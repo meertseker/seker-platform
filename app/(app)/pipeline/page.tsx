@@ -231,36 +231,36 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
               {totalCount} kayıt, sayfa {page}/{totalPages}
             </p>
             <div className="flex gap-2">
-              <Link
-                aria-disabled={page <= 1}
-                href={
-                  page <= 1
-                    ? hrefWith(currentParams, {})
-                    : hrefWith(currentParams, { sayfa: String(page - 1) })
-                }
-                className={`rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold ${
-                  page <= 1
-                    ? "pointer-events-none text-zinc-300"
-                    : "text-zinc-700 hover:border-zinc-300 hover:text-zinc-950"
-                }`}
-              >
-                Önceki
-              </Link>
-              <Link
-                aria-disabled={page >= totalPages}
-                href={
-                  page >= totalPages
-                    ? hrefWith(currentParams, {})
-                    : hrefWith(currentParams, { sayfa: String(page + 1) })
-                }
-                className={`rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold ${
-                  page >= totalPages
-                    ? "pointer-events-none text-zinc-300"
-                    : "text-zinc-700 hover:border-zinc-300 hover:text-zinc-950"
-                }`}
-              >
-                Sonraki
-              </Link>
+              {page <= 1 ? (
+                <span
+                  aria-disabled="true"
+                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-300"
+                >
+                  Önceki
+                </span>
+              ) : (
+                <Link
+                  href={hrefWith(currentParams, { sayfa: String(page - 1) })}
+                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+                >
+                  Önceki
+                </Link>
+              )}
+              {page >= totalPages ? (
+                <span
+                  aria-disabled="true"
+                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-300"
+                >
+                  Sonraki
+                </span>
+              ) : (
+                <Link
+                  href={hrefWith(currentParams, { sayfa: String(page + 1) })}
+                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+                >
+                  Sonraki
+                </Link>
+              )}
             </div>
           </div>
           {leads.length > 0 ? (

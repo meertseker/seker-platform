@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { signOut } from "@/actions/auth";
 
 type Role = "yonetici" | "danisman";
@@ -52,17 +52,20 @@ function NavLink({
   label,
   pathname,
   compact = false,
+  onClick,
 }: {
   href: string;
   label: string;
   pathname: string;
   compact?: boolean;
+  onClick?: () => void;
 }) {
   const active = isActive(pathname, href);
 
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={
         compact
           ? `rounded-2xl px-3 py-2 text-center text-xs font-semibold transition ${
@@ -90,6 +93,8 @@ export function Nav({ fullName, role }: NavProps) {
     serverSnapshot,
   );
   const pathname = mounted ? currentPathname : "";
+  const [openMenuPathname, setOpenMenuPathname] = useState<string | null>(null);
+  const moreMenuOpen = openMenuPathname === pathname;
   const visibleSecondary = secondaryItems.filter((item) => canSee(item, role));
   const allDesktopItems = [...mainItems, ...visibleSecondary];
 
@@ -99,7 +104,7 @@ export function Nav({ fullName, role }: NavProps) {
         <Link href="/" className="px-3 text-lg font-semibold">
           AnaOkulCRM
         </Link>
-        <nav className="mt-8 flex flex-1 flex-col gap-1">
+        <nav aria-label="Ana navigasyon" className="mt-8 flex flex-1 flex-col gap-1">
           {allDesktopItems.map((item) => (
             <NavLink
               key={item.href}
@@ -148,7 +153,10 @@ export function Nav({ fullName, role }: NavProps) {
         </div>
       </header>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] md:hidden">
+      <nav
+        aria-label="Alt navigasyon"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] md:hidden"
+      >
         <div className="grid grid-cols-6 gap-1">
           {mainItems.map((item) => (
             <NavLink
@@ -159,21 +167,32 @@ export function Nav({ fullName, role }: NavProps) {
               compact
             />
           ))}
-          <details className="relative">
-            <summary className="list-none rounded-2xl px-3 py-2 text-center text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-950">
+          <div className="relative">
+            <button
+              type="button"
+              aria-label="Diğer menü"
+              aria-expanded={moreMenuOpen}
+              onClick={() =>
+                setOpenMenuPathname(moreMenuOpen ? null : pathname)
+              }
+              className="w-full rounded-2xl px-3 py-2 text-center text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-950"
+            >
               …
-            </summary>
-            <div className="absolute bottom-12 right-0 min-w-40 rounded-2xl border border-zinc-200 bg-white p-2 shadow-lg">
-              {visibleSecondary.map((item) => (
-                <NavLink
-                  key={item.href}
-                  href={item.href}
-                  label={item.label}
-                  pathname={pathname}
-                />
-              ))}
-            </div>
-          </details>
+            </button>
+            {moreMenuOpen ? (
+              <div className="absolute bottom-12 right-0 min-w-40 rounded-2xl border border-zinc-200 bg-white p-2 shadow-lg">
+                {visibleSecondary.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    href={item.href}
+                    label={item.label}
+                    pathname={pathname}
+                    onClick={() => setOpenMenuPathname(null)}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
       </nav>
     </>
