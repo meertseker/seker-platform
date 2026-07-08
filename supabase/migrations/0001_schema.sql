@@ -299,3 +299,68 @@ create policy ins_events on public.events for insert with check (is_staff() and 
 
 -- app_settings yazma: yönetici
 create policy write_app_settings on public.app_settings for all using (is_yonetici()) with check (is_yonetici());
+
+-- ===================== Danışman kolon kurcalama koruması =====================
+
+-- Trigger A: offers — danışman yalnızca gecersiz kılma yapabilir (status + superseded_by_offer_id + updated_at)
+create or replace function public.guard_offers_danisman() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  -- service_role (auth.uid() IS NULL) ve yöneticiler: kısıtsız
+  if (select auth.uid()) is null or public.is_yonetici() then
+    return new;
+  end if;
+
+  if (new.lead_id           is distinct from old.lead_id)           or
+     (new.created_by        is distinct from old.created_by)        or
+     (new.program           is distinct from old.program)           or
+     (new.list_price        is distinct from old.list_price)        or
+     (new.offered_price     is distinct from old.offered_price)     or
+     (new.installment_count is distinct from old.installment_count) or
+     (new.note              is distinct from old.note)              or
+     (new.decided_by        is distinct from old.decided_by)        or
+     (new.decided_at        is distinct from old.decided_at)        or
+     (new.counter_price     is distinct from old.counter_price)     or
+     (new.created_at        is distinct from old.created_at)
+  then
+    raise exception 'Danışman teklif üzerinde yalnızca geçersiz kılma yapabilir';
+  end if;
+
+  if new.status is distinct from 'gecersiz' then
+    raise exception 'Danışman teklif üzerinde yalnızca geçersiz kılma yapabilir';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger guard_offers_danisman
+  before update on public.offers
+  for each row execute function public.guard_offers_danisman();
+
+-- Trigger B: installments — danışman yalnızca bekliyor→odendi işaretleyebilir
+create or replace function public.guard_installments_danisman() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  -- service_role (auth.uid() IS NULL) ve yöneticiler: kısıtsız
+  if (select auth.uid()) is null or public.is_yonetici() then
+    return new;
+  end if;
+
+  if old.status <> 'bekliyor'                      or
+     new.status <> 'odendi'                        or
+     (new.plan_id    is distinct from old.plan_id)    or
+     (new.due_date   is distinct from old.due_date)   or
+     (new.created_at is distinct from old.created_at) or
+     new.amount > old.amount
+  then
+    raise exception 'Danışman taksitte yalnızca ödeme işaretleyebilir';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger guard_installments_danisman
+  before update on public.installments
+  for each row execute function public.guard_installments_danisman();
