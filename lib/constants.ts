@@ -52,6 +52,23 @@ export const STUDENT_STATUSES = {
   aktif: "Aktif", ayrildi: "Ayrıldı", mezun: "Mezun",
 } as const;
 
+export const EVENT_LABELS = {
+  lead_olusturuldu: "Lead oluşturuldu",
+  durum_degisti: "Durum değişti",
+  lead_guncellendi: "Lead güncellendi",
+  randevu_olusturuldu: "Randevu oluşturuldu",
+  randevu_sonuclandi: "Randevu sonuçlandı",
+  teklif_olusturuldu: "Teklif oluşturuldu",
+  teklif_onaylandi: "Teklif onaylandı",
+  teklif_reddedildi: "Teklif reddedildi",
+  teklif_revize_edildi: "Teklif revize edildi",
+  ogrenciye_donusturuldu: "Öğrenciye dönüştürüldü",
+  plan_olusturuldu: "Ödeme planı oluşturuldu",
+  taksit_odendi: "Taksit ödendi",
+  odeme_geri_alindi: "Ödeme geri alındı",
+  fiyat_listesi_guncellendi: "Fiyat listesi güncellendi",
+} as const;
+
 export function label(group: Record<string, string>, value: string): string {
   return group[value] ?? value;
 }
