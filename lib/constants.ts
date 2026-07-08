@@ -43,10 +43,12 @@ export type PaymentMethod = keyof typeof PAYMENT_METHODS;
 export const APPOINTMENT_TYPES = {
   okul_ziyareti: "Okul Ziyareti", telefon: "Telefon Görüşmesi",
 } as const;
+export type AppointmentType = keyof typeof APPOINTMENT_TYPES;
 export const APPOINTMENT_OUTCOMES = {
   bekliyor: "Bekliyor", geldi: "Geldi", gelmedi: "Gelmedi",
   ertelendi: "Ertelendi", iptal: "İptal",
 } as const;
+export type AppointmentOutcome = keyof typeof APPOINTMENT_OUTCOMES;
 
 export const STUDENT_STATUSES = {
   aktif: "Aktif", ayrildi: "Ayrıldı", mezun: "Mezun",

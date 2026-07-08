@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActivityFeed, type ActivityFeedItem } from "@/components/activity-feed";
+import { AppointmentForm } from "@/components/appointment-form";
+import {
+  AppointmentList,
+  type AppointmentListItem,
+} from "@/components/appointment-list";
 import { NoteForm } from "@/components/note-form";
 import { StatusSelect } from "@/components/status-select";
 import {
   label,
+  type AppointmentOutcome,
+  type AppointmentType,
   LEAD_SOURCES,
   LEAD_STATUSES,
   LOST_REASONS,
@@ -60,6 +67,14 @@ interface EventRow {
   actor?: ProfileJoin | ProfileJoin[] | null;
 }
 
+interface AppointmentRow {
+  id: string;
+  scheduled_at: string;
+  type: AppointmentType;
+  outcome: AppointmentOutcome;
+  outcome_note: string | null;
+}
+
 function one<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
 }
@@ -103,8 +118,33 @@ function normalizeFeed(notes: NoteRow[], events: EventRow[]): ActivityFeedItem[]
   );
 }
 
-function LeadAppointmentsSection() {
-  return null;
+function LeadAppointmentsSection({
+  leadId,
+  appointments,
+  hasError,
+}: {
+  leadId: string;
+  appointments: AppointmentListItem[];
+  hasError: boolean;
+}) {
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-xl font-semibold text-zinc-950">Randevular</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Geçmiş ve gelecek randevuları takip edin, sonuçlarını işaretleyin.
+        </p>
+      </div>
+      <AppointmentForm leadId={leadId} />
+      {hasError ? (
+        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          Randevular yüklenirken bir sorun oluştu.
+        </p>
+      ) : (
+        <AppointmentList appointments={appointments} />
+      )}
+    </section>
+  );
 }
 
 function LeadOffersSection() {
@@ -115,7 +155,7 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
   const { id } = await params;
   const supabase = await createServerSupabase();
 
-  const [leadResult, notesResult, eventsResult] = await Promise.all([
+  const [leadResult, notesResult, eventsResult, appointmentsResult] = await Promise.all([
     supabase
       .from("leads")
       .select(
@@ -134,6 +174,11 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
       .eq("entity_type", "lead")
       .eq("entity_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("appointments")
+      .select("id, scheduled_at, type, outcome, outcome_note")
+      .eq("lead_id", id)
+      .order("scheduled_at", { ascending: false }),
   ]);
 
   if (leadResult.error || !leadResult.data) notFound();
@@ -144,6 +189,7 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
     (notesResult.data ?? []) as unknown as NoteRow[],
     (eventsResult.data ?? []) as unknown as EventRow[],
   );
+  const appointments = (appointmentsResult.data ?? []) as unknown as AppointmentRow[];
   const whatsappNumber = lead.phone.replace(/\D/g, "");
   const converted = lead.converted_student_id !== null;
 
@@ -239,7 +285,11 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
             </dl>
           </section>
 
-          <LeadAppointmentsSection />
+          <LeadAppointmentsSection
+            leadId={lead.id}
+            appointments={appointments}
+            hasError={Boolean(appointmentsResult.error)}
+          />
           <LeadOffersSection />
 
           <section className="space-y-4">

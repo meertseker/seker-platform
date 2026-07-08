@@ -23,11 +23,12 @@ interface StatusSelectProps {
 
 export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
   const router = useRouter();
-  const [selected, setSelected] = useState(status);
+  const [optimisticStatus, setOptimisticStatus] = useState<LeadStatus | null>(null);
   const [pendingStatus, setPendingStatus] = useState<LeadStatus | null>(null);
   const [lostReason, setLostReason] = useState<LostReason | "">("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const selected = optimisticStatus ?? status;
 
   const options = useMemo(
     () =>
@@ -42,12 +43,12 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
     startTransition(async () => {
       const result = await updateLeadStatus(leadId, to, reason);
       if (result.error) {
-        setSelected(status);
+        setOptimisticStatus(null);
         setError(result.error);
         return;
       }
 
-      setSelected(to);
+      setOptimisticStatus(to);
       setPendingStatus(null);
       setLostReason("");
       router.refresh();
@@ -55,7 +56,7 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
   }
 
   function handleChange(to: LeadStatus) {
-    setSelected(to);
+    setOptimisticStatus(to === status ? null : to);
     setError(null);
 
     if (to === status) return;
@@ -71,7 +72,7 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
     if (isPending) return;
     setPendingStatus(null);
     setLostReason("");
-    setSelected(status);
+    setOptimisticStatus(null);
   }
 
   return (
