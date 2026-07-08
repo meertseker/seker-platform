@@ -40,6 +40,14 @@ function revalidateOfferViews(leadId: string) {
   revalidatePath("/");
 }
 
+async function advanceLeadStatusAfterApproval(leadId: string) {
+  try {
+    await updateLeadStatus(leadId, "teklif");
+  } catch {
+    return;
+  }
+}
+
 async function activeListPrice(program: Program) {
   const supabase = await createServerSupabase();
   const { data: activeList, error: listError } = await supabase
@@ -288,7 +296,7 @@ export async function decideOffer(
     .eq("id", offer.lead_id);
 
   if (decision === "onaylandi") {
-    await updateLeadStatus(offer.lead_id, "teklif");
+    await advanceLeadStatusAfterApproval(offer.lead_id);
   }
 
   revalidateOfferViews(offer.lead_id);
@@ -304,12 +312,15 @@ export async function createOfferFromCounter(
   const { data: source } = await supabase
     .from("offers")
     .select(
-      "id, lead_id, program, list_price, installment_count, note, status, counter_price, decided_by, decided_at",
+      "id, lead_id, program, list_price, installment_count, note, status, counter_price, decided_by, decided_at, superseded_by_offer_id",
     )
     .eq("id", offerId)
     .maybeSingle();
 
   if (!source) return { error: "Revize teklif bulunamadı" };
+  if (source.superseded_by_offer_id) {
+    return { error: "Bu revize teklif zaten kullanılmış" };
+  }
   if (source.status !== "revize_edildi" || !source.counter_price) {
     return { error: "Bu teklif için karşı rakam bulunmuyor" };
   }
@@ -334,6 +345,16 @@ export async function createOfferFromCounter(
 
   if (error || !offer) return { error: "Karşı rakamla teklif oluşturulamadı" };
 
+  const { error: supersedeSourceError } = await supabase
+    .from("offers")
+    .update({ superseded_by_offer_id: offer.id })
+    .eq("id", source.id)
+    .is("superseded_by_offer_id", null);
+
+  if (supersedeSourceError) {
+    return { error: "Karşı rakamla teklif oluşturulamadı" };
+  }
+
   await supersedeApprovedOffers(supabase, source.lead_id, offer.id);
   await logEvent(supabase, {
     entityType: "offer",
@@ -353,6 +374,7 @@ export async function createOfferFromCounter(
     .from("leads")
     .update({ last_activity_at: new Date().toISOString() })
     .eq("id", source.lead_id);
+  await advanceLeadStatusAfterApproval(source.lead_id);
 
   revalidateOfferViews(source.lead_id);
   return { id: offer.id };

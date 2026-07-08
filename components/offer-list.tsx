@@ -175,18 +175,20 @@ export function OfferList({ offers }: OfferListProps) {
                   <p className="text-sm font-medium text-amber-900">
                     Karşı rakam: {formatTRY(tlToKurus(offer.counter_price))}
                   </p>
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => createFromCounter(offer.id)}
-                    className="rounded-xl bg-amber-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-amber-400"
-                  >
-                    {isSaving
-                      ? "Oluşturuluyor..."
-                      : `Karşı rakamla teklif oluştur (${formatTRY(
-                          tlToKurus(offer.counter_price),
-                        )})`}
-                  </button>
+                  {offer.superseded_by_offer_id ? null : (
+                    <button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={() => createFromCounter(offer.id)}
+                      className="rounded-xl bg-amber-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-amber-400"
+                    >
+                      {isSaving
+                        ? "Oluşturuluyor..."
+                        : `Karşı rakamla teklif oluştur (${formatTRY(
+                            tlToKurus(offer.counter_price),
+                          )})`}
+                    </button>
+                  )}
                 </div>
               ) : null}
             </li>
