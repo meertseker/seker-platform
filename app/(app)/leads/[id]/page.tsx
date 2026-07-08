@@ -7,6 +7,8 @@ import {
   type AppointmentListItem,
 } from "@/components/appointment-list";
 import { NoteForm } from "@/components/note-form";
+import { OfferForm, type ActivePriceItem } from "@/components/offer-form";
+import { OfferList, type OfferListItem } from "@/components/offer-list";
 import { StatusSelect } from "@/components/status-select";
 import {
   label,
@@ -18,6 +20,8 @@ import {
   type LeadSource,
   type LeadStatus,
   type LostReason,
+  type OfferStatus,
+  type Program,
 } from "@/lib/constants";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -73,6 +77,25 @@ interface AppointmentRow {
   type: AppointmentType;
   outcome: AppointmentOutcome;
   outcome_note: string | null;
+}
+
+interface OfferRow {
+  id: string;
+  program: Program;
+  list_price: number;
+  offered_price: number;
+  installment_count: number;
+  note: string | null;
+  status: OfferStatus;
+  counter_price: number | null;
+  superseded_by_offer_id: string | null;
+  created_at: string;
+  creator?: ProfileJoin | ProfileJoin[] | null;
+}
+
+interface PriceItemRow {
+  program: Program;
+  monthly_fee: number;
 }
 
 function one<T>(value: T | T[] | null | undefined) {
@@ -147,15 +170,72 @@ function LeadAppointmentsSection({
   );
 }
 
-function LeadOffersSection() {
-  return null;
+function normalizeOffers(offers: OfferRow[]): OfferListItem[] {
+  return offers.map((offer) => ({
+    id: offer.id,
+    program: offer.program,
+    list_price: Number(offer.list_price),
+    offered_price: Number(offer.offered_price),
+    installment_count: offer.installment_count,
+    note: offer.note,
+    status: offer.status,
+    counter_price: offer.counter_price === null ? null : Number(offer.counter_price),
+    superseded_by_offer_id: offer.superseded_by_offer_id,
+    created_at: offer.created_at,
+    creatorName: one(offer.creator)?.full_name ?? null,
+  }));
+}
+
+function normalizePriceItems(items: PriceItemRow[]): ActivePriceItem[] {
+  return items.map((item) => ({
+    program: item.program,
+    monthly_fee: Number(item.monthly_fee),
+  }));
+}
+
+function LeadOffersSection({
+  leadId,
+  offers,
+  priceItems,
+  hasError,
+}: {
+  leadId: string;
+  offers: OfferListItem[];
+  priceItems: ActivePriceItem[];
+  hasError: boolean;
+}) {
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-xl font-semibold text-zinc-950">Teklifler</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Liste fiyatı, indirim ve yönetici onay sürecini buradan takip edin.
+        </p>
+      </div>
+      <OfferForm leadId={leadId} priceItems={priceItems} />
+      {hasError ? (
+        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          Teklifler yüklenirken bir sorun oluştu.
+        </p>
+      ) : (
+        <OfferList offers={offers} />
+      )}
+    </section>
+  );
 }
 
 export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
   const { id } = await params;
   const supabase = await createServerSupabase();
 
-  const [leadResult, notesResult, eventsResult, appointmentsResult] = await Promise.all([
+  const [
+    leadResult,
+    notesResult,
+    eventsResult,
+    appointmentsResult,
+    offersResult,
+    priceItemsResult,
+  ] = await Promise.all([
     supabase
       .from("leads")
       .select(
@@ -179,6 +259,18 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
       .select("id, scheduled_at, type, outcome, outcome_note")
       .eq("lead_id", id)
       .order("scheduled_at", { ascending: false }),
+    supabase
+      .from("offers")
+      .select(
+        "id, program, list_price, offered_price, installment_count, note, status, counter_price, superseded_by_offer_id, created_at, creator:profiles!offers_created_by_fkey(id, full_name)",
+      )
+      .eq("lead_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("price_list_items")
+      .select("program, monthly_fee, price_list:price_lists!inner(is_active)")
+      .eq("price_list.is_active", true)
+      .order("program", { ascending: true }),
   ]);
 
   if (leadResult.error || !leadResult.data) notFound();
@@ -190,6 +282,10 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
     (eventsResult.data ?? []) as unknown as EventRow[],
   );
   const appointments = (appointmentsResult.data ?? []) as unknown as AppointmentRow[];
+  const offers = normalizeOffers((offersResult.data ?? []) as unknown as OfferRow[]);
+  const priceItems = normalizePriceItems(
+    (priceItemsResult.data ?? []) as unknown as PriceItemRow[],
+  );
   const whatsappNumber = lead.phone.replace(/\D/g, "");
   const converted = lead.converted_student_id !== null;
 
@@ -290,7 +386,12 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
             appointments={appointments}
             hasError={Boolean(appointmentsResult.error)}
           />
-          <LeadOffersSection />
+          <LeadOffersSection
+            leadId={lead.id}
+            offers={offers}
+            priceItems={priceItems}
+            hasError={Boolean(offersResult.error || priceItemsResult.error)}
+          />
 
           <section className="space-y-4">
             <div>

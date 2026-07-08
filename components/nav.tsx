@@ -4,12 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { signOut } from "@/actions/auth";
+import {
+  NotificationBell,
+  type NotificationItem,
+} from "@/components/notification-bell";
 
 type Role = "yonetici" | "danisman";
 
 interface NavProps {
   fullName: string;
   role: Role;
+  notifications: NotificationItem[];
+  unreadCount: number;
 }
 
 const mainItems = [
@@ -85,7 +91,7 @@ function NavLink({
   );
 }
 
-export function Nav({ fullName, role }: NavProps) {
+export function Nav({ fullName, role, notifications, unreadCount }: NavProps) {
   const currentPathname = usePathname();
   const mounted = useSyncExternalStore(
     subscribeClientReady,
@@ -138,6 +144,10 @@ export function Nav({ fullName, role }: NavProps) {
             AnaOkulCRM
           </Link>
           <div className="ml-auto flex items-center gap-3">
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+            />
             <span className="max-w-36 truncate text-sm font-medium text-zinc-700 sm:max-w-none">
               {fullName}
             </span>
