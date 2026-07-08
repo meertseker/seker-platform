@@ -1,8 +1,13 @@
 -- Lokal geliştirme kullanıcıları (şifreler yalnızca lokal!)
-insert into auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, aud, role, raw_app_meta_data, raw_user_meta_data)
+insert into auth.users (
+  id, instance_id, email, encrypted_password, email_confirmed_at, aud, role,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, email_change, email_change_token_new, email_change_token_current,
+  recovery_token, phone_change, phone_change_token
+)
 values
-  ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000000','yonetici@test.local', crypt('sifre123', gen_salt('bf')), now(), 'authenticated','authenticated','{"provider":"email","providers":["email"]}','{}'),
-  ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000000','danisman@test.local', crypt('sifre123', gen_salt('bf')), now(), 'authenticated','authenticated','{"provider":"email","providers":["email"]}','{}');
+  ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000000','yonetici@test.local', crypt('sifre123', gen_salt('bf')), now(), 'authenticated','authenticated','{"provider":"email","providers":["email"]}','{}', now(), now(), '', '', '', '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000000','danisman@test.local', crypt('sifre123', gen_salt('bf')), now(), 'authenticated','authenticated','{"provider":"email","providers":["email"]}','{}', now(), now(), '', '', '', '', '', '', '');
 insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 values
   (gen_random_uuid(),'00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001','{"sub":"00000000-0000-0000-0000-000000000001","email":"yonetici@test.local"}','email',now(),now(),now()),

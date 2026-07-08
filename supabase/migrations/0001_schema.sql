@@ -364,3 +364,13 @@ $$;
 create trigger guard_installments_danisman
   before update on public.installments
   for each row execute function public.guard_installments_danisman();
+
+-- ===================== Yetkiler (PostgREST / service_role / authenticated) =====================
+grant usage on schema public to postgres, anon, authenticated, service_role;
+
+grant all on all tables in schema public to postgres, service_role;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+
+grant usage, select on all sequences in schema public to authenticated, service_role;
+
+grant execute on all functions in schema public to authenticated, service_role;
