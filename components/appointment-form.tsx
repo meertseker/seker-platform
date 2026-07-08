@@ -25,6 +25,15 @@ interface ConflictInfo {
 
 const typeKeys = Object.keys(APPOINTMENT_TYPES) as AppointmentType[];
 
+const conflictDateFormatter = new Intl.DateTimeFormat("tr-TR", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Istanbul",
+});
+
 export function AppointmentForm({ leadId }: AppointmentFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -149,7 +158,8 @@ export function AppointmentForm({ leadId }: AppointmentFormProps) {
       {conflict ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-sm font-medium text-amber-900">
-            Bu saate yakın başka randevu var: {conflict.leadName} — yine de
+            Bu saate yakın başka randevu var: {conflict.leadName} —{" "}
+            {conflictDateFormatter.format(new Date(conflict.at))}. Yine de
             kaydet?
           </p>
           <div className="mt-3 flex flex-wrap gap-2">

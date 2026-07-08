@@ -208,10 +208,15 @@ export async function setAppointmentOutcome(
       outcome_note: note?.trim() || null,
     })
     .eq("id", id)
+    .eq("outcome", "bekliyor")
     .select("id, lead_id, created_by")
     .single();
 
-  if (error || !appointment) {
+  if (error?.code === "PGRST116" || !appointment) {
+    return { error: "Randevu zaten sonuçlandırılmış" };
+  }
+
+  if (error) {
     return { error: "Randevu sonucu kaydedilemedi." };
   }
 
