@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setAppointmentOutcome } from "@/actions/appointments";
@@ -13,6 +14,8 @@ import {
 
 export interface AppointmentListItem {
   id: string;
+  leadId?: string;
+  leadName?: string;
   scheduled_at: string;
   type: AppointmentType;
   outcome: AppointmentOutcome;
@@ -21,6 +24,8 @@ export interface AppointmentListItem {
 
 interface AppointmentListProps {
   appointments: AppointmentListItem[];
+  emptyText?: string;
+  compactTime?: boolean;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
@@ -61,11 +66,23 @@ function formatDate(value: string) {
   return dateFormatter.format(new Date(value));
 }
 
+function formatTime(value: string) {
+  return new Intl.DateTimeFormat("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Istanbul",
+  }).format(new Date(value));
+}
+
 function needsNote(outcome: AppointmentOutcome) {
   return outcome === "gelmedi" || outcome === "ertelendi";
 }
 
-export function AppointmentList({ appointments }: AppointmentListProps) {
+export function AppointmentList({
+  appointments,
+  emptyText = "Henüz randevu yok. İlk randevuyu ekleyin.",
+  compactTime = false,
+}: AppointmentListProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -102,7 +119,7 @@ export function AppointmentList({ appointments }: AppointmentListProps) {
   if (appointments.length === 0) {
     return (
       <p className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500">
-        Henüz randevu yok. İlk randevuyu ekleyin.
+        {emptyText}
       </p>
     );
   }
@@ -132,8 +149,18 @@ export function AppointmentList({ appointments }: AppointmentListProps) {
                     dateTime={appointment.scheduled_at}
                     className="text-base font-semibold text-zinc-950"
                   >
-                    {formatDate(appointment.scheduled_at)}
+                    {compactTime
+                      ? formatTime(appointment.scheduled_at)
+                      : formatDate(appointment.scheduled_at)}
                   </time>
+                  {appointment.leadId ? (
+                    <Link
+                      href={`/leads/${appointment.leadId}`}
+                      className="mt-1 block text-sm font-semibold text-zinc-800 transition hover:text-zinc-950 hover:underline"
+                    >
+                      {appointment.leadName ?? "Lead detayına git"}
+                    </Link>
+                  ) : null}
                   <p className="mt-1 text-sm text-zinc-600">
                     {label(APPOINTMENT_TYPES, appointment.type)}
                   </p>
