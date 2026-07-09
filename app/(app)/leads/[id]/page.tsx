@@ -329,7 +329,7 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
   const whatsappNumber = lead.phone.replace(/\D/g, "");
   const converted = lead.converted_student_id !== null;
   const hasApprovedOffer = offers.some((offer) => offer.status === "onaylandi");
-  const canConvert = !converted && (lead.status === "kazanildi" || hasApprovedOffer);
+  const canConvert = !converted && hasApprovedOffer;
 
   return (
     <div className="space-y-6">

@@ -84,8 +84,12 @@ export async function convertLeadToStudent(leadId: string, startDate: string) {
 
   if (leadError || !updatedLead) {
     const cleanupClient = createAdminSupabase() ?? supabase;
-    await cleanupClient.from("students").delete().eq("id", student.id);
-    return { error: "Lead öğrenciye dönüştürülemedi" };
+    const cleanup = await cleanupClient.from("students").delete().eq("id", student.id);
+    return {
+      error: cleanup.error
+        ? "Dönüştürme başarısız oldu; oluşturulan öğrenci kaydı silinemedi, manuel kontrol edilmeli"
+        : "Lead öğrenciye dönüştürülemedi",
+    };
   }
 
   await logEvent(supabase, {
