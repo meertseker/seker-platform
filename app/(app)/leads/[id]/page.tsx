@@ -6,6 +6,7 @@ import {
   AppointmentList,
   type AppointmentListItem,
 } from "@/components/appointment-list";
+import { LeadConversionForm } from "@/components/lead-conversion-form";
 import { NoteForm } from "@/components/note-form";
 import { OfferForm, type ActivePriceItem } from "@/components/offer-form";
 import { OfferList, type OfferListItem } from "@/components/offer-list";
@@ -288,6 +289,8 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
   );
   const whatsappNumber = lead.phone.replace(/\D/g, "");
   const converted = lead.converted_student_id !== null;
+  const hasApprovedOffer = offers.some((offer) => offer.status === "onaylandi");
+  const canConvert = !converted && (lead.status === "kazanildi" || hasApprovedOffer);
 
   return (
     <div className="space-y-6">
@@ -443,6 +446,20 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
               )}
             </div>
           </section>
+
+          {canConvert ? (
+            <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <h2 className="text-lg font-semibold text-zinc-950">
+                Kayıt işlemi
+              </h2>
+              <p className="mt-2 text-sm text-zinc-600">
+                Onaylı teklif ile öğrenci kaydı ve ödeme planı hazırlayın.
+              </p>
+              <div className="mt-4">
+                <LeadConversionForm leadId={lead.id} canConvert={canConvert} />
+              </div>
+            </section>
+          ) : null}
 
           <NoteForm leadId={lead.id} />
         </aside>
