@@ -4,7 +4,8 @@ import {
   type PendingOfferItem,
 } from "@/components/offer-approval-list";
 import { getSessionProfile } from "@/lib/auth";
-import type { Program } from "@/lib/constants";
+import { label, PROGRAMS, type Program } from "@/lib/constants";
+import { formatTRY, tlToKurus } from "@/lib/money";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -32,10 +33,17 @@ function one<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
 }
 
+function discountPercent(listPrice: number, offeredPrice: number) {
+  if (listPrice <= 0 || offeredPrice >= listPrice) return 0;
+  return Math.round(((listPrice - offeredPrice) / listPrice) * 100);
+}
+
 function normalizePendingOffers(rows: PendingOfferRow[]): PendingOfferItem[] {
   return rows.flatMap((row) => {
     const lead = one(row.lead);
     if (!lead) return [];
+    const listPrice = Number(row.list_price);
+    const offeredPrice = Number(row.offered_price);
 
     return [
       {
@@ -45,8 +53,12 @@ function normalizePendingOffers(rows: PendingOfferRow[]): PendingOfferItem[] {
         childName: lead.child_name,
         consultantName: one(row.creator)?.full_name ?? null,
         program: row.program,
-        listPrice: Number(row.list_price),
-        offeredPrice: Number(row.offered_price),
+        listPrice,
+        offeredPrice,
+        programLabel: label(PROGRAMS, row.program),
+        listPriceText: formatTRY(tlToKurus(listPrice)),
+        offeredPriceText: formatTRY(tlToKurus(offeredPrice)),
+        discountText: `%${discountPercent(listPrice, offeredPrice)}`,
       },
     ];
   });

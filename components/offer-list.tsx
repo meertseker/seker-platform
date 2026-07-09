@@ -10,7 +10,6 @@ import {
   type OfferStatus,
   type Program,
 } from "@/lib/constants";
-import { formatTRY, tlToKurus } from "@/lib/money";
 
 export interface OfferListItem {
   id: string;
@@ -24,20 +23,17 @@ export interface OfferListItem {
   superseded_by_offer_id: string | null;
   created_at: string;
   creatorName: string | null;
+  listPriceText: string;
+  offeredPriceText: string;
+  counterPriceText: string | null;
+  createdAtText: string;
+  discountText: string;
+  counterAccepted: boolean;
 }
 
 interface OfferListProps {
   offers: OfferListItem[];
 }
-
-const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "Europe/Istanbul",
-});
 
 function statusClass(status: OfferStatus) {
   switch (status) {
@@ -52,11 +48,6 @@ function statusClass(status: OfferStatus) {
     default:
       return "bg-zinc-100 text-zinc-600 ring-zinc-200";
   }
-}
-
-function discountPercent(listPrice: number, offeredPrice: number) {
-  if (listPrice <= 0 || offeredPrice >= listPrice) return 0;
-  return Math.round(((listPrice - offeredPrice) / listPrice) * 100);
 }
 
 export function OfferList({ offers }: OfferListProps) {
@@ -100,7 +91,6 @@ export function OfferList({ offers }: OfferListProps) {
       <ul className="space-y-3">
         {offers.map((offer) => {
           const active = offer.status === "onaylandi";
-          const discount = discountPercent(offer.list_price, offer.offered_price);
           const isSaving = pendingId === offer.id && isPending;
 
           return (
@@ -123,7 +113,7 @@ export function OfferList({ offers }: OfferListProps) {
                     ) : null}
                   </div>
                   <p className="mt-1 text-sm text-zinc-600">
-                    {dateFormatter.format(new Date(offer.created_at))}
+                    {offer.createdAtText}
                     {offer.creatorName ? ` - ${offer.creatorName}` : ""}
                   </p>
                 </div>
@@ -141,19 +131,19 @@ export function OfferList({ offers }: OfferListProps) {
                 <div>
                   <dt className="text-xs font-medium text-zinc-500">Liste</dt>
                   <dd className="mt-1 text-sm font-semibold text-zinc-900">
-                    {formatTRY(tlToKurus(offer.list_price))}
+                    {offer.listPriceText}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-xs font-medium text-zinc-500">Teklif</dt>
                   <dd className="mt-1 text-sm font-semibold text-zinc-900">
-                    {formatTRY(tlToKurus(offer.offered_price))}
+                    {offer.offeredPriceText}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-xs font-medium text-zinc-500">İndirim</dt>
                   <dd className="mt-1 text-sm font-semibold text-zinc-900">
-                    %{discount}
+                    {offer.discountText}
                   </dd>
                 </div>
                 <div>
@@ -173,9 +163,9 @@ export function OfferList({ offers }: OfferListProps) {
               {offer.status === "revize_edildi" && offer.counter_price ? (
                 <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3">
                   <p className="text-sm font-medium text-amber-900">
-                    Karşı rakam: {formatTRY(tlToKurus(offer.counter_price))}
+                    Karşı rakam: {offer.counterPriceText}
                   </p>
-                  {offer.superseded_by_offer_id ? null : (
+                  {offer.counterAccepted ? null : (
                     <button
                       type="button"
                       disabled={isSaving}
@@ -184,9 +174,7 @@ export function OfferList({ offers }: OfferListProps) {
                     >
                       {isSaving
                         ? "Oluşturuluyor..."
-                        : `Karşı rakamla teklif oluştur (${formatTRY(
-                            tlToKurus(offer.counter_price),
-                          )})`}
+                        : `Karşı rakamla teklif oluştur (${offer.counterPriceText})`}
                     </button>
                   )}
                 </div>

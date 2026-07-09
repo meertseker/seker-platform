@@ -326,6 +326,21 @@ export async function createOfferFromCounter(
   }
 
   const counterPrice = Number(source.counter_price);
+  const { data: existingAccepted } = await supabase
+    .from("offers")
+    .select("id")
+    .eq("lead_id", source.lead_id)
+    .eq("status", "onaylandi")
+    .eq("offered_price", counterPrice)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingAccepted) {
+    revalidateOfferViews(source.lead_id);
+    return { id: existingAccepted.id };
+  }
+
   const { data: offer, error } = await supabase
     .from("offers")
     .insert({

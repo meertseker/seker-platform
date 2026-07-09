@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { decideOffer } from "@/actions/offers";
-import { label, PROGRAMS, type Program } from "@/lib/constants";
-import { formatTRY, tlToKurus } from "@/lib/money";
+import type { Program } from "@/lib/constants";
 
 export interface PendingOfferItem {
   id: string;
@@ -16,6 +15,10 @@ export interface PendingOfferItem {
   program: Program;
   listPrice: number;
   offeredPrice: number;
+  programLabel: string;
+  listPriceText: string;
+  offeredPriceText: string;
+  discountText: string;
 }
 
 interface OfferApprovalListProps {
@@ -26,11 +29,6 @@ function parseTl(value: string) {
   const normalized = value.replace(/\./g, "").replace(",", ".");
   const amount = Number(normalized);
   return Number.isFinite(amount) ? amount : null;
-}
-
-function discountPercent(listPrice: number, offeredPrice: number) {
-  if (listPrice <= 0 || offeredPrice >= listPrice) return 0;
-  return Math.round(((listPrice - offeredPrice) / listPrice) * 100);
 }
 
 export function OfferApprovalList({ offers }: OfferApprovalListProps) {
@@ -118,7 +116,7 @@ export function OfferApprovalList({ offers }: OfferApprovalListProps) {
                     {offer.parentName}
                   </Link>
                   <p className="mt-1 text-sm text-zinc-600">
-                    {child} - {label(PROGRAMS, offer.program)}
+                    {child} - {offer.programLabel}
                   </p>
                 </div>
 
@@ -127,15 +125,15 @@ export function OfferApprovalList({ offers }: OfferApprovalListProps) {
                 </div>
 
                 <div className="text-sm font-semibold text-zinc-900">
-                  {formatTRY(tlToKurus(offer.listPrice))}
+                  {offer.listPriceText}
                 </div>
 
                 <div className="text-sm font-semibold text-zinc-900">
-                  {formatTRY(tlToKurus(offer.offeredPrice))}
+                  {offer.offeredPriceText}
                 </div>
 
                 <div className="text-sm font-semibold text-zinc-900">
-                  %{discountPercent(offer.listPrice, offer.offeredPrice)}
+                  {offer.discountText}
                 </div>
 
                 <div className="space-y-2">

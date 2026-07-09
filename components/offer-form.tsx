@@ -4,11 +4,11 @@ import { FormEvent, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createOffer } from "@/actions/offers";
 import { label, PROGRAMS, type Program } from "@/lib/constants";
-import { formatTRY, tlToKurus } from "@/lib/money";
 
 export interface ActivePriceItem {
   program: Program;
   monthly_fee: number;
+  monthly_fee_text: string;
 }
 
 interface OfferFormProps {
@@ -34,9 +34,9 @@ export function OfferForm({ leadId, priceItems }: OfferFormProps) {
   const [isPending, startTransition] = useTransition();
 
   const pricesByProgram = useMemo(() => {
-    return new Map(priceItems.map((item) => [item.program, item.monthly_fee]));
+    return new Map(priceItems.map((item) => [item.program, item.monthly_fee_text]));
   }, [priceItems]);
-  const selectedPrice = pricesByProgram.get(selectedProgram);
+  const selectedPriceText = pricesByProgram.get(selectedProgram);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,8 +117,7 @@ export function OfferForm({ leadId, priceItems }: OfferFormProps) {
             ))}
           </select>
           <p className="mt-2 text-xs text-zinc-500">
-            Liste fiyatı:{" "}
-            {selectedPrice ? formatTRY(tlToKurus(selectedPrice)) : "Yok"}
+            Liste fiyatı: {selectedPriceText ?? "Yok"}
           </p>
         </div>
 

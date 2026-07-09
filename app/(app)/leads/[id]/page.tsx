@@ -25,6 +25,7 @@ import {
   type Program,
 } from "@/lib/constants";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { formatTRY, tlToKurus } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -119,6 +120,20 @@ function formatChild(lead: LeadRow) {
   return "Çocuk bilgisi yok";
 }
 
+const offerDateFormatter = new Intl.DateTimeFormat("tr-TR", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Istanbul",
+});
+
+function discountPercent(listPrice: number, offeredPrice: number) {
+  if (listPrice <= 0 || offeredPrice >= listPrice) return 0;
+  return Math.round(((listPrice - offeredPrice) / listPrice) * 100);
+}
+
 function normalizeFeed(notes: NoteRow[], events: EventRow[]): ActivityFeedItem[] {
   const noteItems: ActivityFeedItem[] = notes.map((note) => ({
     type: "note",
@@ -172,25 +187,49 @@ function LeadAppointmentsSection({
 }
 
 function normalizeOffers(offers: OfferRow[]): OfferListItem[] {
-  return offers.map((offer) => ({
-    id: offer.id,
-    program: offer.program,
-    list_price: Number(offer.list_price),
-    offered_price: Number(offer.offered_price),
-    installment_count: offer.installment_count,
-    note: offer.note,
-    status: offer.status,
-    counter_price: offer.counter_price === null ? null : Number(offer.counter_price),
-    superseded_by_offer_id: offer.superseded_by_offer_id,
-    created_at: offer.created_at,
-    creatorName: one(offer.creator)?.full_name ?? null,
-  }));
+  const acceptedCounterPrices = new Set(
+    offers
+      .filter((offer) => offer.status === "onaylandi")
+      .map((offer) => Number(offer.offered_price).toFixed(2)),
+  );
+
+  return offers.map((offer) => {
+    const listPrice = Number(offer.list_price);
+    const offeredPrice = Number(offer.offered_price);
+    const counterPrice =
+      offer.counter_price === null ? null : Number(offer.counter_price);
+
+    return {
+      id: offer.id,
+      program: offer.program,
+      list_price: listPrice,
+      offered_price: offeredPrice,
+      installment_count: offer.installment_count,
+      note: offer.note,
+      status: offer.status,
+      counter_price: counterPrice,
+      superseded_by_offer_id: offer.superseded_by_offer_id,
+      created_at: offer.created_at,
+      creatorName: one(offer.creator)?.full_name ?? null,
+      listPriceText: formatTRY(tlToKurus(listPrice)),
+      offeredPriceText: formatTRY(tlToKurus(offeredPrice)),
+      counterPriceText:
+        counterPrice === null ? null : formatTRY(tlToKurus(counterPrice)),
+      createdAtText: offerDateFormatter.format(new Date(offer.created_at)),
+      discountText: `%${discountPercent(listPrice, offeredPrice)}`,
+      counterAccepted:
+        offer.status === "revize_edildi" &&
+        counterPrice !== null &&
+        acceptedCounterPrices.has(counterPrice.toFixed(2)),
+    };
+  });
 }
 
 function normalizePriceItems(items: PriceItemRow[]): ActivePriceItem[] {
   return items.map((item) => ({
     program: item.program,
     monthly_fee: Number(item.monthly_fee),
+    monthly_fee_text: formatTRY(tlToKurus(Number(item.monthly_fee))),
   }));
 }
 
