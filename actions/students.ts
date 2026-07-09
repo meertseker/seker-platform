@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getApprovedOffer } from "@/actions/offers";
 import { getSessionProfile } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
+import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 function normalizeDate(value: string) {
@@ -82,7 +83,8 @@ export async function convertLeadToStudent(leadId: string, startDate: string) {
     .maybeSingle();
 
   if (leadError || !updatedLead) {
-    await supabase.from("students").delete().eq("id", student.id);
+    const cleanupClient = createAdminSupabase() ?? supabase;
+    await cleanupClient.from("students").delete().eq("id", student.id);
     return { error: "Lead öğrenciye dönüştürülemedi" };
   }
 

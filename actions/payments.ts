@@ -11,6 +11,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { generateInstallments, remainderInstallment } from "@/lib/installments";
 import { logEvent } from "@/lib/events";
 import { formatTRY, kurusToTl, tlToKurus } from "@/lib/money";
+import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 type Supabase = Awaited<ReturnType<typeof createServerSupabase>>;
@@ -114,7 +115,8 @@ export async function createPaymentPlan(
   );
 
   if (installmentsError) {
-    const cleanup = await supabase.from("payment_plans").delete().eq("id", plan.id);
+    const cleanupClient = createAdminSupabase() ?? supabase;
+    const cleanup = await cleanupClient.from("payment_plans").delete().eq("id", plan.id);
     return {
       error: cleanup.error
         ? "Taksitler oluşturulamadı; ödeme planı manuel kontrol edilmeli"
@@ -198,8 +200,9 @@ export async function markInstallmentPaid(
     .eq("id", installmentId);
 
   if (updateError) {
+    const cleanupClient = createAdminSupabase() ?? supabase;
     const cleanup = remainderId
-      ? await supabase.from("installments").delete().eq("id", remainderId)
+      ? await cleanupClient.from("installments").delete().eq("id", remainderId)
       : null;
     return {
       error: cleanup?.error
