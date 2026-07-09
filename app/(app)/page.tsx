@@ -205,6 +205,7 @@ export default async function Home() {
       .select("id, parent_name, status, last_activity_at")
       .in("status", staleStatuses)
       .lt("last_activity_at", cutoff)
+      .not("assigned_to", "is", null)
       .order("last_activity_at", { ascending: true }),
     profile.role === "yonetici"
       ? supabase
