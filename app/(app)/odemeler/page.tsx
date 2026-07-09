@@ -85,10 +85,10 @@ function totalKurus(rows: InstallmentRow[]) {
 }
 
 function paidTotalKurus(rows: InstallmentRow[]) {
-  return rows.reduce(
-    (sum, row) => sum + tlToKurus(Number(row.paid_amount ?? row.amount)),
-    0,
-  );
+  return rows.reduce((sum, row) => {
+    if (row.paid_amount == null) return sum;
+    return sum + tlToKurus(Number(row.paid_amount));
+  }, 0);
 }
 
 function sortByDueDate(rows: InstallmentRow[]) {
