@@ -4,7 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 let yon: SupabaseClient, dan: SupabaseClient;
 let leadId: string, offerId: string, instId: string, eventId: string;
+let rejectedOfferId: string, approvedOfferId: string, convertedLeadId: string;
 const DAN_ID = "00000000-0000-0000-0000-000000000002";
+const YON_ID = "00000000-0000-0000-0000-000000000001";
 
 beforeAll(async () => {
   yon = await clientFor("yonetici@test.local");
@@ -38,6 +40,33 @@ beforeAll(async () => {
     entity_type: "lead", entity_id: leadId, event_type: "durum_degisti",
   }).select().single();
   eventId = ev!.id;
+
+  // Sonlanmış teklif kilidi testleri için: reddedilmiş ve onaylanmış birer teklif
+  const { data: rejectedOffer } = await admin.from("offers").insert({
+    lead_id: leadId, created_by: DAN_ID, program: "tam_gun",
+    list_price: 22000, offered_price: 15000, status: "reddedildi",
+    decided_by: YON_ID, decided_at: new Date().toISOString(),
+  }).select().single();
+  rejectedOfferId = rejectedOffer!.id;
+
+  const { data: approvedOffer } = await admin.from("offers").insert({
+    lead_id: leadId, created_by: DAN_ID, program: "tam_gun",
+    list_price: 22000, offered_price: 22000, status: "onaylandi",
+    decided_by: YON_ID, decided_at: new Date().toISOString(),
+  }).select().single();
+  approvedOfferId = approvedOffer!.id;
+
+  // Dönüştürülmüş lead kilidi testi için: kazanılmış, öğrenciye bağlı bir lead
+  const { data: convertedStudent } = await admin.from("students").insert({
+    full_name: "Dönüşüm Öğrenci", parent_name: "Dönüşüm Veli",
+    phone: "+905000000099", season: "2026-2027", program: "tam_gun",
+  }).select().single();
+  const { data: convertedLead } = await admin.from("leads").insert({
+    parent_name: "Dönüşüm Veli", phone: "+905000000099",
+    source: "referans", assigned_to: DAN_ID,
+    status: "kazanildi", converted_student_id: convertedStudent!.id,
+  }).select().single();
+  convertedLeadId = convertedLead!.id;
 });
 
 describe("RLS", () => {
@@ -88,5 +117,42 @@ describe("RLS", () => {
       list_price: 22000, offered_price: 20000, status: "onay_bekliyor",
     });
     expect(error).not.toBeNull();
+  });
+
+  // --- 0002: teklif sahteciliği ve sonuçlanmış teklif kilidi ---
+  it("danışman düşük list_price ile sahte 'onaylandi' teklif ekleyemez", async () => {
+    const { data, error } = await dan.from("offers").insert({
+      lead_id: leadId, created_by: DAN_ID, program: "tam_gun",
+      list_price: 1, offered_price: 1, status: "onaylandi",
+    }).select();
+    expect(error !== null || (data ?? []).length === 0).toBe(true);
+  });
+
+  it("yönetici 'reddedildi' teklifi 'onaylandi'ya çeviremez (sonuçlanmış teklif kilidi)", async () => {
+    const { data, error } = await yon.from("offers")
+      .update({ status: "onaylandi" }).eq("id", rejectedOfferId).select();
+    expect(error !== null || (data ?? []).length === 0).toBe(true);
+  });
+
+  it("'onaylandi' teklif 'gecersiz'e çevrilebilir (supersede akışı serbest kalmalı)", async () => {
+    const { data, error } = await yon.from("offers")
+      .update({ status: "gecersiz", superseded_by_offer_id: offerId })
+      .eq("id", approvedOfferId).select();
+    expect(error).toBeNull();
+    expect(data!.length).toBe(1);
+  });
+
+  // --- 0002: dönüştürülmüş lead kilidi ---
+  it("dönüştürülmüş lead'in parent_name alanı güncellenemez", async () => {
+    const { data, error } = await yon.from("leads")
+      .update({ parent_name: "Değiştirilmiş İsim" }).eq("id", convertedLeadId).select();
+    expect(error !== null || (data ?? []).length === 0).toBe(true);
+  });
+
+  it("dönüştürülmüş lead'de yalnızca last_activity_at güncellemesi geçer", async () => {
+    const { data, error } = await yon.from("leads")
+      .update({ last_activity_at: new Date().toISOString() }).eq("id", convertedLeadId).select();
+    expect(error).toBeNull();
+    expect(data!.length).toBe(1);
   });
 });
