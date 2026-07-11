@@ -116,19 +116,33 @@ export function OfferApprovalList({ offers }: OfferApprovalListProps) {
                 </div>
 
                 <div className="text-sm font-medium text-zinc-700">
+                  <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 lg:hidden">
+                    Danışman:
+                  </span>
                   {offer.consultantName ?? "Atanmamış"}
                 </div>
 
-                <div className="text-sm font-semibold text-zinc-900">
-                  {offer.listPriceText}
-                </div>
+                <div className="flex flex-wrap gap-x-6 gap-y-1 lg:contents">
+                  <div className="text-sm font-semibold text-zinc-900">
+                    <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 lg:hidden">
+                      Liste:
+                    </span>
+                    {offer.listPriceText}
+                  </div>
 
-                <div className="text-sm font-semibold text-zinc-900">
-                  {offer.offeredPriceText}
-                </div>
+                  <div className="text-sm font-semibold text-zinc-900">
+                    <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 lg:hidden">
+                      Teklif:
+                    </span>
+                    {offer.offeredPriceText}
+                  </div>
 
-                <div className="text-sm font-semibold text-zinc-900">
-                  {offer.discountText}
+                  <div className="text-sm font-semibold text-zinc-900">
+                    <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 lg:hidden">
+                      İndirim:
+                    </span>
+                    {offer.discountText}
+                  </div>
                 </div>
 
                 <div className="space-y-2">

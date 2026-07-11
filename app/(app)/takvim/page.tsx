@@ -141,18 +141,18 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
       isoWeek(istanbulTodayAsUtcDate()).year,
       isoWeek(istanbulTodayAsUtcDate()).week,
     );
-  const days = Array.from({ length: 5 }, (_, index) => addDays(selectedMonday, index));
+  const weekDays = Array.from({ length: 7 }, (_, index) => addDays(selectedMonday, index));
   const supabase = await createServerSupabase();
 
   const { data, error } = await supabase
     .from("appointments")
     .select("id, lead_id, scheduled_at, type, outcome, lead:leads(id, parent_name)")
     .gte("scheduled_at", istanbulDayStartIso(selectedMonday))
-    .lt("scheduled_at", istanbulDayStartIso(addDays(selectedMonday, 5)))
+    .lt("scheduled_at", istanbulDayStartIso(addDays(selectedMonday, 7)))
     .order("scheduled_at", { ascending: true });
 
   const appointments = (data ?? []) as unknown as CalendarAppointment[];
-  const byDay = new Map(days.map((day) => [ymd(day), [] as CalendarAppointment[]]));
+  const byDay = new Map(weekDays.map((day) => [ymd(day), [] as CalendarAppointment[]]));
 
   for (const appointment of appointments) {
     const date = new Date(appointment.scheduled_at);
@@ -167,6 +167,18 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
     const key = `${get("year")}-${get("month")}-${get("day")}`;
     byDay.get(key)?.push(appointment);
   }
+
+  // Hafta içi her zaman görünür; cumartesi/pazar yalnızca randevu varsa
+  // gösterilir ki hafta sonu randevuları takvimde asla kaybolmasın.
+  const days = weekDays.filter(
+    (day, index) => index < 5 || (byDay.get(ymd(day))?.length ?? 0) > 0,
+  );
+  const gridClass =
+    days.length === 7
+      ? "grid gap-4 lg:grid-cols-7"
+      : days.length === 6
+        ? "grid gap-4 lg:grid-cols-6"
+        : "grid gap-4 lg:grid-cols-5";
 
   const currentWeek = weekKey(selectedMonday);
   const prevWeek = weekKey(addDays(selectedMonday, -7));
@@ -229,7 +241,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         </p>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-5">
+      <section className={gridClass}>
         {days.map((day) => {
           const dayAppointments = byDay.get(ymd(day)) ?? [];
 
