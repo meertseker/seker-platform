@@ -20,6 +20,9 @@
 # production
 /build
 
+# seed script çıktıları — gerçek isim/telefon içerir, asla commit edilmez (Task 16)
+scripts/seed/out/
+
 # misc
 .DS_Store
 *.pem
