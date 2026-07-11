@@ -19,7 +19,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 import ws from "ws";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { normalizeTurkishPhone } from "../../lib/phone";
 import { LEAD_SOURCES, LEAD_STATUSES, LOST_REASONS, PROGRAMS, STUDENT_STATUSES } from "../../lib/constants";
 import { csvToObjects } from "./lib/csv";
@@ -87,13 +87,24 @@ function validYear(n: number | null): boolean {
 
 type SkipReport = { row: number; reason: string };
 
+// `rows` inserts ile aynı sırada, orijinal CSV satır numarasını taşır — DB'ye
+// yazılacak kayıtlarda kişisel veri (isim/telefon) tutmadan, rerun sırasında
+// mükerrer bulunan satırları "satır N" olarak raporlayabilmek için.
+type BuildResult = {
+  inserts: Record<string, unknown>[];
+  skipped: SkipReport[];
+  total: number;
+  rows: number[];
+};
+
 // ---------------------------------------------------------------------------
 // leads.csv -> public.leads
 // ---------------------------------------------------------------------------
 
-function buildLeadInserts(csvText: string, assignedTo: string) {
+function buildLeadInserts(csvText: string, assignedTo: string): BuildResult {
   const objects = csvToObjects(csvText);
   const inserts: Record<string, unknown>[] = [];
+  const rows: number[] = [];
   const skipped: SkipReport[] = [];
 
   objects.forEach((o, idx) => {
@@ -140,18 +151,20 @@ function buildLeadInserts(csvText: string, assignedTo: string) {
       assigned_to: assignedTo,
       ...(timestamp ? { last_activity_at: timestamp, created_at: timestamp } : {}),
     });
+    rows.push(rowNo);
   });
 
-  return { inserts, skipped, total: objects.length };
+  return { inserts, skipped, total: objects.length, rows };
 }
 
 // ---------------------------------------------------------------------------
 // students.csv -> public.students
 // ---------------------------------------------------------------------------
 
-function buildStudentInserts(csvText: string) {
+function buildStudentInserts(csvText: string): BuildResult {
   const objects = csvToObjects(csvText);
   const inserts: Record<string, unknown>[] = [];
+  const rows: number[] = [];
   const skipped: SkipReport[] = [];
 
   objects.forEach((o, idx) => {
@@ -193,9 +206,95 @@ function buildStudentInserts(csvText: string) {
       ...(startDate ? { start_date: startDate } : {}),
       ...(status ? { status } : {}),
     });
+    rows.push(rowNo);
   });
 
-  return { inserts, skipped, total: objects.length };
+  return { inserts, skipped, total: objects.length, rows };
+}
+
+// ---------------------------------------------------------------------------
+// Rerun / idempotency helpers
+//
+// Bu script insan onayıyla birden fazla kez (crash sonrası devam dahil) çalışabilir.
+// leads.phone üzerinde yalnızca UNIQUE OLMAYAN bir index var, yani aynı CSV ile
+// ikinci çalıştırma satırları sessizce çoğaltır. Bunu önlemek için DB'ye yazmadan
+// önce zaten var olan satırları "doğal anahtar" ile tespit edip atlıyoruz:
+//   - leads: telefon tek başına yeterli anahtar (bir veli/lead telefonu tekildir).
+//   - students: telefon TEK BAŞINA yetersiz — aynı ailede (aynı veli telefonu)
+//     birden fazla çocuk kayıtlı olabilir, bu yüzden telefon + full_name birleşimi
+//     kullanılır (kardeşleri birbirinden ayırt eder). Bu da tek başına mükemmel
+//     değildir (iki farklı aile aynı telefonu paylaşamaz ama teorik olarak aynı
+//     çocuk adını taşıyabilir + aynı telefon olursa nadir bir çakışma olur); pratikte
+//     seed verisi tek bir okulun tek dönemlik kütüğü olduğundan bu risk kabul edilebilir
+//     ve brief'te başka bir doğal anahtar (ör. TC kimlik) yok.
+// ---------------------------------------------------------------------------
+
+function studentDedupeKey(phone: string, fullName: string): string {
+  return `${phone}::${fullName.trim().toLocaleLowerCase("tr")}`;
+}
+
+async function fetchExistingLeadPhones(db: SupabaseClient): Promise<Set<string>> {
+  const { data, error } = await db.from("leads").select("phone");
+  if (error) throw new Error(`mevcut lead telefonları okunamadı: ${error.message}`);
+  return new Set(((data ?? []) as { phone: string }[]).map((r) => r.phone));
+}
+
+async function fetchExistingStudentKeys(db: SupabaseClient): Promise<Set<string>> {
+  const { data, error } = await db.from("students").select("phone, full_name");
+  if (error) throw new Error(`mevcut öğrenci kayıtları okunamadı: ${error.message}`);
+  return new Set(
+    ((data ?? []) as { phone: string; full_name: string }[]).map((r) => studentDedupeKey(r.phone, r.full_name))
+  );
+}
+
+/** `result.inserts`'i mutasyona uğratarak zaten DB'de olan satırları çıkarır ve
+ * `result.skipped`'e "telefon zaten kayıtlı" nedeniyle ekler. Kişisel veri (isim/
+ * telefon) loglanmaz — yalnızca orijinal CSV satır numarası. */
+function dropExisting(result: BuildResult, keyOf: (row: Record<string, unknown>) => string, existing: Set<string>) {
+  const keptInserts: Record<string, unknown>[] = [];
+  const keptRows: number[] = [];
+  result.inserts.forEach((row, i) => {
+    if (existing.has(keyOf(row))) {
+      result.skipped.push({ row: result.rows[i], reason: "telefon zaten kayıtlı" });
+    } else {
+      keptInserts.push(row);
+      keptRows.push(result.rows[i]);
+    }
+  });
+  result.inserts = keptInserts;
+  result.rows = keptRows;
+}
+
+/** Daha önce bu entity_type için bir seed_import event'i var mı diye bakar ve
+ * varsa operatörü Türkçe bir uyarı ile bilgilendirir. Engellemez — telefon bazlı
+ * dedupe (yukarıda) devam etmeyi zaten güvenli kılıyor. */
+async function warnIfPreviousSeedExists(db: SupabaseClient, entityType: "lead" | "student") {
+  const { data, error } = await db
+    .from("events")
+    .select("id")
+    .eq("entity_type", entityType)
+    .eq("event_type", "seed_import")
+    .limit(1);
+  if (error) throw new Error(`seed_import kontrolü başarısız (${entityType}): ${error.message}`);
+  if ((data ?? []).length > 0) {
+    console.warn(
+      `UYARI: '${entityType}' için daha önce bir seed_import event'i bulundu — bu script bu ` +
+        `ortamda daha önce (kısmen veya tamamen) çalıştırılmış görünüyor. Telefon bazlı tekrar-` +
+        `kontrolü sayesinde zaten var olan kayıtlar atlanacağından devam etmek güvenli; yine de ` +
+        `sonucu (atlanan/yüklenen sayıları) gözden geçirin.`
+    );
+  }
+}
+
+function printSummary(opts: Options, leadResult: BuildResult, studentResult: BuildResult) {
+  console.log("=== upload.ts özet ===");
+  console.log(`Mod: ${opts.dryRun ? "DRY RUN (DB'ye yazılmayacak)" : "GERÇEK YÜKLEME"}`);
+  console.log(`Leads: toplam=${leadResult.total} yüklenecek=${leadResult.inserts.length} atlanacak=${leadResult.skipped.length}`);
+  for (const s of leadResult.skipped.slice(0, 20)) console.log(`  [leads satır ${s.row}] ${s.reason}`);
+  console.log(
+    `Students: toplam=${studentResult.total} yüklenecek=${studentResult.inserts.length} atlanacak=${studentResult.skipped.length}`
+  );
+  for (const s of studentResult.skipped.slice(0, 20)) console.log(`  [students satır ${s.row}] ${s.reason}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -227,21 +326,18 @@ async function main() {
     process.exit(1);
   }
 
-  const leadResult = opts.skipLeads
-    ? { inserts: [], skipped: [], total: 0 }
+  const leadResult: BuildResult = opts.skipLeads
+    ? { inserts: [], skipped: [], total: 0, rows: [] }
     : buildLeadInserts(leadsCsv, opts.assignedTo!);
-  const studentResult = opts.skipStudents
-    ? { inserts: [], skipped: [], total: 0 }
+  const studentResult: BuildResult = opts.skipStudents
+    ? { inserts: [], skipped: [], total: 0, rows: [] }
     : buildStudentInserts(studentsCsv);
 
-  console.log("=== upload.ts özet ===");
-  console.log(`Mod: ${opts.dryRun ? "DRY RUN (DB'ye yazılmayacak)" : "GERÇEK YÜKLEME"}`);
-  console.log(`Leads: toplam=${leadResult.total} yüklenecek=${leadResult.inserts.length} atlanacak=${leadResult.skipped.length}`);
-  for (const s of leadResult.skipped.slice(0, 20)) console.log(`  [leads satır ${s.row}] ${s.reason}`);
-  console.log(`Students: toplam=${studentResult.total} yüklenecek=${studentResult.inserts.length} atlanacak=${studentResult.skipped.length}`);
-  for (const s of studentResult.skipped.slice(0, 20)) console.log(`  [students satır ${s.row}] ${s.reason}`);
-
   if (opts.dryRun) {
+    // --dry-run tamamen "inert" kalmalı: hiçbir DB istemcisi kurulmaz, hiçbir
+    // ağ çağrısı yapılmaz. DB tekrar-kontrolü (dedupe) bu yüzden yalnızca aşağıdaki
+    // gerçek yükleme yolunda çalışır.
+    printSummary(opts, leadResult, studentResult);
     console.log("\nDry-run: DB'ye hiçbir şey yazılmadı.");
     return;
   }
@@ -253,6 +349,28 @@ async function main() {
     process.exit(1);
   }
   const db = createClient(url, serviceKey, { auth: { persistSession: false } });
+
+  // Pre-flight: bu ortamda daha önce seed çalıştırılmış mı? Bilgilendirir, engellemez.
+  if (!opts.skipLeads) await warnIfPreviousSeedExists(db, "lead");
+  if (!opts.skipStudents) await warnIfPreviousSeedExists(db, "student");
+
+  // Rerun-safety: DB'de zaten var olan satırları CSV'den ayıkla (bkz. yukarıdaki
+  // "Rerun / idempotency helpers" bölümü — leads.phone unique olmadığından bu kontrol
+  // olmadan crash sonrası yeniden çalıştırma tüm satırları çoğaltırdı).
+  if (leadResult.inserts.length > 0) {
+    const existingPhones = await fetchExistingLeadPhones(db);
+    dropExisting(leadResult, (row) => row.phone as string, existingPhones);
+  }
+  if (studentResult.inserts.length > 0) {
+    const existingStudentKeys = await fetchExistingStudentKeys(db);
+    dropExisting(
+      studentResult,
+      (row) => studentDedupeKey(row.phone as string, row.full_name as string),
+      existingStudentKeys
+    );
+  }
+
+  printSummary(opts, leadResult, studentResult);
 
   if (leadResult.inserts.length > 0) {
     const { error } = await db.from("leads").insert(leadResult.inserts);

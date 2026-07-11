@@ -117,6 +117,20 @@ her toplu yüklemeden sonra tek bir işaret event'i yazılır:
 yazmaz). Bu yüzden WhatsApp'tan çıkarılan ham metin, leadin `source_detail`
 kolonuna yazılır; bu tasarım kararı burada belgelenmiştir.
 
+**Crash sonrası yeniden çalıştırma güvenlidir.** `leads.phone` üzerinde yalnızca
+unique OLMAYAN bir index bulunduğundan, script her gerçek yüklemeden önce DB'de
+zaten var olan satırları kontrol eder ve atlar: leads için telefon tek başına
+anahtardır; students için telefon + `full_name` birleşimi kullanılır (aynı veli
+telefonuyla birden fazla kardeş kayıtlı olabileceğinden telefon tek başına
+yetersizdir). Bu yüzden işlem yarıda kesilse (crash, ağ hatası vb.) bile aynı
+CSV ile scripti tekrar çalıştırmak güvenlidir — zaten yüklenmiş satırlar
+"telefon zaten kayıtlı" nedeniyle atlanacak ve yalnızca eksik kalan satırlar
+yüklenecektir. Ayrıca script, gerçek yükleme öncesi ilgili `entity_type` için
+daha önce bir `seed_import` event'i olup olmadığını kontrol eder; varsa
+konsola bir UYARI basar (bu ortamda script'in daha önce çalıştığını bildirir).
+Bu uyarı işlemi **durdurmaz** — yukarıdaki telefon bazlı kontrol devam etmeyi
+zaten güvenli kıldığı için sadece operatörü bilgilendirir.
+
 ## Gizlilik
 
 - `out/*.csv` gerçek ad/telefon içerir — **asla commit edilmez** (`.gitignore`'da
