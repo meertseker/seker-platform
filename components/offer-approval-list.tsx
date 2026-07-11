@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { decideOffer } from "@/actions/offers";
 import type { Program } from "@/lib/constants";
+import { parseTlInput } from "@/lib/tl-input";
 
 export interface PendingOfferItem {
   id: string;
@@ -23,12 +24,6 @@ export interface PendingOfferItem {
 
 interface OfferApprovalListProps {
   offers: PendingOfferItem[];
-}
-
-function parseTl(value: string) {
-  const normalized = value.replace(/\./g, "").replace(",", ".");
-  const amount = Number(normalized);
-  return Number.isFinite(amount) ? amount : null;
 }
 
 export function OfferApprovalList({ offers }: OfferApprovalListProps) {
@@ -64,7 +59,7 @@ export function OfferApprovalList({ offers }: OfferApprovalListProps) {
   }
 
   function submitCounter(offerId: string) {
-    const counterPrice = parseTl(counterDrafts[offerId] ?? "");
+    const counterPrice = parseTlInput(counterDrafts[offerId] ?? "");
     if (!counterPrice) {
       setError("Geçerli bir karşı rakam girin.");
       return;

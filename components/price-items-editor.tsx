@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { upsertPriceItem } from "@/actions/price-lists";
 import { label, PROGRAMS, type Program } from "@/lib/constants";
+import { formatTlInput, parseTlInput } from "@/lib/tl-input";
 
 export interface PriceItemRow {
   program: Program;
@@ -16,12 +17,6 @@ interface PriceItemsEditorProps {
   items: PriceItemRow[];
 }
 
-function parseTl(value: string) {
-  const normalized = value.replace(/\./g, "").replace(",", ".").trim();
-  if (!normalized) return NaN;
-  return Number(normalized);
-}
-
 export function PriceItemsEditor({ priceListId, items }: PriceItemsEditorProps) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Record<Program, { monthly: string; registration: string }>>(
@@ -30,8 +25,8 @@ export function PriceItemsEditor({ priceListId, items }: PriceItemsEditorProps) 
         items.map((item) => [
           item.program,
           {
-            monthly: String(item.monthlyFeeTl),
-            registration: String(item.registrationFeeTl),
+            monthly: formatTlInput(item.monthlyFeeTl),
+            registration: formatTlInput(item.registrationFeeTl),
           },
         ]),
       ) as Record<Program, { monthly: string; registration: string }>,
@@ -52,14 +47,14 @@ export function PriceItemsEditor({ priceListId, items }: PriceItemsEditorProps) 
 
   function submit(program: Program) {
     const draft = drafts[program];
-    const monthlyFeeTl = parseTl(draft?.monthly ?? "");
-    const registrationFeeTl = parseTl(draft?.registration ?? "");
+    const monthlyFeeTl = parseTlInput(draft?.monthly ?? "");
+    const registrationFeeTl = parseTlInput(draft?.registration ?? "");
 
-    if (!Number.isFinite(monthlyFeeTl) || monthlyFeeTl <= 0) {
+    if (monthlyFeeTl === null || monthlyFeeTl <= 0) {
       setError("Geçerli bir aylık aidat girin");
       return;
     }
-    if (!Number.isFinite(registrationFeeTl) || registrationFeeTl < 0) {
+    if (registrationFeeTl === null) {
       setError("Geçerli bir kayıt ücreti girin");
       return;
     }

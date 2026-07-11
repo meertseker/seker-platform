@@ -70,6 +70,12 @@ export async function setActiveSeason(id: string): Promise<PriceListActionResult
 
   if (!target) return { error: "Fiyat listesi bulunamadı" };
 
+  const { data: previousActive } = await supabase
+    .from("price_lists")
+    .select("id, season")
+    .eq("is_active", true)
+    .maybeSingle();
+
   const { error: deactivateError } = await supabase
     .from("price_lists")
     .update({ is_active: false })
@@ -85,7 +91,30 @@ export async function setActiveSeason(id: string): Promise<PriceListActionResult
     .maybeSingle();
 
   if (activateError || !activated) {
-    return { error: "Sezon aktifleştirilemedi" };
+    // Deactivate-all already succeeded, so no price list is active right now
+    // (new offers would fail). Try to restore whichever season was active
+    // before we started, so the system isn't left with zero active seasons.
+    if (previousActive && previousActive.id !== id) {
+      const { data: restored, error: restoreError } = await supabase
+        .from("price_lists")
+        .update({ is_active: true })
+        .eq("id", previousActive.id)
+        .select("id")
+        .maybeSingle();
+
+      if (!restoreError && restored) {
+        revalidateSettingsViews();
+        return {
+          error: `Sezon aktifleştirilemedi; "${previousActive.season}" sezonu tekrar aktif hale getirildi`,
+        };
+      }
+    }
+
+    return {
+      error: previousActive
+        ? `Sezon aktifleştirilemedi ve "${previousActive.season}" sezonu otomatik olarak geri yüklenemedi; lütfen "${previousActive.season}" sezonunu manuel olarak aktif hale getirin`
+        : "Sezon aktifleştirilemedi ve şu anda hiçbir sezon aktif değil; lütfen bir sezonu manuel olarak aktif hale getirin",
+    };
   }
 
   await logEvent(supabase, {
