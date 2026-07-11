@@ -8,5 +8,7 @@ export async function logEvent(supabase: SupabaseClient, e: {
     entity_type: e.entityType, entity_id: e.entityId,
     event_type: e.eventType, actor_id: e.actorId, payload: e.payload ?? {},
   });
-  if (error) throw new Error(`Event yazılamadı: ${error.message}`);
+  // Mutasyon zaten commit edildi; kayıp bir audit satırı 500'e ve tekrar
+  // denemeye yol açmamalı, yalnızca loglanır.
+  if (error) console.error(`Event yazılamadı: ${error.message}`);
 }

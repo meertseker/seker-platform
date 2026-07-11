@@ -6,6 +6,7 @@ import { createPaymentPlan } from "@/actions/payments";
 import { ITEM_TYPES, label, type ItemType } from "@/lib/constants";
 import { generateInstallments } from "@/lib/installments";
 import { formatTRY, tlToKurus } from "@/lib/money";
+import { formatTlInput, parseTlInput } from "@/lib/tl-input";
 
 interface PlanWizardProps {
   studentId: string;
@@ -26,12 +27,6 @@ function todayInIstanbul() {
   }).format(new Date());
 }
 
-function parseTl(value: string) {
-  const normalized = value.replace(",", ".").trim();
-  if (!normalized) return NaN;
-  return Number(normalized);
-}
-
 export function PlanWizard({
   studentId,
   initialOpen = false,
@@ -42,15 +37,17 @@ export function PlanWizard({
   const router = useRouter();
   const [open, setOpen] = useState(initialOpen);
   const [itemType, setItemType] = useState<ItemType>("aidat");
-  const [total, setTotal] = useState(initialTotalTl ? String(initialTotalTl) : "");
+  const [total, setTotal] = useState(
+    initialTotalTl ? formatTlInput(initialTotalTl) : "",
+  );
   const [count, setCount] = useState(initialInstallmentCount ?? 10);
   const [firstDueDate, setFirstDueDate] = useState(() => todayInIstanbul());
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const totalTl = parseTl(total);
+  const totalTl = parseTlInput(total);
   const preview = useMemo(() => {
-    if (!Number.isFinite(totalTl) || totalTl <= 0 || count < 1 || count > 12 || !firstDueDate) {
+    if (totalTl === null || totalTl <= 0 || count < 1 || count > 12 || !firstDueDate) {
       return [];
     }
 
@@ -62,6 +59,7 @@ export function PlanWizard({
   }, [count, firstDueDate, totalTl]);
 
   function submit() {
+    if (totalTl === null) return;
     setError(null);
     startTransition(async () => {
       const result = await createPaymentPlan(

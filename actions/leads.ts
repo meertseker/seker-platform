@@ -83,6 +83,16 @@ export interface UpdateLeadFields {
 export async function updateLead(leadId: string, fields: UpdateLeadFields) {
   const profile = await getSessionProfile();
   const supabase = await createServerSupabase();
+
+  const { data: existingLead } = await supabase
+    .from("leads")
+    .select("converted_student_id")
+    .eq("id", leadId)
+    .maybeSingle();
+  if (existingLead?.converted_student_id) {
+    return { error: "Öğrenciye dönüştürülmüş lead güncellenemez" };
+  }
+
   const patch: Record<string, string | number | null> = {};
 
   if (fields.parentName !== undefined) {

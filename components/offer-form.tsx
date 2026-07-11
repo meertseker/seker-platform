@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createOffer } from "@/actions/offers";
 import { label, PROGRAMS, type Program } from "@/lib/constants";
+import { parseTlInput } from "@/lib/tl-input";
 
 export interface ActivePriceItem {
   program: Program;
@@ -18,12 +19,6 @@ interface OfferFormProps {
 
 const programKeys = Object.keys(PROGRAMS) as Program[];
 const installmentOptions = Array.from({ length: 12 }, (_, index) => index + 1);
-
-function parseTl(value: string) {
-  const normalized = value.replace(/\./g, "").replace(",", ".");
-  const amount = Number(normalized);
-  return Number.isFinite(amount) ? amount : null;
-}
 
 export function OfferForm({ leadId, priceItems }: OfferFormProps) {
   const router = useRouter();
@@ -43,7 +38,7 @@ export function OfferForm({ leadId, priceItems }: OfferFormProps) {
     const form = event.currentTarget;
     const formData = new FormData(form);
     const program = String(formData.get("program") ?? "") as Program;
-    const offeredPrice = parseTl(String(formData.get("offeredPrice") ?? ""));
+    const offeredPrice = parseTlInput(String(formData.get("offeredPrice") ?? ""));
     const installmentCount = Number(formData.get("installmentCount"));
     const note = String(formData.get("note") ?? "");
 

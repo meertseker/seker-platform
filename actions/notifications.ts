@@ -23,8 +23,10 @@ export async function notify(
     payload,
   });
 
+  // Mutasyon zaten commit edildi; kayıp bir bildirim 500'e ve tekrar
+  // denemeye yol açmamalı, yalnızca loglanır.
   if (error) {
-    throw new Error(`Bildirim yazılamadı: ${error.message}`);
+    console.error(`Bildirim yazılamadı: ${error.message}`);
   }
 }
 

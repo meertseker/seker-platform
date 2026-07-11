@@ -13,6 +13,7 @@ import {
   type PaymentMethod,
 } from "@/lib/constants";
 import { formatTRY, tlToKurus } from "@/lib/money";
+import { formatTlInput, parseTlInput } from "@/lib/tl-input";
 
 export interface InstallmentTableItem {
   id: string;
@@ -52,14 +53,6 @@ function formatDate(date: string) {
   return dateFormatter.format(new Date(`${date}T12:00:00+03:00`));
 }
 
-function moneyInput(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(2);
-}
-
-function parseTl(value: string) {
-  return Number(value.replace(",", ".").trim());
-}
-
 export function InstallmentTable({ installments, role, today }: InstallmentTableProps) {
   const router = useRouter();
   const [paying, setPaying] = useState<InstallmentTableItem | null>(null);
@@ -83,18 +76,23 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
   function openPayModal(installment: InstallmentTableItem) {
     setError(null);
     setPaying(installment);
-    setPaidAmount(moneyInput(installment.amount));
+    setPaidAmount(formatTlInput(installment.amount));
     setPaymentMethod("havale");
     setPaidAt(todayInIstanbul());
   }
 
   function submitPaid() {
     if (!paying) return;
+    const amount = parseTlInput(paidAmount);
+    if (amount === null) {
+      setError("Geçerli bir tutar girin");
+      return;
+    }
     setError(null);
     startTransition(async () => {
       const result = await markInstallmentPaid(
         paying.id,
-        parseTl(paidAmount),
+        amount,
         paymentMethod,
         paidAt,
       );
@@ -110,16 +108,21 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
   function openEdit(installment: InstallmentTableItem) {
     setError(null);
     setEditing(installment);
-    setEditAmount(moneyInput(installment.amount));
+    setEditAmount(formatTlInput(installment.amount));
     setEditDueDate(installment.due_date);
   }
 
   function submitEdit() {
     if (!editing) return;
+    const amount = parseTlInput(editAmount);
+    if (amount === null) {
+      setError("Geçerli bir tutar girin");
+      return;
+    }
     setError(null);
     startTransition(async () => {
       const result = await updateInstallment(editing.id, {
-        amountTl: parseTl(editAmount),
+        amountTl: amount,
         dueDate: editDueDate,
       });
       if (result.error) {

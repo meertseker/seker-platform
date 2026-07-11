@@ -213,6 +213,9 @@ export async function decideOffer(
     .maybeSingle();
 
   if (!offer) return { error: "Teklif bulunamadı" };
+  if (offer.status !== "onay_bekliyor") {
+    return { error: "Teklif zaten sonuçlandırılmış" };
+  }
 
   const decidedAt = new Date().toISOString();
 
@@ -220,7 +223,7 @@ export async function decideOffer(
     const counterPrice = normalizeMoney(counterPriceTl);
     if (!counterPrice) return { error: "Geçerli bir karşı rakam girin" };
 
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("offers")
       .update({
         status: "revize_edildi",
@@ -228,9 +231,13 @@ export async function decideOffer(
         decided_by: profile.id,
         decided_at: decidedAt,
       })
-      .eq("id", offerId);
+      .eq("id", offerId)
+      .eq("status", "onay_bekliyor")
+      .select("id")
+      .maybeSingle();
 
     if (error) return { error: "Karşı rakam kaydedilemedi" };
+    if (!updated) return { error: "Teklif zaten sonuçlandırılmış" };
 
     await logEvent(supabase, {
       entityType: "offer",
@@ -256,14 +263,17 @@ export async function decideOffer(
     await supersedeApprovedOffers(supabase, offer.lead_id, offerId);
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("offers")
     .update({
       status: decision,
       decided_by: profile.id,
       decided_at: decidedAt,
     })
-    .eq("id", offerId);
+    .eq("id", offerId)
+    .eq("status", "onay_bekliyor")
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return {
@@ -272,6 +282,9 @@ export async function decideOffer(
           ? "Teklif onaylanamadı"
           : "Teklif reddedilemedi",
     };
+  }
+  if (!updated) {
+    return { error: "Teklif zaten sonuçlandırılmış" };
   }
 
   const eventType =
