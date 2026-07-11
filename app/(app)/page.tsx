@@ -9,12 +9,16 @@ import {
   type AppointmentType,
   type LeadStatus,
 } from "@/lib/constants";
-import { formatTRY, tlToKurus } from "@/lib/money";
+import {
+  STALE_LEAD_STATUSES,
+  staleCutoffIso,
+  istanbulDateString,
+  overdueTotalKurus,
+} from "@/lib/cron-rules";
+import { formatTRY } from "@/lib/money";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-type OpenLeadStatus = "yeni" | "ulasildi" | "gorusme_yapildi" | "teklif";
 
 interface LeadJoin {
   id: string;
@@ -53,13 +57,6 @@ interface StaleLeadRow {
   last_activity_at: string;
 }
 
-const staleStatuses: OpenLeadStatus[] = [
-  "yeni",
-  "ulasildi",
-  "gorusme_yapildi",
-  "teklif",
-];
-
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
   day: "numeric",
   month: "long",
@@ -69,10 +66,6 @@ const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
 
 function one<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
-}
-
-function todayInIstanbul() {
-  return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" });
 }
 
 function formatDate(value: string) {
@@ -159,7 +152,7 @@ export default async function Home() {
   const profile = await getSessionProfile();
   const supabase = await createServerSupabase();
   const now = new Date();
-  const today = todayInIstanbul();
+  const today = istanbulDateString(now);
   const dayStart = `${today}T00:00:00+03:00`;
   const dayEnd = `${today}T23:59:59+03:00`;
 
@@ -194,7 +187,7 @@ export default async function Home() {
   ]);
 
   const staleDays = Number(settingsResult.data?.value ?? 3);
-  const cutoff = new Date(now.getTime() - staleDays * 86400000).toISOString();
+  const cutoff = staleCutoffIso(now, staleDays);
   const [
     staleLeadsResult,
     pendingOffersResult,
@@ -203,7 +196,7 @@ export default async function Home() {
     supabase
       .from("leads")
       .select("id, parent_name, status, last_activity_at")
-      .in("status", staleStatuses)
+      .in("status", STALE_LEAD_STATUSES)
       .lt("last_activity_at", cutoff)
       .not("assigned_to", "is", null)
       .order("last_activity_at", { ascending: true }),
@@ -227,10 +220,7 @@ export default async function Home() {
   );
   const tasks = (tasksResult.data ?? []) as unknown as TaskRow[];
   const staleLeads = (staleLeadsResult.data ?? []) as unknown as StaleLeadRow[];
-  const overdueTotal = (overdueInstallmentsResult.data ?? []).reduce(
-    (sum, row) => sum + tlToKurus(Number(row.amount)),
-    0,
-  );
+  const overdueTotal = overdueTotalKurus(overdueInstallmentsResult.data ?? []);
 
   return (
     <div className="space-y-6">
