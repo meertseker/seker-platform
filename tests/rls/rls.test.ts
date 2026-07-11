@@ -5,6 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 let yon: SupabaseClient, dan: SupabaseClient;
 let leadId: string, offerId: string, instId: string, eventId: string;
 let rejectedOfferId: string, approvedOfferId: string, convertedLeadId: string;
+let counterLeadId: string, counterOfferId: string;
+let pendingInsertLeadId: string, autoApproveLeadId: string;
 const DAN_ID = "00000000-0000-0000-0000-000000000002";
 const YON_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -67,6 +69,36 @@ beforeAll(async () => {
     status: "kazanildi", converted_student_id: convertedStudent!.id,
   }).select().single();
   convertedLeadId = convertedLead!.id;
+
+  // Karşı teklif kabulü (accept_counter_offer RPC) testleri için: yönetici
+  // tarafından revize edilmiş (counter_price dolu), henüz kullanılmamış bir teklif.
+  const { data: counterLead } = await admin.from("leads").insert({
+    parent_name: "Karşı Teklif Veli", phone: "+905000000077",
+    source: "referans", assigned_to: DAN_ID,
+  }).select().single();
+  counterLeadId = counterLead!.id;
+  const { data: counterOffer } = await admin.from("offers").insert({
+    lead_id: counterLeadId, created_by: DAN_ID, program: "tam_gun",
+    list_price: 22000, offered_price: 18000, status: "revize_edildi",
+    counter_price: 20000, decided_by: YON_ID, decided_at: new Date().toISOString(),
+  }).select().single();
+  counterOfferId = counterOffer!.id;
+
+  // Danışmanın normal teklif akışlarının (onay_bekliyor insert, tam liste
+  // fiyatında otomatik onay) 0002 sahtecilik korumasıyla hâlâ çalıştığını
+  // doğrulamak için ayrı lead'ler (partial unique index bir lead'e tek
+  // onay_bekliyor teklife izin verir).
+  const { data: pendingLead } = await admin.from("leads").insert({
+    parent_name: "Bekleyen Teklif Veli", phone: "+905000000078",
+    source: "referans", assigned_to: DAN_ID,
+  }).select().single();
+  pendingInsertLeadId = pendingLead!.id;
+
+  const { data: autoApproveLead } = await admin.from("leads").insert({
+    parent_name: "Otomatik Onay Veli", phone: "+905000000079",
+    source: "referans", assigned_to: DAN_ID,
+  }).select().single();
+  autoApproveLeadId = autoApproveLead!.id;
 });
 
 describe("RLS", () => {
@@ -154,5 +186,60 @@ describe("RLS", () => {
       .update({ last_activity_at: new Date().toISOString() }).eq("id", convertedLeadId).select();
     expect(error).toBeNull();
     expect(data!.length).toBe(1);
+  });
+
+  // --- Karşı teklif kabulü: accept_counter_offer() RPC (danışman için atomik) ---
+  let newCounterAcceptedOfferId: string;
+
+  it("danışman karşı rakamı kabul edebilir: yeni 'onaylandi' teklif oluşur ve kaynak kapanır", async () => {
+    const { data, error } = await dan.rpc("accept_counter_offer", {
+      source_offer_id: counterOfferId,
+    });
+    expect(error).toBeNull();
+    expect(typeof data).toBe("string");
+    newCounterAcceptedOfferId = data as string;
+
+    const { data: newOffer } = await admin.from("offers")
+      .select("status, offered_price, lead_id, decided_by")
+      .eq("id", newCounterAcceptedOfferId).single();
+    expect(newOffer!.status).toBe("onaylandi");
+    expect(Number(newOffer!.offered_price)).toBe(20000);
+    expect(newOffer!.lead_id).toBe(counterLeadId);
+    expect(newOffer!.decided_by).toBe(YON_ID);
+
+    const { data: source } = await admin.from("offers")
+      .select("status, superseded_by_offer_id")
+      .eq("id", counterOfferId).single();
+    expect(source!.superseded_by_offer_id).toBe(newCounterAcceptedOfferId);
+    // Kaynağın durumu 'revize_edildi' olarak kalır (yalnızca supersede alanı değişir).
+    expect(source!.status).toBe("revize_edildi");
+  });
+
+  it("aynı karşı teklif ikinci kez kabul edilemez (yeniden kullanım koruması)", async () => {
+    const { data, error } = await dan.rpc("accept_counter_offer", {
+      source_offer_id: counterOfferId,
+    });
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+    expect(error!.message).toContain("zaten kullanılmış");
+  });
+
+  it("danışman normal 'onay_bekliyor' teklif oluşturabilir", async () => {
+    const { data, error } = await dan.from("offers").insert({
+      lead_id: pendingInsertLeadId, created_by: DAN_ID, program: "tam_gun",
+      list_price: 22000, offered_price: 19000, status: "onay_bekliyor",
+    }).select();
+    expect(error).toBeNull();
+    expect(data!.length).toBe(1);
+  });
+
+  it("danışman aktif liste fiyatına eşit teklifle gerçek otomatik onay oluşturabilir", async () => {
+    const { data, error } = await dan.from("offers").insert({
+      lead_id: autoApproveLeadId, created_by: DAN_ID, program: "tam_gun",
+      list_price: 22000, offered_price: 22000, status: "onaylandi",
+    }).select();
+    expect(error).toBeNull();
+    expect(data!.length).toBe(1);
+    expect(data![0].decided_by).toBeNull();
   });
 });

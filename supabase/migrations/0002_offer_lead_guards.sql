@@ -38,8 +38,13 @@ language plpgsql security definer set search_path = public as $$
 declare
   active_price numeric(12,2);
 begin
-  -- service_role (auth.uid() IS NULL, ör. test fixture'ları) ve yöneticiler: kısıtsız
-  if (select auth.uid()) is null or public.is_yonetici() then
+  -- service_role (auth.uid() IS NULL, ör. test fixture'ları), yöneticiler ve
+  -- accept_counter_offer() RPC'si (bkz. dosya sonu) içindeki denetimli insert: kısıtsız.
+  -- app.accept_counter yalnızca bu dosyadaki SECURITY DEFINER fonksiyon içinden,
+  -- transaction-local olarak set edilebilir; PostgREST pg_catalog.set_config'i
+  -- istemciye açmadığı için dışarıdan taklit edilemez.
+  if (select auth.uid()) is null or public.is_yonetici()
+     or current_setting('app.accept_counter', true) = '1' then
     return new;
   end if;
 
@@ -158,3 +163,144 @@ $$;
 create trigger guard_leads_converted
   before update on public.leads
   for each row execute function public.guard_leads_converted();
+
+-- ===================== 4) Karşı teklif kabulü: danışman için atomik RPC =====================
+--
+-- Final-review takibi: spec §6.2 akışının 2. adımı (yönetici 'revize_edildi' +
+-- counter_price ile karşı teklif sunar -> danışman "Karşı rakamla teklif
+-- oluştur" der -> createOfferFromCounter yeni 'onaylandi' teklif açar ve
+-- kaynağı superseded_by_offer_id ile kapatır) danışman için iki yönden kırıktı:
+--
+--  a) Kaynak teklifin superseded_by_offer_id güncellemesi danışman için
+--     RLS (upd_offers_danisman with check status='gecersiz') VE
+--     guard_offers_danisman (yukarıda; status 'gecersiz' değilse red) yüzünden
+--     başarısız oluyordu — durum 'revize_edildi' olarak kalıyor.
+--  b) Bu dosyadaki guard_offers_insert, decided_by dolu geldiği için (karşı
+--     teklif akışı decided_by'ı kaynaktan kopyalar) danışman insert'ini
+--     doğrudan reddediyordu.
+--
+-- Sonuç: orphan (kaynağı kapatılmamış) onaylı teklif + atlanmış event/lead
+-- durumu ilerletme. Çözüm: tüm işlemi tek bir SECURITY DEFINER RPC'ye
+-- taşımak (Option A). RPC postgres sahipli olduğu için içindeki tüm
+-- yazımlar RLS'i bypass eder (superuser), ANCAK BEFORE trigger'lar (yukarıdaki
+-- guard_offers_insert / guard_offers_danisman) rol/RLS'den bağımsız her
+-- yazımda tetiklenir — bu yüzden onlara transaction-local
+-- `app.accept_counter` bayrağıyla kısıtlı bir bypass eklendi (yalnızca bu
+-- fonksiyon set edebilir; PostgREST pg_catalog.set_config'i istemciye
+-- açığa çıkarmadığından dışarıdan taklit edilemez). auth.uid() SECURITY
+-- DEFINER içinde de çağıranın kimliğini döndürmeye devam eder (JWT claim
+-- okur, rol değişiminden etkilenmez) — bu yüzden created_by/decided_by hâlâ
+-- doğru kullanıcılara işaret eder.
+--
+-- Yeniden kullanım koruması (actions/offers.ts createOfferFromCounter'daki
+-- orijinal mantıkla aynı semantik): source.superseded_by_offer_id dolu ise
+-- veya status <> 'revize_edildi' ya da counter_price boşsa red. Satır
+-- `for update` ile kilitlenir, böylece iki eşzamanlı kabul isteğinden yalnız
+-- biri başarılı olur (ikincisi kilit açıldığında superseded_by_offer_id'nin
+-- dolu olduğunu görüp "zaten kullanılmış" hatası alır) — RLS/uygulama
+-- katmanındaki eski TS "existingAccepted" yumuşatması artık gerekmiyor,
+-- çünkü tüm akış tek transaction'da atomik.
+create or replace function public.accept_counter_offer(source_offer_id uuid)
+returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  src public.offers%rowtype;
+  caller uuid;
+  new_offer_id uuid;
+begin
+  caller := auth.uid();
+
+  if caller is null then
+    raise exception 'Bu işlem için oturum açmış bir kullanıcı gerekir';
+  end if;
+
+  if not exists (
+    select 1 from public.profiles p where p.id = caller and p.is_active
+  ) then
+    raise exception 'Bu işlem için aktif personel yetkisi gerekir';
+  end if;
+
+  select * into src from public.offers where id = source_offer_id for update;
+
+  if not found then
+    raise exception 'Revize teklif bulunamadı';
+  end if;
+
+  if src.superseded_by_offer_id is not null then
+    raise exception 'Bu revize teklif zaten kullanılmış';
+  end if;
+
+  if src.status <> 'revize_edildi' or src.counter_price is null then
+    raise exception 'Bu teklif için karşı rakam bulunmuyor';
+  end if;
+
+  -- Yalnızca bu transaction içinde geçerli; commit/rollback sonrası sıfırlanır.
+  perform set_config('app.accept_counter', '1', true);
+
+  insert into public.offers (
+    lead_id, created_by, program, list_price, offered_price,
+    installment_count, note, status, decided_by, decided_at
+  ) values (
+    src.lead_id, caller, src.program, src.list_price, src.counter_price,
+    src.installment_count, src.note, 'onaylandi', src.decided_by, now()
+  )
+  returning id into new_offer_id;
+
+  -- bkz. actions/offers.ts supersedeApprovedOffers — lead için başka
+  -- onaylı teklif varsa geçersiz kılınır (guard_offers_terminal bu geçişi
+  -- zaten herkese açık bırakıyor: onaylandi -> gecersiz).
+  update public.offers
+    set status = 'gecersiz', superseded_by_offer_id = new_offer_id
+    where lead_id = src.lead_id and status = 'onaylandi' and id <> new_offer_id;
+
+  update public.offers
+    set superseded_by_offer_id = new_offer_id
+    where id = src.id and superseded_by_offer_id is null;
+
+  return new_offer_id;
+end;
+$$;
+
+revoke all on function public.accept_counter_offer(uuid) from public;
+grant execute on function public.accept_counter_offer(uuid) to authenticated, service_role;
+
+-- ===================== guard_offers_danisman yeniden tanımı (bkz. 0001_schema.sql) =====================
+-- Yalnızca accept_counter_offer() içindeki kaynak-teklif güncellemesine
+-- (superseded_by_offer_id set edilirken status 'revize_edildi' olarak kalır)
+-- izin vermek için app.accept_counter bypass'ı eklendi; mantığın geri kalanı
+-- 0001'dekiyle birebir aynıdır.
+create or replace function public.guard_offers_danisman() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  -- service_role (auth.uid() IS NULL), yöneticiler ve accept_counter_offer()
+  -- RPC'si içindeki denetimli güncelleme: kısıtsız.
+  if (select auth.uid()) is null or public.is_yonetici()
+     or current_setting('app.accept_counter', true) = '1' then
+    return new;
+  end if;
+
+  if (new.lead_id           is distinct from old.lead_id)           or
+     (new.created_by        is distinct from old.created_by)        or
+     (new.program           is distinct from old.program)           or
+     (new.list_price        is distinct from old.list_price)        or
+     (new.offered_price     is distinct from old.offered_price)     or
+     (new.installment_count is distinct from old.installment_count) or
+     (new.note              is distinct from old.note)              or
+     (new.decided_by        is distinct from old.decided_by)        or
+     (new.decided_at        is distinct from old.decided_at)        or
+     (new.counter_price     is distinct from old.counter_price)     or
+     (new.created_at        is distinct from old.created_at)
+  then
+    raise exception 'Danışman teklif üzerinde yalnızca geçersiz kılma yapabilir';
+  end if;
+
+  if new.status is distinct from 'gecersiz' then
+    raise exception 'Danışman teklif üzerinde yalnızca geçersiz kılma yapabilir';
+  end if;
+
+  return new;
+end;
+$$;
+-- Trigger zaten 0001'de tanımlı (guard_offers_danisman before update on
+-- public.offers); create or replace function yeterli, trigger'ı yeniden
+-- oluşturmaya gerek yok.

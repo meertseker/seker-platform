@@ -322,71 +322,35 @@ export async function createOfferFromCounter(
   const profile = await getSessionProfile();
   const supabase = await createServerSupabase();
 
+  // Kaynak teklifi yalnızca event/log payload'ı ve lead_id için okuyoruz;
+  // karar mantığının tamamı (geçerlilik kontrolleri, insert, supersede)
+  // artık accept_counter_offer() SECURITY DEFINER RPC'sinde atomik olarak
+  // yapılıyor — bkz. supabase/migrations/0002_offer_lead_guards.sql.
+  // Danışman için doğrudan tablo yazımı iki yönden kırıktı: guard_offers_insert
+  // decided_by dolu insert'i reddediyordu, ve kaynağın superseded_by_offer_id
+  // güncellemesi hem RLS (upd_offers_danisman) hem guard_offers_danisman
+  // tarafından reddediliyordu (status 'gecersiz' değilse). RPC bu ikisini de
+  // transaction-local app.accept_counter bayrağıyla aşıyor.
   const { data: source } = await supabase
     .from("offers")
-    .select(
-      "id, lead_id, program, list_price, installment_count, note, status, counter_price, decided_by, decided_at, superseded_by_offer_id",
-    )
+    .select("id, lead_id, program, list_price, counter_price")
     .eq("id", offerId)
     .maybeSingle();
 
   if (!source) return { error: "Revize teklif bulunamadı" };
-  if (source.superseded_by_offer_id) {
-    return { error: "Bu revize teklif zaten kullanılmış" };
-  }
-  if (source.status !== "revize_edildi" || !source.counter_price) {
-    return { error: "Bu teklif için karşı rakam bulunmuyor" };
-  }
 
-  const counterPrice = Number(source.counter_price);
-  const { data: existingAccepted } = await supabase
-    .from("offers")
-    .select("id")
-    .eq("lead_id", source.lead_id)
-    .eq("status", "onaylandi")
-    .eq("offered_price", counterPrice)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data: newOfferId, error } = await supabase.rpc(
+    "accept_counter_offer",
+    { source_offer_id: offerId },
+  );
 
-  if (existingAccepted) {
-    revalidateOfferViews(source.lead_id);
-    return { id: existingAccepted.id };
+  if (error || !newOfferId) {
+    return { error: error?.message || "Karşı rakamla teklif oluşturulamadı" };
   }
 
-  const { data: offer, error } = await supabase
-    .from("offers")
-    .insert({
-      lead_id: source.lead_id,
-      created_by: profile.id,
-      program: source.program,
-      list_price: Number(source.list_price),
-      offered_price: counterPrice,
-      installment_count: source.installment_count,
-      note: source.note,
-      status: "onaylandi",
-      decided_by: source.decided_by,
-      decided_at: source.decided_at,
-    })
-    .select("id")
-    .single();
-
-  if (error || !offer) return { error: "Karşı rakamla teklif oluşturulamadı" };
-
-  const { error: supersedeSourceError } = await supabase
-    .from("offers")
-    .update({ superseded_by_offer_id: offer.id })
-    .eq("id", source.id)
-    .is("superseded_by_offer_id", null);
-
-  if (supersedeSourceError) {
-    return { error: "Karşı rakamla teklif oluşturulamadı" };
-  }
-
-  await supersedeApprovedOffers(supabase, source.lead_id, offer.id);
   await logEvent(supabase, {
     entityType: "offer",
-    entityId: offer.id,
+    entityId: newOfferId,
     eventType: "teklif_olusturuldu",
     actorId: profile.id,
     payload: {
@@ -394,7 +358,7 @@ export async function createOfferFromCounter(
       sourceOfferId: source.id,
       program: source.program,
       listPrice: Number(source.list_price),
-      offeredPrice: counterPrice,
+      offeredPrice: Number(source.counter_price),
       status: "onaylandi",
     },
   });
@@ -405,5 +369,5 @@ export async function createOfferFromCounter(
   await advanceLeadStatusAfterApproval(source.lead_id);
 
   revalidateOfferViews(source.lead_id);
-  return { id: offer.id };
+  return { id: newOfferId };
 }
