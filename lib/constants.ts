@@ -1,13 +1,15 @@
 export const LEAD_STATUSES = {
   yeni: "Yeni", ulasildi: "Ulaşıldı", randevu: "Randevu",
   gorusme_yapildi: "Görüşme Yapıldı", teklif: "Teklif",
+  beklemede: "Beklemede",
   kazanildi: "Kazanıldı", kaybedildi: "Kaybedildi",
 } as const;
 export type LeadStatus = keyof typeof LEAD_STATUSES;
 
 export const LEAD_SOURCES = {
   referans: "Referans", instagram: "Instagram", reklam: "Reklam",
-  tabela_gecerken: "Tabela / Geçerken", telefon: "Telefon", diger: "Diğer",
+  tabela_gecerken: "Tabela / Geçerken", telefon: "Telefon",
+  etkinlik: "Etkinlik", diger: "Diğer",
 } as const;
 export type LeadSource = keyof typeof LEAD_SOURCES;
 
@@ -42,6 +44,7 @@ export type PaymentMethod = keyof typeof PAYMENT_METHODS;
 
 export const APPOINTMENT_TYPES = {
   okul_ziyareti: "Okul Ziyareti", telefon: "Telefon Görüşmesi",
+  demo: "Demo Dersi", oryantasyon: "Oryantasyon",
 } as const;
 export type AppointmentType = keyof typeof APPOINTMENT_TYPES;
 export const APPOINTMENT_OUTCOMES = {
@@ -49,6 +52,16 @@ export const APPOINTMENT_OUTCOMES = {
   ertelendi: "Ertelendi", iptal: "İptal",
 } as const;
 export type AppointmentOutcome = keyof typeof APPOINTMENT_OUTCOMES;
+
+export const INSTALLMENT_STATUSES = {
+  bekliyor: "Bekliyor", odendi: "Ödendi", iptal: "İptal",
+} as const;
+export type InstallmentStatus = keyof typeof INSTALLMENT_STATUSES;
+
+export const DISCOUNT_TYPES = {
+  yok: "Yok", yuzde_10: "%10 Kardeş", ozel: "Özel",
+} as const;
+export type DiscountType = keyof typeof DISCOUNT_TYPES;
 
 export const STUDENT_STATUSES = {
   aktif: "Aktif", ayrildi: "Ayrıldı", mezun: "Mezun",
@@ -69,6 +82,10 @@ export const EVENT_LABELS = {
   taksit_odendi: "Taksit ödendi",
   odeme_geri_alindi: "Ödeme geri alındı",
   fiyat_listesi_guncellendi: "Fiyat listesi güncellendi",
+  beklemeye_alindi: "Beklemeye alındı",
+  ogrenci_ayrildi: "Öğrenci ayrıldı",
+  iade_kaydedildi: "İade kaydedildi",
+  aileye_baglandi: "Aileye bağlandı",
 } as const;
 
 export function label(group: Record<string, string>, value: string): string {
