@@ -7,6 +7,7 @@ let leadId: string, offerId: string, instId: string, eventId: string;
 let rejectedOfferId: string, approvedOfferId: string, convertedLeadId: string;
 let counterLeadId: string, counterOfferId: string;
 let pendingInsertLeadId: string, autoApproveLeadId: string;
+let familyStudentId: string;
 const DAN_ID = "00000000-0000-0000-0000-000000000002";
 const YON_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -28,6 +29,7 @@ beforeAll(async () => {
     full_name: "RLS Öğrenci", parent_name: "RLS Test Veli",
     phone: "+905000000001", season: "2026-2027", program: "tam_gun",
   }).select().single();
+  familyStudentId = student!.id;
   const { data: plan } = await admin.from("payment_plans").insert({
     student_id: student!.id, season: "2026-2027", item_type: "aidat",
     total_amount: 180000, installment_count: 1,
@@ -241,5 +243,38 @@ describe("RLS", () => {
     expect(error).toBeNull();
     expect(data!.length).toBe(1);
     expect(data![0].decided_by).toBeNull();
+  });
+});
+
+describe("families & refunds RLS", () => {
+  const FAMILY_CODE = "AILE-TEST-RLS-0004";
+
+  it("danışman aile oluşturabilir ve okuyabilir", async () => {
+    // Tekrar çalıştırmalara dayanıklı olmak için önceki fixture'ı temizle.
+    await admin.from("families").delete().eq("family_code", FAMILY_CODE);
+
+    const { data, error } = await dan
+      .from("families")
+      .insert({ family_code: FAMILY_CODE, primary_parent_name: "Test Veli" })
+      .select("id").single();
+    expect(error).toBeNull();
+    expect(data?.id).toBeTruthy();
+  });
+
+  it("danışman iade kaydı OLUŞTURAMAZ (yalnız yönetici)", async () => {
+    const { error } = await dan.from("refunds").insert({
+      student_id: familyStudentId, amount: 100, method: "nakit",
+      refund_date: "2026-07-14", created_by: DAN_ID,
+    });
+    expect(error).not.toBeNull(); // RLS reddeder
+  });
+
+  it("yönetici iade kaydı oluşturabilir", async () => {
+    const { data, error } = await yon.from("refunds").insert({
+      student_id: familyStudentId, amount: 100, method: "nakit",
+      refund_date: "2026-07-14", created_by: YON_ID,
+    }).select("id").single();
+    expect(error).toBeNull();
+    expect(data?.id).toBeTruthy();
   });
 });
