@@ -21,7 +21,7 @@ export interface InstallmentTableItem {
   id: string;
   due_date: string;
   amount: number;
-  status: "bekliyor" | "odendi";
+  status: "bekliyor" | "odendi" | "iptal";
   paid_at: string | null;
   paid_amount: number | null;
   payment_method: PaymentMethod | null;
@@ -194,7 +194,11 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                   </td>
                   <td className="px-4 py-3">
                     <span className={badgeClass(INSTALLMENT_STATUS_STYLES[installment.status])}>
-                      {installment.status === "odendi" ? "Ödendi" : "Bekliyor"}
+                      {installment.status === "odendi"
+                        ? "Ödendi"
+                        : installment.status === "iptal"
+                          ? "İptal"
+                          : "Bekliyor"}
                     </span>
                     {installment.payment_method ? (
                       <span className="ml-2 text-xs text-muted-foreground">
@@ -214,7 +218,7 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                           Ödendi işaretle
                         </button>
                       ) : null}
-                      {role === "yonetici" ? (
+                      {role === "yonetici" && installment.status !== "iptal" ? (
                         <>
                           <button
                             type="button"

@@ -67,9 +67,10 @@ export const APPOINTMENT_OUTCOME_STYLES: Record<AppointmentOutcome, string> = {
   iptal: "bg-slate-100 text-slate-600 ring-slate-200",
 };
 
-export const INSTALLMENT_STATUS_STYLES: Record<"bekliyor" | "odendi", string> = {
+export const INSTALLMENT_STATUS_STYLES: Record<"bekliyor" | "odendi" | "iptal", string> = {
   bekliyor: "bg-slate-100 text-slate-600 ring-slate-200",
   odendi: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  iptal: "bg-slate-100 text-slate-600 ring-slate-200",
 };
 
 export const STUDENT_STATUS_STYLES: Record<

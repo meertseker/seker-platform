@@ -20,7 +20,7 @@ interface StudentsPageProps {
 interface InstallmentRow {
   due_date: string;
   amount: number;
-  status: "bekliyor" | "odendi";
+  status: "bekliyor" | "odendi" | "iptal";
   paid_amount: number | null;
 }
 

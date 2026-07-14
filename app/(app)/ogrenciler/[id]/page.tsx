@@ -5,6 +5,8 @@ import {
   type InstallmentTableItem,
 } from "@/components/installment-table";
 import { PlanWizard } from "@/components/plan-wizard";
+import { RefundPanel, type RefundItem } from "@/components/refund-panel";
+import { StudentLeaveForm } from "@/components/student-leave-form";
 import {
   ITEM_TYPES,
   label,
@@ -33,7 +35,7 @@ interface InstallmentRow {
   id: string;
   due_date: string;
   amount: number;
-  status: "bekliyor" | "odendi";
+  status: "bekliyor" | "odendi" | "iptal";
   paid_at: string | null;
   paid_amount: number | null;
   payment_method: PaymentMethod | null;
@@ -61,11 +63,37 @@ interface StudentRow {
   program: Program;
   start_date: string | null;
   status: keyof typeof STUDENT_STATUSES;
+  left_date: string | null;
+  leave_reason: string | null;
   payment_plans?: PlanRow[] | null;
+}
+
+interface RefundRow {
+  id: string;
+  amount: number;
+  method: PaymentMethod;
+  refund_date: string;
+  note: string | null;
+  creator: { full_name: string } | { full_name: string }[] | null;
 }
 
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function one<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
+
+function toRefundItems(rows: RefundRow[] | null | undefined): RefundItem[] {
+  return (rows ?? []).map((row) => ({
+    id: row.id,
+    amount: Number(row.amount),
+    method: row.method,
+    refund_date: row.refund_date,
+    note: row.note,
+    creatorName: one(row.creator)?.full_name ?? null,
+  }));
 }
 
 function todayInIstanbul() {
@@ -127,7 +155,7 @@ export default async function StudentDetailPage({
   const { data, error } = await supabase
     .from("students")
     .select(
-      "id, full_name, birth_month, birth_year, parent_name, phone, season, program, start_date, status, payment_plans(id, season, item_type, total_amount, installment_count, source_offer_id, created_at, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method))",
+      "id, full_name, birth_month, birth_year, parent_name, phone, season, program, start_date, status, left_date, leave_reason, payment_plans(id, season, item_type, total_amount, installment_count, source_offer_id, created_at, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -138,6 +166,22 @@ export default async function StudentDetailPage({
   const plans = [...(student.payment_plans ?? [])].sort(
     (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
   );
+
+  const refunds =
+    student.status === "ayrildi"
+      ? toRefundItems(
+          (
+            await supabase
+              .from("refunds")
+              .select(
+                "id, amount, method, refund_date, note, creator:profiles!refunds_created_by_fkey(full_name)",
+              )
+              .eq("student_id", student.id)
+              .order("refund_date", { ascending: false })
+          ).data as unknown as RefundRow[] | null,
+        )
+      : [];
+
   const today = todayInIstanbul();
   const totalKurus = plans.reduce(
     (sum, plan) => sum + tlToKurus(Number(plan.total_amount)),
@@ -220,8 +264,36 @@ export default async function StudentDetailPage({
               {formatTRY(totalKurus)}
             </dd>
           </div>
+          {student.status === "ayrildi" ? (
+            <>
+              <div>
+                <dt className="text-xs font-medium text-muted-foreground">Ayrılış tarihi</dt>
+                <dd className="mt-1 text-sm font-semibold text-foreground">
+                  {formatDate(student.left_date)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-muted-foreground">Ayrılış nedeni</dt>
+                <dd className="mt-1 text-sm font-semibold text-foreground">
+                  {student.leave_reason || "Belirtilmedi"}
+                </dd>
+              </div>
+            </>
+          ) : null}
         </dl>
       </section>
+
+      {student.status === "aktif" && profile.role === "yonetici" ? (
+        <StudentLeaveForm studentId={student.id} />
+      ) : null}
+
+      {student.status === "ayrildi" ? (
+        <RefundPanel
+          studentId={student.id}
+          canManage={profile.role === "yonetici"}
+          refunds={refunds}
+        />
+      ) : null}
 
       <PlanWizard
         studentId={student.id}
