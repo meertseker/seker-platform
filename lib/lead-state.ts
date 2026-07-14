@@ -20,6 +20,18 @@ export function canTransition(
       ? { ok: true }
       : { ok: false, reason: "Kaybedilen lead yalnızca 'Ulaşıldı' olarak yeniden açılabilir" };
   }
+  const ACTIVE_STATES: LeadStatus[] = ["yeni", "ulasildi", "randevu", "gorusme_yapildi", "teklif"];
+  if (to === "beklemede") {
+    return ACTIVE_STATES.includes(from)
+      ? { ok: true }
+      : { ok: false, reason: "Bu durumdan beklemeye alınamaz" };
+  }
+  if (from === "beklemede") {
+    const REACTIVATE: LeadStatus[] = ["ulasildi", "randevu", "teklif"];
+    return REACTIVATE.includes(to)
+      ? { ok: true }
+      : { ok: false, reason: "Beklemedeki lead yalnızca ulaşıldı, randevu veya teklife alınabilir" };
+  }
   // ileri veya geri geçiş FLOW içinde serbest (spec §6.1)
   if (FLOW.includes(from) && FLOW.includes(to)) return { ok: true };
   return { ok: false, reason: "Geçersiz durum geçişi" };
