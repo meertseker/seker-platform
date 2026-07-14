@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, BadgePercent } from "lucide-react";
 import { AppointmentList, type AppointmentListItem } from "@/components/appointment-list";
 import { TaskCompleteButton } from "@/components/task-complete-button";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 import { getSessionProfile } from "@/lib/auth";
 import {
   LEAD_STATUSES,
@@ -25,6 +26,7 @@ export const dynamic = "force-dynamic";
 interface LeadJoin {
   id: string;
   parent_name: string;
+  phone: string;
 }
 
 interface ProfileJoin {
@@ -55,6 +57,7 @@ interface TaskRow {
 interface StaleLeadRow {
   id: string;
   parent_name: string;
+  phone: string;
   status: LeadStatus;
   last_activity_at: string;
 }
@@ -113,6 +116,7 @@ function normalizeAppointments(rows: TodayAppointmentRow[]): AppointmentListItem
       id: row.id,
       leadId: lead?.id ?? row.lead_id,
       leadName: lead?.parent_name,
+      leadPhone: lead?.phone,
       scheduled_at: row.scheduled_at,
       type: row.type,
       outcome: row.outcome,
@@ -182,14 +186,14 @@ export default async function Home() {
     .maybeSingle();
   const appointmentsPromise = supabase
     .from("appointments")
-    .select("id, lead_id, scheduled_at, type, outcome, outcome_note, lead:leads(id, parent_name)")
+    .select("id, lead_id, scheduled_at, type, outcome, outcome_note, lead:leads(id, parent_name, phone)")
     .gte("scheduled_at", dayStart)
     .lte("scheduled_at", dayEnd)
     .order("scheduled_at", { ascending: true });
   let tasksQuery = supabase
     .from("tasks")
     .select(
-      "id, title, due_date, lead_id, assigned_to, lead:leads(id, parent_name), assignee:profiles!tasks_assigned_to_fkey(id, full_name)",
+      "id, title, due_date, lead_id, assigned_to, lead:leads(id, parent_name, phone), assignee:profiles!tasks_assigned_to_fkey(id, full_name)",
     )
     .eq("status", "acik")
     .order("due_date", { ascending: true })
@@ -214,7 +218,7 @@ export default async function Home() {
   ] = await Promise.all([
     supabase
       .from("leads")
-      .select("id, parent_name, status, last_activity_at")
+      .select("id, parent_name, phone, status, last_activity_at")
       .in("status", STALE_LEAD_STATUSES)
       .lt("last_activity_at", cutoff)
       .not("assigned_to", "is", null)
@@ -328,12 +332,15 @@ export default async function Home() {
                         <p className="font-semibold text-foreground">{task.title}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                           {lead ? (
-                            <Link
-                              href={`/leads/${lead.id}`}
-                              className="font-semibold text-foreground hover:underline"
-                            >
-                              {lead.parent_name}
-                            </Link>
+                            <span className="inline-flex items-center gap-2">
+                              <Link
+                                href={`/leads/${lead.id}`}
+                                className="font-semibold text-foreground hover:underline"
+                              >
+                                {lead.parent_name}
+                              </Link>
+                              <WhatsAppButton phone={lead.phone} compact />
+                            </span>
                           ) : (
                             <span>Lead bağlantısı yok</span>
                           )}
@@ -380,6 +387,7 @@ export default async function Home() {
                   <th className="px-4 py-3">Veli</th>
                   <th className="px-4 py-3">Durum</th>
                   <th className="px-4 py-3">Son işlem</th>
+                  <th className="px-4 py-3">İletişim</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -400,6 +408,9 @@ export default async function Home() {
                     </td>
                     <td className="px-4 py-4 text-slate-700">
                       {daysSince(lead.last_activity_at, now)} gün önce
+                    </td>
+                    <td className="px-4 py-4">
+                      <WhatsAppButton phone={lead.phone} compact />
                     </td>
                   </tr>
                 ))}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { reopenLead } from "@/actions/leads";
 import { StatusSelect } from "@/components/status-select";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 import { badgeClass, LEAD_STATUS_STYLES } from "@/lib/status-styles";
 import {
   label,
@@ -74,7 +75,10 @@ export function LeadCard({ lead, archived = false }: LeadCardProps) {
           >
             {lead.parent_name}
           </Link>
-          <p className="mt-1 text-sm text-muted-foreground">{lead.phone}</p>
+          <div className="mt-1 flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">{lead.phone}</p>
+            <WhatsAppButton phone={lead.phone} compact />
+          </div>
         </div>
         <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
           {label(LEAD_SOURCES, lead.source)}

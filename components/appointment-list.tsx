@@ -5,6 +5,7 @@ import { Clock } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setAppointmentOutcome } from "@/actions/appointments";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 import { APPOINTMENT_OUTCOME_STYLES, badgeClass } from "@/lib/status-styles";
 import {
   APPOINTMENT_OUTCOMES,
@@ -18,6 +19,7 @@ export interface AppointmentListItem {
   id: string;
   leadId?: string;
   leadName?: string;
+  leadPhone?: string;
   scheduled_at: string;
   type: AppointmentType;
   outcome: AppointmentOutcome;
@@ -157,12 +159,17 @@ export function AppointmentList({
                     </time>
                   </div>
                   {appointment.leadId ? (
-                    <Link
-                      href={`/leads/${appointment.leadId}`}
-                      className="mt-1 block text-sm font-semibold text-foreground transition-colors hover:underline"
-                    >
-                      {appointment.leadName ?? "Lead detayına git"}
-                    </Link>
+                    <div className="mt-1 flex items-center gap-2">
+                      <Link
+                        href={`/leads/${appointment.leadId}`}
+                        className="text-sm font-semibold text-foreground transition-colors hover:underline"
+                      >
+                        {appointment.leadName ?? "Lead detayına git"}
+                      </Link>
+                      {appointment.leadPhone ? (
+                        <WhatsAppButton phone={appointment.leadPhone} compact />
+                      ) : null}
+                    </div>
                   ) : null}
                   <p className="mt-1 text-sm text-muted-foreground">
                     {label(APPOINTMENT_TYPES, appointment.type)}

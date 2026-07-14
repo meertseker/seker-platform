@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MessageCircle, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
 import { ActivityFeed, type ActivityFeedItem } from "@/components/activity-feed";
 import { AppointmentForm } from "@/components/appointment-form";
 import {
@@ -12,6 +12,7 @@ import { NoteForm } from "@/components/note-form";
 import { OfferForm, type ActivePriceItem } from "@/components/offer-form";
 import { OfferList, type OfferListItem } from "@/components/offer-list";
 import { StatusSelect } from "@/components/status-select";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 import {
   label,
   type AppointmentOutcome,
@@ -327,7 +328,6 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
   const priceItems = normalizePriceItems(
     (priceItemsResult.data ?? []) as unknown as PriceItemRow[],
   );
-  const whatsappNumber = lead.phone.replace(/\D/g, "");
   const converted = lead.converted_student_id !== null;
   const hasApprovedOffer = offers.some((offer) => offer.status === "onaylandi");
   const canConvert = !converted && hasApprovedOffer;
@@ -372,15 +372,7 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
                     <Phone aria-hidden="true" className="size-4" />
                     Ara
                   </a>
-                  <a
-                    href={`https://wa.me/${whatsappNumber}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-emerald-200 bg-accent-soft px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:border-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <MessageCircle aria-hidden="true" className="size-4" />
-                    WhatsApp
-                  </a>
+                  <WhatsAppButton phone={lead.phone} />
                 </div>
               </div>
               <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-semibold text-slate-700">
