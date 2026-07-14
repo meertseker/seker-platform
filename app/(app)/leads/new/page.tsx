@@ -37,6 +37,7 @@ export default function NewLeadPage() {
   const [duplicate, setDuplicate] = useState<DuplicateWarning>(null);
   const [checkingPhone, setCheckingPhone] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [ozelDurumChecked, setOzelDurumChecked] = useState(false);
 
   async function checkPhone(phone: string) {
     setDuplicate(null);
@@ -63,6 +64,7 @@ export default function NewLeadPage() {
     const parentName = String(formData.get("parentName") ?? "").trim();
     const phone = String(formData.get("phone") ?? "").trim();
     const source = String(formData.get("source") ?? "") as LeadSource;
+    const ozelDurum = formData.get("ozelDurum") === "on";
 
     if (!parentName || !phone || !source) {
       setError("Veli adı, telefon ve kaynak zorunludur.");
@@ -78,6 +80,12 @@ export default function NewLeadPage() {
         childName: String(formData.get("childName") ?? "").trim(),
         childBirthMonth: optionalNumber(formData.get("childBirthMonth")),
         childBirthYear: optionalNumber(formData.get("childBirthYear")),
+        ingilizceGerekli: formData.get("ingilizceGerekli") === "on",
+        ozelDurum,
+        ozelDurumNote: ozelDurum
+          ? String(formData.get("ozelDurumNote") ?? "").trim()
+          : undefined,
+        wantsSummer: formData.get("wantsSummer") === "on",
       });
 
       if (result.error || !result.id) {
@@ -266,6 +274,47 @@ export default function NewLeadPage() {
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
+          <label className="flex items-center gap-3 text-sm font-medium text-foreground">
+            <input
+              type="checkbox"
+              name="ingilizceGerekli"
+              className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            İngilizce gerekli
+          </label>
+
+          <label className="flex items-center gap-3 text-sm font-medium text-foreground">
+            <input
+              type="checkbox"
+              name="wantsSummer"
+              className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            Yaz okulu ile ilgileniyor
+          </label>
+
+          <div>
+            <label className="flex items-center gap-3 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                name="ozelDurum"
+                checked={ozelDurumChecked}
+                onChange={(event) => setOzelDurumChecked(event.currentTarget.checked)}
+                className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              Özel durum
+            </label>
+            {ozelDurumChecked ? (
+              <input
+                id="ozelDurumNote"
+                name="ozelDurumNote"
+                className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
+                placeholder="Özel durum notu"
+              />
+            ) : null}
           </div>
         </div>
 

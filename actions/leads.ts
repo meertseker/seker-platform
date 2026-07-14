@@ -10,6 +10,7 @@ import type { LeadStatus, LeadSource, LostReason } from "@/lib/constants";
 export interface CreateLeadInput {
   parentName: string; phone: string; source: LeadSource; sourceDetail?: string;
   childName?: string; childBirthMonth?: number; childBirthYear?: number;
+  ingilizceGerekli?: boolean; ozelDurum?: boolean; ozelDurumNote?: string; wantsSummer?: boolean;
 }
 
 export async function createLead(input: CreateLeadInput) {
@@ -17,6 +18,7 @@ export async function createLead(input: CreateLeadInput) {
   const supabase = await createServerSupabase();
   const phone = normalizeTurkishPhone(input.phone);
   if (!phone) return { error: "Geçerli bir cep telefonu girin (05XX XXX XX XX)" };
+  const ozelDurum = input.ozelDurum ?? false;
   const { data, error } = await supabase.from("leads").insert({
     parent_name: input.parentName.trim(), phone,
     source: input.source, source_detail: input.sourceDetail || null,
@@ -24,6 +26,10 @@ export async function createLead(input: CreateLeadInput) {
     child_birth_month: input.childBirthMonth || null,
     child_birth_year: input.childBirthYear || null,
     assigned_to: profile.id,
+    ingilizce_gerekli: input.ingilizceGerekli ?? false,
+    ozel_durum: ozelDurum,
+    ozel_durum_note: ozelDurum ? (input.ozelDurumNote?.trim() || null) : null,
+    wants_summer: input.wantsSummer ?? false,
   }).select("id").single();
   if (error) return { error: "Lead kaydedilemedi, lütfen tekrar deneyin" };
   await logEvent(supabase, {
@@ -78,6 +84,7 @@ export async function reopenLead(leadId: string) {
 export interface UpdateLeadFields {
   parentName?: string; phone?: string; source?: LeadSource; sourceDetail?: string | null;
   childName?: string | null; childBirthMonth?: number | null; childBirthYear?: number | null;
+  ingilizceGerekli?: boolean; ozelDurum?: boolean; ozelDurumNote?: string | null; wantsSummer?: boolean;
 }
 
 export async function updateLead(leadId: string, fields: UpdateLeadFields) {
@@ -93,7 +100,7 @@ export async function updateLead(leadId: string, fields: UpdateLeadFields) {
     return { error: "Öğrenciye dönüştürülmüş lead güncellenemez" };
   }
 
-  const patch: Record<string, string | number | null> = {};
+  const patch: Record<string, string | number | boolean | null> = {};
 
   if (fields.parentName !== undefined) {
     const parentName = fields.parentName.trim();
@@ -110,6 +117,15 @@ export async function updateLead(leadId: string, fields: UpdateLeadFields) {
   if (fields.childName !== undefined) patch.child_name = fields.childName || null;
   if (fields.childBirthMonth !== undefined) patch.child_birth_month = fields.childBirthMonth;
   if (fields.childBirthYear !== undefined) patch.child_birth_year = fields.childBirthYear;
+  if (fields.ingilizceGerekli !== undefined) patch.ingilizce_gerekli = fields.ingilizceGerekli;
+  if (fields.wantsSummer !== undefined) patch.wants_summer = fields.wantsSummer;
+  if (fields.ozelDurum !== undefined) {
+    patch.ozel_durum = fields.ozelDurum;
+    if (!fields.ozelDurum) patch.ozel_durum_note = null;
+  }
+  if (fields.ozelDurumNote !== undefined && fields.ozelDurum !== false) {
+    patch.ozel_durum_note = fields.ozelDurumNote?.trim() || null;
+  }
 
   const changedFields = Object.keys(patch);
   if (changedFields.length === 0) return {};

@@ -53,6 +53,10 @@ interface LeadRow {
   source_detail: string | null;
   status: LeadStatus;
   lost_reason: LostReason | null;
+  ingilizce_gerekli: boolean;
+  ozel_durum: boolean;
+  ozel_durum_note: string | null;
+  wants_summer: boolean;
   assigned_to: string | null;
   converted_student_id: string | null;
   last_activity_at: string;
@@ -281,7 +285,7 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
     supabase
       .from("leads")
       .select(
-        "id, parent_name, phone, child_name, child_birth_month, child_birth_year, source, source_detail, status, lost_reason, assigned_to, converted_student_id, last_activity_at, created_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
+        "id, parent_name, phone, child_name, child_birth_month, child_birth_year, source, source_detail, status, lost_reason, ingilizce_gerekli, ozel_durum, ozel_durum_note, wants_summer, assigned_to, converted_student_id, last_activity_at, created_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -416,6 +420,37 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
                 </div>
               ) : null}
             </dl>
+
+            {lead.ingilizce_gerekli || lead.ozel_durum || lead.wants_summer ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {lead.ingilizce_gerekli ? (
+                  <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-semibold text-slate-700">
+                    İngilizce
+                  </span>
+                ) : null}
+                {lead.ozel_durum ? (
+                  <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-semibold text-slate-700">
+                    Özel durum
+                  </span>
+                ) : null}
+                {lead.wants_summer ? (
+                  <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-semibold text-slate-700">
+                    Yaz okulu
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+
+            {lead.ozel_durum && lead.ozel_durum_note ? (
+              <div className="mt-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Özel durum notu
+                </p>
+                <p className="mt-1 rounded-2xl bg-muted px-3 py-2 text-sm text-slate-700">
+                  {lead.ozel_durum_note}
+                </p>
+              </div>
+            ) : null}
           </section>
 
           <LeadAppointmentsSection
