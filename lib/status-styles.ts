@@ -1,3 +1,14 @@
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  FileText,
+  MessageCircle,
+  Phone,
+  Sparkles,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import type {
   AppointmentOutcome,
   LeadStatus,
@@ -12,7 +23,7 @@ import type {
  */
 
 export const BADGE_BASE =
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset";
+  "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset";
 
 export const LEAD_STATUS_STYLES: Record<LeadStatus, string> = {
   yeni: "bg-blue-50 text-blue-700 ring-blue-200",
@@ -20,8 +31,24 @@ export const LEAD_STATUS_STYLES: Record<LeadStatus, string> = {
   randevu: "bg-violet-50 text-violet-700 ring-violet-200",
   gorusme_yapildi: "bg-amber-50 text-amber-800 ring-amber-200",
   teklif: "bg-orange-50 text-orange-700 ring-orange-200",
+  beklemede: "bg-slate-100 text-slate-600 ring-slate-200",
   kazanildi: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   kaybedildi: "bg-red-50 text-red-700 ring-red-200",
+};
+
+/*
+ * Durum → ikon eşlemesi. Renk tek başına anlam taşımadığı için her rozette
+ * ikon ve Türkçe etiket de bulunur (renk-körü güvenli).
+ */
+export const LEAD_STATUS_ICONS: Record<LeadStatus, LucideIcon> = {
+  yeni: Sparkles,
+  ulasildi: Phone,
+  randevu: CalendarDays,
+  gorusme_yapildi: MessageCircle,
+  teklif: FileText,
+  beklemede: Clock,
+  kazanildi: CheckCircle2,
+  kaybedildi: XCircle,
 };
 
 export const OFFER_STATUS_STYLES: Record<OfferStatus, string> = {

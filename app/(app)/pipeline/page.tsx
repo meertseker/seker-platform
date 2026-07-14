@@ -35,6 +35,7 @@ const STATUS_DOTS: Record<LeadStatus, string> = {
   randevu: "bg-violet-500",
   gorusme_yapildi: "bg-amber-500",
   teklif: "bg-orange-500",
+  beklemede: "bg-slate-500",
   kazanildi: "bg-emerald-500",
   kaybedildi: "bg-red-500",
 };
