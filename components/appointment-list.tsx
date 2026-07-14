@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { Clock } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setAppointmentOutcome } from "@/actions/appointments";
+import { APPOINTMENT_OUTCOME_STYLES, badgeClass } from "@/lib/status-styles";
 import {
   APPOINTMENT_OUTCOMES,
   APPOINTMENT_TYPES,
@@ -47,19 +49,17 @@ interface NoteDraft {
   note: string;
 }
 
-function outcomeClass(outcome: AppointmentOutcome) {
-  switch (outcome) {
-    case "geldi":
-      return "bg-green-50 text-green-700 ring-green-200";
-    case "gelmedi":
-      return "bg-red-50 text-red-700 ring-red-200";
-    case "ertelendi":
-      return "bg-amber-50 text-amber-700 ring-amber-200";
-    case "iptal":
-      return "bg-zinc-100 text-zinc-600 ring-zinc-200";
-    default:
-      return "bg-blue-50 text-blue-700 ring-blue-200";
+const OUTCOME_BUTTON_BASE =
+  "min-h-11 cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+
+function outcomeButtonClass(outcome: AppointmentOutcome) {
+  if (outcome === "geldi") {
+    return `${OUTCOME_BUTTON_BASE} bg-accent text-white hover:bg-accent-strong focus-visible:ring-offset-2`;
   }
+  if (outcome === "gelmedi" || outcome === "iptal") {
+    return `${OUTCOME_BUTTON_BASE} border border-border bg-surface text-slate-700 hover:border-red-300 hover:text-red-700`;
+  }
+  return `${OUTCOME_BUTTON_BASE} border border-border bg-surface text-slate-700 hover:border-slate-300 hover:text-foreground`;
 }
 
 function formatDate(value: string) {
@@ -118,7 +118,7 @@ export function AppointmentList({
 
   if (appointments.length === 0) {
     return (
-      <p className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500">
+      <p className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
         {emptyText}
       </p>
     );
@@ -141,39 +141,42 @@ export function AppointmentList({
           return (
             <li
               key={appointment.id}
-              className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm"
+              className="rounded-2xl border border-border bg-surface p-4 shadow-sm"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <time
-                    dateTime={appointment.scheduled_at}
-                    className="text-base font-semibold text-zinc-950"
-                  >
-                    {compactTime
-                      ? formatTime(appointment.scheduled_at)
-                      : formatDate(appointment.scheduled_at)}
-                  </time>
+                  <div className="flex items-center gap-1.5">
+                    <Clock aria-hidden className="size-4 text-muted-foreground" />
+                    <time
+                      dateTime={appointment.scheduled_at}
+                      className="text-base font-semibold text-foreground tabular-nums"
+                    >
+                      {compactTime
+                        ? formatTime(appointment.scheduled_at)
+                        : formatDate(appointment.scheduled_at)}
+                    </time>
+                  </div>
                   {appointment.leadId ? (
                     <Link
                       href={`/leads/${appointment.leadId}`}
-                      className="mt-1 block text-sm font-semibold text-zinc-800 transition hover:text-zinc-950 hover:underline"
+                      className="mt-1 block text-sm font-semibold text-foreground transition-colors hover:underline"
                     >
                       {appointment.leadName ?? "Lead detayına git"}
                     </Link>
                   ) : null}
-                  <p className="mt-1 text-sm text-zinc-600">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {label(APPOINTMENT_TYPES, appointment.type)}
                   </p>
                   {appointment.outcome_note ? (
-                    <p className="mt-2 rounded-2xl bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
+                    <p className="mt-2 rounded-2xl bg-muted px-3 py-2 text-sm text-muted-foreground">
                       {appointment.outcome_note}
                     </p>
                   ) : null}
                 </div>
 
                 <span
-                  className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ring-1 ${outcomeClass(
-                    appointment.outcome,
+                  className={`w-fit ${badgeClass(
+                    APPOINTMENT_OUTCOME_STYLES[appointment.outcome],
                   )}`}
                 >
                   {label(APPOINTMENT_OUTCOMES, appointment.outcome)}
@@ -189,7 +192,7 @@ export function AppointmentList({
                         type="button"
                         disabled={isPending}
                         onClick={() => updateOutcome(appointment.id, option.value)}
-                        className="rounded-xl border border-zinc-200 px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950 disabled:cursor-not-allowed disabled:text-zinc-400"
+                        className={outcomeButtonClass(option.value)}
                       >
                         {isSavingAppointment ? "Kaydediliyor..." : option.label}
                       </button>
@@ -197,10 +200,10 @@ export function AppointmentList({
                   </div>
 
                   {activeNoteDraft ? (
-                    <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
+                    <div className="mt-3 rounded-2xl border border-border bg-muted p-3">
                       <label
                         htmlFor={`appointment-note-${appointment.id}`}
-                        className="text-sm font-medium text-zinc-700"
+                        className="text-sm font-medium text-foreground"
                       >
                         Kısa not (opsiyonel)
                       </label>
@@ -215,7 +218,7 @@ export function AppointmentList({
                             note: event.target.value,
                           })
                         }
-                        className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 disabled:cursor-not-allowed disabled:bg-zinc-100"
+                        className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
                         placeholder="Örn. veli tekrar aranacak"
                       />
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -229,7 +232,7 @@ export function AppointmentList({
                               activeNoteDraft.note,
                             )
                           }
-                          className="rounded-xl bg-zinc-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+                          className="min-h-11 cursor-pointer rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isSavingAppointment ? "Kaydediliyor..." : "Kaydet"}
                         </button>
@@ -237,7 +240,7 @@ export function AppointmentList({
                           type="button"
                           disabled={isPending}
                           onClick={() => setNoteDraft(null)}
-                          className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950 disabled:cursor-not-allowed disabled:text-zinc-400"
+                          className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Vazgeç
                         </button>

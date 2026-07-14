@@ -55,8 +55,8 @@ export default async function AyarlarPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-zinc-950">Ayarlar</h1>
-        <p className="mt-2 text-sm text-zinc-600">
+        <h1 className="text-3xl font-semibold text-foreground">Ayarlar</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
           Sezon ve fiyat listesi yönetimi burada yapılır.
         </p>
       </div>
@@ -66,7 +66,7 @@ export default async function AyarlarPage() {
       {activeList ? (
         <PriceItemsEditor priceListId={activeList.id} items={activeItems} />
       ) : (
-        <p className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500">
+        <p className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
           Fiyat düzenlemek için önce bir sezonu aktif yapın.
         </p>
       )}

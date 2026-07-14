@@ -83,18 +83,18 @@ export function PlanWizard({
   }
 
   return (
-    <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+    <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-950">Ödeme planı</h2>
-          <p className="mt-1 text-sm text-zinc-600">
+          <h2 className="text-xl font-semibold text-foreground">Ödeme planı</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Kalem tutarını taksitlere bölün; kuruş farkı son taksite eklenir.
           </p>
         </div>
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
+          className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {open ? "Sihirbazı kapat" : "Plan oluştur"}
         </button>
@@ -103,12 +103,12 @@ export function PlanWizard({
       {open ? (
         <div className="mt-5 space-y-5">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="block text-sm font-medium text-zinc-700">
+            <label className="block text-sm font-medium text-foreground">
               Kalem tipi
               <select
                 value={itemType}
                 onChange={(event) => setItemType(event.target.value as ItemType)}
-                className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
               >
                 {itemTypes.map((type) => (
                   <option key={type} value={type}>
@@ -118,18 +118,18 @@ export function PlanWizard({
               </select>
             </label>
 
-            <label className="block text-sm font-medium text-zinc-700">
+            <label className="block text-sm font-medium text-foreground">
               Toplam TL
               <input
                 inputMode="decimal"
                 value={total}
                 onChange={(event) => setTotal(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15"
                 placeholder="180000"
               />
             </label>
 
-            <label className="block text-sm font-medium text-zinc-700">
+            <label className="block text-sm font-medium text-foreground">
               Taksit sayısı
               <input
                 type="number"
@@ -137,36 +137,36 @@ export function PlanWizard({
                 max={12}
                 value={count}
                 onChange={(event) => setCount(Number(event.target.value))}
-                className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15"
               />
             </label>
 
-            <label className="block text-sm font-medium text-zinc-700">
+            <label className="block text-sm font-medium text-foreground">
               İlk vade
               <input
                 type="date"
                 value={firstDueDate}
                 onChange={(event) => setFirstDueDate(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
               />
             </label>
           </div>
 
           {preview.length > 0 ? (
-            <div className="overflow-hidden rounded-2xl border border-zinc-200">
-              <table className="min-w-full divide-y divide-zinc-200 text-sm">
-                <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <div className="overflow-hidden rounded-2xl border border-border">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">#</th>
                     <th className="px-4 py-3">Vade</th>
                     <th className="px-4 py-3 text-right">Tutar</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100 bg-white">
+                <tbody className="divide-y divide-border bg-surface">
                   {preview.map((installment, index) => (
                     <tr key={`${installment.dueDate}-${index}`}>
-                      <td className="px-4 py-3 font-medium text-zinc-700">{index + 1}</td>
-                      <td className="px-4 py-3 text-zinc-700">
+                      <td className="px-4 py-3 font-medium text-foreground tabular-nums">{index + 1}</td>
+                      <td className="px-4 py-3 text-foreground">
                         {new Intl.DateTimeFormat("tr-TR", {
                           day: "numeric",
                           month: "long",
@@ -174,7 +174,7 @@ export function PlanWizard({
                           timeZone: "Europe/Istanbul",
                         }).format(new Date(`${installment.dueDate}T12:00:00+03:00`))}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-zinc-950">
+                      <td className="px-4 py-3 text-right font-semibold text-foreground tabular-nums">
                         {formatTRY(installment.amountKurus)}
                       </td>
                     </tr>
@@ -183,13 +183,13 @@ export function PlanWizard({
               </table>
             </div>
           ) : (
-            <p className="rounded-2xl border border-dashed border-zinc-300 p-5 text-center text-sm text-zinc-500">
+            <p className="rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
               Önizleme için geçerli tutar, taksit sayısı ve vade girin.
             </p>
           )}
 
           {error ? (
-            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+            <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
               {error}
             </p>
           ) : null}
@@ -198,7 +198,7 @@ export function PlanWizard({
             type="button"
             onClick={submit}
             disabled={isPending || preview.length === 0}
-            className="rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+            className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? "Kaydediliyor..." : "Onayla"}
           </button>

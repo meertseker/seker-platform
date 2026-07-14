@@ -52,7 +52,7 @@ export function LeadConversionForm({ leadId, canConvert }: LeadConversionFormPro
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full rounded-xl bg-zinc-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
+        className="min-h-11 w-full cursor-pointer rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
         Öğrenciye Dönüştür
       </button>
@@ -64,15 +64,15 @@ export function LeadConversionForm({ leadId, canConvert }: LeadConversionFormPro
           aria-modal="true"
           aria-labelledby={`convert-title-${leadId}`}
         >
-          <div className="w-full rounded-3xl bg-white p-5 shadow-xl sm:max-w-md">
-            <h2 id={`convert-title-${leadId}`} className="text-lg font-semibold text-zinc-950">
+          <div className="w-full rounded-2xl border border-border bg-surface p-5 shadow-xl sm:max-w-md">
+            <h2 id={`convert-title-${leadId}`} className="text-lg font-semibold text-foreground">
               Öğrenciye dönüştür
             </h2>
-            <p className="mt-2 text-sm text-zinc-600">
+            <p className="mt-2 text-sm text-muted-foreground">
               Onaylı teklif bilgileriyle öğrenci kaydı açılır ve ödeme planı sihirbazı başlatılır.
             </p>
 
-            <label className="mt-4 block text-sm font-medium text-zinc-700" htmlFor="start-date">
+            <label className="mt-4 block text-sm font-medium text-foreground" htmlFor="start-date">
               Başlangıç tarihi
             </label>
             <input
@@ -80,11 +80,11 @@ export function LeadConversionForm({ leadId, canConvert }: LeadConversionFormPro
               type="date"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+              className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
 
             {error ? (
-              <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+              <p className="mt-3 rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
                 {error}
               </p>
             ) : null}
@@ -94,7 +94,7 @@ export function LeadConversionForm({ leadId, canConvert }: LeadConversionFormPro
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={isPending}
-                className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 disabled:cursor-not-allowed disabled:text-zinc-400"
+                className="min-h-11 flex-1 cursor-pointer rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Vazgeç
               </button>
@@ -102,7 +102,7 @@ export function LeadConversionForm({ leadId, canConvert }: LeadConversionFormPro
                 type="button"
                 onClick={submit}
                 disabled={isPending || !startDate}
-                className="flex-1 rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+                className="min-h-11 flex-1 cursor-pointer rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPending ? "Dönüştürülüyor..." : "Dönüştür"}
               </button>

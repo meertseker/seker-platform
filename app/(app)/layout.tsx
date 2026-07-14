@@ -38,7 +38,7 @@ export default async function AppLayout({
   const unreadCount = unreadResult.count ?? 0;
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-950">
+    <div className="min-h-screen bg-background text-foreground">
       <Nav
         fullName={profile.full_name}
         role={profile.role}

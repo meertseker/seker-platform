@@ -41,10 +41,10 @@ export function NoteForm({ leadId }: NoteFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-3 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5"
+      className="space-y-3 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
     >
       <div>
-        <label htmlFor="note-body" className="text-sm font-medium text-zinc-800">
+        <label htmlFor="note-body" className="text-sm font-medium text-foreground">
           Yeni not
         </label>
         <textarea
@@ -53,7 +53,7 @@ export function NoteForm({ leadId }: NoteFormProps) {
           rows={4}
           disabled={isPending}
           placeholder="Görüşme notunu yazın..."
-          className="mt-2 block w-full resize-y rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 disabled:cursor-not-allowed disabled:bg-zinc-100"
+          className="mt-2 block w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
         />
       </div>
 
@@ -66,7 +66,7 @@ export function NoteForm({ leadId }: NoteFormProps) {
       <button
         type="submit"
         disabled={isPending}
-        className="w-full rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400 sm:w-auto"
+        className="min-h-11 w-full cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
       >
         {isPending ? "Ekleniyor..." : "Not Ekle"}
       </button>

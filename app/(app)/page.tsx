@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AlertTriangle, BadgePercent } from "lucide-react";
 import { AppointmentList, type AppointmentListItem } from "@/components/appointment-list";
 import { TaskCompleteButton } from "@/components/task-complete-button";
 import { getSessionProfile } from "@/lib/auth";
@@ -16,6 +17,7 @@ import {
   overdueTotalKurus,
 } from "@/lib/cron-rules";
 import { formatTRY } from "@/lib/money";
+import { badgeClass, LEAD_STATUS_STYLES } from "@/lib/status-styles";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -79,8 +81,8 @@ function daysSince(value: string, referenceDate: Date) {
 
 function taskTone(dueDate: string, today: string) {
   return dueDate <= today
-    ? "border-amber-200 bg-amber-50"
-    : "border-zinc-200 bg-white";
+    ? "border-amber-200 bg-warning-soft"
+    : "border-border bg-surface";
 }
 
 function SectionCard({
@@ -93,10 +95,10 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-4 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <section className="space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
       <div>
-        <h2 className="text-xl font-semibold text-zinc-950">{title}</h2>
-        <p className="mt-1 text-sm text-zinc-600">{description}</p>
+        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
       {children}
     </section>
@@ -124,26 +126,43 @@ function AdminCard({
   label,
   value,
   helper,
+  icon,
+  iconClass,
   danger = false,
 }: {
   href: string;
   label: string;
   value: string;
   helper: string;
+  icon: React.ReactNode;
+  iconClass: string;
   danger?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className={`block rounded-3xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-        danger ? "border-red-200" : "border-zinc-200"
+      className={`block rounded-2xl border bg-surface p-5 shadow-sm transition-colors hover:border-slate-300 ${
+        danger ? "border-red-200" : "border-border"
       }`}
     >
-      <p className="text-sm font-medium text-zinc-500">{label}</p>
-      <p className={`mt-2 text-2xl font-semibold ${danger ? "text-red-700" : "text-zinc-950"}`}>
-        {value}
-      </p>
-      <p className="mt-2 text-xs text-zinc-500">{helper}</p>
+      <div className="flex items-start gap-4">
+        <span
+          className={`flex size-10 items-center justify-center rounded-xl ${iconClass}`}
+        >
+          {icon}
+        </span>
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p
+            className={`mt-2 text-2xl font-semibold tabular-nums ${
+              danger ? "text-red-700" : "text-foreground"
+            }`}
+          >
+            {value}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">{helper}</p>
+        </div>
+      </div>
     </Link>
   );
 }
@@ -226,11 +245,11 @@ export default async function Home() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500">Bugün</p>
-          <h1 className="mt-1 text-3xl font-semibold text-zinc-950">
+          <p className="text-sm font-medium text-muted-foreground">Bugün</p>
+          <h1 className="mt-1 text-3xl font-semibold text-foreground">
             {formatDate(today)}
           </h1>
-          <p className="mt-2 text-sm text-zinc-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             Randevular, görevler ve takipsiz lead&apos;ler için günlük çalışma
             alanı.
           </p>
@@ -244,12 +263,16 @@ export default async function Home() {
             label="Onay bekleyen teklifler"
             value={`${pendingOffersResult.count ?? 0}`}
             helper="Yönetici onayı gereken teklif sayısı"
+            icon={<BadgePercent aria-hidden="true" className="size-5" />}
+            iconClass="bg-warning-soft text-warning"
           />
           <AdminCard
             href="/odemeler"
             label="Toplam geciken taksit"
             value={formatTRY(overdueTotal)}
             helper="Bugünden önce vadeli bekleyen taksitler"
+            icon={<AlertTriangle aria-hidden="true" className="size-5" />}
+            iconClass="bg-destructive-soft text-destructive"
             danger={overdueTotal > 0}
           />
         </section>
@@ -261,7 +284,7 @@ export default async function Home() {
           description="Bugün gerçekleşecek görüşmeleri saat sırasıyla takip edin."
         >
           {appointmentsResult.error ? (
-            <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
               Randevular yüklenirken bir sorun oluştu.
             </p>
           ) : (
@@ -282,7 +305,7 @@ export default async function Home() {
           }
         >
           {tasksResult.error ? (
-            <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
               Görevler yüklenirken bir sorun oluştu.
             </p>
           ) : tasks.length > 0 ? (
@@ -295,19 +318,19 @@ export default async function Home() {
                 return (
                   <li
                     key={task.id}
-                    className={`rounded-3xl border p-4 shadow-sm ${taskTone(
+                    className={`rounded-2xl border p-4 shadow-sm ${taskTone(
                       task.due_date,
                       today,
                     )}`}
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <p className="font-semibold text-zinc-950">{task.title}</p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-600">
+                        <p className="font-semibold text-foreground">{task.title}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                           {lead ? (
                             <Link
                               href={`/leads/${lead.id}`}
-                              className="font-semibold text-zinc-800 hover:underline"
+                              className="font-semibold text-foreground hover:underline"
                             >
                               {lead.parent_name}
                             </Link>
@@ -322,7 +345,7 @@ export default async function Home() {
                           ) : null}
                         </div>
                         {profile.role === "yonetici" ? (
-                          <p className="mt-2 text-xs font-medium text-zinc-500">
+                          <p className="mt-2 text-xs font-medium text-muted-foreground">
                             Sorumlu: {assignee?.full_name ?? "Atanmamış"}
                           </p>
                         ) : null}
@@ -334,7 +357,7 @@ export default async function Home() {
               })}
             </ul>
           ) : (
-            <p className="rounded-3xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500">
+            <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
               Açık görev görünmüyor.
             </p>
           )}
@@ -346,36 +369,36 @@ export default async function Home() {
         description={`${staleDays}+ gündür işlem görmeyen açık lead'leri canlı olarak gösterir.`}
       >
         {staleLeadsResult.error ? (
-          <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
             Takipsiz lead&apos;ler yüklenirken bir sorun oluştu.
           </p>
         ) : staleLeads.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-zinc-200 text-sm">
-              <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <table className="min-w-full divide-y divide-border text-sm">
+              <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Veli</th>
                   <th className="px-4 py-3">Durum</th>
                   <th className="px-4 py-3">Son işlem</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-border">
                 {staleLeads.map((lead) => (
-                  <tr key={lead.id} className="transition hover:bg-zinc-50">
+                  <tr key={lead.id} className="transition-colors hover:bg-muted">
                     <td className="px-4 py-4">
                       <Link
                         href={`/leads/${lead.id}`}
-                        className="font-semibold text-zinc-950 hover:underline"
+                        className="font-semibold text-foreground hover:underline"
                       >
                         {lead.parent_name}
                       </Link>
                     </td>
                     <td className="px-4 py-4">
-                      <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-700">
+                      <span className={badgeClass(LEAD_STATUS_STYLES[lead.status])}>
                         {label(LEAD_STATUSES, lead.status)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-zinc-700">
+                    <td className="px-4 py-4 text-slate-700">
                       {daysSince(lead.last_activity_at, now)} gün önce
                     </td>
                   </tr>
@@ -384,7 +407,7 @@ export default async function Home() {
             </table>
           </div>
         ) : (
-          <p className="rounded-3xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500">
+          <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
             Takipsiz açık lead görünmüyor.
           </p>
         )}

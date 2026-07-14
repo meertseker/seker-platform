@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { reopenLead } from "@/actions/leads";
 import { StatusSelect } from "@/components/status-select";
+import { badgeClass, LEAD_STATUS_STYLES } from "@/lib/status-styles";
 import {
   label,
   LEAD_SOURCES,
@@ -64,42 +65,42 @@ export function LeadCard({ lead, archived = false }: LeadCardProps) {
   const isLost = lead.status === "kaybedildi";
 
   return (
-    <article className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+    <article className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <Link
             href={`/leads/${lead.id}`}
-            className="font-semibold text-zinc-950 hover:underline"
+            className="font-semibold text-foreground hover:underline"
           >
             {lead.parent_name}
           </Link>
-          <p className="mt-1 text-sm text-zinc-500">{lead.phone}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{lead.phone}</p>
         </div>
-        <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-700">
+        <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
           {label(LEAD_SOURCES, lead.source)}
         </span>
       </div>
 
       {lead.source_detail ? (
-        <p className="mt-3 rounded-2xl bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
+        <p className="mt-3 rounded-2xl bg-muted px-3 py-2 text-xs text-muted-foreground">
           {lead.source_detail}
         </p>
       ) : null}
 
       <dl className="mt-4 space-y-2 text-sm">
         <div>
-          <dt className="text-xs font-medium text-zinc-500">Çocuk</dt>
-          <dd className="text-zinc-800">{formatChild(lead)}</dd>
+          <dt className="text-xs font-medium text-muted-foreground">Çocuk</dt>
+          <dd className="text-foreground">{formatChild(lead)}</dd>
         </div>
         <div>
-          <dt className="text-xs font-medium text-zinc-500">Danışman</dt>
-          <dd className="text-zinc-800">
+          <dt className="text-xs font-medium text-muted-foreground">Danışman</dt>
+          <dd className="text-foreground">
             {lead.assigned?.full_name ?? "Atanmamış"}
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-medium text-zinc-500">Son aktivite</dt>
-          <dd className="text-zinc-800">
+          <dt className="text-xs font-medium text-muted-foreground">Son aktivite</dt>
+          <dd className="text-foreground tabular-nums">
             {dateFormatter.format(new Date(lead.last_activity_at))}
           </dd>
         </div>
@@ -108,7 +109,7 @@ export function LeadCard({ lead, archived = false }: LeadCardProps) {
       <div className="mt-4">
         {archived ? (
           <div className="space-y-3">
-            <div className="rounded-2xl bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-700">
+            <div className={badgeClass(LEAD_STATUS_STYLES[lead.status])}>
               {label(LEAD_STATUSES, lead.status)}
               {lead.lost_reason
                 ? ` - ${label(LOST_REASONS, lead.lost_reason)}`
@@ -119,7 +120,7 @@ export function LeadCard({ lead, archived = false }: LeadCardProps) {
                 <input type="hidden" name="leadId" value={lead.id} />
                 <button
                   type="submit"
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+                  className="min-h-11 w-full cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Yeniden Aç
                 </button>

@@ -16,6 +16,7 @@ import {
 } from "@/lib/constants";
 import { getSessionProfile } from "@/lib/auth";
 import { formatTRY, tlToKurus } from "@/lib/money";
+import { badgeClass, STUDENT_STATUS_STYLES } from "@/lib/status-styles";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -156,66 +157,66 @@ export default async function StudentDetailPage({
       <div>
         <Link
           href="/ogrenciler"
-          className="text-sm font-medium text-zinc-600 hover:text-zinc-950"
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           Öğrenci listesine dön
         </Link>
         <h1 className="mt-3 text-3xl font-semibold">{student.full_name}</h1>
-        <p className="mt-2 text-sm text-zinc-600">
+        <p className="mt-2 text-sm text-muted-foreground">
           Öğrenci bilgileri, ödeme planları ve taksit hareketleri.
         </p>
       </div>
 
-      <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-zinc-500">Öğrenci</p>
-            <h2 className="mt-1 text-2xl font-semibold text-zinc-950">
+            <p className="text-sm font-medium text-muted-foreground">Öğrenci</p>
+            <h2 className="mt-1 text-2xl font-semibold text-foreground">
               {student.full_name}
             </h2>
-            <p className="mt-2 text-sm text-zinc-600">
+            <p className="mt-2 text-sm text-muted-foreground">
               {label(PROGRAMS, student.program)} - {student.season}
             </p>
           </div>
-          <span className="w-fit rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-700">
+          <span className={`w-fit ${badgeClass(STUDENT_STATUS_STYLES[student.status])}`}>
             {label(STUDENT_STATUSES, student.status)}
           </span>
         </div>
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <dt className="text-xs font-medium text-zinc-500">Veli</dt>
-            <dd className="mt-1 text-sm font-semibold text-zinc-900">
+            <dt className="text-xs font-medium text-muted-foreground">Veli</dt>
+            <dd className="mt-1 text-sm font-semibold text-foreground">
               {student.parent_name}
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-medium text-zinc-500">Telefon</dt>
-            <dd className="mt-1 text-sm font-semibold text-zinc-900">
+            <dt className="text-xs font-medium text-muted-foreground">Telefon</dt>
+            <dd className="mt-1 text-sm font-semibold text-foreground">
               {student.phone}
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-medium text-zinc-500">Doğum</dt>
-            <dd className="mt-1 text-sm font-semibold text-zinc-900">
+            <dt className="text-xs font-medium text-muted-foreground">Doğum</dt>
+            <dd className="mt-1 text-sm font-semibold text-foreground">
               {formatBirth(student.birth_month, student.birth_year)}
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-medium text-zinc-500">Başlangıç</dt>
-            <dd className="mt-1 text-sm font-semibold text-zinc-900">
+            <dt className="text-xs font-medium text-muted-foreground">Başlangıç</dt>
+            <dd className="mt-1 text-sm font-semibold text-foreground">
               {formatDate(student.start_date)}
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-medium text-zinc-500">Ödenen</dt>
-            <dd className="mt-1 text-sm font-semibold text-zinc-900">
+            <dt className="text-xs font-medium text-muted-foreground">Ödenen</dt>
+            <dd className="mt-1 text-sm font-semibold tabular-nums text-foreground">
               {formatTRY(paidKurus)}
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-medium text-zinc-500">Plan toplamı</dt>
-            <dd className="mt-1 text-sm font-semibold text-zinc-900">
+            <dt className="text-xs font-medium text-muted-foreground">Plan toplamı</dt>
+            <dd className="mt-1 text-sm font-semibold tabular-nums text-foreground">
               {formatTRY(totalKurus)}
             </dd>
           </div>
@@ -236,8 +237,8 @@ export default async function StudentDetailPage({
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-950">Planlar</h2>
-          <p className="mt-1 text-sm text-zinc-600">
+          <h2 className="text-xl font-semibold text-foreground">Planlar</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Her plan kendi taksitleriyle birlikte takip edilir.
           </p>
         </div>
@@ -251,23 +252,23 @@ export default async function StudentDetailPage({
               return (
                 <article
                   key={plan.id}
-                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6"
+                  className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold text-zinc-950">
+                      <h3 className="text-lg font-semibold text-foreground">
                         {label(ITEM_TYPES, plan.item_type)}
                       </h3>
-                      <p className="mt-1 text-sm text-zinc-600">
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {plan.season} - {plan.installment_count} taksit
                       </p>
                     </div>
                     <div className="text-left sm:text-right">
-                      <p className="text-sm font-semibold text-zinc-950">
+                      <p className="text-sm font-semibold tabular-nums text-foreground">
                         {formatTRY(planPaid)} / {formatTRY(planTotal)}
                       </p>
                       {plan.source_offer_id ? (
-                        <p className="mt-1 text-xs text-zinc-500">Onaylı tekliften oluşturuldu</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Onaylı tekliften oluşturuldu</p>
                       ) : null}
                     </div>
                   </div>
@@ -284,7 +285,7 @@ export default async function StudentDetailPage({
             })}
           </div>
         ) : (
-          <p className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500">
+          <p className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
             Henüz ödeme planı yok.
           </p>
         )}

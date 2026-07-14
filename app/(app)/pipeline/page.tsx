@@ -29,6 +29,16 @@ const openStatuses = statusKeys.filter(
 const sourceKeys = Object.keys(LEAD_SOURCES) as LeadSource[];
 const pageSize = 50;
 
+const STATUS_DOTS: Record<LeadStatus, string> = {
+  yeni: "bg-blue-500",
+  ulasildi: "bg-sky-500",
+  randevu: "bg-violet-500",
+  gorusme_yapildi: "bg-amber-500",
+  teklif: "bg-orange-500",
+  kazanildi: "bg-emerald-500",
+  kaybedildi: "bg-red-500",
+};
+
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -139,18 +149,18 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500">Lead takibi</p>
+          <p className="text-sm font-medium text-muted-foreground">Lead takibi</p>
           <h1 className="mt-1 text-3xl font-semibold">
             {archive ? "Kazanılan/Kaybedilen Arşivi" : "Pipeline"}
           </h1>
-          <p className="mt-2 text-sm text-zinc-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             Lead durumlarını takip edin, filtreleyin ve hızlıca güncelleyin.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/leads/new"
-            className="rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Yeni Lead
           </Link>
@@ -159,7 +169,7 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
               arsiv: archive ? undefined : "1",
               sayfa: undefined,
             })}
-            className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+            className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {archive ? "Açık Pipeline" : "Kazanılan/Kaybedilen Arşivi"}
           </Link>
@@ -168,13 +178,13 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
 
       <form
         action="/pipeline"
-        className="grid gap-3 rounded-3xl border border-zinc-200 bg-white p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+        className="grid gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:grid-cols-[1fr_1fr_auto] sm:items-end"
       >
         {archive ? <input type="hidden" name="arsiv" value="1" /> : null}
         <div>
           <label
             htmlFor="danisman"
-            className="text-sm font-medium text-zinc-700"
+            className="text-sm font-medium text-slate-700"
           >
             Danışman
           </label>
@@ -182,7 +192,7 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
             id="danisman"
             name="danisman"
             defaultValue={danisman}
-            className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
           >
             <option value="">Tüm danışmanlar</option>
             {(profiles ?? []).map((profile: ProfileOption) => (
@@ -193,14 +203,14 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
           </select>
         </div>
         <div>
-          <label htmlFor="kaynak" className="text-sm font-medium text-zinc-700">
+          <label htmlFor="kaynak" className="text-sm font-medium text-slate-700">
             Kaynak
           </label>
           <select
             id="kaynak"
             name="kaynak"
             defaultValue={kaynak}
-            className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
           >
             <option value="">Tüm kaynaklar</option>
             {sourceKeys.map((source) => (
@@ -212,14 +222,14 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
         </div>
         <button
           type="submit"
-          className="rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
+          className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Filtrele
         </button>
       </form>
 
       {leadsResult.error ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           Leadler yüklenemedi.
         </p>
       ) : null}
@@ -227,21 +237,21 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
       {archive ? (
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-zinc-600">
+            <p className="text-sm text-muted-foreground">
               {totalCount} kayıt, sayfa {page}/{totalPages}
             </p>
             <div className="flex gap-2">
               {page <= 1 ? (
                 <span
                   aria-disabled="true"
-                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-300"
+                  className="min-h-11 cursor-not-allowed rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-300"
                 >
                   Önceki
                 </span>
               ) : (
                 <Link
                   href={hrefWith(currentParams, { sayfa: String(page - 1) })}
-                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+                  className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Önceki
                 </Link>
@@ -249,14 +259,14 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
               {page >= totalPages ? (
                 <span
                   aria-disabled="true"
-                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-300"
+                  className="min-h-11 cursor-not-allowed rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-300"
                 >
                   Sonraki
                 </span>
               ) : (
                 <Link
                   href={hrefWith(currentParams, { sayfa: String(page + 1) })}
-                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+                  className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Sonraki
                 </Link>
@@ -270,7 +280,7 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
               ))}
             </div>
           ) : (
-            <p className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500">
+            <p className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
               Arşivde kayıt yok.
             </p>
           )}
@@ -283,13 +293,17 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
             return (
               <div
                 key={status}
-                className="min-h-96 rounded-3xl border border-zinc-200 bg-zinc-100/70 p-3"
+                className="min-h-96 rounded-2xl border border-border bg-muted/70 p-3"
               >
                 <div className="mb-3 flex items-center justify-between gap-2 px-1">
-                  <h2 className="font-semibold text-zinc-900">
+                  <h2 className="flex items-center gap-2 font-semibold text-foreground">
+                    <span
+                      aria-hidden="true"
+                      className={`size-2 rounded-full ${STATUS_DOTS[status]}`}
+                    />
                     {label(LEAD_STATUSES, status)}
                   </h2>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-zinc-600">
+                  <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-muted-foreground tabular-nums">
                     {statusLeads.length}
                   </span>
                 </div>
@@ -299,7 +313,7 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
                       <LeadCard key={lead.id} lead={lead} />
                     ))
                   ) : (
-                    <p className="rounded-2xl border border-dashed border-zinc-300 bg-white p-4 text-center text-sm text-zinc-500">
+                    <p className="rounded-2xl border border-dashed border-border bg-surface p-4 text-center text-sm text-muted-foreground">
                       Bu durumda lead yok.
                     </p>
                   )}

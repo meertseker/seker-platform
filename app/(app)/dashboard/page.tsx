@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getSessionProfile } from "@/lib/auth";
 import { LEAD_SOURCES, LOST_REASONS, label } from "@/lib/constants";
 import { formatTRY } from "@/lib/money";
@@ -58,20 +59,20 @@ function pct(numerator: number, denominator: number): number {
 
 function MetricCard({ label: cardLabel, value, helper }: { label: string; value: string; helper: string }) {
   return (
-    <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-      <p className="text-sm font-medium text-zinc-500">{cardLabel}</p>
-      <p className="mt-2 text-2xl font-semibold text-zinc-950">{value}</p>
-      <p className="mt-2 text-xs text-zinc-500">{helper}</p>
+    <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+      <p className="text-sm font-medium text-muted-foreground">{cardLabel}</p>
+      <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{value}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{helper}</p>
     </div>
   );
 }
 
-function Bar({ widthPct, tone = "default" }: { widthPct: number; tone?: "default" | "danger" }) {
+function Bar({ widthPct, fillClass = "bg-primary" }: { widthPct: number; fillClass?: string }) {
   const clamped = Math.min(100, Math.max(0, widthPct));
   return (
-    <div className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-100">
+    <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
       <div
-        className={`h-full rounded-full ${tone === "danger" ? "bg-red-500" : "bg-zinc-900"}`}
+        className={`h-full rounded-full ${fillClass}`}
         style={{ width: `${clamped}%` }}
       />
     </div>
@@ -80,17 +81,17 @@ function Bar({ widthPct, tone = "default" }: { widthPct: number; tone?: "default
 
 function FunnelSection({ funnel }: { funnel: FunnelResult }) {
   const stages = [
-    { key: "leads", title: "Lead", value: funnel.leads },
-    { key: "randevu", title: "Randevu", value: funnel.randevu },
-    { key: "gorusme", title: "Görüşme", value: funnel.gorusme },
-    { key: "kayit", title: "Kayıt", value: funnel.kayit },
+    { key: "leads", title: "Lead", value: funnel.leads, fillClass: "bg-primary" },
+    { key: "randevu", title: "Randevu", value: funnel.randevu, fillClass: "bg-blue-500" },
+    { key: "gorusme", title: "Görüşme", value: funnel.gorusme, fillClass: "bg-violet-500" },
+    { key: "kayit", title: "Kayıt", value: funnel.kayit, fillClass: "bg-emerald-500" },
   ];
 
   return (
-    <section className="space-y-4 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <section className="space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
       <div>
-        <h2 className="text-xl font-semibold text-zinc-950">Huni</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+        <h2 className="text-xl font-semibold text-foreground">Huni</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Seçili ayda oluşturulan lead&apos;lerin aşamalara göre ilerleyişi.
         </p>
       </div>
@@ -98,17 +99,17 @@ function FunnelSection({ funnel }: { funnel: FunnelResult }) {
         {stages.map((stage) => (
           <div key={stage.key} className="space-y-1.5">
             <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="font-medium text-zinc-700">{stage.title}</span>
-              <span className="font-semibold text-zinc-950">
+              <span className="font-medium text-slate-700">{stage.title}</span>
+              <span className="font-semibold tabular-nums text-foreground">
                 {stage.value}
                 {stage.key !== "leads" ? (
-                  <span className="ml-2 text-xs font-medium text-zinc-500">
+                  <span className="ml-2 text-xs font-medium tabular-nums text-muted-foreground">
                     (%{pct(stage.value, funnel.leads)})
                   </span>
                 ) : null}
               </span>
             </div>
-            <Bar widthPct={pct(stage.value, funnel.leads)} />
+            <Bar widthPct={pct(stage.value, funnel.leads)} fillClass={stage.fillClass} />
           </div>
         ))}
       </div>
@@ -118,16 +119,16 @@ function FunnelSection({ funnel }: { funnel: FunnelResult }) {
 
 function SourceConversionSection({ rows }: { rows: SourceConversionRow[] }) {
   return (
-    <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-200 bg-zinc-50 px-5 py-4">
-        <h2 className="text-xl font-semibold text-zinc-950">Kaynak dönüşümü</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+    <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+      <div className="border-b border-border bg-muted px-5 py-4">
+        <h2 className="text-xl font-semibold text-foreground">Kaynak dönüşümü</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Tüm zamanların kaynak bazında lead ve kayıt sayıları.
         </p>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-zinc-200 text-sm">
-          <thead className="bg-white text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        <table className="min-w-full divide-y divide-border text-sm">
+          <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-5 py-3">Kaynak</th>
               <th className="px-5 py-3 text-right">Lead</th>
@@ -135,15 +136,15 @@ function SourceConversionSection({ rows }: { rows: SourceConversionRow[] }) {
               <th className="px-5 py-3 text-right">Dönüşüm %</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-border">
             {rows.map((row) => (
-              <tr key={row.source} className="transition hover:bg-zinc-50">
-                <td className="px-5 py-4 font-semibold text-zinc-950">
+              <tr key={row.source} className="transition-colors hover:bg-muted/60">
+                <td className="px-5 py-4 font-semibold text-foreground">
                   {label(LEAD_SOURCES, row.source)}
                 </td>
-                <td className="px-5 py-4 text-right text-zinc-700">{row.total}</td>
-                <td className="px-5 py-4 text-right text-zinc-700">{row.won}</td>
-                <td className="px-5 py-4 text-right font-semibold text-zinc-950">
+                <td className="px-5 py-4 text-right tabular-nums text-muted-foreground">{row.total}</td>
+                <td className="px-5 py-4 text-right tabular-nums text-muted-foreground">{row.won}</td>
+                <td className="px-5 py-4 text-right font-semibold tabular-nums text-foreground">
                   %{pct(row.won, row.total)}
                 </td>
               </tr>
@@ -159,15 +160,15 @@ function LostReasonsSection({ rows }: { rows: LostReasonRow[] }) {
   const max = Math.max(1, ...rows.map((row) => row.count));
 
   return (
-    <section className="space-y-4 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <section className="space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
       <div>
-        <h2 className="text-xl font-semibold text-zinc-950">Kayıp nedenleri</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+        <h2 className="text-xl font-semibold text-foreground">Kayıp nedenleri</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Kaybedilen lead&apos;lerin neden dağılımı (tüm zamanlar).
         </p>
       </div>
       {rows.every((row) => row.count === 0) ? (
-        <p className="rounded-3xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500">
+        <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
           Kaybedilen lead görünmüyor.
         </p>
       ) : (
@@ -175,10 +176,10 @@ function LostReasonsSection({ rows }: { rows: LostReasonRow[] }) {
           {rows.map((row) => (
             <div key={row.reason} className="space-y-1.5">
               <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="font-medium text-zinc-700">{label(LOST_REASONS, row.reason)}</span>
-                <span className="font-semibold text-zinc-950">{row.count}</span>
+                <span className="font-medium text-slate-700">{label(LOST_REASONS, row.reason)}</span>
+                <span className="font-semibold tabular-nums text-foreground">{row.count}</span>
               </div>
-              <Bar widthPct={(row.count / max) * 100} tone="danger" />
+              <Bar widthPct={(row.count / max) * 100} fillClass="bg-destructive" />
             </div>
           ))}
         </div>
@@ -211,16 +212,16 @@ function PaymentSummarySection({ summary }: { summary: PaymentSummary }) {
 
 function ConsultantBreakdownSection({ rows }: { rows: ConsultantBreakdownRow[] }) {
   return (
-    <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-200 bg-zinc-50 px-5 py-4">
-        <h2 className="text-xl font-semibold text-zinc-950">Danışman kırılımı</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+    <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+      <div className="border-b border-border bg-muted px-5 py-4">
+        <h2 className="text-xl font-semibold text-foreground">Danışman kırılımı</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Tüm zamanların danışman bazında lead ve kayıt sayıları.
         </p>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-zinc-200 text-sm">
-          <thead className="bg-white text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        <table className="min-w-full divide-y divide-border text-sm">
+          <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-5 py-3">Danışman</th>
               <th className="px-5 py-3 text-right">Lead</th>
@@ -228,13 +229,13 @@ function ConsultantBreakdownSection({ rows }: { rows: ConsultantBreakdownRow[] }
               <th className="px-5 py-3 text-right">Dönüşüm %</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-border">
             {rows.map((row) => (
-              <tr key={row.consultantId} className="transition hover:bg-zinc-50">
-                <td className="px-5 py-4 font-semibold text-zinc-950">{row.consultantName}</td>
-                <td className="px-5 py-4 text-right text-zinc-700">{row.leads}</td>
-                <td className="px-5 py-4 text-right text-zinc-700">{row.won}</td>
-                <td className="px-5 py-4 text-right font-semibold text-zinc-950">
+              <tr key={row.consultantId} className="transition-colors hover:bg-muted/60">
+                <td className="px-5 py-4 font-semibold text-foreground">{row.consultantName}</td>
+                <td className="px-5 py-4 text-right tabular-nums text-muted-foreground">{row.leads}</td>
+                <td className="px-5 py-4 text-right tabular-nums text-muted-foreground">{row.won}</td>
+                <td className="px-5 py-4 text-right font-semibold tabular-nums text-foreground">
                   %{pct(row.won, row.leads)}
                 </td>
               </tr>
@@ -267,34 +268,36 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500">Analiz</p>
-          <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Dashboard</h1>
-          <p className="mt-2 text-sm text-zinc-600">
+          <p className="text-sm font-medium text-muted-foreground">Analiz</p>
+          <h1 className="mt-1 text-3xl font-semibold text-foreground">Dashboard</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
             {formatMonthLabel(month)} ayı için huni, kaynak dönüşümü ve ödeme özeti.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/dashboard?ay=${prevMonth}`}
-            className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+            className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
+            <ChevronLeft aria-hidden className="size-4" />
             Önceki ay
           </Link>
           <Link
             href={`/dashboard?ay=${nextMonth}`}
-            className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+            className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Sonraki ay
+            <ChevronRight aria-hidden className="size-4" />
           </Link>
         </div>
       </div>
 
       <form
         action="/dashboard"
-        className="flex flex-col gap-3 rounded-3xl border border-zinc-200 bg-white p-4 sm:flex-row sm:items-end"
+        className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:flex-row sm:items-end"
       >
         <div>
-          <label htmlFor="ay" className="text-sm font-medium text-zinc-700">
+          <label htmlFor="ay" className="text-sm font-medium text-foreground">
             Ay seç
           </label>
           <input
@@ -302,12 +305,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             name="ay"
             type="month"
             defaultValue={month}
-            className="mt-2 block rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            className="mt-2 block min-h-11 rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
           />
         </div>
         <button
           type="submit"
-          className="rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
+          className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Ayı Göster
         </button>

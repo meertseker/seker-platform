@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   APPOINTMENT_OUTCOMES,
   APPOINTMENT_TYPES,
@@ -6,6 +7,7 @@ import {
   type AppointmentOutcome,
   type AppointmentType,
 } from "@/lib/constants";
+import { APPOINTMENT_OUTCOME_STYLES, badgeClass } from "@/lib/status-styles";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -120,18 +122,7 @@ function ymd(date: Date) {
 }
 
 function outcomeClass(outcome: AppointmentOutcome) {
-  switch (outcome) {
-    case "geldi":
-      return "bg-green-50 text-green-700 ring-green-200";
-    case "gelmedi":
-      return "bg-red-50 text-red-700 ring-red-200";
-    case "ertelendi":
-      return "bg-amber-50 text-amber-700 ring-amber-200";
-    case "iptal":
-      return "bg-zinc-100 text-zinc-600 ring-zinc-200";
-    default:
-      return "bg-blue-50 text-blue-700 ring-blue-200";
-  }
+  return badgeClass(APPOINTMENT_OUTCOME_STYLES[outcome]);
 }
 
 export default async function CalendarPage({ searchParams }: CalendarPageProps) {
@@ -180,6 +171,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         ? "grid gap-4 lg:grid-cols-6"
         : "grid gap-4 lg:grid-cols-5";
 
+  const todayYmd = ymd(istanbulTodayAsUtcDate());
   const currentWeek = weekKey(selectedMonday);
   const prevWeek = weekKey(addDays(selectedMonday, -7));
   const nextWeek = weekKey(addDays(selectedMonday, 7));
@@ -188,9 +180,9 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500">Randevu takvimi</p>
-          <h1 className="mt-1 text-3xl font-semibold text-zinc-950">Takvim</h1>
-          <p className="mt-2 text-sm text-zinc-600">
+          <p className="text-sm font-medium text-muted-foreground">Randevu takvimi</p>
+          <h1 className="mt-1 text-3xl font-semibold text-foreground">Takvim</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
             Haftalık okul ziyareti ve telefon randevularını takip edin.
           </p>
         </div>
@@ -198,25 +190,27 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/takvim?hafta=${prevWeek}`}
-            className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+            className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
+            <ChevronLeft aria-hidden className="size-4" />
             Önceki hafta
           </Link>
           <Link
             href={`/takvim?hafta=${nextWeek}`}
-            className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+            className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Sonraki hafta
+            <ChevronRight aria-hidden className="size-4" />
           </Link>
         </div>
       </div>
 
       <form
         action="/takvim"
-        className="flex flex-col gap-3 rounded-3xl border border-zinc-200 bg-white p-4 sm:flex-row sm:items-end"
+        className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:flex-row sm:items-end"
       >
         <div>
-          <label htmlFor="hafta" className="text-sm font-medium text-zinc-700">
+          <label htmlFor="hafta" className="text-sm font-medium text-foreground">
             Hafta seç
           </label>
           <input
@@ -224,19 +218,19 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
             name="hafta"
             type="week"
             defaultValue={currentWeek}
-            className="mt-2 block rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            className="mt-2 block min-h-11 rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
           />
         </div>
         <button
           type="submit"
-          className="rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
+          className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Haftayı Göster
         </button>
       </form>
 
       {error ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           Randevular yüklenemedi.
         </p>
       ) : null}
@@ -248,13 +242,15 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
           return (
             <div
               key={ymd(day)}
-              className="min-h-48 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm"
+              className={`min-h-48 rounded-2xl border border-border bg-surface p-4 shadow-sm ${
+                ymd(day) === todayYmd ? "ring-2 ring-primary/30" : ""
+              }`}
             >
               <div className="mb-4 flex items-center justify-between gap-2">
-                <h2 className="font-semibold capitalize text-zinc-950">
+                <h2 className="font-semibold capitalize text-foreground">
                   {dayFormatter.format(day)}
                 </h2>
-                <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600">
+                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold tabular-nums text-muted-foreground">
                   {dayAppointments.length}
                 </span>
               </div>
@@ -267,31 +263,27 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                     return (
                       <li
                         key={appointment.id}
-                        className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3"
+                        className="rounded-2xl border border-border bg-muted p-3"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <time
                             dateTime={appointment.scheduled_at}
-                            className="text-sm font-semibold text-zinc-950"
+                            className="text-sm font-semibold tabular-nums text-foreground"
                           >
                             {timeFormatter.format(new Date(appointment.scheduled_at))}
                           </time>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${outcomeClass(
-                              appointment.outcome,
-                            )}`}
-                          >
+                          <span className={outcomeClass(appointment.outcome)}>
                             {label(APPOINTMENT_OUTCOMES, appointment.outcome)}
                           </span>
                         </div>
 
                         <Link
                           href={`/leads/${lead?.id ?? appointment.lead_id}`}
-                          className="mt-2 block text-sm font-semibold text-zinc-800 transition hover:text-zinc-950"
+                          className="mt-2 block text-sm font-semibold text-foreground transition-colors hover:text-primary"
                         >
                           {lead?.parent_name ?? "Lead detayına git"}
                         </Link>
-                        <p className="mt-1 text-xs font-medium text-zinc-500">
+                        <p className="mt-1 text-xs font-medium text-muted-foreground">
                           {label(APPOINTMENT_TYPES, appointment.type)}
                         </p>
                       </li>
@@ -299,7 +291,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                   })}
                 </ul>
               ) : (
-                <p className="rounded-2xl border border-dashed border-zinc-300 p-4 text-center text-sm text-zinc-500">
+                <p className="rounded-2xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
                   Bu gün randevu yok.
                 </p>
               )}

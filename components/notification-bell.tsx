@@ -1,5 +1,6 @@
 "use client";
 
+import { Bell } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -119,25 +120,25 @@ export function NotificationBell({
         aria-label="Bildirimler"
         aria-expanded={open}
         onClick={toggleOpen}
-        className="relative rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+        className="relative min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        Zil
+        <Bell aria-hidden className="size-5" />
         {displayUnreadCount > 0 ? (
-          <span className="absolute -right-2 -top-2 min-w-5 rounded-full bg-red-600 px-1.5 py-0.5 text-center text-xs font-bold text-white">
+          <span className="absolute -right-2 -top-2 min-w-5 rounded-full bg-destructive px-1.5 py-0.5 text-center text-xs font-bold text-white tabular-nums">
             {displayUnreadCount > 99 ? "99+" : displayUnreadCount}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-12 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-lg">
-          <div className="border-b border-zinc-200 px-4 py-3">
-            <p className="text-sm font-semibold text-zinc-950">Bildirimler</p>
-            <p className="mt-1 text-xs text-zinc-500">Son 20 bildirim</p>
+        <div className="absolute right-0 top-12 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border bg-surface shadow-lg">
+          <div className="border-b border-border px-4 py-3">
+            <p className="text-sm font-semibold text-foreground">Bildirimler</p>
+            <p className="mt-1 text-xs text-muted-foreground">Son 20 bildirim</p>
           </div>
 
           {notifications.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-zinc-500">
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground">
               Henüz bildirim yok.
             </p>
           ) : (
@@ -147,14 +148,14 @@ export function NotificationBell({
                   <button
                     type="button"
                     onClick={() => openNotification(notification)}
-                    className={`block w-full px-4 py-3 text-left transition hover:bg-zinc-50 ${
-                      notification.read_at ? "bg-white" : "bg-blue-50/60"
+                    className={`block w-full cursor-pointer px-4 py-3 text-left transition-colors hover:bg-muted ${
+                      notification.read_at ? "bg-surface" : "bg-primary-soft"
                     }`}
                   >
-                    <span className="block text-sm font-medium text-zinc-900">
+                    <span className="block text-sm font-medium text-foreground tabular-nums">
                       {notificationText(notification)}
                     </span>
-                    <span className="mt-1 block text-xs text-zinc-500">
+                    <span className="mt-1 block text-xs text-muted-foreground">
                       {relativeTime(notification.created_at)}
                     </span>
                   </button>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MessageCircle, Phone } from "lucide-react";
 import { ActivityFeed, type ActivityFeedItem } from "@/components/activity-feed";
 import { AppointmentForm } from "@/components/appointment-form";
 import {
@@ -169,14 +170,14 @@ function LeadAppointmentsSection({
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-zinc-950">Randevular</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+        <h2 className="text-xl font-semibold text-foreground">Randevular</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Geçmiş ve gelecek randevuları takip edin, sonuçlarını işaretleyin.
         </p>
       </div>
       <AppointmentForm leadId={leadId} />
       {hasError ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           Randevular yüklenirken bir sorun oluştu.
         </p>
       ) : (
@@ -247,14 +248,14 @@ function LeadOffersSection({
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold text-zinc-950">Teklifler</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+        <h2 className="text-xl font-semibold text-foreground">Teklifler</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Liste fiyatı, indirim ve yönetici onay sürecini buradan takip edin.
         </p>
       </div>
       <OfferForm leadId={leadId} priceItems={priceItems} />
       {hasError ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           Teklifler yüklenirken bir sorun oluştu.
         </p>
       ) : (
@@ -337,18 +338,18 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
         <div>
           <Link
             href="/pipeline"
-            className="text-sm font-medium text-zinc-600 hover:text-zinc-950"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             Pipeline ekranına dön
           </Link>
           <h1 className="mt-3 text-3xl font-semibold">{lead.parent_name}</h1>
-          <p className="mt-2 text-sm text-zinc-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             Lead detayını, notları ve sistem aktivitelerini takip edin.
           </p>
         </div>
         <Link
           href="/leads/new"
-          className="rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
+          className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Yeni Lead
         </Link>
@@ -356,66 +357,68 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-6">
-          <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+          <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-500">Veli</p>
-                <h2 className="mt-1 text-2xl font-semibold text-zinc-950">
+                <p className="text-sm font-medium text-muted-foreground">Veli</p>
+                <h2 className="mt-1 text-2xl font-semibold text-foreground">
                   {lead.parent_name}
                 </h2>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <a
                     href={`tel:${lead.phone}`}
-                    className="rounded-xl border border-zinc-200 px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+                    className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
+                    <Phone aria-hidden="true" className="size-4" />
                     Ara
                   </a>
                   <a
                     href={`https://wa.me/${whatsappNumber}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm font-semibold text-green-800 transition hover:border-green-300"
+                    className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-emerald-200 bg-accent-soft px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:border-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
+                    <MessageCircle aria-hidden="true" className="size-4" />
                     WhatsApp
                   </a>
                 </div>
               </div>
-              <span className="w-fit rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-700">
+              <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-semibold text-slate-700">
                 {label(LEAD_SOURCES, lead.source)}
               </span>
             </div>
 
             <dl className="mt-6 grid gap-4 sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-medium text-zinc-500">Telefon</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-800">
+                <dt className="text-xs font-medium text-muted-foreground">Telefon</dt>
+                <dd className="mt-1 text-sm font-medium text-foreground">
                   {lead.phone}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-medium text-zinc-500">Çocuk</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-800">
+                <dt className="text-xs font-medium text-muted-foreground">Çocuk</dt>
+                <dd className="mt-1 text-sm font-medium text-foreground">
                   {formatChild(lead)}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-medium text-zinc-500">Danışman</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-800">
+                <dt className="text-xs font-medium text-muted-foreground">Danışman</dt>
+                <dd className="mt-1 text-sm font-medium text-foreground">
                   {assigned?.full_name ?? "Atanmamış"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-medium text-zinc-500">Kaynak</dt>
-                <dd className="mt-1 text-sm font-medium text-zinc-800">
+                <dt className="text-xs font-medium text-muted-foreground">Kaynak</dt>
+                <dd className="mt-1 text-sm font-medium text-foreground">
                   {label(LEAD_SOURCES, lead.source)}
                 </dd>
               </div>
               {lead.source_detail ? (
                 <div className="sm:col-span-2">
-                  <dt className="text-xs font-medium text-zinc-500">
+                  <dt className="text-xs font-medium text-muted-foreground">
                     Kaynak detayı
                   </dt>
-                  <dd className="mt-1 rounded-2xl bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+                  <dd className="mt-1 rounded-2xl bg-muted px-3 py-2 text-sm text-slate-700">
                     {lead.source_detail}
                   </dd>
                 </div>
@@ -437,15 +440,15 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
 
           <section className="space-y-4">
             <div>
-              <h2 className="text-xl font-semibold text-zinc-950">
+              <h2 className="text-xl font-semibold text-foreground">
                 Aktivite Akışı
               </h2>
-              <p className="mt-1 text-sm text-zinc-600">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Sistem aktiviteleri ve ekip notları en yeniden eskiye sıralanır.
               </p>
             </div>
             {notesResult.error || eventsResult.error ? (
-              <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
                 Aktivite akışı yüklenirken bir sorun oluştu.
               </p>
             ) : (
@@ -455,23 +458,23 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
         </div>
 
         <aside className="space-y-6">
-          <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-zinc-950">Durum</h2>
+          <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-foreground">Durum</h2>
             <div className="mt-4">
               {converted ? (
                 <div className="space-y-3">
-                  <div className="rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-700">
+                  <div className="rounded-2xl bg-muted px-4 py-3 text-sm font-semibold text-slate-700">
                     {label(LEAD_STATUSES, lead.status)}
                     {lead.lost_reason
                       ? ` - ${label(LOST_REASONS, lead.lost_reason)}`
                       : ""}
                   </div>
-                  <p className="text-sm text-zinc-600">
+                  <p className="text-sm text-muted-foreground">
                     Bu lead öğrenciye dönüştürüldüğü için durum kilitli.
                   </p>
                   <Link
                     href={`/ogrenciler/${lead.converted_student_id}`}
-                    className="inline-flex rounded-xl border border-zinc-200 px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950"
+                    className="inline-flex min-h-11 cursor-pointer items-center rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     Öğrenci kaydına git
                   </Link>
@@ -487,11 +490,11 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
           </section>
 
           {canConvert ? (
-            <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-zinc-950">
+            <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+              <h2 className="text-lg font-semibold text-foreground">
                 Kayıt işlemi
               </h2>
-              <p className="mt-2 text-sm text-zinc-600">
+              <p className="mt-2 text-sm text-muted-foreground">
                 Onaylı teklif ile öğrenci kaydı ve ödeme planı hazırlayın.
               </p>
               <div className="mt-4">

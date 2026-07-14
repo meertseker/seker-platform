@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Banknote } from "lucide-react";
 import {
   markInstallmentPaid,
   revertInstallment,
@@ -13,6 +14,7 @@ import {
   type PaymentMethod,
 } from "@/lib/constants";
 import { formatTRY, tlToKurus } from "@/lib/money";
+import { badgeClass, INSTALLMENT_STATUS_STYLES } from "@/lib/status-styles";
 import { formatTlInput, parseTlInput } from "@/lib/tl-input";
 
 export interface InstallmentTableItem {
@@ -149,7 +151,7 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
 
   if (installments.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-zinc-300 p-5 text-center text-sm text-zinc-500">
+      <p className="rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
         Bu planda henüz taksit yok.
       </p>
     );
@@ -158,14 +160,14 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
   return (
     <div className="space-y-3">
       {error ? (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+        <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-200">
-        <table className="min-w-full divide-y divide-zinc-200 text-sm">
-          <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      <div className="overflow-hidden rounded-2xl border border-border">
+        <table className="min-w-full divide-y divide-border text-sm">
+          <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Vade</th>
               <th className="px-4 py-3 text-right">Tutar</th>
@@ -173,35 +175,29 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
               <th className="px-4 py-3 text-right">İşlem</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 bg-white">
+          <tbody className="divide-y divide-border bg-surface">
             {sorted.map((installment) => {
               const overdue = installment.status === "bekliyor" && installment.due_date < today;
 
               return (
                 <tr key={installment.id} className={overdue ? "bg-red-50/70" : undefined}>
-                  <td className="px-4 py-3 font-medium text-zinc-800">
+                  <td className="px-4 py-3 font-medium text-foreground">
                     {formatDate(installment.due_date)}
                     {overdue ? (
-                      <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                      <span className="ml-2 inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200">
                         Geciken
                       </span>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-zinc-950">
+                  <td className="px-4 py-3 text-right font-semibold text-foreground tabular-nums">
                     {formatTRY(tlToKurus(installment.amount))}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        installment.status === "odendi"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-zinc-100 text-zinc-700"
-                      }`}
-                    >
+                    <span className={badgeClass(INSTALLMENT_STATUS_STYLES[installment.status])}>
                       {installment.status === "odendi" ? "Ödendi" : "Bekliyor"}
                     </span>
                     {installment.payment_method ? (
-                      <span className="ml-2 text-xs text-zinc-500">
+                      <span className="ml-2 text-xs text-muted-foreground">
                         {label(PAYMENT_METHODS, installment.payment_method)}
                       </span>
                     ) : null}
@@ -212,8 +208,9 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                         <button
                           type="button"
                           onClick={() => openPayModal(installment)}
-                          className="rounded-lg bg-zinc-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800"
+                          className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
+                          <Banknote aria-hidden className="size-4" />
                           Ödendi işaretle
                         </button>
                       ) : null}
@@ -222,7 +219,7 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                           <button
                             type="button"
                             onClick={() => openEdit(installment)}
-                            className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:border-zinc-300"
+                            className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             Düzenle
                           </button>
@@ -230,7 +227,7 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                             <button
                               type="button"
                               onClick={() => revert(installment.id)}
-                              className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:border-red-300"
+                              className="min-h-11 cursor-pointer rounded-xl border border-red-200 bg-destructive-soft px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:border-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               Geri Al
                             </button>
@@ -252,24 +249,24 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full rounded-3xl bg-white p-5 shadow-xl sm:max-w-md">
-            <h2 className="text-lg font-semibold text-zinc-950">Taksiti ödendi işaretle</h2>
+          <div className="w-full rounded-2xl border border-border bg-surface p-5 shadow-xl sm:max-w-md">
+            <h2 className="text-lg font-semibold text-foreground">Taksiti ödendi işaretle</h2>
             <div className="mt-4 space-y-3">
-              <label className="block text-sm font-medium text-zinc-700">
+              <label className="block text-sm font-medium text-foreground">
                 Ödenen tutar
                 <input
                   inputMode="decimal"
                   value={paidAmount}
                   onChange={(event) => setPaidAmount(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                  className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15"
                 />
               </label>
-              <label className="block text-sm font-medium text-zinc-700">
+              <label className="block text-sm font-medium text-foreground">
                 Yöntem
                 <select
                   value={paymentMethod}
                   onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
-                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                  className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
                 >
                   {paymentMethods.map((method) => (
                     <option key={method} value={method}>
@@ -278,13 +275,13 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                   ))}
                 </select>
               </label>
-              <label className="block text-sm font-medium text-zinc-700">
+              <label className="block text-sm font-medium text-foreground">
                 Ödeme tarihi
                 <input
                   type="date"
                   value={paidAt}
                   onChange={(event) => setPaidAt(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                  className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
                 />
               </label>
             </div>
@@ -294,7 +291,7 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                 type="button"
                 onClick={() => setPaying(null)}
                 disabled={isPending}
-                className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 disabled:cursor-not-allowed disabled:text-zinc-400"
+                className="min-h-11 flex-1 cursor-pointer rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Vazgeç
               </button>
@@ -302,7 +299,7 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                 type="button"
                 onClick={submitPaid}
                 disabled={isPending}
-                className="flex-1 rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+                className="min-h-11 flex-1 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPending ? "Kaydediliyor..." : "Kaydet"}
               </button>
@@ -317,25 +314,25 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full rounded-3xl bg-white p-5 shadow-xl sm:max-w-md">
-            <h2 className="text-lg font-semibold text-zinc-950">Taksiti düzenle</h2>
+          <div className="w-full rounded-2xl border border-border bg-surface p-5 shadow-xl sm:max-w-md">
+            <h2 className="text-lg font-semibold text-foreground">Taksiti düzenle</h2>
             <div className="mt-4 space-y-3">
-              <label className="block text-sm font-medium text-zinc-700">
+              <label className="block text-sm font-medium text-foreground">
                 Tutar
                 <input
                   inputMode="decimal"
                   value={editAmount}
                   onChange={(event) => setEditAmount(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                  className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15"
                 />
               </label>
-              <label className="block text-sm font-medium text-zinc-700">
+              <label className="block text-sm font-medium text-foreground">
                 Vade
                 <input
                   type="date"
                   value={editDueDate}
                   onChange={(event) => setEditDueDate(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+                  className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
                 />
               </label>
             </div>
@@ -345,7 +342,7 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                 type="button"
                 onClick={() => setEditing(null)}
                 disabled={isPending}
-                className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 disabled:cursor-not-allowed disabled:text-zinc-400"
+                className="min-h-11 flex-1 cursor-pointer rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Vazgeç
               </button>
@@ -353,7 +350,7 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                 type="button"
                 onClick={submitEdit}
                 disabled={isPending}
-                className="flex-1 rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+                className="min-h-11 flex-1 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPending ? "Kaydediliyor..." : "Kaydet"}
               </button>

@@ -94,24 +94,24 @@ export default function NewLeadPage() {
       <div>
         <Link
           href="/pipeline"
-          className="text-sm font-medium text-zinc-600 hover:text-zinc-950"
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           Pipeline ekranına dön
         </Link>
         <h1 className="mt-3 text-3xl font-semibold">Yeni Lead</h1>
-        <p className="mt-2 text-sm text-zinc-600">
+        <p className="mt-2 text-sm text-muted-foreground">
           Veli iletişim bilgilerini ve çocuğa dair ilk bilgileri girin.
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-5 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6"
+        className="space-y-5 rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6"
       >
         <div>
           <label
             htmlFor="parentName"
-            className="block text-sm font-medium text-zinc-800"
+            className="block text-sm font-medium text-foreground"
           >
             Veli adı *
           </label>
@@ -120,7 +120,7 @@ export default function NewLeadPage() {
             name="parentName"
             required
             autoComplete="name"
-            className="mt-2 block w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none transition placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
             placeholder="Ayşe Yılmaz"
           />
         </div>
@@ -128,7 +128,7 @@ export default function NewLeadPage() {
         <div>
           <label
             htmlFor="phone"
-            className="block text-sm font-medium text-zinc-800"
+            className="block text-sm font-medium text-foreground"
           >
             Telefon *
           </label>
@@ -139,16 +139,16 @@ export default function NewLeadPage() {
             required
             autoComplete="tel"
             onBlur={(event) => checkPhone(event.currentTarget.value)}
-            className="mt-2 block w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none transition placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
             placeholder="05XX XXX XX XX"
           />
           {checkingPhone ? (
-            <p className="mt-2 text-xs font-medium text-zinc-500">
+            <p className="mt-2 text-xs font-medium text-muted-foreground">
               Numara kontrol ediliyor...
             </p>
           ) : null}
           {duplicate ? (
-            <div className="mt-3 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm font-medium text-yellow-900">
+            <div className="mt-3 rounded-2xl border border-amber-200 bg-warning-soft px-4 py-3 text-sm font-medium text-amber-900">
               Bu numara kayıtlı:{" "}
               <Link
                 href={
@@ -168,7 +168,7 @@ export default function NewLeadPage() {
           <div>
             <label
               htmlFor="source"
-              className="block text-sm font-medium text-zinc-800"
+              className="block text-sm font-medium text-foreground"
             >
               Kaynak *
             </label>
@@ -177,7 +177,7 @@ export default function NewLeadPage() {
               name="source"
               required
               defaultValue=""
-              className="mt-2 block w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+              className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
             >
               <option value="" disabled>
                 Kaynak seçin
@@ -193,14 +193,14 @@ export default function NewLeadPage() {
           <div>
             <label
               htmlFor="sourceDetail"
-              className="block text-sm font-medium text-zinc-800"
+              className="block text-sm font-medium text-foreground"
             >
               Kaynak detayı
             </label>
             <input
               id="sourceDetail"
               name="sourceDetail"
-              className="mt-2 block w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none transition placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+              className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
               placeholder="Örn. veli referansı"
             />
           </div>
@@ -209,14 +209,14 @@ export default function NewLeadPage() {
         <div>
           <label
             htmlFor="childName"
-            className="block text-sm font-medium text-zinc-800"
+            className="block text-sm font-medium text-foreground"
           >
             Çocuk adı
           </label>
           <input
             id="childName"
             name="childName"
-            className="mt-2 block w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none transition placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
             placeholder="Deniz"
           />
         </div>
@@ -225,7 +225,7 @@ export default function NewLeadPage() {
           <div>
             <label
               htmlFor="childBirthMonth"
-              className="block text-sm font-medium text-zinc-800"
+              className="block text-sm font-medium text-foreground"
             >
               Doğum ayı
             </label>
@@ -233,7 +233,7 @@ export default function NewLeadPage() {
               id="childBirthMonth"
               name="childBirthMonth"
               defaultValue=""
-              className="mt-2 block w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+              className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
             >
               <option value="">Ay seçin</option>
               {Array.from({ length: 12 }, (_, index) => index + 1).map(
@@ -249,7 +249,7 @@ export default function NewLeadPage() {
           <div>
             <label
               htmlFor="childBirthYear"
-              className="block text-sm font-medium text-zinc-800"
+              className="block text-sm font-medium text-foreground"
             >
               Doğum yılı
             </label>
@@ -257,7 +257,7 @@ export default function NewLeadPage() {
               id="childBirthYear"
               name="childBirthYear"
               defaultValue=""
-              className="mt-2 block w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+              className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
             >
               <option value="">Yıl seçin</option>
               {birthYears.map((year) => (
@@ -270,7 +270,7 @@ export default function NewLeadPage() {
         </div>
 
         {error ? (
-          <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <p className="rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
             {error}
           </p>
         ) : null}
@@ -278,7 +278,7 @@ export default function NewLeadPage() {
         <button
           type="submit"
           disabled={isPending}
-          className="w-full rounded-xl bg-zinc-950 px-4 py-3 text-base font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+          className="min-h-11 w-full cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? "Kaydediliyor..." : "Lead Oluştur"}
         </button>

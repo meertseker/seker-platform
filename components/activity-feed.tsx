@@ -68,7 +68,7 @@ function formatEvent(item: EventFeedItem) {
 export function ActivityFeed({ items }: ActivityFeedProps) {
   if (items.length === 0) {
     return (
-      <p className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500">
+      <p className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
         Henüz aktivite yok. İlk notu ekleyin.
       </p>
     );
@@ -84,9 +84,9 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
           return (
             <li
               key={item.id}
-              className="rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-600"
+              className="rounded-2xl bg-muted px-4 py-3 text-sm text-muted-foreground"
             >
-              <span className="font-medium text-zinc-800">
+              <span className="font-medium text-foreground">
                 {formatEvent(item)}
               </span>{" "}
               — {actor}, {timestamp}
@@ -97,13 +97,13 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
         return (
           <li
             key={item.id}
-            className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm"
+            className="rounded-2xl border border-border bg-surface p-4 shadow-sm"
           >
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
-              <span className="font-semibold text-zinc-800">{actor}</span>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">{actor}</span>
               <time dateTime={item.createdAt}>{timestamp}</time>
             </div>
-            <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-800">
+            <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">
               {item.body}
             </p>
           </li>

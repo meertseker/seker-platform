@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Check, X } from "lucide-react";
 import { decideOffer } from "@/actions/offers";
 import type { Program } from "@/lib/constants";
 import { parseTlInput } from "@/lib/tl-input";
@@ -69,7 +70,7 @@ export function OfferApprovalList({ offers }: OfferApprovalListProps) {
 
   if (offers.length === 0) {
     return (
-      <p className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500">
+      <p className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
         Onay bekleyen teklif yok.
       </p>
     );
@@ -78,13 +79,13 @@ export function OfferApprovalList({ offers }: OfferApprovalListProps) {
   return (
     <div className="space-y-4">
       {error ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}
 
-      <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
-        <div className="hidden grid-cols-[1.4fr_1fr_0.9fr_0.9fr_0.7fr_1.8fr] gap-4 border-b border-zinc-200 bg-zinc-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 lg:grid">
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+        <div className="hidden grid-cols-[1.4fr_1fr_0.9fr_0.9fr_0.7fr_1.8fr] gap-4 border-b border-border bg-muted px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground lg:grid">
           <span>Lead</span>
           <span>Danışman</span>
           <span>Liste</span>
@@ -93,7 +94,7 @@ export function OfferApprovalList({ offers }: OfferApprovalListProps) {
           <span>Aksiyon</span>
         </div>
 
-        <ul className="divide-y divide-zinc-200">
+        <ul className="divide-y divide-border">
           {offers.map((offer) => {
             const isSaving = pendingId === offer.id && isPending;
             const child = offer.childName ?? "Çocuk bilgisi yok";
@@ -106,39 +107,39 @@ export function OfferApprovalList({ offers }: OfferApprovalListProps) {
                 <div>
                   <Link
                     href={`/leads/${offer.leadId}`}
-                    className="font-semibold text-zinc-950 hover:underline"
+                    className="font-semibold text-foreground hover:underline"
                   >
                     {offer.parentName}
                   </Link>
-                  <p className="mt-1 text-sm text-zinc-600">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {child} - {offer.programLabel}
                   </p>
                 </div>
 
-                <div className="text-sm font-medium text-zinc-700">
-                  <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 lg:hidden">
+                <div className="text-sm font-medium text-foreground">
+                  <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">
                     Danışman:
                   </span>
                   {offer.consultantName ?? "Atanmamış"}
                 </div>
 
                 <div className="flex flex-wrap gap-x-6 gap-y-1 lg:contents">
-                  <div className="text-sm font-semibold text-zinc-900">
-                    <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 lg:hidden">
+                  <div className="text-sm font-semibold text-foreground tabular-nums">
+                    <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">
                       Liste:
                     </span>
                     {offer.listPriceText}
                   </div>
 
-                  <div className="text-sm font-semibold text-zinc-900">
-                    <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 lg:hidden">
+                  <div className="text-sm font-semibold text-foreground tabular-nums">
+                    <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">
                       Teklif:
                     </span>
                     {offer.offeredPriceText}
                   </div>
 
-                  <div className="text-sm font-semibold text-zinc-900">
-                    <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 lg:hidden">
+                  <div className="text-sm font-semibold text-foreground tabular-nums">
+                    <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">
                       İndirim:
                     </span>
                     {offer.discountText}
@@ -151,16 +152,18 @@ export function OfferApprovalList({ offers }: OfferApprovalListProps) {
                       type="button"
                       disabled={isPending}
                       onClick={() => submitDecision(offer.id, "onaylandi")}
-                      className="rounded-xl bg-green-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:bg-green-300"
+                      className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
+                      <Check aria-hidden className="size-4" />
                       {isSaving ? "İşleniyor..." : "Onayla"}
                     </button>
                     <button
                       type="button"
                       disabled={isPending}
                       onClick={() => submitDecision(offer.id, "reddedildi")}
-                      className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:border-red-300 disabled:cursor-not-allowed disabled:text-red-300"
+                      className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl border border-red-200 bg-destructive-soft px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:border-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive disabled:cursor-not-allowed disabled:opacity-50"
                     >
+                      <X aria-hidden className="size-4" />
                       Reddet
                     </button>
                   </div>
@@ -178,13 +181,13 @@ export function OfferApprovalList({ offers }: OfferApprovalListProps) {
                         }))
                       }
                       placeholder="Karşı rakam"
-                      className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 disabled:cursor-not-allowed disabled:bg-zinc-100"
+                      className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
                     />
                     <button
                       type="button"
                       disabled={isPending}
                       onClick={() => submitCounter(offer.id)}
-                      className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950 disabled:cursor-not-allowed disabled:text-zinc-400"
+                      className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Gönder
                     </button>

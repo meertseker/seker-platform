@@ -85,7 +85,7 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
         value={selected}
         disabled={isPending || converted || options.length <= 1}
         onChange={(event) => handleChange(event.target.value as LeadStatus)}
-        className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-800 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-500"
+        className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -95,10 +95,10 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
       </select>
 
       {isPending ? (
-        <p className="text-xs font-medium text-zinc-500">Kaydediliyor...</p>
+        <p className="text-xs font-medium text-muted-foreground">Kaydediliyor...</p>
       ) : null}
       {converted ? (
-        <p className="text-xs text-zinc-500">Öğrenciye dönüştürüldü.</p>
+        <p className="text-xs text-muted-foreground">Öğrenciye dönüştürüldü.</p>
       ) : null}
       {error ? (
         <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
@@ -108,19 +108,19 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
 
       {pendingStatus ? (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-zinc-950/40 p-4 sm:items-center sm:justify-center"
+          className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"
           role="dialog"
           aria-modal="true"
           aria-labelledby={`lost-title-${leadId}`}
         >
-          <div className="w-full rounded-3xl bg-white p-5 shadow-xl sm:max-w-md">
+          <div className="w-full rounded-2xl border border-border bg-surface p-5 shadow-xl sm:max-w-md">
             <h2
               id={`lost-title-${leadId}`}
-              className="text-lg font-semibold text-zinc-950"
+              className="text-lg font-semibold text-foreground"
             >
               Kayıp nedeni seçin
             </h2>
-            <p className="mt-2 text-sm text-zinc-600">
+            <p className="mt-2 text-sm text-muted-foreground">
               Lead kaybedildi olarak işaretlenmeden önce neden zorunludur.
             </p>
 
@@ -128,7 +128,7 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
               {lostReasonKeys.map((reason) => (
                 <label
                   key={reason}
-                  className="flex items-center gap-3 rounded-2xl border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800"
+                  className="flex items-center gap-3 rounded-2xl border border-border px-3 py-2 text-sm font-medium text-foreground"
                 >
                   <input
                     type="radio"
@@ -154,7 +154,7 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
                 type="button"
                 onClick={closeModal}
                 disabled={isPending}
-                className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 disabled:cursor-not-allowed disabled:text-zinc-400"
+                className="min-h-11 flex-1 cursor-pointer rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Vazgeç
               </button>
@@ -166,7 +166,7 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
                     ? submitStatus(pendingStatus, lostReason)
                     : setError("Kayıp nedeni zorunludur")
                 }
-                className="flex-1 rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+                className="min-h-11 flex-1 cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPending ? "Kaydediliyor..." : "Kaydet"}
               </button>

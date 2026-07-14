@@ -33,7 +33,7 @@ export function TaskCompleteButton({ id }: TaskCompleteButtonProps) {
         type="button"
         disabled={isPending}
         onClick={onComplete}
-        className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-950 disabled:cursor-not-allowed disabled:text-zinc-400"
+        className="min-h-11 cursor-pointer rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isPending ? "Tamamlanıyor..." : "Tamamla"}
       </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { GraduationCap } from "lucide-react";
 import { signIn, type SignInState } from "@/actions/auth";
 
 const initialState: SignInState | null = null;
@@ -9,12 +10,15 @@ export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(signIn, initialState);
 
   return (
-    <main className="flex min-h-screen flex-1 items-center justify-center bg-zinc-50 px-4 py-10 text-zinc-950">
-      <section className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+    <main className="flex min-h-screen flex-1 items-center justify-center bg-background px-4 py-10 text-foreground">
+      <section className="w-full max-w-sm rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8">
         <div className="mb-8 text-center">
-          <p className="text-sm font-medium text-zinc-500">AnaOkulCRM</p>
+          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary text-on-primary">
+            <GraduationCap aria-hidden="true" className="size-6" />
+          </div>
+          <p className="mt-3 text-sm font-bold text-foreground">AnaOkulCRM</p>
           <h1 className="mt-2 text-2xl font-semibold">Giriş Yap</h1>
-          <p className="mt-2 text-sm text-zinc-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             Yönetici veya danışman hesabınızla devam edin.
           </p>
         </div>
@@ -23,7 +27,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-zinc-800"
+              className="block text-sm font-medium text-foreground"
             >
               E-posta
             </label>
@@ -33,7 +37,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               required
-              className="mt-2 block w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none transition placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+              className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
               placeholder="yonetici@test.local"
             />
           </div>
@@ -41,7 +45,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-zinc-800"
+              className="block text-sm font-medium text-foreground"
             >
               Şifre
             </label>
@@ -51,13 +55,16 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
-              className="mt-2 block w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none transition placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+              className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
               placeholder="Şifreniz"
             />
           </div>
 
           {state?.error ? (
-            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <p
+              role="alert"
+              className="rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700"
+            >
               {state.error}
             </p>
           ) : null}
@@ -65,7 +72,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isPending}
-            className="w-full rounded-xl bg-zinc-950 px-4 py-3 text-base font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+            className="min-h-11 w-full cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? "Giriş yapılıyor..." : "Giriş Yap"}
           </button>

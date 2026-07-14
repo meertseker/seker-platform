@@ -82,15 +82,15 @@ export default async function OffersApprovalPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-zinc-950">Teklif Onayları</h1>
-        <p className="mt-2 text-sm text-zinc-600">
+        <h1 className="text-3xl font-semibold text-foreground">Teklif Onayları</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
           İndirimli teklifler burada onaylanır, reddedilir veya karşı rakamla
           danışmana geri gönderilir.
         </p>
       </div>
 
       {error ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           Teklifler yüklenirken bir sorun oluştu.
         </p>
       ) : (

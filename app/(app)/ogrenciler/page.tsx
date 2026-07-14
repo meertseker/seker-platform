@@ -5,6 +5,7 @@ import {
   STUDENT_STATUSES,
   type Program,
 } from "@/lib/constants";
+import { badgeClass, STUDENT_STATUS_STYLES } from "@/lib/status-styles";
 import { formatTRY, tlToKurus } from "@/lib/money";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -128,32 +129,32 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-medium text-zinc-500">Öğrenci takip</p>
+        <p className="text-sm font-medium text-muted-foreground">Öğrenci takip</p>
         <h1 className="mt-1 text-3xl font-semibold">Öğrenciler</h1>
-        <p className="mt-2 text-sm text-zinc-600">
+        <p className="mt-2 text-sm text-muted-foreground">
           Kayıtları, programları ve ödeme durumlarını buradan takip edin.
         </p>
       </div>
 
       <form
         action="/ogrenciler"
-        className="grid gap-3 rounded-3xl border border-zinc-200 bg-white p-4 sm:grid-cols-[1fr_14rem_auto] sm:items-end"
+        className="grid gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:grid-cols-[1fr_14rem_auto] sm:items-end"
       >
-        <label className="block text-sm font-medium text-zinc-700">
+        <label className="block text-sm font-medium text-foreground">
           Arama
           <input
             name="q"
             defaultValue={q}
             placeholder="Öğrenci, veli veya telefon"
-            className="mt-2 w-full rounded-xl border border-zinc-200 px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
           />
         </label>
-        <label className="block text-sm font-medium text-zinc-700">
+        <label className="block text-sm font-medium text-foreground">
           Durum
           <select
             name="durum"
             defaultValue={durum}
-            className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
+            className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
           >
             <option value="">Tüm durumlar</option>
             {statusKeys.map((status) => (
@@ -165,21 +166,21 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         </label>
         <button
           type="submit"
-          className="rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
+          className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Filtrele
         </button>
       </form>
 
       {error ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           Öğrenciler yüklenemedi.
         </p>
       ) : null}
 
-      <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-zinc-200 text-sm">
-          <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+        <table className="min-w-full divide-y divide-border text-sm">
+          <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Öğrenci</th>
               <th className="px-4 py-3">Program</th>
@@ -188,39 +189,39 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               <th className="px-4 py-3">Durum</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-border">
             {students.map((student) => {
               const payment = summary(student, today);
 
               return (
-                <tr key={student.id} className="transition hover:bg-zinc-50">
+                <tr key={student.id} className="transition-colors hover:bg-muted/60">
                   <td className="px-4 py-4">
                     <Link
                       href={`/ogrenciler/${student.id}`}
-                      className="font-semibold text-zinc-950 hover:underline"
+                      className="font-semibold text-foreground hover:underline"
                     >
                       {student.full_name}
                     </Link>
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {student.parent_name} - {student.phone}
                     </p>
                   </td>
-                  <td className="px-4 py-4 text-zinc-700">
+                  <td className="px-4 py-4 text-muted-foreground">
                     {label(PROGRAMS, student.program)}
                   </td>
-                  <td className="px-4 py-4 text-zinc-700">{student.season}</td>
+                  <td className="px-4 py-4 text-muted-foreground">{student.season}</td>
                   <td className="px-4 py-4">
-                    <span className="font-semibold text-zinc-950">
+                    <span className="font-semibold tabular-nums text-foreground">
                       {formatTRY(payment.paidKurus)} / {formatTRY(payment.totalKurus)}
                     </span>
                     {payment.overdue ? (
-                      <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                      <span className="ml-2 inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200">
                         Geciken
                       </span>
                     ) : null}
                   </td>
                   <td className="px-4 py-4">
-                    <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-700">
+                    <span className={badgeClass(STUDENT_STATUS_STYLES[student.status])}>
                       {label(STUDENT_STATUSES, student.status)}
                     </span>
                   </td>
@@ -229,7 +230,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
             })}
             {students.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-sm text-zinc-500">
+                <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
                   Öğrenci bulunamadı.
                 </td>
               </tr>
@@ -241,7 +242,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       {(q || durum) && students.length > 0 ? (
         <Link
           href={hrefWith(currentParams, { q: undefined, durum: undefined })}
-          className="text-sm font-semibold text-zinc-600 hover:text-zinc-950"
+          className="text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
         >
           Filtreleri temizle
         </Link>

@@ -98,11 +98,11 @@ export function AppointmentForm({ leadId }: AppointmentFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5"
+      className="space-y-4 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
     >
       <div>
-        <h3 className="text-lg font-semibold text-zinc-950">Yeni randevu</h3>
-        <p className="mt-1 text-sm text-zinc-600">
+        <h3 className="text-lg font-semibold text-foreground">Yeni randevu</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Okul ziyareti veya telefon görüşmesi için tarih belirleyin.
         </p>
       </div>
@@ -111,7 +111,7 @@ export function AppointmentForm({ leadId }: AppointmentFormProps) {
         <div>
           <label
             htmlFor="appointment-scheduled-at"
-            className="text-sm font-medium text-zinc-700"
+            className="text-sm font-medium text-foreground"
           >
             Tarih ve saat
           </label>
@@ -120,14 +120,14 @@ export function AppointmentForm({ leadId }: AppointmentFormProps) {
             name="scheduledAt"
             type="datetime-local"
             disabled={isPending}
-            className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 disabled:cursor-not-allowed disabled:bg-zinc-100"
+            className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
           />
         </div>
 
         <div>
           <label
             htmlFor="appointment-type"
-            className="text-sm font-medium text-zinc-700"
+            className="text-sm font-medium text-foreground"
           >
             Tür
           </label>
@@ -136,7 +136,7 @@ export function AppointmentForm({ leadId }: AppointmentFormProps) {
             name="type"
             defaultValue="okul_ziyareti"
             disabled={isPending}
-            className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 disabled:cursor-not-allowed disabled:bg-zinc-100"
+            className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
           >
             {typeKeys.map((type) => (
               <option key={type} value={type}>
@@ -149,7 +149,7 @@ export function AppointmentForm({ leadId }: AppointmentFormProps) {
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+          className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? "Kaydediliyor..." : "Randevu Ekle"}
         </button>
@@ -167,7 +167,7 @@ export function AppointmentForm({ leadId }: AppointmentFormProps) {
               type="button"
               disabled={isPending}
               onClick={confirmConflict}
-              className="rounded-xl bg-amber-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-amber-400"
+              className="min-h-11 cursor-pointer rounded-xl bg-amber-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             >
               Yine de kaydet
             </button>
@@ -178,7 +178,7 @@ export function AppointmentForm({ leadId }: AppointmentFormProps) {
                 setConflict(null);
                 setPendingAppointment(null);
               }}
-              className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-900 transition hover:border-amber-300 disabled:cursor-not-allowed disabled:text-amber-400"
+              className="min-h-11 cursor-pointer rounded-xl border border-amber-200 bg-surface px-3 py-2 text-sm font-semibold text-amber-900 transition-colors hover:border-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             >
               Vazgeç
             </button>

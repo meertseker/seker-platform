@@ -75,14 +75,14 @@ export function PriceItemsEditor({ priceListId, items }: PriceItemsEditorProps) 
   }
 
   return (
-    <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="text-xl font-semibold text-zinc-950">Aktif Sezon Fiyatları</h2>
-      <p className="mt-1 text-sm text-zinc-600">
+    <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
+      <h2 className="text-xl font-semibold text-foreground">Aktif Sezon Fiyatları</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
         Program bazlı aylık aidat ve kayıt ücretini güncelleyin.
       </p>
 
       {error ? (
-        <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+        <p className="mt-4 rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}
@@ -95,13 +95,13 @@ export function PriceItemsEditor({ priceListId, items }: PriceItemsEditorProps) 
           return (
             <div
               key={program}
-              className="grid gap-3 rounded-2xl border border-zinc-200 p-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end"
+              className="grid gap-3 rounded-2xl border border-border p-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end"
             >
-              <div className="text-sm font-semibold text-zinc-900">
+              <div className="text-sm font-semibold text-foreground">
                 {label(PROGRAMS, program)}
               </div>
 
-              <label className="block text-sm font-medium text-zinc-700">
+              <label className="block text-sm font-medium text-foreground">
                 Aylık aidat (TL)
                 <input
                   type="text"
@@ -109,11 +109,11 @@ export function PriceItemsEditor({ priceListId, items }: PriceItemsEditorProps) 
                   value={draft.monthly}
                   disabled={isPending}
                   onChange={(event) => updateDraft(program, "monthly", event.target.value)}
-                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 disabled:cursor-not-allowed disabled:bg-zinc-100"
+                  className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
                 />
               </label>
 
-              <label className="block text-sm font-medium text-zinc-700">
+              <label className="block text-sm font-medium text-foreground">
                 Kayıt ücreti (TL)
                 <input
                   type="text"
@@ -121,7 +121,7 @@ export function PriceItemsEditor({ priceListId, items }: PriceItemsEditorProps) 
                   value={draft.registration}
                   disabled={isPending}
                   onChange={(event) => updateDraft(program, "registration", event.target.value)}
-                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 disabled:cursor-not-allowed disabled:bg-zinc-100"
+                  className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
                 />
               </label>
 
@@ -129,7 +129,7 @@ export function PriceItemsEditor({ priceListId, items }: PriceItemsEditorProps) 
                 type="button"
                 disabled={isPending}
                 onClick={() => submit(program)}
-                className="rounded-xl bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+                className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSaving ? "Kaydediliyor..." : "Kaydet"}
               </button>
