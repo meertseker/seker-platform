@@ -150,12 +150,12 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">Lead takibi</p>
+          <p className="text-sm font-medium text-muted-foreground">Veli takibi</p>
           <h1 className="mt-1 text-3xl font-semibold">
-            {archive ? "Kazanılan/Kaybedilen Arşivi" : "Pipeline"}
+            {archive ? "Kazanılan/Kaybedilen Arşivi" : "Veliler"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Lead durumlarını takip edin, filtreleyin ve hızlıca güncelleyin.
+            Veli adaylarını takip edin, filtreleyin ve hızlıca güncelleyin.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -163,7 +163,7 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
             href="/leads/new"
             className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Yeni Lead
+            Yeni Veli
           </Link>
           <Link
             href={hrefWith(currentParams, {
@@ -172,7 +172,7 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
             })}
             className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {archive ? "Açık Pipeline" : "Kazanılan/Kaybedilen Arşivi"}
+            {archive ? "Açık Veliler" : "Kazanılan/Kaybedilen Arşivi"}
           </Link>
         </div>
       </div>

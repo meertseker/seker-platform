@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { Clock, Phone } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setAppointmentOutcome } from "@/actions/appointments";
@@ -53,6 +53,17 @@ interface NoteDraft {
 
 const OUTCOME_BUTTON_BASE =
   "min-h-11 cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+
+const CALL_COMPACT_CLASS =
+  "inline-flex size-11 items-center justify-center rounded-xl border border-border bg-surface text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/** Geçmiş saatli ama hâlâ "bekliyor" olan randevu = gecikmiş iş (üstte kırmızı gösterilir). */
+function isOverduePending(appointment: AppointmentListItem) {
+  return (
+    appointment.outcome === "bekliyor" &&
+    new Date(appointment.scheduled_at).getTime() < Date.now()
+  );
+}
 
 function outcomeButtonClass(outcome: AppointmentOutcome) {
   if (outcome === "geldi") {
@@ -139,24 +150,39 @@ export function AppointmentList({
           const activeNoteDraft =
             noteDraft?.id === appointment.id ? noteDraft : null;
           const isSavingAppointment = pendingId === appointment.id && isPending;
+          const overduePending = isOverduePending(appointment);
 
           return (
             <li
               key={appointment.id}
-              className="rounded-2xl border border-border bg-surface p-4 shadow-sm"
+              className={`rounded-2xl border p-4 shadow-sm ${
+                overduePending
+                  ? "border-red-300 bg-destructive-soft"
+                  : "border-border bg-surface"
+              }`}
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <Clock aria-hidden className="size-4 text-muted-foreground" />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Clock
+                      aria-hidden
+                      className={`size-4 ${overduePending ? "text-red-700" : "text-muted-foreground"}`}
+                    />
                     <time
                       dateTime={appointment.scheduled_at}
-                      className="text-base font-semibold text-foreground tabular-nums"
+                      className={`text-base font-semibold tabular-nums ${
+                        overduePending ? "text-red-800" : "text-foreground"
+                      }`}
                     >
                       {compactTime
                         ? formatTime(appointment.scheduled_at)
                         : formatDate(appointment.scheduled_at)}
                     </time>
+                    {overduePending ? (
+                      <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200">
+                        Geçmiş / sonuçlanmadı
+                      </span>
+                    ) : null}
                   </div>
                   {appointment.leadId ? (
                     <div className="mt-1 flex items-center gap-2">
@@ -167,7 +193,17 @@ export function AppointmentList({
                         {appointment.leadName ?? "Lead detayına git"}
                       </Link>
                       {appointment.leadPhone ? (
-                        <WhatsAppButton phone={appointment.leadPhone} compact />
+                        <>
+                          <a
+                            href={`tel:${appointment.leadPhone}`}
+                            aria-label="Telefonla ara"
+                            title="Ara"
+                            className={CALL_COMPACT_CLASS}
+                          >
+                            <Phone aria-hidden className="size-4" />
+                          </a>
+                          <WhatsAppButton phone={appointment.leadPhone} compact />
+                        </>
                       ) : null}
                     </div>
                   ) : null}
