@@ -26,6 +26,14 @@
   --color-warning: #d97706; /* amber-600 — geciken/bekleyen */
   --color-warning-soft: #fffbeb;
 
+  /* Durum rozetleri — renk-körü güvenli (renk + ikon + metin) */
+  --color-status-yeni: #1d4ed8;       --color-status-yeni-soft: #dbeafe;
+  --color-status-randevu: #d97706;    --color-status-randevu-soft: #fef3c7;
+  --color-status-teklif: #0369a1;     --color-status-teklif-soft: #e0f2fe;
+  --color-status-kazanildi: #15803d;  --color-status-kazanildi-soft: #dcfce7;
+  --color-status-kaybedildi: #b91c1c; --color-status-kaybedildi-soft: #fee2e2;
+  --color-status-notr: #4b5563;       --color-status-notr-soft: #e5e7eb;
+
   --color-muted: #f1f5f9; /* slate-100 */
   --color-muted-foreground: #475569; /* slate-600 — 4.5:1 beyaz üzerinde */
   --color-border: #e2e8f0; /* slate-200 */
