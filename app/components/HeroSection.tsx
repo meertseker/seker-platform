@@ -18,7 +18,7 @@ const HeroSection = () => {
         {/* Headline */}
         <div className="text-center mb-12 max-w-3xl mx-auto">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-            Şeker Anaokulu'na
+            Şeker Anaokulu&apos;na
             <br /> 
             Hoş Geldiniz!
           </h1>

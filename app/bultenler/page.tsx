@@ -8,7 +8,7 @@ const Bultenler = () => {
   const [activeTab, setActiveTab] = useState("pdfler");
   
   // Dummy data for announcements
-  const [duyurular, setDuyurular] = useState([
+  const [duyurular] = useState([
     {
       id: 1,
       baslik: "Yaz Okulu Kayıtları Başladı",

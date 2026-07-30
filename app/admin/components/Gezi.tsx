@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import React, { useState } from 'react'
+import React from 'react'
 
 const Gezi = () => {
   return (
@@ -9,7 +9,7 @@ const Gezi = () => {
                   <input 
                     type="file" 
                     multiple 
-                    onChange={(e) => {}}
+                    onChange={() => {}}
                     className="mb-4"
                   />
                   <textarea
