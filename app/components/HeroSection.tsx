@@ -1,6 +1,6 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import { SITE, WHATSAPP_URL } from '@/lib/site';
+import TrackedLink from './TrackedLink';
 
 export default function HeroSection() {
   const yearsActive = new Date().getFullYear() - SITE.foundingYear;
@@ -35,20 +35,23 @@ export default function HeroSection() {
         </p>
 
         <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <Link
+          <TrackedLink
             href="/kayit"
+            event="cta_click"
+            payload={{ location: 'hero', target: 'kayit' }}
             className="w-full rounded-full bg-gold-500 px-10 py-4 font-medium text-navy-900 hover:bg-gold-400 sm:w-auto"
           >
             Ön Görüşme Randevusu
-          </Link>
-          <a
+          </TrackedLink>
+          <TrackedLink
             href={WHATSAPP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+            event="whatsapp_click"
+            payload={{ location: 'hero' }}
+            external
             className="w-full rounded-full border border-white/40 px-10 py-4 font-medium text-white hover:bg-white/10 sm:w-auto"
           >
             WhatsApp&apos;tan Yazın
-          </a>
+          </TrackedLink>
         </div>
       </div>
     </section>
