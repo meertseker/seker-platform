@@ -6,6 +6,8 @@ import WhatsAppButton from "./components/WhatsAppButton";
 import MobileActionBar from "./components/MobileActionBar";
 import Analytics from "./components/Analytics";
 import { organizationSchema } from "../lib/schema";
+import { SITE } from "../lib/site";
+import { buildMetadata } from "../lib/metadata";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,8 +20,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Şeker Anaokulu",
-  description: "Çocuklarınıza sevgi dolu ve eğitici bir ortam sunuyoruz.",
+  ...buildMetadata({
+    title: SITE.name,
+    description: SITE.description,
+    path: "/",
+  }),
+  metadataBase: new URL(SITE.url),
 };
 
 export default function RootLayout({
