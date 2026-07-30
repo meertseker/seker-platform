@@ -14,7 +14,7 @@ export const AIDAT_COUNT = 10;
 
 export type InstallmentDraftRow = { due_date: string; amount: number; status: "bekliyor" };
 export type PlanDraft = {
-  item_type: "aidat" | "servis" | "diger";
+  item_type: "aidat" | "servis" | "kitap";
   total_amount: number;
   installment_count: number;
   installments: InstallmentDraftRow[];
@@ -73,7 +73,7 @@ export function buildImportPlan(objects: Record<string, string>[]): { units: Imp
     const servis = parseTl(o.servis_monthly);
     if (servis) plans.push(makePlan("servis", servis, AIDAT_COUNT, AIDAT_FIRST_DUE));
     const kitap = parseTl(o.kitap_amount);
-    if (kitap) plans.push(makePlan("diger", kitap, 1, AIDAT_FIRST_DUE));
+    if (kitap) plans.push(makePlan("kitap", kitap, 1, AIDAT_FIRST_DUE));
 
     units.push({ source_row: rowNo, student: { full_name, parent_name, phone, season, program }, plans, flags });
   });

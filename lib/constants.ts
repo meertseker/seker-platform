@@ -33,7 +33,7 @@ export type Program = keyof typeof PROGRAMS;
 
 export const ITEM_TYPES = {
   aidat: "Aidat", kayit_ucreti: "Kayıt Ücreti",
-  servis: "Servis", yemek: "Yemek", diger: "Diğer",
+  servis: "Servis", yemek: "Yemek", kitap: "Kitap-Kırtasiye", diger: "Diğer",
 } as const;
 export type ItemType = keyof typeof ITEM_TYPES;
 

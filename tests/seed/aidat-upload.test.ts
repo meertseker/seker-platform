@@ -22,7 +22,7 @@ describe("buildImportPlan", () => {
     const sum = aidat.installments.reduce((a, i) => a + i.amount, 0);
     expect(sum).toBeCloseTo(250000, 2);
     expect(aidat.installments[0]).toMatchObject({ due_date: "2026-09-05", status: "bekliyor" });
-    expect(u.plans.some((p) => p.item_type === "diger" && p.total_amount === 45000)).toBe(true);
+    expect(u.plans.some((p) => p.item_type === "kitap" && p.total_amount === 45000)).toBe(true);
   });
 
   it("loads rows with missing phone/program/parent as nulls, flagged (does not skip)", () => {
