@@ -13,6 +13,6 @@ export const DAILY_FLOW: FlowItem[] = [
   { time: '11:30 – 12:15', title: 'Öğle yemeği', description: 'TODO: Menü döngüsü ve diyetisyen onayı bilgisi.' },
   { time: '12:15 – 14:00', title: 'Dinlenme / sessiz saat', description: 'Küçük yaş gruplarında uyku, büyüklerde sakin etkinlik.' },
   { time: '14:00 – 15:30', title: 'Branş ve atölyeler', description: 'İngilizce, müzik, drama, robotik, satranç, seramik.' },
-  { time: '15:30 – 16:00', title: 'İkindi kahvaltısı', description: 'TODO' },
+  { time: '15:30 – 16:00', title: 'İkindi kahvaltısı', description: 'TODO: İkindi kahvaltısında ne veriliyor?' },
   { time: '16:00 – 19:15', title: 'Serbest oyun ve uğurlama', description: 'Günün değerlendirmesi ve veli ile kısa bilgi paylaşımı.' },
 ];
