@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, message: 'Geçersiz istek' }, { status: 400 });
+    return NextResponse.json({ ok: false, errors: {}, message: 'Geçersiz istek' }, { status: 400 });
   }
 
   const parsed = leadSchema.safeParse(body);
