@@ -16,19 +16,19 @@ const Header = () => {
     <div className="relative z-9999">
       <header className="bg-white px-4 md:px-8 py-4 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" aria-label={`${SITE.name} ana sayfa`} className="flex items-center font-bold text-lg md:text-xl text-navy-900">
+        <Link href="/" aria-label={`${SITE.name} ana sayfa`} className="flex items-center font-bold text-lg md:text-xl text-ink">
           <div className="w-18 h-18">
             <Image src="/logo.png" alt={SITE.name} width={72} height={72} priority />
           </div>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6 lg:space-x-8 text-sm lg:text-base font-medium text-navy-900">
+        <nav className="hidden md:flex items-center space-x-6 lg:space-x-8 text-sm lg:text-base font-medium text-ink">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="text-navy-900 transition-colors duration-200 hover:opacity-70"
+              className="text-ink transition-colors duration-200 hover:opacity-70"
             >
               {item.label}
             </Link>
@@ -38,7 +38,7 @@ const Header = () => {
         {/* Contact Button - Desktop */}
         <Link
           href="/kayit"
-          className="hidden md:block rounded-full bg-gold-500 px-5 py-2 text-sm font-medium text-navy-900 shadow-sm transition-colors duration-200 hover:bg-gold-400"
+          className="hidden md:block rounded-full bg-mark px-5 py-2 text-sm font-medium text-ink shadow-sm transition-opacity duration-200 hover:opacity-90"
         >
           Ön Görüşme Randevusu
         </Link>
@@ -46,7 +46,7 @@ const Header = () => {
         {/* Mobile Menu Button */}
         <button
           onClick={toggleMenu}
-          className="md:hidden text-navy-900 p-2 focus:outline-none"
+          className="md:hidden text-ink p-2 focus:outline-none"
           aria-label="Toggle menu"
         >
           {isMenuOpen ? (
@@ -63,19 +63,19 @@ const Header = () => {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-md z-10 py-4 px-6 flex flex-col space-y-4 font-medium text-navy-900">
+        <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-md z-10 py-4 px-6 flex flex-col space-y-4 font-medium text-ink">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="text-navy-900 transition-colors duration-200 hover:opacity-70"
+              className="text-ink transition-colors duration-200 hover:opacity-70"
             >
               {item.label}
             </Link>
           ))}
           <Link
             href="/kayit"
-            className="rounded-full bg-gold-500 py-2 text-center font-medium text-navy-900 shadow-sm transition-colors duration-200 hover:bg-gold-400 mt-2"
+            className="rounded-full bg-mark py-2 text-center font-medium text-ink shadow-sm transition-opacity duration-200 hover:opacity-90 mt-2"
           >
             Ön Görüşme Randevusu
           </Link>

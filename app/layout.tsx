@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Bricolage_Grotesque, Newsreader, Martian_Mono } from "next/font/google";
 import "./globals.css";
 import Footer from "./components/Footer";
 import WhatsAppButton from "./components/WhatsAppButton";
@@ -10,16 +10,24 @@ import { preschoolSchema } from "../lib/schema";
 import { SITE } from "../lib/site";
 import { buildMetadata } from "../lib/metadata";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin-ext"],
-  weight: ["400", "600"],
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "600", "700"],
   display: "swap",
 });
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin-ext"],
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
+  subsets: ["latin", "latin-ext"],
+  weight: ["300", "400", "500"],
+  display: "swap",
+});
+
+const martian = Martian_Mono({
+  variable: "--font-martian",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500"],
   display: "swap",
 });
 
@@ -43,7 +51,7 @@ export default function RootLayout({
         <JsonLd data={preschoolSchema} />
       </head>
       <body
-        className={`${fraunces.variable} ${inter.variable} antialiased pb-14 md:pb-0`}
+        className={`${bricolage.variable} ${newsreader.variable} ${martian.variable} antialiased pb-14 md:pb-0`}
       >
         <Analytics />
         {children}

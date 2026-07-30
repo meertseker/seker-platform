@@ -21,7 +21,7 @@ const SOURCE_LABELS: Record<(typeof PUBLISHED_TESTIMONIALS)[number]['source'], s
 
 export default function VeliYorumlariPage() {
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen bg-paper">
       <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
@@ -30,9 +30,9 @@ export default function VeliYorumlariPage() {
         ])}
       />
 
-      <section className="bg-navy-900 py-20 text-center">
+      <section className="bg-ink py-20 text-center">
         <h1 className="px-6 font-display text-4xl text-white md:text-5xl">Veli Yorumları</h1>
-        <p className="mx-auto mt-6 max-w-2xl px-6 text-navy-100">
+        <p className="mx-auto mt-6 max-w-2xl px-6 text-paper">
           Beykent Büyükçekmece&apos;de çocuğunuz için okul ararken en çok güvendiğiniz kaynak,
           hâlihazırda bizi tercih etmiş ailelerin deneyimidir.
         </p>
@@ -42,13 +42,13 @@ export default function VeliYorumlariPage() {
         <section className="mx-auto max-w-5xl px-6 py-16">
           <div className="grid gap-8 md:grid-cols-2">
             {PUBLISHED_TESTIMONIALS.map((item) => (
-              <figure key={item.id} className="rounded-2xl bg-cream p-8">
-                <blockquote className="text-lg leading-relaxed text-navy-800">
+              <figure key={item.id} className="rounded-2xl bg-paper p-8">
+                <blockquote className="text-lg leading-relaxed text-ink">
                   &ldquo;{item.quote}&rdquo;
                 </blockquote>
-                <figcaption className="mt-6 text-sm text-navy-600">
-                  <span className="font-medium text-navy-900">{item.author}</span> — {item.context}
-                  <span className="block text-navy-400">{SOURCE_LABELS[item.source]}</span>
+                <figcaption className="mt-6 text-sm text-ink-soft">
+                  <span className="font-medium text-ink">{item.author}</span> — {item.context}
+                  <span className="block text-ink-soft">{SOURCE_LABELS[item.source]}</span>
                 </figcaption>
               </figure>
             ))}
@@ -56,18 +56,18 @@ export default function VeliYorumlariPage() {
         </section>
       ) : (
         <section className="mx-auto max-w-2xl px-6 py-16 text-center">
-          <div className="rounded-2xl border border-navy-100 bg-cream p-10">
-            <p className="font-display text-2xl text-navy-900">
+          <div className="rounded-2xl border border-rule bg-paper p-10">
+            <p className="font-display text-2xl text-ink">
               Veli yorumlarımızı burada topluyoruz.
             </p>
-            <p className="mt-4 text-navy-700">
+            <p className="mt-4 text-ink-soft">
               Yorumları yalnızca velilerimizden yazılı onay aldıktan sonra yayımlıyoruz; bu
               sayfa yakında dolacak. Bu arada en güvenilir bilgi kaynağı okulumuzu bizzat
               görmek — sınıfları ve öğretmenlerimizle tanışmak için bir ziyaret planlayalım.
             </p>
             <a
               href="/kayit"
-              className="mt-8 inline-block rounded-full bg-navy-900 px-8 py-4 font-medium text-white transition hover:bg-navy-800"
+              className="mt-8 inline-block rounded-full bg-ink px-8 py-4 font-medium text-white transition hover:bg-ink-soft"
             >
               Okul Ziyareti Planlayın
             </a>
@@ -75,11 +75,11 @@ export default function VeliYorumlariPage() {
         </section>
       )}
 
-      <section className="bg-cream py-16 text-center">
-        <h2 className="font-display text-2xl text-navy-900">
+      <section className="bg-paper py-16 text-center">
+        <h2 className="font-display text-2xl text-ink">
           Şeker Anaokulu&apos;nda veliyseniz deneyiminizi paylaşın
         </h2>
-        <p className="mx-auto mt-4 max-w-xl px-6 text-navy-700">
+        <p className="mx-auto mt-4 max-w-xl px-6 text-ink-soft">
           Google İşletme Profilimiz üzerinden bıraktığınız yorumlar diğer aileler için de yol
           gösterici oluyor.
         </p>
@@ -88,7 +88,7 @@ export default function VeliYorumlariPage() {
           event="cta_click"
           payload={{ page: 'veli-yorumlari', target: 'google-review' }}
           external
-          className="mt-8 inline-block rounded-full border border-navy-900 px-8 py-4 font-medium text-navy-900 transition hover:bg-navy-50"
+          className="mt-8 inline-block rounded-full border border-ink px-8 py-4 font-medium text-ink transition hover:bg-paper-warm"
         >
           Google&apos;da Yorum Bırakın
         </TrackedLink>

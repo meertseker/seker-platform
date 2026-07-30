@@ -35,15 +35,15 @@ const FAQ_SUBSET = PUBLISHED_FAQ.filter((item) =>
 
 export default function UcretlerPage() {
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen bg-paper">
       <Header />
       <JsonLd data={buildFaqSchema(FAQ_SUBSET)} />
 
-      <section className="bg-navy-900 py-20 text-center">
+      <section className="bg-ink py-20 text-center">
         <h1 className="px-6 font-display text-4xl text-white md:text-5xl">
           Ücretimiz ve neye karşılık geldiği
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl px-6 text-navy-100">
+        <p className="mx-auto mt-6 max-w-2xl px-6 text-paper">
           Ücretimizi web sitesinde yayımlamıyoruz — çünkü bir rakam, tek başına
           neyi kapsadığını anlatmıyor. Okulu gezmeden ve sınıfı görmeden verilen
           bir fiyat, doğru karar vermenize yardımcı olmaz.
@@ -51,44 +51,44 @@ export default function UcretlerPage() {
       </section>
 
       <section className="mx-auto max-w-3xl px-6 py-16">
-        <div className="rounded-2xl border border-navy-100 bg-cream p-10 text-center">
-          <p className="text-sm uppercase tracking-[0.2em] text-navy-600">
+        <div className="rounded-2xl border border-rule bg-paper p-10 text-center">
+          <p className="text-sm uppercase tracking-[0.2em] text-ink-soft">
             2026-2027 eğitim yılı
           </p>
-          <p className="mt-5 font-display text-3xl leading-snug text-navy-900">
+          <p className="mt-5 font-display text-3xl leading-snug text-ink">
             Bölgemizin üst segmentinde konumlanıyoruz.
           </p>
-          <p className="mx-auto mt-5 max-w-xl text-navy-700">
+          <p className="mx-auto mt-5 max-w-xl text-ink-soft">
             10 kişilik sınıflar, her sınıfta iki öğretmen ve native İngilizce
             öğretmeni bir arada, ancak belirli bir maliyetle mümkün. Bunu saklamak
             yerine, neyin karşılığı olduğunu anlatmayı tercih ediyoruz.
           </p>
-          <p className="mt-6 text-sm text-navy-600">
+          <p className="mt-6 text-sm text-ink-soft">
             Ücret, ödeme planı, kardeş ve peşin ödeme koşulları ön görüşmede
             size özel olarak paylaşılır.
           </p>
         </div>
       </section>
 
-      <section className="bg-cream py-16">
+      <section className="bg-paper py-16">
         <div className="mx-auto grid max-w-4xl gap-12 px-6 md:grid-cols-2">
           <div>
-            <h2 className="font-display text-2xl text-navy-900">Ücrete dahil</h2>
+            <h2 className="font-display text-2xl text-ink">Ücrete dahil</h2>
             <ul className="mt-6 space-y-3">
               {INCLUDED.map((item) => (
-                <li key={item} className="flex gap-3 text-navy-700">
-                  <span className="text-gold-500">✓</span>
+                <li key={item} className="flex gap-3 text-ink-soft">
+                  <span className="text-ink">✓</span>
                   {item}
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <h2 className="font-display text-2xl text-navy-900">Ayrıca fiyatlanır</h2>
+            <h2 className="font-display text-2xl text-ink">Ayrıca fiyatlanır</h2>
             <ul className="mt-6 space-y-3">
               {EXCLUDED.map((item) => (
-                <li key={item} className="flex gap-3 text-navy-600">
-                  <span className="text-navy-300">—</span>
+                <li key={item} className="flex gap-3 text-ink-soft">
+                  <span className="text-ink-soft">—</span>
                   {item}
                 </li>
               ))}
@@ -98,8 +98,8 @@ export default function UcretlerPage() {
       </section>
 
       <section className="mx-auto max-w-3xl px-6 py-16">
-        <h2 className="font-display text-3xl text-navy-900">Ücretimizi ne belirliyor?</h2>
-        <div className="mt-8 space-y-6 text-navy-700">
+        <h2 className="font-display text-3xl text-ink">Ücretimizi ne belirliyor?</h2>
+        <div className="mt-8 space-y-6 text-ink-soft">
           <p>
             <strong>Sınıflarımızda 10 çocuk bulunur ve her sınıfta iki öğretmen görev
             yapar</strong> — öğretmen başına beş çocuk. Millî Eğitim Bakanlığı
@@ -119,9 +119,9 @@ export default function UcretlerPage() {
         </div>
       </section>
 
-      <section className="bg-cream py-16">
+      <section className="bg-paper py-16">
         <div className="mx-auto max-w-2xl px-6">
-          <h2 className="text-center font-display text-3xl text-navy-900">
+          <h2 className="text-center font-display text-3xl text-ink">
             Size özel ödeme planı için görüşelim
           </h2>
           <div className="mt-10">

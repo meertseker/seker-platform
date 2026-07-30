@@ -1,59 +1,67 @@
 @import "tailwindcss";
 
 @theme {
-  /* Premium palet — lacivert ana, altın vurgu, krem zemin */
-  --color-navy-50:  #f2f4fa;
-  --color-navy-100: #e3e7f4;
-  --color-navy-200: #c4cce8;
-  --color-navy-300: #94a3d4;
-  --color-navy-400: #6274bb;
-  --color-navy-500: #3f4f9f;
-  --color-navy-600: #2c3a80;
-  --color-navy-700: #1e2a63;
-  --color-navy-800: #14204a;
-  --color-navy-900: #0b1533;
+  /* Kâğıt ve mürekkep — sabit. Okunaklılık pazarlık konusu değil. */
+  --color-paper:      #F7F6F2;
+  --color-paper-warm: #EFEDE5;
+  --color-ink:        #14170F;
+  --color-ink-soft:   #4A4E42;
+  --color-rule:       #D8D5C9;
 
-  --color-gold-300: #e8d9a8;
-  --color-gold-400: #d4bd77;
-  --color-gold-500: #b89b4a;
-  --color-gold-600: #967a33;
+  /* Gün ışığı dereceleri — yalnızca kadraj grading'i ve bölüm vurgusu. */
+  --color-dawn:    #3E4A5B;
+  --color-morning: #2F5A45;
+  --color-midday:  #C98A2E;
+  --color-golden:  #A8763A;
+  --color-dusk:    #232742;
 
-  --color-cream: #faf8f4;
-  --color-ivory: #ffffff;
+  /* Künye işareti — tek vurgu rengi, tek görev. */
+  --color-mark: #C98A2E;
 
-  /* Marka mirası — yalnızca küçük vurgu olarak */
-  --color-accent-coral: #ef6700;
-
-  --font-display: var(--font-fraunces), Georgia, serif;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-bricolage), Georgia, serif;
+  --font-body:    var(--font-newsreader), Georgia, serif;
+  --font-mono:    var(--font-martian), ui-monospace, monospace;
 }
 
 :root {
-  --background: var(--color-ivory);
-  --foreground: var(--color-navy-900);
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Premium tipografi ölçeği: büyük, sakin başlıklar, geniş satır arası */
 h1, h2, h3 {
   font-family: var(--font-display);
-  letter-spacing: -0.015em;
-  line-height: 1.15;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  font-weight: 600;
 }
 
 p {
-  line-height: 1.75;
+  line-height: 1.7;
 }
 
-/* Lüks his için yavaş, yumuşak geçişler */
+/* Timecode ve rakamlar */
+.timecode {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Odak halkası — künye rengiyle aynı, tek vurgu disiplini */
+:focus-visible {
+  outline: 2px solid var(--color-mark);
+  outline-offset: 3px;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   a, button {
-    transition: all 240ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: color 200ms ease, background-color 200ms ease, border-color 200ms ease;
   }
 }

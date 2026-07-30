@@ -61,7 +61,7 @@ const SECTIONS = [
 
 export default function EgitimYaklasimimizPage() {
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen bg-paper">
       <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
@@ -71,14 +71,14 @@ export default function EgitimYaklasimimizPage() {
       />
       <JsonLd data={buildFaqSchema(FAQ_SUBSET)} />
 
-      <section className="bg-navy-900 py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-gold-400">
+      <section className="bg-ink py-20 text-center">
+        <p className="text-sm uppercase tracking-[0.2em] text-mark">
           Montessori · High Scope · Çoklu Zeka
         </p>
         <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
           Eğitim Yaklaşımımız
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl px-6 text-navy-100">
+        <p className="mx-auto mt-6 max-w-2xl px-6 text-paper">
           Beykent Büyükçekmece&apos;de 2-6 yaş arası çocuklar için Montessori, High Scope ve
           Çoklu Zeka kuramlarını temel alan, oyun temelli bir program uyguluyoruz.
         </p>
@@ -88,12 +88,12 @@ export default function EgitimYaklasimimizPage() {
         <div className="space-y-16">
           {SECTIONS.map((section) => (
             <div key={section.question}>
-              <h2 className="font-display text-2xl text-navy-900 md:text-3xl">
+              <h2 className="font-display text-2xl text-ink md:text-3xl">
                 {section.question}
               </h2>
-              <div className="mt-5 space-y-4 text-navy-700">
+              <div className="mt-5 space-y-4 text-ink-soft">
                 {section.answer.map((paragraph, index) => (
-                  <p key={index} className={index === 0 ? 'text-lg text-navy-800' : undefined}>
+                  <p key={index} className={index === 0 ? 'text-lg text-ink' : undefined}>
                     {paragraph}
                   </p>
                 ))}
@@ -103,9 +103,9 @@ export default function EgitimYaklasimimizPage() {
         </div>
       </section>
 
-      <section className="bg-cream py-16">
+      <section className="bg-paper py-16">
         <div className="mx-auto max-w-4xl px-6">
-          <h2 className="text-center font-display text-3xl text-navy-900">
+          <h2 className="text-center font-display text-3xl text-ink">
             Yaş grubuna göre program
           </h2>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -116,12 +116,12 @@ export default function EgitimYaklasimimizPage() {
               { label: '5-6 yaş', name: 'İlkokula Hazırlık' },
             ].map((group) => (
               <div key={group.label} className="rounded-xl bg-white p-6 text-center">
-                <p className="font-display text-xl text-navy-900">{group.label}</p>
-                <p className="mt-2 text-sm text-navy-600">{group.name}</p>
+                <p className="font-display text-xl text-ink">{group.label}</p>
+                <p className="mt-2 text-sm text-ink-soft">{group.name}</p>
               </div>
             ))}
           </div>
-          <p className="mx-auto mt-8 max-w-2xl text-center text-navy-700">
+          <p className="mx-auto mt-8 max-w-2xl text-center text-ink-soft">
             {SITE.foundingYear}&apos;den beri, {new Date().getFullYear() - SITE.foundingYear} yıldır
             aynı yaklaşımla {SITE.areaServed.slice(0, 3).join(', ')} ve çevresindeki ailelere
             hizmet veriyoruz.
@@ -130,10 +130,10 @@ export default function EgitimYaklasimimizPage() {
       </section>
 
       <section className="mx-auto max-w-2xl px-6 py-16">
-        <h2 className="text-center font-display text-3xl text-navy-900">
+        <h2 className="text-center font-display text-3xl text-ink">
           Programı yerinde görmek ister misiniz?
         </h2>
-        <p className="mt-4 text-center text-navy-700">
+        <p className="mt-4 text-center text-ink-soft">
           Sınıflarımızı ziyaret edip öğretmenlerimizle tanışmak için ön görüşme randevusu alın.
         </p>
         <div className="mt-10">

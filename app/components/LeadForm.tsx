@@ -60,8 +60,8 @@ export default function LeadForm({ variant = 'full' }: { variant?: 'full' | 'com
     }
   }
 
-  const field = 'w-full rounded-lg border border-navy-200 bg-white px-4 py-3 text-navy-900 focus:border-navy-600 focus:outline-none focus:ring-1 focus:ring-navy-600';
-  const label = 'mb-1.5 block text-sm font-medium text-navy-800';
+  const field = 'w-full rounded-lg border border-rule bg-white px-4 py-3 text-ink focus:border-mark focus:outline-none focus:ring-1 focus:ring-mark';
+  const label = 'mb-1.5 block text-sm font-medium text-ink';
   const err = (name: string) =>
     errors[name] ? <p className="mt-1 text-sm text-red-600">{errors[name]![0]}</p> : null;
 
@@ -130,7 +130,7 @@ export default function LeadForm({ variant = 'full' }: { variant?: 'full' | 'com
         </div>
       )}
 
-      <label className="flex items-start gap-3 text-sm text-navy-700">
+      <label className="flex items-start gap-3 text-sm text-ink-soft">
         <input type="checkbox" name="kvkkConsent" required className="mt-1 h-4 w-4" />
         <span>
           <a href="/gizlilik" className="underline">KVKK Aydınlatma Metni</a>&apos;ni okudum, iletişim
@@ -144,12 +144,12 @@ export default function LeadForm({ variant = 'full' }: { variant?: 'full' | 'com
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-full bg-navy-900 px-8 py-4 font-medium text-white transition hover:bg-navy-800 disabled:opacity-60"
+        className="w-full rounded-full bg-ink px-8 py-4 font-medium text-white transition hover:bg-ink-soft disabled:opacity-60"
       >
         {submitting ? 'Gönderiliyor…' : 'Ön Görüşme Randevusu'}
       </button>
 
-      <p className="text-center text-sm text-navy-600">
+      <p className="text-center text-sm text-ink-soft">
         Talebinize ortalama <strong>15 dakika</strong> içinde dönüş yapıyoruz.
       </p>
     </form>

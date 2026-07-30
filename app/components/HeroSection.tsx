@@ -6,7 +6,7 @@ export default function HeroSection() {
   const yearsActive = new Date().getFullYear() - SITE.foundingYear;
 
   return (
-    <section className="relative isolate overflow-hidden bg-navy-900">
+    <section className="relative isolate overflow-hidden bg-ink">
       <Image
         src="/cocukklar.webp"
         alt="Şeker Anaokulu'nda etkinlik sırasındaki çocuklar"
@@ -15,10 +15,10 @@ export default function HeroSection() {
         sizes="100vw"
         className="object-cover object-[center_30%] opacity-35"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-navy-900/85 via-navy-900/70 to-navy-900/90" />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink/85 via-ink/70 to-ink/90" />
 
       <div className="relative mx-auto max-w-4xl px-6 py-28 text-center md:py-36">
-        <p className="mb-6 text-sm uppercase tracking-[0.2em] text-gold-400">
+        <p className="mb-6 text-sm uppercase tracking-[0.2em] text-mark">
           Beykent · Büyükçekmece · {SITE.foundingYear}&apos;den beri
         </p>
 
@@ -28,7 +28,7 @@ export default function HeroSection() {
           İki öğretmen.
         </h1>
 
-        <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-navy-100">
+        <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-paper">
           2-6 yaş için Montessori ve High Scope temelli okul öncesi eğitim.
           Native öğretmenimizle çocuklarımız mezun olduğunda İngilizce konuşuyor.
           {' '}{yearsActive} yıldır Beykent&apos;te, aynı çatı altında.
@@ -39,7 +39,7 @@ export default function HeroSection() {
             href="/kayit"
             event="cta_click"
             payload={{ location: 'hero', target: 'kayit' }}
-            className="w-full rounded-full bg-gold-500 px-10 py-4 font-medium text-navy-900 hover:bg-gold-400 sm:w-auto"
+            className="w-full rounded-full bg-mark px-10 py-4 font-medium text-ink transition-opacity hover:opacity-90 sm:w-auto"
           >
             Ön Görüşme Randevusu
           </TrackedLink>

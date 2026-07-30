@@ -74,7 +74,7 @@ const SAFETY_SECTIONS: SafetySection[] = [
 
 export default function GuvenlikPage() {
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen bg-paper">
       <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
@@ -83,31 +83,31 @@ export default function GuvenlikPage() {
         ])}
       />
 
-      <section className="bg-navy-900 py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-gold-400">Güvenlik ve Sağlık</p>
+      <section className="bg-ink py-20 text-center">
+        <p className="text-sm uppercase tracking-[0.2em] text-mark">Güvenlik ve Sağlık</p>
         <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
           Çocuğunuzun güvenliği, tesadüfe bırakılmaz.
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl px-6 text-navy-100">
+        <p className="mx-auto mt-6 max-w-2xl px-6 text-paper">
           Aşağıdaki başlıklar okulumuzun güvenlik ve sağlık uygulamalarını özetler. İşaretli
           bölümler, doğrulanmış belge ve rakamlarla yakında güncellenecektir.
         </p>
       </section>
 
-      <section className="bg-cream py-16">
+      <section className="bg-paper py-16">
         <div className="mx-auto max-w-4xl px-6">
           <div className="grid gap-6 md:grid-cols-2">
             {SAFETY_SECTIONS.map((section) => (
               <div key={section.id} className="rounded-xl bg-white p-8">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="font-display text-xl text-navy-900">{section.title}</h2>
+                  <h2 className="font-display text-xl text-ink">{section.title}</h2>
                   {section.todo && (
-                    <span className="shrink-0 rounded-full bg-gold-300 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-navy-900">
+                    <span className="shrink-0 rounded-full bg-mark px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink">
                       Doğrulanacak
                     </span>
                   )}
                 </div>
-                <p className="mt-3 text-navy-700">{section.body}</p>
+                <p className="mt-3 text-ink-soft">{section.body}</p>
               </div>
             ))}
           </div>
@@ -116,10 +116,10 @@ export default function GuvenlikPage() {
 
       <section className="py-16">
         <div className="mx-auto max-w-2xl px-6">
-          <h2 className="text-center font-display text-3xl text-navy-900">
+          <h2 className="text-center font-display text-3xl text-ink">
             Güvenlik uygulamalarımızı yerinde inceleyin
           </h2>
-          <p className="mt-4 text-center text-navy-700">
+          <p className="mt-4 text-center text-ink-soft">
             Ön görüşme sırasında bina güvenlik önlemlerini birlikte gözden geçirebiliriz.
           </p>
           <div className="mt-10">

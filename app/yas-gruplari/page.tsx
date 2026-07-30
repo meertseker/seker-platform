@@ -16,7 +16,7 @@ export const metadata = buildMetadata({
 
 export default function AgeGroupsIndexPage() {
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen bg-paper">
       <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
@@ -25,12 +25,12 @@ export default function AgeGroupsIndexPage() {
         ])}
       />
 
-      <section className="bg-navy-900 py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-gold-400">2 yaştan ilkokula hazırlığa</p>
+      <section className="bg-ink py-20 text-center">
+        <p className="text-sm uppercase tracking-[0.2em] text-mark">2 yaştan ilkokula hazırlığa</p>
         <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
           Her yaşın kendi programı, kendi sınıfı var.
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl px-6 text-navy-100">
+        <p className="mx-auto mt-6 max-w-2xl px-6 text-paper">
           Dört yaş grubu, dört ayrı gelişim dönemi. Çocuğunuzun bulunduğu gruba tıklayarak
           o yaşa özel programı, günlük akışı ve sınıf mevcudunu inceleyin.
         </p>
@@ -53,10 +53,10 @@ export default function AgeGroupsIndexPage() {
                 />
               </div>
               <div className="p-8">
-                <p className="text-sm uppercase tracking-[0.2em] text-gold-600">{group.ageLabel}</p>
-                <h2 className="mt-3 font-display text-2xl text-navy-900">{group.title}</h2>
-                <p className="mt-3 text-navy-700">{group.headline}</p>
-                <span className="mt-6 inline-block text-navy-900 underline">
+                <p className="text-sm uppercase tracking-[0.2em] text-ink-soft">{group.ageLabel}</p>
+                <h2 className="mt-3 font-display text-2xl text-ink">{group.title}</h2>
+                <p className="mt-3 text-ink-soft">{group.headline}</p>
+                <span className="mt-6 inline-block text-ink underline">
                   Programı incele
                 </span>
               </div>
@@ -65,12 +65,12 @@ export default function AgeGroupsIndexPage() {
         </div>
       </section>
 
-      <section className="bg-cream py-16">
+      <section className="bg-paper py-16">
         <div className="mx-auto max-w-2xl px-6">
-          <h2 className="text-center font-display text-3xl text-navy-900">
+          <h2 className="text-center font-display text-3xl text-ink">
             Çocuğunuzun yaş grubu için kontenjan sorun
           </h2>
-          <p className="mt-4 text-center text-navy-700">
+          <p className="mt-4 text-center text-ink-soft">
             Sınıf mevcudumuz sınırlı olduğu için kayıtları dönem başında kapatıyoruz.
           </p>
           <div className="mt-10">

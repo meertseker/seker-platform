@@ -30,7 +30,7 @@ export default async function AgeGroupPage({ params }: { params: Promise<{ slug:
   if (!group) notFound();
 
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen bg-paper">
       <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
@@ -40,30 +40,30 @@ export default async function AgeGroupPage({ params }: { params: Promise<{ slug:
         ])}
       />
 
-      <section className="bg-navy-900 py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-gold-400">{group.ageLabel}</p>
+      <section className="bg-ink py-20 text-center">
+        <p className="text-sm uppercase tracking-[0.2em] text-mark">{group.ageLabel}</p>
         <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
           {group.headline}
         </h1>
       </section>
 
       <section className="mx-auto max-w-3xl px-6 py-16">
-        <p className="text-lg text-navy-700">{group.intro}</p>
-        <p className="mt-6 rounded-xl bg-cream px-6 py-4 text-navy-800">
+        <p className="text-lg text-ink-soft">{group.intro}</p>
+        <p className="mt-6 rounded-xl bg-paper px-6 py-4 text-ink">
           <strong>Sınıf mevcudu:</strong> {group.classSize}
         </p>
       </section>
 
-      <section className="bg-cream py-16">
+      <section className="bg-paper py-16">
         <div className="mx-auto max-w-5xl px-6">
-          <h2 className="text-center font-display text-3xl text-navy-900">
+          <h2 className="text-center font-display text-3xl text-ink">
             {group.ageLabel} programında odak alanlarımız
           </h2>
           <div className="mt-12 grid gap-8 md:grid-cols-2">
             {group.focusAreas.map((area) => (
               <div key={area.title} className="rounded-xl bg-white p-8">
-                <h3 className="font-display text-xl text-navy-900">{area.title}</h3>
-                <p className="mt-3 text-navy-700">{area.description}</p>
+                <h3 className="font-display text-xl text-ink">{area.title}</h3>
+                <p className="mt-3 text-ink-soft">{area.description}</p>
               </div>
             ))}
           </div>
@@ -80,28 +80,28 @@ export default async function AgeGroupPage({ params }: { params: Promise<{ slug:
             className="rounded-2xl object-cover"
           />
           <div>
-            <h2 className="font-display text-3xl text-navy-900">Günün akışından</h2>
+            <h2 className="font-display text-3xl text-ink">Günün akışından</h2>
             <ul className="mt-6 space-y-3">
               {group.dailyHighlights.map((item) => (
-                <li key={item} className="flex gap-3 text-navy-700">
-                  <span className="text-gold-500">—</span>
+                <li key={item} className="flex gap-3 text-ink-soft">
+                  <span className="text-ink-soft">—</span>
                   {item}
                 </li>
               ))}
             </ul>
-            <Link href="/gunluk-akis" className="mt-8 inline-block text-navy-900 underline">
+            <Link href="/gunluk-akis" className="mt-8 inline-block text-ink underline">
               Tam günlük akışı görün
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="bg-cream py-16">
+      <section className="bg-paper py-16">
         <div className="mx-auto max-w-2xl px-6">
-          <h2 className="text-center font-display text-3xl text-navy-900">
+          <h2 className="text-center font-display text-3xl text-ink">
             {group.ageLabel} kontenjanımızı sorun
           </h2>
-          <p className="mt-4 text-center text-navy-700">
+          <p className="mt-4 text-center text-ink-soft">
             Sınıf mevcudumuz sınırlı olduğu için kayıtları dönem başında kapatıyoruz.
           </p>
           <div className="mt-10">

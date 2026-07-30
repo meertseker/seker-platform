@@ -43,7 +43,7 @@ export default function SocialMediaLinks() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label={p.label}
-          className="text-navy-200 hover:text-white"
+          className="text-paper/70 hover:text-white"
         >
           {p.icon}
         </a>
