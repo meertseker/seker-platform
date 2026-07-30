@@ -26,8 +26,18 @@ describe('buildMetadata', () => {
     expect(home.title).toBe('Özel Şeker Anaokulu');
   });
 
+  it('ana sayfa canonical URL\'inde sondaki eğik çizgi bulunmaz', () => {
+    const home = buildMetadata({ title: 'Özel Şeker Anaokulu', description: 'x', path: '/' });
+    expect(home.alternates?.canonical).toBe('https://sekeranaokulu.com');
+  });
+
   it('noindex bayrağına uyar', () => {
     const hidden = buildMetadata({ title: 'X', description: 'y', path: '/z', noindex: true });
     expect(hidden.robots).toEqual({ index: false, follow: false });
+  });
+
+  it('noindex istenmediğinde robots alanı hiç eklenmez', () => {
+    const meta = buildMetadata({ title: 'X', description: 'y', path: '/z' });
+    expect('robots' in meta).toBe(false);
   });
 });
