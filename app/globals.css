@@ -1,26 +1,59 @@
 @import "tailwindcss";
 
+@theme {
+  /* Premium palet — lacivert ana, altın vurgu, krem zemin */
+  --color-navy-50:  #f2f4fa;
+  --color-navy-100: #e3e7f4;
+  --color-navy-200: #c4cce8;
+  --color-navy-300: #94a3d4;
+  --color-navy-400: #6274bb;
+  --color-navy-500: #3f4f9f;
+  --color-navy-600: #2c3a80;
+  --color-navy-700: #1e2a63;
+  --color-navy-800: #14204a;
+  --color-navy-900: #0b1533;
+
+  --color-gold-300: #e8d9a8;
+  --color-gold-400: #d4bd77;
+  --color-gold-500: #b89b4a;
+  --color-gold-600: #967a33;
+
+  --color-cream: #faf8f4;
+  --color-ivory: #ffffff;
+
+  /* Marka mirası — yalnızca küçük vurgu olarak */
+  --color-accent-coral: #ef6700;
+
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: var(--color-ivory);
+  --foreground: var(--color-navy-900);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), sans-serif; /* Remove quotes around var(--font-sans) */
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Premium tipografi ölçeği: büyük, sakin başlıklar, geniş satır arası */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+p {
+  line-height: 1.75;
+}
+
+/* Lüks his için yavaş, yumuşak geçişler */
+@media (prefers-reduced-motion: no-preference) {
+  a, button {
+    transition: all 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
 }
