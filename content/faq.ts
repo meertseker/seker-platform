@@ -10,7 +10,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'yas-araligi',
     question: 'Anaokulunuza kaç yaş arası çocuklar kabul ediliyor?',
     answer:
-      'Özel Şeker Anaokulu 3-6 yaş arası çocukları kabul eder. 3-4 yaş, 4-5 yaş ve 5-6 yaş için ayrı sınıflarımız ve her gruba özel eğitim programlarımız vardır.',
+      'Özel Şeker Anaokulu 2 yaşından itibaren, çocuk 5 yaşını tamamlayana kadar kabul eder. 2-3 yaş oyun grubu, 3-4 yaş, 4-5 yaş ve 5-6 yaş için ayrı sınıflarımız ve her gruba özel eğitim programlarımız vardır.',
     featured: true,
   },
   {

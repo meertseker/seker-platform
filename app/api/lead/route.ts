@@ -8,6 +8,7 @@ export const runtime = 'nodejs';
 const PROGRAM_LABELS: Record<string, string> = {
   'tam-gun': 'Tam Gün',
   'yarim-gun': 'Yarım Gün',
+  'oyun-grubu': 'Oyun Grubu (2-3 yaş)',
   'yaz-okulu': 'Yaz Okulu',
 };
 

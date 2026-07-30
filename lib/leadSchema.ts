@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-export const AGE_GROUPS = ['3-4', '4-5', '5-6'] as const;
-export const PROGRAMS = ['tam-gun', 'yarim-gun', 'yaz-okulu'] as const;
+export const AGE_GROUPS = ['2-3', '3-4', '4-5', '5-6'] as const;
+export const PROGRAMS = ['tam-gun', 'yarim-gun', 'oyun-grubu', 'yaz-okulu'] as const;
 
 export const leadSchema = z.object({
   parentName: z.string().trim().min(2, 'Ad soyad en az 2 karakter olmalı').max(80),

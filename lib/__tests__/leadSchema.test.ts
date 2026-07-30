@@ -42,4 +42,14 @@ describe('leadSchema', () => {
     const r = leadSchema.safeParse({ ...valid, childAge: '15-16' });
     expect(r.success).toBe(false);
   });
+
+  it('2-3 yaş grubunu kabul eder', () => {
+    const r = leadSchema.safeParse({ ...valid, childAge: '2-3' });
+    expect(r.success).toBe(true);
+  });
+
+  it('oyun grubu programını kabul eder', () => {
+    const r = leadSchema.safeParse({ ...valid, program: 'oyun-grubu' });
+    expect(r.success).toBe(true);
+  });
 });

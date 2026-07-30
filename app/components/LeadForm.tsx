@@ -7,6 +7,7 @@ import { trackEvent } from '@/lib/analytics';
 const PROGRAM_LABELS: Record<(typeof PROGRAMS)[number], string> = {
   'tam-gun': 'Tam Gün',
   'yarim-gun': 'Yarım Gün',
+  'oyun-grubu': 'Oyun Grubu (2-3 yaş)',
   'yaz-okulu': 'Yaz Okulu',
 };
 

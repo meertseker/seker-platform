@@ -13,7 +13,7 @@ export const SITE = {
   url: 'https://sekeranaokulu.com',
   foundingYear: 2011,
   description:
-    'Beykent Büyükçekmece\'de 2011\'den beri, 3-6 yaş için Montessori ve High Scope temelli okul öncesi eğitim.',
+    'Beykent Büyükçekmece\'de 2011\'den beri, 2-6 yaş için Montessori ve High Scope temelli okul öncesi eğitim.',
   phone: {
     display: '0530 101 88 75',
     e164: '+905301018875',
