@@ -5,7 +5,8 @@ import Footer from "./components/Footer";
 import WhatsAppButton from "./components/WhatsAppButton";
 import MobileActionBar from "./components/MobileActionBar";
 import Analytics from "./components/Analytics";
-import { organizationSchema } from "../lib/schema";
+import JsonLd from "./components/JsonLd";
+import { preschoolSchema } from "../lib/schema";
 import { SITE } from "../lib/site";
 import { buildMetadata } from "../lib/metadata";
 
@@ -36,10 +37,7 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
-        />
+        <JsonLd data={preschoolSchema} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased pb-14 md:pb-0`}

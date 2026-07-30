@@ -1,49 +1,26 @@
 "use client"
 import React, { useState } from 'react'
 import Link from 'next/link'
-
-interface FAQItem {
-  id: number
-  question: string
-  answer: string
-}
+import { FEATURED_FAQ } from '@/content/faq'
+import { buildFaqSchema } from '@/lib/schema'
+import JsonLd from './JsonLd'
 
 const FAQSection = () => {
-  const [openItems, setOpenItems] = useState<number[]>([])
+  const [openItems, setOpenItems] = useState<string[]>([])
 
-  const toggleItem = (id: number) => {
-    setOpenItems(prev => 
-      prev.includes(id) 
+  const toggleItem = (id: string) => {
+    setOpenItems(prev =>
+      prev.includes(id)
         ? prev.filter(item => item !== id)
         : [...prev, id]
     )
   }
 
   // Anasayfada gösterilecek önemli sorular
-  const featuredFAQs: FAQItem[] = [
-    {
-      id: 1,
-      question: "Anaokulumuza kaç yaş arası çocuklar kabul edilir?",
-      answer: "Şeker Anaokulu'nda 3-6 yaş arası çocukları kabul etmekteyiz. Yaş gruplarına göre sınıflarımız düzenlenmiştir ve her yaş grubuna uygun eğitim programları sunmaktayız."
-    },
-    {
-      id: 2,
-      question: "Çalışma saatleri nelerdir?",
-      answer: "Anaokulumuza 07:15-19:15 saatleri arasında hizmet vermekteyiz. Tam gün ve yarım gün seçeneklerimiz mevcuttur. Yarım gün eğitim 07:15-13:00 saatleri arasındadır."
-    },
-    {
-      id: 3,
-      question: "Eğitim programınız nasıldır?",
-      answer: "Montessori ve Reggio Emilia yaklaşımlarını temel alan eğitim programımız oyun temelli öğrenmeye odaklanır. Sanat, müzik, drama, fen, matematik ve dil gelişimi alanlarında aktiviteler düzenlenir."
-    },
-    {
-      id: 4,
-      question: "Güvenlik önlemleriniz nelerdir?",
-      answer: "Anaokulumuza 24 saat güvenlik kamerası sistemi, güvenli giriş-çıkış kontrol sistemi, yangın alarm sistemi ve ilk yardım eğitimi almış personel bulunmaktadır."
-    }
-  ];
+  const featuredFAQs = FEATURED_FAQ;
 
   return (
+    <>
     <section className="py-16 bg-gradient-to-br from-blue-50 to-indigo-50">
       <div className="container mx-auto px-4 md:px-6">
         {/* Section Header */}
@@ -115,6 +92,8 @@ const FAQSection = () => {
         <div className="absolute bottom-20 left-10 w-16 h-16 bg-red-500 rounded-full opacity-10"></div>
       </div>
     </section>
+    <JsonLd data={buildFaqSchema(FEATURED_FAQ)} />
+    </>
   )
 }
 
