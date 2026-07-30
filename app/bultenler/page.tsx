@@ -95,28 +95,28 @@ const Bultenler = () => {
       id: 1,
       baslik: "Doğa Müzesi Gezisi",
       tarih: "15.04.2025",
-      resim: "/gezi1.jpg",
+      resim: "/yazaktiviteleri.webp",
       aciklama: "Öğrencilerimiz ile beraber doğa müzesine yaptığımız eğitici gezi"
     },
     {
       id: 2,
       baslik: "Çiftlik Gezisi",
       tarih: "20.03.2025",
-      resim: "/gezi2.jpg",
+      resim: "/sportiffaaliyetler.webp",
       aciklama: "Hayvanları yakından tanıma fırsatı bulduk"
     },
     {
       id: 3,
       baslik: "Bilim Merkezi",
       tarih: "10.02.2025",
-      resim: "/gezi3.jpg",
+      resim: "/binincilik.webp",
       aciklama: "Deneylerle dolu bir gün geçirdik"
     },
     {
       id: 4,
       baslik: "Şehir Tiyatrosu",
       tarih: "05.01.2025",
-      resim: "/gezi4.jpg",
+      resim: "/yuzme.webp",
       aciklama: "Çocuk oyununu hep beraber izledik"
     }
   ];
@@ -127,42 +127,42 @@ const Bultenler = () => {
       id: 1,
       baslik: "23 Nisan Kutlamaları",
       tarih: "23.04.2025",
-      resim: "/aktivite1.jpg",
+      resim: "/seramik.webp",
       aciklama: "23 Nisan Ulusal Egemenlik ve Çocuk Bayramı etkinliklerimiz"
     },
     {
       id: 2,
       baslik: "Kış Partisi",
       tarih: "15.02.2025",
-      resim: "/aktivite2.jpg",
+      resim: "/robotic.webp",
       aciklama: "Eğlenceli kış partimizden kareler"
     },
     {
       id: 3,
       baslik: "Resim Atölyesi",
       tarih: "10.03.2025",
-      resim: "/aktivite3.jpg",
+      resim: "/muzik.webp",
       aciklama: "Minik sanatçılarımızın eserleri"
     },
     {
       id: 4,
       baslik: "Yıl Sonu Gösterisi",
       tarih: "20.06.2024",
-      resim: "/aktivite4.jpg",
+      resim: "/seramik.webp",
       aciklama: "Geçen yılki yıl sonu gösterimizden anlar"
     },
     {
       id: 5,
       baslik: "Okuma Etkinliği",
       tarih: "08.03.2025",
-      resim: "/aktivite5.jpg",
+      resim: "/robotic.webp",
       aciklama: "Dünya Kitap Günü etkinliklerimiz"
     },
     {
       id: 6,
       baslik: "Müzik Dersi",
       tarih: "12.04.2025",
-      resim: "/aktivite6.jpg",
+      resim: "/muzik.webp",
       aciklama: "Ritim ve müzik dersimizden keyifli anlar"
     }
   ];
@@ -296,8 +296,8 @@ const Bultenler = () => {
             {gezilerimiz.map((gezi) => (
               <div key={gezi.id} className="bg-white rounded-xl shadow-md overflow-hidden">
                 <div className="aspect-w-16 aspect-h-9 relative h-60">
-                  <Image 
-                    src={gezi.resim || "/placeholder.jpg"} 
+                  <Image
+                    src={gezi.resim || "/cocukklar.webp"}
                     alt={gezi.baslik}
                     className="object-cover"
                     fill
@@ -320,8 +320,8 @@ const Bultenler = () => {
             {aktivitelerimiz.map((aktivite) => (
               <div key={aktivite.id} className="bg-white rounded-xl shadow-md overflow-hidden">
                 <div className="aspect-w-16 aspect-h-9 relative h-52">
-                  <Image 
-                    src={aktivite.resim || "/placeholder.jpg"} 
+                  <Image
+                    src={aktivite.resim || "/cocukklar.webp"}
                     alt={aktivite.baslik}
                     className="object-cover"
                     fill

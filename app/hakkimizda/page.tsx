@@ -36,17 +36,17 @@ const HakkimizdaPage = () => {
             description="Çocukların doğal meraklarını körükleyerek, yaratıcılıklarını geliştirmek ve sosyal becerilerini güçlendirmek. Her çocuğun bireysel özelliklerini keşfetmesine yardımcı olarak, onları hayata hazırlamak. Modern eğitim yaklaşımları ile geleneksel değerleri harmanlayarak, çocuklarımızın hem akademik hem de kişisel gelişimlerini desteklemek."
             buttonText="İletişim"
             buttonLink="/iletisim"
-            imageSrc="/asyalicocuk.webp"
-            imageAlt="Mutlu çocuklar"
+            imageSrc="/cocukklar.webp"
+            imageAlt="Şeker Anaokulu sınıfında çocuklar"
             imagePosition="right"
             backgroundColor="#3ba4cc"
           />
           
           {/* Center Image */}
           <div className="my-16 text-center md:hidden">
-            <Image 
-              src="/asyalicocuk.webp" 
-              alt="Çocuklar mutlu bir şekilde öğreniyor"
+            <Image
+              src="/montesori.webp"
+              alt="Montessori materyaliyle çalışan çocuk"
               className="rounded-lg shadow-lg mx-auto"
               width={300}
               height={200}
@@ -59,8 +59,8 @@ const HakkimizdaPage = () => {
               description="Türkiye'nin en kaliteli okul öncesi eğitim kurumu olmak. Çocukların potansiyellerini en üst düzeyde kullanabilecekleri, özgüven sahibi, yaratıcı, problem çözme becerileri gelişmiş bireyler yetiştirebilmek. Ailelerin güvenle tercih ettiği, çocukların sevgi ile hatırladığı bir eğitim yuva olmak."
               buttonText="Aktivitelerimiz"
               buttonLink="/aktiviteler"
-              imageSrc="/asyalicocuk.webp"
-              imageAlt="Çocuklar ve öğretmenler"
+              imageSrc="/art.webp"
+              imageAlt="Sanat atölyesinde çalışma"
               imagePosition="left"
               backgroundColor="#e657a2"
             />

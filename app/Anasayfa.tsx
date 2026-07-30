@@ -26,17 +26,17 @@ const Anasayfa = () => {
             description="Eğitim anlayışımız, çocukların kendi hızlarında öğrenmelerine olanak tanıyan oyun temelli ve etkileşimli bir yaklaşıma dayanır. Montessori ve Reggio Emilia yaklaşımlarından ilham alarak hazırladığımız programlarımızla çocukların zihinsel, sosyal, duygusal ve motor gelişimlerini bir bütün olarak destekliyoruz. Her gün yeni bir deneyim, yeni bir öğrenme fırsatı."
             buttonText="Daha Fazla"
             buttonLink="/hakkimizda"
-            imageSrc="/asyalicocuk.webp"
-            imageAlt="Eğitici oyuncaklarla gülümseyen çocuk"
+            imageSrc="/cocukklar.webp"
+            imageAlt="Şeker Anaokulu sınıfında çocuklar"
             imagePosition="right"
             backgroundColor="#3ba4cc"
           />
           
           {/* Center Image */}
           <div className="my-16 text-center md:hidden">
-            <Image 
-              src="/asyalicocuk.webp" 
-              alt="Çocuklar mutlu bir şekilde öğreniyor"
+            <Image
+              src="/montesori.webp"
+              alt="Montessori materyaliyle çalışan çocuk"
               className="rounded-lg shadow-lg mx-auto"
               width={300}
               height={200}
@@ -49,8 +49,8 @@ const Anasayfa = () => {
               description="Anaokulumuzdaki her köşe, çocukların kendilerini güvende hissetmeleri için özel olarak tasarlanmıştır. Deneyimli öğretmen kadromuz ve modern eğitim anlayışımızla çocuklarınızın sosyal, duygusal ve akademik gelişimlerini destekliyoruz. Oyun alanlarımız, sanat atölyelerimiz ve kütüphanemizle çocukların hayal gücünü geliştiren bir öğrenme ortamı sunuyoruz."
               buttonText="Keşfet"
               buttonLink="/aktiviteler"
-              imageSrc="/asyalicocuk.webp"
-              imageAlt="Güvenli oyun alanında mutlu çocuklar"
+              imageSrc="/art.webp"
+              imageAlt="Sanat atölyesinde çalışma"
               imagePosition="left"
               backgroundColor="#e657a2"
             />

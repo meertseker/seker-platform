@@ -7,8 +7,9 @@ export type Teacher = {
   photo: string;
 };
 
-// TODO: Gerçek kadro bilgileriyle doldurun. Fotoğraflar public/kadro/ altına konur.
-// Her öğretmenden yazılı izin alın (KVKK).
+// TODO: Gerçek kadro bilgileriyle doldurun. public/kadro/kurucu.webp şu an
+// geçici bir görseldir (psikolog.webp kopyası); gerçek fotoğraf temin
+// edildiğinde bu dosyanın üzerine yazılmalı. Her öğretmenden yazılı izin alın (KVKK).
 export const TEACHERS: Teacher[] = [
   {
     id: 'kurucu',
@@ -16,6 +17,6 @@ export const TEACHERS: Teacher[] = [
     role: 'Kurucu ve Okul Müdürü',
     education: 'TODO: Üniversite ve bölüm',
     experience: 'TODO: Kaç yıllık deneyim, önceki kurumlar',
-    photo: '/kadro/kurucu.jpg',
+    photo: '/kadro/kurucu.webp',
   },
 ];

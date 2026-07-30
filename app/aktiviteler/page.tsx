@@ -254,8 +254,8 @@ const Aktiviteler = () => {
                 >
                   {/* Aktivite Resmi */}
                   <div className="relative h-48 bg-gray-200">
-                    <Image 
-                      src={aktivite.resim || "/placeholder.jpg"} 
+                    <Image
+                      src={aktivite.resim || "/cocukklar.webp"}
                       alt={aktivite.başlık}
                       className="object-cover w-full h-full"
                       width={400}
@@ -294,8 +294,8 @@ const Aktiviteler = () => {
               <div className="grid grid-cols-1 md:grid-cols-2">
                 {/* Aktivite Resmi */}
                 <div className="relative h-80 md:h-auto bg-gray-200">
-                  <Image 
-                    src={seçiliAktivite.resim || "/placeholder.jpg"} 
+                  <Image
+                    src={seçiliAktivite.resim || "/cocukklar.webp"}
                     alt={seçiliAktivite.başlık}
                     className="absolute inset-0 w-full h-full object-cover"
                     width={600}

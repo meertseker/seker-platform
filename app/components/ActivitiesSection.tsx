@@ -68,8 +68,8 @@ const ActivitiesSection = () => {
             >
               {/* Activity Image */}
               <div className="relative h-48 bg-gray-200">
-                <Image 
-                  src={aktivite.resim || "/placeholder.jpg"} 
+                <Image
+                  src={aktivite.resim || "/cocukklar.webp"}
                   alt={aktivite.başlık}
                   className="object-cover w-full h-full"
                   width={300}
