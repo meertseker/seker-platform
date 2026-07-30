@@ -154,7 +154,7 @@ function PaymentRows({
   const danger = section.tone === "danger";
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+    <section className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
       <div
         className={`flex flex-col gap-2 border-b px-5 py-4 sm:flex-row sm:items-start sm:justify-between ${
           danger ? "border-red-100 bg-destructive-soft" : "border-border bg-muted"

@@ -119,7 +119,7 @@ function FunnelSection({ funnel }: { funnel: FunnelResult }) {
 
 function SourceConversionSection({ rows }: { rows: SourceConversionRow[] }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+    <section className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
       <div className="border-b border-border bg-muted px-5 py-4">
         <h2 className="text-xl font-semibold text-foreground">Kaynak dönüşümü</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -212,7 +212,7 @@ function PaymentSummarySection({ summary }: { summary: PaymentSummary }) {
 
 function ConsultantBreakdownSection({ rows }: { rows: ConsultantBreakdownRow[] }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+    <section className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
       <div className="border-b border-border bg-muted px-5 py-4">
         <h2 className="text-xl font-semibold text-foreground">Danışman kırılımı</h2>
         <p className="mt-1 text-sm text-muted-foreground">

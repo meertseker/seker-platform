@@ -153,7 +153,7 @@ export function PlanWizard({
           </div>
 
           {preview.length > 0 ? (
-            <div className="overflow-hidden rounded-2xl border border-border">
+            <div className="overflow-x-auto rounded-2xl border border-border">
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <tr>

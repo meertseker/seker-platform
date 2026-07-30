@@ -191,7 +191,7 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
         </p>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-border">
+      <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
         <table className="min-w-full divide-y divide-border text-sm">
           <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <tr>
@@ -301,6 +301,95 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
             })()}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobil: satırlar kart olarak (tablo telefonda taşmasın, butonlar erişilir kalsın) */}
+      <div className="space-y-2 sm:hidden">
+        {(() => {
+          let lastMonth: string | null = null;
+          const out: React.ReactNode[] = [];
+          for (const installment of sorted) {
+            const overdue = installment.status === "bekliyor" && installment.due_date < today;
+            const monthKey = installment.due_date.slice(0, 7);
+            if (showItemColumn && monthKey !== lastMonth) {
+              lastMonth = monthKey;
+              out.push(
+                <div
+                  key={`mm-${monthKey}`}
+                  className="flex items-center justify-between px-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                >
+                  <span className="text-foreground">{formatMonth(installment.due_date)}</span>
+                  <span className="tabular-nums">{formatTRY(monthTotals.get(monthKey) ?? 0)}</span>
+                </div>,
+              );
+            }
+            out.push(
+              <div
+                key={installment.id}
+                className={`rounded-2xl border p-4 ${overdue ? "border-red-200 bg-red-50/70" : "border-border bg-surface"}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-foreground">{formatDate(installment.due_date)}</p>
+                    {showItemColumn && installment.itemLabel ? (
+                      <p className="mt-0.5 text-xs text-muted-foreground">{installment.itemLabel}</p>
+                    ) : null}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold tabular-nums text-foreground">
+                      {formatTRY(tlToKurus(installment.amount))}
+                    </p>
+                    <span className={`mt-1 inline-block ${badgeClass(INSTALLMENT_STATUS_STYLES[installment.status])}`}>
+                      {installment.status === "odendi"
+                        ? "Ödendi"
+                        : installment.status === "iptal"
+                          ? "İptal"
+                          : "Bekliyor"}
+                    </span>
+                    {installment.payment_method ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {label(PAYMENT_METHODS, installment.payment_method)}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {installment.status === "bekliyor" ? (
+                    <button
+                      type="button"
+                      onClick={() => openPayModal(installment)}
+                      className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Banknote aria-hidden className="size-4" />
+                      Ödendi işaretle
+                    </button>
+                  ) : null}
+                  {role === "yonetici" && installment.status !== "iptal" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openEdit(installment)}
+                        className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        Düzenle
+                      </button>
+                      {installment.status === "odendi" ? (
+                        <button
+                          type="button"
+                          onClick={() => revert(installment.id)}
+                          className="min-h-11 cursor-pointer rounded-xl border border-red-200 bg-destructive-soft px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:border-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Geri Al
+                        </button>
+                      ) : null}
+                    </>
+                  ) : null}
+                </div>
+              </div>,
+            );
+          }
+          return out;
+        })()}
       </div>
 
       {paying ? (
