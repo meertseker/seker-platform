@@ -6,11 +6,18 @@ describe('öğretmen kadrosu', () => {
     expect(TEACHERS.length).toBeGreaterThan(0);
   });
 
-  it('her kişinin adı, unvanı ve fotoğrafı vardır', () => {
+  it('her kişinin adı ve unvanı vardır', () => {
     for (const person of TEACHERS) {
       expect(person.name.length).toBeGreaterThan(2);
       expect(person.role.length).toBeGreaterThan(2);
-      expect(person.photo).toMatch(/^\/kadro\//);
+    }
+  });
+
+  it('fotoğrafı olan kişilerin fotoğrafı public/kadro/ altındadır', () => {
+    for (const person of TEACHERS) {
+      if (person.photo) {
+        expect(person.photo).toMatch(/^\/kadro\//);
+      }
     }
   });
 

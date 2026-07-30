@@ -13,6 +13,15 @@ export const metadata = buildMetadata({
   path: '/kadromuz',
 });
 
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0]!.toLocaleUpperCase('tr-TR'))
+    .slice(0, 2)
+    .join('');
+}
+
 export default function KadromuzPage() {
   return (
     <div className="min-h-screen bg-ivory">
@@ -47,14 +56,26 @@ export default function KadromuzPage() {
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {TEACHERS.map((person) => (
               <div key={person.id} className="overflow-hidden rounded-2xl bg-white shadow-sm">
-                <div className="relative h-64 bg-navy-100">
-                  <Image
-                    src={person.photo}
-                    alt={person.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
+                {person.photo ? (
+                  <div className="relative h-64 bg-navy-100">
+                    <Image
+                      src={person.photo}
+                      alt={person.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="flex h-64 items-center justify-center bg-gold-300"
+                    role="img"
+                    aria-label={person.name}
+                  >
+                    <span className="font-display text-5xl text-navy-900">
+                      {getInitials(person.name)}
+                    </span>
+                  </div>
+                )}
                 <div className="p-6">
                   <h2 className="font-display text-xl text-navy-900">{person.name}</h2>
                   <p className="mt-1 text-sm font-medium uppercase tracking-wide text-gold-600">
