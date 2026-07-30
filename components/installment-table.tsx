@@ -25,12 +25,16 @@ export interface InstallmentTableItem {
   paid_at: string | null;
   paid_amount: number | null;
   payment_method: PaymentMethod | null;
+  /** Kalem etiketi (Aidat / Kitap-Kırtasiye / Servis) — birden çok plan tek takvimde toplandığında gösterilir. */
+  itemLabel?: string;
 }
 
 interface InstallmentTableProps {
   installments: InstallmentTableItem[];
   role: "yonetici" | "danisman";
   today: string;
+  /** Kalem sütununu + aya göre gruplamayı göster (öğrenci detayında tüm planlar tek takvimde). */
+  showItemColumn?: boolean;
 }
 
 const paymentMethods = Object.keys(PAYMENT_METHODS) as PaymentMethod[];
@@ -55,7 +59,17 @@ function formatDate(date: string) {
   return dateFormatter.format(new Date(`${date}T12:00:00+03:00`));
 }
 
-export function InstallmentTable({ installments, role, today }: InstallmentTableProps) {
+const monthFormatter = new Intl.DateTimeFormat("tr-TR", {
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Istanbul",
+});
+
+function formatMonth(date: string) {
+  return monthFormatter.format(new Date(`${date}T12:00:00+03:00`));
+}
+
+export function InstallmentTable({ installments, role, today, showItemColumn = false }: InstallmentTableProps) {
   const router = useRouter();
   const [paying, setPaying] = useState<InstallmentTableItem | null>(null);
   const [editing, setEditing] = useState<InstallmentTableItem | null>(null);
@@ -74,6 +88,18 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
       ),
     [installments],
   );
+
+  // Aya göre alt-toplam (YYYY-MM) — grup başlığında "Eylül · 70.000 ₺" göstermek için.
+  const monthTotals = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of sorted) {
+      const key = item.due_date.slice(0, 7);
+      map.set(key, (map.get(key) ?? 0) + tlToKurus(item.amount));
+    }
+    return map;
+  }, [sorted]);
+
+  const columnCount = showItemColumn ? 5 : 4;
 
   function openPayModal(installment: InstallmentTableItem) {
     setError(null);
@@ -170,16 +196,39 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
           <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Vade</th>
+              {showItemColumn ? <th className="px-4 py-3">Kalem</th> : null}
               <th className="px-4 py-3 text-right">Tutar</th>
               <th className="px-4 py-3">Durum</th>
               <th className="px-4 py-3 text-right">İşlem</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border bg-surface">
-            {sorted.map((installment) => {
-              const overdue = installment.status === "bekliyor" && installment.due_date < today;
+            {(() => {
+              let lastMonth: string | null = null;
+              const out: React.ReactNode[] = [];
+              for (const installment of sorted) {
+                const overdue = installment.status === "bekliyor" && installment.due_date < today;
+                const monthKey = installment.due_date.slice(0, 7);
 
-              return (
+                // Aya göre gruplama başlığı (yalnız birleşik takvimde).
+                if (showItemColumn && monthKey !== lastMonth) {
+                  lastMonth = monthKey;
+                  out.push(
+                    <tr key={`m-${monthKey}`} className="bg-muted/60">
+                      <td
+                        colSpan={columnCount}
+                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                      >
+                        <span className="text-foreground">{formatMonth(installment.due_date)}</span>
+                        <span className="ml-2 tabular-nums">
+                          · {formatTRY(monthTotals.get(monthKey) ?? 0)}
+                        </span>
+                      </td>
+                    </tr>,
+                  );
+                }
+
+                out.push(
                 <tr key={installment.id} className={overdue ? "bg-red-50/70" : undefined}>
                   <td className="px-4 py-3 font-medium text-foreground">
                     {formatDate(installment.due_date)}
@@ -189,6 +238,11 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                       </span>
                     ) : null}
                   </td>
+                  {showItemColumn ? (
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {installment.itemLabel ?? "—"}
+                    </td>
+                  ) : null}
                   <td className="px-4 py-3 text-right font-semibold text-foreground tabular-nums">
                     {formatTRY(tlToKurus(installment.amount))}
                   </td>
@@ -240,9 +294,11 @@ export function InstallmentTable({ installments, role, today }: InstallmentTable
                       ) : null}
                     </div>
                   </td>
-                </tr>
-              );
-            })}
+                </tr>,
+                );
+              }
+              return out;
+            })()}
           </tbody>
         </table>
       </div>

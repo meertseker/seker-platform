@@ -191,6 +191,30 @@ export default async function StudentDetailPage({
     (sum, plan) => sum + paidSummary(plan.installments),
     0,
   );
+
+  // Tüm planların taksitlerini TEK takvimde topla (kalem etiketiyle) — aya göre gruplanır.
+  const scheduleItems = plans.flatMap((plan) =>
+    toInstallmentItems(plan.installments).map((item) => ({
+      ...item,
+      itemLabel: label(ITEM_TYPES, plan.item_type),
+    })),
+  );
+
+  // Okulun ilk baktığı rakamlar: bu ay ödenecek · geciken · kalan.
+  const currentMonthPrefix = today.slice(0, 7);
+  let kalanKurus = 0;
+  let gecikenKurus = 0;
+  let buAyKurus = 0;
+  for (const plan of plans) {
+    for (const inst of plan.installments ?? []) {
+      if (inst.status !== "bekliyor") continue;
+      const kurus = tlToKurus(Number(inst.amount));
+      kalanKurus += kurus;
+      if (inst.due_date < today) gecikenKurus += kurus;
+      if (inst.due_date.slice(0, 7) === currentMonthPrefix) buAyKurus += kurus;
+    }
+  }
+
   const initialTotal = Number(first(queryParams.total));
   const initialCount = Number(first(queryParams.count));
   const initialOpen = first(queryParams.plan) === "1";
@@ -203,31 +227,23 @@ export default async function StudentDetailPage({
           href="/ogrenciler"
           className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          Öğrenci listesine dön
+          ← Öğrenci listesi
         </Link>
-        <h1 className="mt-3 text-3xl font-semibold">{student.full_name}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Öğrenci bilgileri, ödeme planları ve taksit hareketleri.
-        </p>
-      </div>
-
-      <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Öğrenci</p>
-            <h2 className="mt-1 text-2xl font-semibold text-foreground">
-              {student.full_name}
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {(student.program ? label(PROGRAMS, student.program) : "Program eklenmedi")} - {student.season}
+            <h1 className="text-3xl font-semibold">{student.full_name}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {student.program ? label(PROGRAMS, student.program) : "Program eklenmedi"} · {student.season}
             </p>
           </div>
           <span className={`w-fit ${badgeClass(STUDENT_STATUS_STYLES[student.status])}`}>
             {label(STUDENT_STATUSES, student.status)}
           </span>
         </div>
+      </div>
 
-        <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
+        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <dt className="text-xs font-medium text-muted-foreground">Veli</dt>
             <dd className="mt-1 text-sm font-semibold text-foreground">
@@ -250,18 +266,6 @@ export default async function StudentDetailPage({
             <dt className="text-xs font-medium text-muted-foreground">Başlangıç</dt>
             <dd className="mt-1 text-sm font-semibold text-foreground">
               {formatDate(student.start_date)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium text-muted-foreground">Ödenen</dt>
-            <dd className="mt-1 text-sm font-semibold tabular-nums text-foreground">
-              {formatTRY(paidKurus)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium text-muted-foreground">Plan toplamı</dt>
-            <dd className="mt-1 text-sm font-semibold tabular-nums text-foreground">
-              {formatTRY(totalKurus)}
             </dd>
           </div>
           {student.status === "ayrildi" ? (
@@ -295,6 +299,63 @@ export default async function StudentDetailPage({
         />
       ) : null}
 
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Ödeme Takvimi</h2>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-2xl border border-border bg-surface p-4">
+            <p className="text-xs font-medium text-muted-foreground">Bu ay ödenecek</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+              {formatTRY(buAyKurus)}
+            </p>
+          </div>
+          <div
+            className={`rounded-2xl border p-4 ${
+              gecikenKurus > 0 ? "border-red-200 bg-destructive-soft" : "border-border bg-surface"
+            }`}
+          >
+            <p className="text-xs font-medium text-muted-foreground">Geciken</p>
+            <p
+              className={`mt-1 text-lg font-semibold tabular-nums ${
+                gecikenKurus > 0 ? "text-red-700" : "text-foreground"
+              }`}
+            >
+              {formatTRY(gecikenKurus)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-surface p-4">
+            <p className="text-xs font-medium text-muted-foreground">Kalan</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+              {formatTRY(kalanKurus)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-surface p-4">
+            <p className="text-xs font-medium text-muted-foreground">Toplam</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+              {formatTRY(totalKurus)}
+            </p>
+          </div>
+        </div>
+
+        {scheduleItems.length > 0 ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Tüm ödemeler tek listede, aya göre gruplu. Her satırda “Ödendi işaretle” ile tahsilatı kaydedin.
+            </p>
+            <InstallmentTable
+              installments={scheduleItems}
+              role={profile.role}
+              today={today}
+              showItemColumn
+            />
+          </>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
+            Henüz ödeme planı yok. Aşağıdan “Plan oluştur” ile ekleyebilirsiniz.
+          </p>
+        )}
+      </section>
+
       <PlanWizard
         studentId={student.id}
         initialOpen={initialOpen}
@@ -306,62 +367,6 @@ export default async function StudentDetailPage({
         }
         sourceOfferId={sourceOfferId}
       />
-
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">Planlar</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Her plan kendi taksitleriyle birlikte takip edilir.
-          </p>
-        </div>
-
-        {plans.length > 0 ? (
-          <div className="space-y-4">
-            {plans.map((plan) => {
-              const planPaid = paidSummary(plan.installments);
-              const planTotal = tlToKurus(Number(plan.total_amount));
-
-              return (
-                <article
-                  key={plan.id}
-                  className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-foreground">
-                        {label(ITEM_TYPES, plan.item_type)}
-                      </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {plan.season} - {plan.installment_count} taksit
-                      </p>
-                    </div>
-                    <div className="text-left sm:text-right">
-                      <p className="text-sm font-semibold tabular-nums text-foreground">
-                        {formatTRY(planPaid)} / {formatTRY(planTotal)}
-                      </p>
-                      {plan.source_offer_id ? (
-                        <p className="mt-1 text-xs text-muted-foreground">Onaylı tekliften oluşturuldu</p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="mt-5">
-                    <InstallmentTable
-                      installments={toInstallmentItems(plan.installments)}
-                      role={profile.role}
-                      today={today}
-                    />
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
-            Henüz ödeme planı yok.
-          </p>
-        )}
-      </section>
     </div>
   );
 }
