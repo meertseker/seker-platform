@@ -16,6 +16,8 @@ export default function MobileActionBar() {
       </a>
       <a
         href={WHATSAPP_URL}
+        target="_blank"
+        rel="noopener noreferrer"
         onClick={track('whatsapp_click')}
         className="border-x border-navy-100 py-3.5 text-center text-sm font-medium text-navy-900"
       >

@@ -7,6 +7,7 @@ interface ContactInfoItem {
   title: string
   value: string
   href: string
+  external?: boolean
   icon: React.ReactNode
   bgColor: string
   iconColor: string
@@ -45,6 +46,7 @@ const ContactInfo = () => {
       title: 'Adres',
       value: `${SITE.address.street}\n${SITE.address.district}/${SITE.address.city}`,
       href: SITE.mapsUrl,
+      external: true,
       bgColor: 'bg-red-100',
       iconColor: 'text-red-600',
       icon: (
@@ -66,7 +68,11 @@ const ContactInfo = () => {
             </div>
           </div>
           <h3 className="text-lg font-semibold text-gray-800 mb-2">{item.title}</h3>
-          <a href={item.href} className="text-gray-600 whitespace-pre-line hover:underline">
+          <a
+            href={item.href}
+            {...(item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            className="text-gray-600 whitespace-pre-line hover:underline"
+          >
             {item.value}
           </a>
         </div>

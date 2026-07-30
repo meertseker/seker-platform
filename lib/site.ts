@@ -1,3 +1,11 @@
+const address = {
+  street: 'Cumhuriyet Mahallesi, Uludağ Sokak No:6',
+  district: 'Beykent, Büyükçekmece',
+  city: 'İstanbul',
+  postalCode: '34500', // TODO: doğrula
+  country: 'TR',
+};
+
 export const SITE = {
   name: 'Özel Şeker Anaokulu',
   legalName: 'Özel Şeker Anaokulu',
@@ -11,19 +19,15 @@ export const SITE = {
     e164: '+905301018875',
   },
   email: 'sekerakademi@gmail.com',
-  address: {
-    street: 'Cumhuriyet Mahallesi, Uludağ Sokak No:6',
-    district: 'Beykent, Büyükçekmece',
-    city: 'İstanbul',
-    postalCode: '34500', // TODO: doğrula
-    country: 'TR',
-  },
+  address,
   geo: {
     // TODO: Google Maps'ten gerçek koordinatı al
     latitude: 41.0082,
     longitude: 28.6389,
   },
-  mapsUrl: 'https://maps.google.com/?q=Cumhuriyet+Mahallesi+Uludağ+Sokak+No:6+Beykent+Büyükçekmece',
+  mapsUrl: `https://maps.google.com/?q=${encodeURIComponent(
+    `${address.street} ${address.district}/${address.city}`,
+  )}`,
   hours: { opens: '07:15', closes: '19:15' },
   areaServed: ['Beykent', 'Büyükçekmece', 'Beylikdüzü', 'Bahçeşehir', 'Esenyurt', 'Avcılar'],
   social: {
