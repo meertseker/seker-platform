@@ -36,7 +36,7 @@ const HakkimizdaPage = () => {
             description="Çocukların doğal meraklarını körükleyerek, yaratıcılıklarını geliştirmek ve sosyal becerilerini güçlendirmek. Her çocuğun bireysel özelliklerini keşfetmesine yardımcı olarak, onları hayata hazırlamak. Modern eğitim yaklaşımları ile geleneksel değerleri harmanlayarak, çocuklarımızın hem akademik hem de kişisel gelişimlerini desteklemek."
             buttonText="İletişim"
             buttonLink="/iletisim"
-            imageSrc="/asyalicocuk.png"
+            imageSrc="/asyalicocuk.webp"
             imageAlt="Mutlu çocuklar"
             imagePosition="right"
             backgroundColor="#3ba4cc"
@@ -45,7 +45,7 @@ const HakkimizdaPage = () => {
           {/* Center Image */}
           <div className="my-16 text-center md:hidden">
             <Image 
-              src="/asyalicocuk.png" 
+              src="/asyalicocuk.webp" 
               alt="Çocuklar mutlu bir şekilde öğreniyor"
               className="rounded-lg shadow-lg mx-auto"
               width={300}
@@ -59,7 +59,7 @@ const HakkimizdaPage = () => {
               description="Türkiye'nin en kaliteli okul öncesi eğitim kurumu olmak. Çocukların potansiyellerini en üst düzeyde kullanabilecekleri, özgüven sahibi, yaratıcı, problem çözme becerileri gelişmiş bireyler yetiştirebilmek. Ailelerin güvenle tercih ettiği, çocukların sevgi ile hatırladığı bir eğitim yuva olmak."
               buttonText="Aktivitelerimiz"
               buttonLink="/aktiviteler"
-              imageSrc="/asyalicocuk.png"
+              imageSrc="/asyalicocuk.webp"
               imageAlt="Çocuklar ve öğretmenler"
               imagePosition="left"
               backgroundColor="#e657a2"

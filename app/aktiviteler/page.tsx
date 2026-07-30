@@ -31,7 +31,7 @@ const Aktiviteler = () => {
         id: 1,
         başlık: "Robotik Kodlama",
         açıklama: "Çocukların problem çözme ve mantıksal düşünme yeteneklerini geliştiren, eğlenceli robotik kodlama atölyeleri.",
-        resim: "/robotic.jpg",
+        resim: "/robotic.webp",
         özellikler: ["Algoritmik düşünme", "Problem çözme becerileri", "Yaratıcı düşünme", "Takım çalışması"],
         yaşGrubu: "3-6 yaş"
       },
@@ -39,7 +39,7 @@ const Aktiviteler = () => {
         id: 2,
         başlık: "Seramik",
         açıklama: "El becerilerini ve üç boyutlu düşünme yeteneğini geliştiren, çocukların kendi eserlerini yarattığı seramik atölyeleri.",
-        resim: "/seramik.jpg",
+        resim: "/seramik.webp",
         özellikler: ["İnce motor becerileri", "Yaratıcı ifade", "Doku algısı", "Sabır ve odaklanma"],
         yaşGrubu: "3-6 yaş"
       },
@@ -47,7 +47,7 @@ const Aktiviteler = () => {
         id: 3,
         başlık: "Görsel Sanatlar",
         açıklama: "Farklı sanat teknikleri ve malzemeleriyle çocukların kendilerini ifade etmelerini sağlayan görsel sanatlar etkinlikleri.",
-        resim: "/art.jpg",
+        resim: "/art.webp",
         özellikler: ["Renk algısı", "Kompozisyon", "Sanatsal ifade", "El-göz koordinasyonu"],
         yaşGrubu: "3-6 yaş"
       },
@@ -55,7 +55,7 @@ const Aktiviteler = () => {
         id: 4,
         başlık: "Bale ve Dans",
         açıklama: "Vücut koordinasyonu, ritim duygusu ve özgüven geliştiren, eğlenceli bale ve dans dersleri.",
-        resim: "/dans.jpg",
+        resim: "/dans.webp",
         özellikler: ["Ritim duygusu", "Denge ve koordinasyon", "Esneklik", "Sahne özgüveni"],
         yaşGrubu: "3-6 yaş"
       },
@@ -63,7 +63,7 @@ const Aktiviteler = () => {
         id: 5,
         başlık: "Müzik ve Ritim",
         açıklama: "Çocukların müzikal zekalarını ve ritim duygularını geliştiren, çeşitli enstrümanlarla tanıştıkları müzik dersleri.",
-        resim: "/muzik.jpg",
+        resim: "/muzik.webp",
         özellikler: ["Ses algısı", "Ritim yeteneği", "Müzikal ifade", "Dinleme becerisi"],
         yaşGrubu: "3-6 yaş"
       },
@@ -71,7 +71,7 @@ const Aktiviteler = () => {
         id: 6,
         başlık: "Drama",
         açıklama: "Kendini ifade etme, empati ve sosyal beceriler kazandıran, yaratıcı drama etkinlikleri.",
-        resim: "/drama.jpg",
+        resim: "/drama.webp",
         özellikler: ["Empati", "Kendini ifade etme", "Rol yapma", "Sosyal beceriler"],
         yaşGrubu: "3-6 yaş"
       },
@@ -79,7 +79,7 @@ const Aktiviteler = () => {
         id: 7,
         başlık: "Montessori Aktiviteleri",
         açıklama: "Montessori felsefesine uygun, çocukların bağımsız öğrenmelerini destekleyen, özel tasarlanmış materyallerle aktiviteler.",
-        resim: "/montesori.jpg",
+        resim: "/montesori.webp",
         özellikler: ["Bağımsız öğrenme", "Pratik yaşam becerileri", "Düzen ve disiplin", "Odaklanma"],
         yaşGrubu: "3-6 yaş"
       },
@@ -87,7 +87,7 @@ const Aktiviteler = () => {
         id: 8,
         başlık: "Satranç",
         açıklama: "Stratejik düşünme, planlama ve konsantrasyon becerilerini geliştiren, eğlenceli satranç dersleri.",
-        resim: "/satranc.jpg",
+        resim: "/satranc.webp",
         özellikler: ["Stratejik düşünme", "Planlama", "Sabır", "Analitik zeka"],
         yaşGrubu: "3-6 yaş"
       },
@@ -95,7 +95,7 @@ const Aktiviteler = () => {
         id: 9,
         başlık: "Beden Eğitimi",
         açıklama: "Çocukların fiziksel gelişimlerini destekleyen, temel motor becerileri geliştiren, eğlenceli spor etkinlikleri.",
-        resim: "/beden.jpg",
+        resim: "/beden.webp",
         özellikler: ["Temel motor beceriler", "Dayanıklılık", "Koordinasyon", "Takım ruhu"],
         yaşGrubu: "3-6 yaş"
       },
@@ -103,7 +103,7 @@ const Aktiviteler = () => {
         id: 10,
         başlık: "Beceri Koordinasyon",
         açıklama: "İnce ve kaba motor becerileri geliştiren, el-göz koordinasyonunu güçlendiren özel tasarlanmış aktiviteler.",
-        resim: "/motorskills.jpg",
+        resim: "/motorskills.webp",
         özellikler: ["El-göz koordinasyonu", "Denge", "Hassas motor beceriler", "Vücut farkındalığı"],
         yaşGrubu: "3-6 yaş"
       },
@@ -111,7 +111,7 @@ const Aktiviteler = () => {
         id: 11,
         başlık: "Psikolog ile Oyun Saati",
         açıklama: "Uzman psikolog eşliğinde, çocukların duygusal ve sosyal gelişimlerini destekleyen terapi oyunları.",
-        resim: "/psikolog.jpg",
+        resim: "/psikolog.webp",
         özellikler: ["Duygusal ifade", "Sosyal beceriler", "Problem çözme", "Özgüven geliştirme"],
         yaşGrubu: "3-6 yaş"
       }
@@ -121,7 +121,7 @@ const Aktiviteler = () => {
         id: 12,
         başlık: "Yaz Okulu Aktiviteleri",
         açıklama: "Yaz boyunca çocukların eğlenerek öğrenmeye devam etmelerini sağlayan, zengin içerikli yaz okulu programı.",
-        resim: "/yazaktiviteleri.jpg",
+        resim: "/yazaktiviteleri.webp",
         özellikler: ["Eğlenceli öğrenme", "Sosyal etkileşim", "Yaratıcı etkinlikler", "Açık hava aktiviteleri"],
         yaşGrubu: "3-6 yaş"
       },
@@ -129,7 +129,7 @@ const Aktiviteler = () => {
         id: 13,
         başlık: "Binicilik",
         açıklama: "Çocukların atlarla bağ kurarak sorumluluk, güven ve denge becerilerini geliştirdiği binicilik dersleri.",
-        resim: "/binincilik.jpg",
+        resim: "/binincilik.webp",
         özellikler: ["Denge ve duruş", "Hayvan sevgisi", "Sorumluluk bilinci", "Özgüven"],
         yaşGrubu: "3-6 yaş"
       },
@@ -137,7 +137,7 @@ const Aktiviteler = () => {
         id: 14,
         başlık: "Yüzme",
         açıklama: "Profesyonel eğitmenler eşliğinde, su korkusunu yenme ve temel yüzme becerilerini kazandıran yüzme dersleri.",
-        resim: "/yuzme.jpg",
+        resim: "/yuzme.webp",
         özellikler: ["Su güvenliği", "Temel yüzme teknikleri", "Nefes kontrolü", "Fiziksel dayanıklılık"],
         yaşGrubu: "3-6 yaş"
       },
@@ -145,7 +145,7 @@ const Aktiviteler = () => {
         id: 15,
         başlık: "Sportif Faaliyetler",
         açıklama: "Açık havada gerçekleştirilen, çocukların enerjilerini pozitif bir şekilde harcamalarını sağlayan çeşitli spor aktiviteleri.",
-        resim: "/sportiffaaliyetler.jpg",
+        resim: "/sportiffaaliyetler.webp",
         özellikler: ["Takım çalışması", "Koordinasyon", "Motor beceriler", "Sosyal etkileşim"],
         yaşGrubu: "3-6 yaş"
       }

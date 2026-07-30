@@ -33,7 +33,7 @@ export const AGE_GROUPS_CONTENT: AgeGroup[] = [
     ],
     dailyHighlights: ['Karşılama ve serbest oyun', 'Duyusal atölye', 'Bahçe zamanı', 'Öğle uykusu', 'Müzik ve hareket'],
     classSize: CLASS_SIZE,
-    image: '/motorskills.jpg',
+    image: '/motorskills.webp',
   },
   {
     slug: '3-4-yas',
@@ -53,7 +53,7 @@ export const AGE_GROUPS_CONTENT: AgeGroup[] = [
     ],
     dailyHighlights: ['Sabah çemberi', 'Montessori çalışma saati', 'İngilizce', 'Bahçe zamanı', 'Atölye'],
     classSize: CLASS_SIZE,
-    image: '/art.jpg',
+    image: '/art.webp',
   },
   {
     slug: '4-5-yas',
@@ -73,7 +73,7 @@ export const AGE_GROUPS_CONTENT: AgeGroup[] = [
     ],
     dailyHighlights: ['Sabah çemberi', 'Bilim veya robotik atölyesi', 'İngilizce', 'Satranç', 'Bahçe zamanı'],
     classSize: CLASS_SIZE,
-    image: '/robotic.jpg',
+    image: '/robotic.webp',
   },
   {
     slug: '5-6-yas',
@@ -93,7 +93,7 @@ export const AGE_GROUPS_CONTENT: AgeGroup[] = [
     ],
     dailyHighlights: ['Sabah çemberi', 'Hazırlık çalışması', 'İngilizce', 'Proje saati', 'Bahçe zamanı'],
     classSize: CLASS_SIZE,
-    image: '/satranc.jpg',
+    image: '/satranc.webp',
   },
 ];
 

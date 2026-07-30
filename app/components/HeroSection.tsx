@@ -8,7 +8,7 @@ export default function HeroSection() {
   return (
     <section className="relative isolate overflow-hidden bg-navy-900">
       <Image
-        src="/cocukklar.jpg"
+        src="/cocukklar.webp"
         alt="Şeker Anaokulu'nda etkinlik sırasındaki çocuklar"
         fill
         priority

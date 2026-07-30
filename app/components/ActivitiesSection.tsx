@@ -19,28 +19,28 @@ const ActivitiesSection = () => {
       id: 1,
       başlık: "Robotik Kodlama",
       açıklama: "Çocukların problem çözme ve mantıksal düşünme yeteneklerini geliştiren, eğlenceli robotik kodlama atölyeleri.",
-      resim: "/robotic.jpg",
+      resim: "/robotic.webp",
       yaşGrubu: "3-6 yaş"
     },
     {
       id: 2,
       başlık: "Seramik",
       açıklama: "El becerilerini ve üç boyutlu düşünme yeteneğini geliştiren, çocukların kendi eserlerini yarattığı seramik atölyeleri.",
-      resim: "/seramik.jpg",
+      resim: "/seramik.webp",
       yaşGrubu: "3-6 yaş"
     },
     {
       id: 3,
       başlık: "Bale ve Dans",
       açıklama: "Vücut koordinasyonu, ritim duygusu ve özgüven geliştiren, eğlenceli bale ve dans dersleri.",
-      resim: "/dans.jpg",
+      resim: "/dans.webp",
       yaşGrubu: "3-6 yaş"
     },
     {
       id: 4,
       başlık: "Müzik ve Ritim",
       açıklama: "Çocukların müzikal zekalarını ve ritim duygularını geliştiren, çeşitli enstrümanlarla tanıştıkları müzik dersleri.",
-      resim: "/muzik.jpg",
+      resim: "/muzik.webp",
       yaşGrubu: "3-6 yaş"
     }
   ];

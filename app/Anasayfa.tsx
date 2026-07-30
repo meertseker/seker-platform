@@ -26,7 +26,7 @@ const Anasayfa = () => {
             description="Eğitim anlayışımız, çocukların kendi hızlarında öğrenmelerine olanak tanıyan oyun temelli ve etkileşimli bir yaklaşıma dayanır. Montessori ve Reggio Emilia yaklaşımlarından ilham alarak hazırladığımız programlarımızla çocukların zihinsel, sosyal, duygusal ve motor gelişimlerini bir bütün olarak destekliyoruz. Her gün yeni bir deneyim, yeni bir öğrenme fırsatı."
             buttonText="Daha Fazla"
             buttonLink="/hakkimizda"
-            imageSrc="/asyalicocuk.png"
+            imageSrc="/asyalicocuk.webp"
             imageAlt="Eğitici oyuncaklarla gülümseyen çocuk"
             imagePosition="right"
             backgroundColor="#3ba4cc"
@@ -35,7 +35,7 @@ const Anasayfa = () => {
           {/* Center Image */}
           <div className="my-16 text-center md:hidden">
             <Image 
-              src="/asyalicocuk.png" 
+              src="/asyalicocuk.webp" 
               alt="Çocuklar mutlu bir şekilde öğreniyor"
               className="rounded-lg shadow-lg mx-auto"
               width={300}
@@ -49,7 +49,7 @@ const Anasayfa = () => {
               description="Anaokulumuzdaki her köşe, çocukların kendilerini güvende hissetmeleri için özel olarak tasarlanmıştır. Deneyimli öğretmen kadromuz ve modern eğitim anlayışımızla çocuklarınızın sosyal, duygusal ve akademik gelişimlerini destekliyoruz. Oyun alanlarımız, sanat atölyelerimiz ve kütüphanemizle çocukların hayal gücünü geliştiren bir öğrenme ortamı sunuyoruz."
               buttonText="Keşfet"
               buttonLink="/aktiviteler"
-              imageSrc="/asyalicocuk.png"
+              imageSrc="/asyalicocuk.webp"
               imageAlt="Güvenli oyun alanında mutlu çocuklar"
               imagePosition="left"
               backgroundColor="#e657a2"
