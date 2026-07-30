@@ -25,17 +25,28 @@ describe("buildImportPlan", () => {
     expect(u.plans.some((p) => p.item_type === "diger" && p.total_amount === 45000)).toBe(true);
   });
 
-  it("skips rows with invalid phone, bad program, blank parent, or blank season", () => {
+  it("loads rows with missing phone/program/parent as nulls, flagged (does not skip)", () => {
     const rows = [
       { ...base, phone: "not-a-phone" },
       { ...base, program: "xxx" },
       { ...base, parent_name: "" },
-      { ...base, season: "" },
     ];
     const { units, skipped } = buildImportPlan(rows);
+    expect(skipped).toHaveLength(0);
+    expect(units).toHaveLength(3);
+    expect(units[0].student.phone).toBeNull();
+    expect(units[0].flags).toContain("telefon eksik");
+    expect(units[1].student.program).toBeNull();
+    expect(units[1].flags).toContain("program eksik");
+    expect(units[2].student.parent_name).toBeNull();
+    expect(units[2].flags).toContain("veli adı eksik");
+  });
+
+  it("skips only rows with no student name", () => {
+    const { units, skipped } = buildImportPlan([{ ...base, full_name: "" }]);
     expect(units).toHaveLength(0);
-    expect(skipped).toHaveLength(4);
-    expect(skipped.map((s) => s.reason).join("|")).toMatch(/telefon|program|parent|season/i);
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0].reason).toMatch(/full_name/);
   });
 
   it("emits a student with no plans when no fee amounts are present", () => {

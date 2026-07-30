@@ -32,10 +32,10 @@ interface PlanRow {
 interface StudentRow {
   id: string;
   full_name: string;
-  parent_name: string;
-  phone: string;
+  parent_name: string | null;
+  phone: string | null;
   season: string;
-  program: Program;
+  program: Program | null;
   status: keyof typeof STUDENT_STATUSES;
   payment_plans?: PlanRow[] | null;
 }
@@ -203,11 +203,11 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                       {student.full_name}
                     </Link>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {student.parent_name} - {student.phone}
+                      {[student.parent_name, student.phone].filter(Boolean).join(" · ") || "Bilgi eklenmedi"}
                     </p>
                   </td>
                   <td className="px-4 py-4 text-muted-foreground">
-                    {label(PROGRAMS, student.program)}
+                    {student.program ? label(PROGRAMS, student.program) : "—"}
                   </td>
                   <td className="px-4 py-4 text-muted-foreground">{student.season}</td>
                   <td className="px-4 py-4">

@@ -28,8 +28,8 @@ if (fs.existsSync(envLocalPath)) dotenv.config({ path: envLocalPath });
 function flag(name: string) { return process.argv.includes(name); }
 function value(name: string) { const i = process.argv.indexOf(name); return i !== -1 ? process.argv[i + 1] : null; }
 
-function studentKey(phone: string, fullName: string) {
-  return `${phone}::${fullName.trim().toLocaleLowerCase("tr")}`;
+function studentKey(phone: string | null, fullName: string) {
+  return `${phone ?? ""}::${fullName.trim().toLocaleLowerCase("tr")}`;
 }
 
 async function main() {
@@ -46,6 +46,8 @@ async function main() {
   const planCount = units.reduce((a, u) => a + u.plans.length, 0);
   const instCount = units.reduce((a, u) => a + u.plans.reduce((b, p) => b + p.installments.length, 0), 0);
   console.log(`Plan: ${planCount} | Taksit: ${instCount}`);
+  const miss = (f: string) => units.filter((u) => u.flags.includes(f)).length;
+  console.log(`Eksik alan (uygulamada tamamlanacak): telefon=${miss("telefon eksik")}, program=${miss("program eksik")}, veli=${miss("veli adı eksik")}`);
 
   if (dryRun) { console.log("\nDry-run: DB'ye hiçbir şey yazılmadı."); return; }
 

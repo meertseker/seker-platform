@@ -57,10 +57,10 @@ interface StudentRow {
   full_name: string;
   birth_month: number | null;
   birth_year: number | null;
-  parent_name: string;
-  phone: string;
+  parent_name: string | null;
+  phone: string | null;
   season: string;
-  program: Program;
+  program: Program | null;
   start_date: string | null;
   status: keyof typeof STUDENT_STATUSES;
   left_date: string | null;
@@ -219,7 +219,7 @@ export default async function StudentDetailPage({
               {student.full_name}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              {label(PROGRAMS, student.program)} - {student.season}
+              {(student.program ? label(PROGRAMS, student.program) : "Program eklenmedi")} - {student.season}
             </p>
           </div>
           <span className={`w-fit ${badgeClass(STUDENT_STATUS_STYLES[student.status])}`}>
@@ -231,13 +231,13 @@ export default async function StudentDetailPage({
           <div>
             <dt className="text-xs font-medium text-muted-foreground">Veli</dt>
             <dd className="mt-1 text-sm font-semibold text-foreground">
-              {student.parent_name}
+              {student.parent_name ?? "Eklenmedi"}
             </dd>
           </div>
           <div>
             <dt className="text-xs font-medium text-muted-foreground">Telefon</dt>
             <dd className="mt-1 text-sm font-semibold text-foreground">
-              {student.phone}
+              {student.phone ?? "Eklenmedi"}
             </dd>
           </div>
           <div>

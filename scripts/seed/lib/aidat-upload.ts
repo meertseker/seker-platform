@@ -19,8 +19,17 @@ export type PlanDraft = {
   installment_count: number;
   installments: InstallmentDraftRow[];
 };
-export type StudentInsert = { full_name: string; parent_name: string; phone: string; season: string; program: string };
-export type ImportUnit = { source_row: number; student: StudentInsert; plans: PlanDraft[] };
+// Telefon/program/veli adı "kaldığı yerden devam" mantığıyla SONRADAN doldurulabilir
+// (bkz. migration 0004). Bu yüzden eksik olmaları satırı atlamaz; null yazılır ve
+// insan tarafından uygulamada tamamlanır.
+export type StudentInsert = {
+  full_name: string;
+  parent_name: string | null;
+  phone: string | null;
+  season: string;
+  program: string | null;
+};
+export type ImportUnit = { source_row: number; student: StudentInsert; plans: PlanDraft[]; flags: string[] };
 export type SkipReport = { row: number; reason: string };
 
 function makePlan(item_type: PlanDraft["item_type"], monthlyTl: number, count: number, firstDue: string): PlanDraft {
@@ -40,16 +49,23 @@ export function buildImportPlan(objects: Record<string, string>[]): { units: Imp
 
   objects.forEach((o, idx) => {
     const rowNo = Number(o.source_row) || idx + 2;
+    // Tek zorunlu alan: öğrenci adı. Diğerleri (telefon/program/veli) eksikse null yazılır.
     const full_name = (o.full_name ?? "").trim();
     if (!full_name) return skipped.push({ row: rowNo, reason: "full_name boş" });
+
+    const season = (o.season ?? "").trim() || "2026-2027";
+    const flags: string[] = [];
+
     const phone = normalizeTurkishPhone(o.phone ?? "");
-    if (!phone) return skipped.push({ row: rowNo, reason: "geçersiz/boş telefon" });
-    const parent_name = (o.parent_name ?? "").trim();
-    if (!parent_name) return skipped.push({ row: rowNo, reason: "parent_name boş" });
-    const program = (o.program ?? "").trim();
-    if (!(program in PROGRAMS)) return skipped.push({ row: rowNo, reason: `geçersiz/boş program: "${program}"` });
-    const season = (o.season ?? "").trim();
-    if (!season) return skipped.push({ row: rowNo, reason: "season boş" });
+    if (!phone) flags.push("telefon eksik");
+
+    const parentRaw = (o.parent_name ?? "").trim();
+    const parent_name = parentRaw || null;
+    if (!parent_name) flags.push("veli adı eksik");
+
+    const programRaw = (o.program ?? "").trim();
+    const program = programRaw in PROGRAMS ? programRaw : null;
+    if (!program) flags.push("program eksik");
 
     const plans: PlanDraft[] = [];
     const aidat = parseTl(o.aidat_monthly);
@@ -59,7 +75,7 @@ export function buildImportPlan(objects: Record<string, string>[]): { units: Imp
     const kitap = parseTl(o.kitap_amount);
     if (kitap) plans.push(makePlan("diger", kitap, 1, AIDAT_FIRST_DUE));
 
-    units.push({ source_row: rowNo, student: { full_name, parent_name, phone, season, program }, plans });
+    units.push({ source_row: rowNo, student: { full_name, parent_name, phone, season, program }, plans, flags });
   });
 
   return { units, skipped };
