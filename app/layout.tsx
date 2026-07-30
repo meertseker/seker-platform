@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Footer from "./components/Footer";
+import WhatsAppButton from "./components/WhatsAppButton";
+import MobileActionBar from "./components/MobileActionBar";
 import { organizationSchema } from "../lib/schema";
 
 const geistSans = Geist({
@@ -33,10 +35,12 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased pb-14 md:pb-0`}
       >
         {children}
         <Footer />
+        <WhatsAppButton />
+        <MobileActionBar />
       </body>
     </html>
   );

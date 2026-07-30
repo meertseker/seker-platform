@@ -1,10 +1,12 @@
 "use client"
 import React from 'react'
+import { SITE } from '@/lib/site'
 
 interface ContactInfoItem {
   type: 'phone' | 'email' | 'location'
   title: string
   value: string
+  href: string
   icon: React.ReactNode
   bgColor: string
   iconColor: string
@@ -15,7 +17,8 @@ const ContactInfo = () => {
     {
       type: 'phone',
       title: 'Telefon',
-      value: '0530 101 88 75',
+      value: SITE.phone.display,
+      href: `tel:${SITE.phone.e164}`,
       bgColor: 'bg-purple-100',
       iconColor: 'text-purple-600',
       icon: (
@@ -27,7 +30,8 @@ const ContactInfo = () => {
     {
       type: 'email',
       title: 'E-posta',
-      value: 'sekerakademi@gmail.com',
+      value: SITE.email,
+      href: `mailto:${SITE.email}`,
       bgColor: 'bg-green-100',
       iconColor: 'text-green-600',
       icon: (
@@ -39,7 +43,8 @@ const ContactInfo = () => {
     {
       type: 'location',
       title: 'Adres',
-      value: 'Cumhuriyet mah, Uludağ Sk. No:6\nBeykent Büyükçekmece/İstanbul',
+      value: `${SITE.address.street}\n${SITE.address.district}/${SITE.address.city}`,
+      href: SITE.mapsUrl,
       bgColor: 'bg-red-100',
       iconColor: 'text-red-600',
       icon: (
@@ -61,7 +66,9 @@ const ContactInfo = () => {
             </div>
           </div>
           <h3 className="text-lg font-semibold text-gray-800 mb-2">{item.title}</h3>
-          <p className="text-gray-600 whitespace-pre-line">{item.value}</p>
+          <a href={item.href} className="text-gray-600 whitespace-pre-line hover:underline">
+            {item.value}
+          </a>
         </div>
       ))}
     </div>
