@@ -1,7 +1,7 @@
-"use client"
 import React from 'react'
 import Header from './components/Header'
 import HeroSection from './components/HeroSection'
+import TrustBar from './components/TrustBar'
 import AboutSection from './components/AboutSection'
 import FeaturesSection from './components/FeaturesSection'
 import ActivitiesSection from './components/ActivitiesSection'
@@ -13,9 +13,11 @@ const Anasayfa = () => {
   return (
     <div className="min-h-screen bg-white">
       <Header />
-      
+
       <HeroSection />
-      <ActivitiesSection /> 
+      <TrustBar />
+      <FeaturesSection />
+      <ActivitiesSection />
       {/* About Section */}
       <div className="py-16 bg-white">
         <div className="container mx-auto px-4 md:px-6">
@@ -55,11 +57,7 @@ const Anasayfa = () => {
           </div>
         </div>
       </div>
-      
-     
-      
-      <FeaturesSection />
-      
+
       <FAQSection />
       
       <ContactSection />
