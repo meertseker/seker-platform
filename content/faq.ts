@@ -67,6 +67,19 @@ export const FAQ_ITEMS: FaqItem[] = [
     answer: 'TODO: Kademeli başlangıç planınızı adım adım anlatın.',
     featured: false,
   },
+  {
+    id: 'ucret-taksit',
+    question: 'Ödeme planı ve taksit seçenekleriniz nelerdir?',
+    answer: 'TODO: Gerçek taksit sayısı, peşin indirimi ve kardeş koşullarını yazın.',
+    featured: false,
+  },
+  {
+    id: 'ucret-dahil',
+    question: 'Yıllık ücrete yemek ve branş dersleri dahil mi?',
+    answer:
+      'Tam gün programımıza günlük İngilizce, tüm branş dersleri, rehberlik desteği ve eğitim materyalleri dahildir. Servis ve okul kıyafeti ayrıca fiyatlanır. Güncel ücret ve ödeme planı ön görüşmede paylaşılır.',
+    featured: false,
+  },
 ];
 
 export const FEATURED_FAQ = FAQ_ITEMS.filter((item) => item.featured);
