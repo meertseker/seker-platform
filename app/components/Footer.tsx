@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import SocialMediaLinks from './SocialMediaLinks'
-import { NAV_ITEMS } from './nav-items'
+import { FOOTER_LINKS } from '@/content/nav'
 import { SITE } from '@/lib/site'
 
 const Footer = () => {
@@ -37,7 +37,7 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold mb-4 text-gold-500">Hızlı Linkler</h4>
             <ul className="space-y-2">
-              {NAV_ITEMS.map((item) => (
+              {FOOTER_LINKS.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="text-navy-100 hover:text-white transition-colors duration-200">
                     {item.label}

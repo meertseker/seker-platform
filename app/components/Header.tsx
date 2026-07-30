@@ -3,9 +3,7 @@ import React, { useState } from 'react'
 import Link from 'next/link';
 import Image from 'next/image';
 import { SITE } from '@/lib/site';
-import { NAV_ITEMS } from './nav-items';
-
-export { NAV_ITEMS };
+import { NAV_ITEMS } from '@/content/nav';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
