@@ -174,7 +174,8 @@ function PaymentRows({
       </div>
 
       {section.items.length > 0 ? (
-        <div className="overflow-x-auto">
+        <>
+        <div className="hidden overflow-x-auto sm:block">
           <table className="min-w-full divide-y divide-border text-sm">
             <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -231,6 +232,50 @@ function PaymentRows({
             </tbody>
           </table>
         </div>
+        {/* Mobil: kartlar (tablo taşmasın, tutar tam görünsün) */}
+        <div className="divide-y divide-border sm:hidden">
+          {section.items.map((item) => {
+            const plan = first(item.plan);
+            const student = first(plan?.student);
+            const overdueDays = daysBetween(item.due_date, today);
+            return (
+              <div
+                key={`m-${section.title}-${item.id}`}
+                className={`px-4 py-3 ${danger ? "bg-destructive-soft/40" : ""}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    {student ? (
+                      <Link
+                        href={`/ogrenciler/${student.id}`}
+                        className="font-semibold text-foreground hover:underline"
+                      >
+                        {student.full_name}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-muted-foreground">Öğrenci bulunamadı</span>
+                    )}
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {label(ITEM_TYPES, plan?.item_type ?? "diger")}
+                    </p>
+                  </div>
+                  <p className="whitespace-nowrap text-right font-semibold tabular-nums text-foreground">
+                    {formatTRY(tlToKurus(Number(item.amount)))}
+                  </p>
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span>{formatDate(item.due_date)}</span>
+                  {danger ? (
+                    <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 font-semibold text-red-700 ring-1 ring-inset ring-red-200">
+                      {overdueDays} gün gecikti
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        </>
       ) : (
         <p className="p-8 text-center text-sm text-muted-foreground">{section.emptyText}</p>
       )}
