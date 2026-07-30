@@ -2,6 +2,11 @@
 import React, { useState } from 'react'
 import Link from 'next/link';
 import Image from 'next/image';
+import { SITE } from '@/lib/site';
+import { NAV_ITEMS } from './nav-items';
+
+export { NAV_ITEMS };
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
@@ -13,35 +18,37 @@ const Header = () => {
     <div className="relative z-9999">
       <header className="bg-white px-4 md:px-8 py-4 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center font-bold text-lg md:text-xl" style={{ color: '#071997' }}>
-            <div className="w-18 h-18">
-            <Image src="/logo.png" alt=""                 width={400}
-                height={400}/></div>
-        </div>
+        <Link href="/" aria-label={`${SITE.name} ana sayfa`} className="flex items-center font-bold text-lg md:text-xl text-navy-900">
+          <div className="w-18 h-18">
+            <Image src="/logo.png" alt={SITE.name} width={72} height={72} priority />
+          </div>
+        </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6 lg:space-x-8 text-sm lg:text-base font-medium" style={{ color: '#071997' }}>
-
-          <Link href="/" className="transition-colors duration-200 hover:opacity-70" style={{ color: '#071997' }}>Anasayfa</Link>
-          <Link href="/hakkimizda" className="transition-colors duration-200 hover:opacity-70" style={{ color: '#071997' }}>Hakkımızda</Link>
-          <Link href="/bultenler" className="transition-colors duration-200 hover:opacity-70" style={{ color: '#071997' }}>Bultenler</Link>
-          <Link href="/aktiviteler" className="transition-colors duration-200 hover:opacity-70" style={{ color: '#071997' }}>Aktiviteler</Link>
-          <Link href="/sss" className="transition-colors duration-200 hover:opacity-70" style={{ color: '#071997' }}>Sikca Sorulan Sorular</Link>
+        <nav className="hidden md:flex items-center space-x-6 lg:space-x-8 text-sm lg:text-base font-medium text-navy-900">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-navy-900 transition-colors duration-200 hover:opacity-70"
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
 
         {/* Contact Button - Desktop */}
-        <a
-          href="/iletisim"
-          className="hidden md:block text-white text-sm px-5 py-2 rounded-full transition-colors duration-200 shadow-sm hover:opacity-80"
-          style={{ backgroundColor: '#ef6700' }}
+        <Link
+          href="/kayit"
+          className="hidden md:block rounded-full bg-gold-500 px-5 py-2 text-sm font-medium text-navy-900 shadow-sm transition-colors duration-200 hover:bg-gold-400"
         >
-          İletişim
-        </a>
+          Ön Görüşme Randevusu
+        </Link>
 
         {/* Mobile Menu Button */}
-        <button 
+        <button
           onClick={toggleMenu}
-          className="md:hidden text-slate-800 p-2 focus:outline-none"
+          className="md:hidden text-navy-900 p-2 focus:outline-none"
           aria-label="Toggle menu"
         >
           {isMenuOpen ? (
@@ -58,18 +65,21 @@ const Header = () => {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-md z-10 py-4 px-6 flex flex-col space-y-4 font-medium" style={{ color: '#071997' }}>
-          <Link href="/" className="transition-colors duration-200 hover:opacity-70" style={{ color: '#071997' }}>Anasayfa</Link>
-          <Link href="/hakkimizda" className="transition-colors duration-200 hover:opacity-70" style={{ color: '#071997' }}>Hakkımızda</Link>
-          <Link href="/bultenler" className="transition-colors duration-200 hover:opacity-70" style={{ color: '#071997' }}>Bultenler</Link>
-          <Link href="/aktiviteler" className="transition-colors duration-200 hover:opacity-70" style={{ color: '#071997' }}>Aktiviteler</Link>
-          <Link href="/sss" className="transition-colors duration-200 hover:opacity-70" style={{ color: '#071997' }}>Sikca Sorulan Sorular</Link>
+        <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-md z-10 py-4 px-6 flex flex-col space-y-4 font-medium text-navy-900">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-navy-900 transition-colors duration-200 hover:opacity-70"
+            >
+              {item.label}
+            </Link>
+          ))}
           <Link
-            href="/iletisim"
-            className="text-white text-center py-2 rounded-full transition-colors duration-200 mt-2 shadow-sm hover:opacity-80"
-            style={{ backgroundColor: '#071997' }}
+            href="/kayit"
+            className="rounded-full bg-gold-500 py-2 text-center font-medium text-navy-900 shadow-sm transition-colors duration-200 hover:bg-gold-400 mt-2"
           >
-            İletişim
+            Ön Görüşme Randevusu
           </Link>
         </div>
       )}
