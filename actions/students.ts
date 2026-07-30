@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getApprovedOffer } from "@/actions/offers";
 import { getSessionProfile } from "@/lib/auth";
-import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/constants";
+import { PAYMENT_METHODS, PROGRAMS, type PaymentMethod, type Program } from "@/lib/constants";
+import { normalizeTurkishPhone } from "@/lib/phone";
 import { logEvent } from "@/lib/events";
 import { kurusToTl, tlToKurus } from "@/lib/money";
 import { installmentsToCancel } from "@/lib/student-leave";
@@ -212,6 +213,120 @@ export async function markStudentLeft(
 
   revalidatePath("/ogrenciler");
   revalidatePath(`/ogrenciler/${studentId}`);
+  return { ok: true };
+}
+
+export interface UpdateStudentFields {
+  fullName?: string;
+  parentName?: string | null;
+  phone?: string | null;
+  program?: Program | "" | null;
+  birthMonth?: number | null;
+  birthYear?: number | null;
+  startDate?: string | null;
+  season?: string;
+}
+
+/** Öğrenci temel bilgilerini düzeltir (kayıttan sonra yanlış girilen alanlar).
+ *  Telefon/program/veli boş bırakılabilir (migration 0004 gereği nullable). */
+export async function updateStudent(studentId: string, fields: UpdateStudentFields) {
+  const profile = await getSessionProfile();
+  if (!studentId) return { error: "Öğrenci bulunamadı" };
+  const supabase = await createServerSupabase();
+
+  const patch: Record<string, string | number | null> = {};
+
+  if (fields.fullName !== undefined) {
+    const value = fields.fullName.trim();
+    if (!value) return { error: "Öğrenci adı zorunludur" };
+    patch.full_name = value;
+  }
+  if (fields.parentName !== undefined) patch.parent_name = fields.parentName?.trim() || null;
+  if (fields.phone !== undefined) {
+    const raw = (fields.phone ?? "").trim();
+    if (!raw) patch.phone = null;
+    else {
+      const phone = normalizeTurkishPhone(raw);
+      if (!phone) return { error: "Geçerli bir cep telefonu girin veya boş bırakın" };
+      patch.phone = phone;
+    }
+  }
+  if (fields.program !== undefined) {
+    if (!fields.program) patch.program = null;
+    else if (fields.program in PROGRAMS) patch.program = fields.program;
+    else return { error: "Geçersiz program" };
+  }
+  if (fields.birthMonth !== undefined) {
+    if (fields.birthMonth === null) patch.birth_month = null;
+    else if (fields.birthMonth >= 1 && fields.birthMonth <= 12) patch.birth_month = fields.birthMonth;
+    else return { error: "Doğum ayı 1-12 arasında olmalı" };
+  }
+  if (fields.birthYear !== undefined) {
+    if (fields.birthYear === null) patch.birth_year = null;
+    else if (fields.birthYear >= 2010 && fields.birthYear <= 2035) patch.birth_year = fields.birthYear;
+    else return { error: "Doğum yılı 2010-2035 arasında olmalı" };
+  }
+  if (fields.startDate !== undefined) {
+    const raw = (fields.startDate ?? "").trim();
+    if (!raw) patch.start_date = null;
+    else {
+      const date = normalizeDate(raw);
+      if (!date) return { error: "Geçerli bir başlangıç tarihi girin" };
+      patch.start_date = date;
+    }
+  }
+  if (fields.season !== undefined) {
+    const value = fields.season.trim();
+    if (!value) return { error: "Sezon zorunludur" };
+    patch.season = value;
+  }
+
+  const changed = Object.keys(patch);
+  if (changed.length === 0) return {};
+
+  const { error } = await supabase.from("students").update(patch).eq("id", studentId);
+  if (error) return { error: "Öğrenci güncellenemedi" };
+
+  await logEvent(supabase, {
+    entityType: "student",
+    entityId: studentId,
+    eventType: "ogrenci_guncellendi",
+    actorId: profile.id,
+    payload: { fields: changed },
+  });
+
+  revalidatePath("/ogrenciler");
+  revalidatePath(`/ogrenciler/${studentId}`);
+  return { ok: true };
+}
+
+/** Öğrenciyi ve bağlı kayıtlarını (plan/taksit/iade) siler — yalnız yönetici.
+ *  Test/mükerrer/yanlış kayıtları temizlemek için. Geri alınamaz. */
+export async function deleteStudent(studentId: string) {
+  const profile = await getSessionProfile();
+  if (profile.role !== "yonetici") return { error: "Bu işlem için yönetici yetkisi gerekir" };
+  if (!studentId) return { error: "Öğrenci bulunamadı" };
+
+  const admin = createAdminSupabase();
+  const db = admin ?? (await createServerSupabase());
+
+  // FK temizliği: iade kayıtları + bu öğrenciye bağlı lead referansı.
+  await db.from("refunds").delete().eq("student_id", studentId);
+  await db.from("leads").update({ converted_student_id: null }).eq("converted_student_id", studentId);
+  // payment_plans + installments ON DELETE CASCADE ile otomatik silinir.
+  const { error } = await db.from("students").delete().eq("id", studentId);
+  if (error) return { error: "Öğrenci silinemedi" };
+
+  const supabase = await createServerSupabase();
+  await logEvent(supabase, {
+    entityType: "student",
+    entityId: studentId,
+    eventType: "ogrenci_silindi",
+    actorId: profile.id,
+    payload: {},
+  });
+
+  revalidatePath("/ogrenciler");
   return { ok: true };
 }
 

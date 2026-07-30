@@ -177,11 +177,10 @@ export function Nav({ fullName, role, notifications, unreadCount }: NavProps) {
           href="/"
           className="flex items-center gap-2.5 rounded-xl px-3 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-on-primary">
-            <GraduationCap aria-hidden className="size-5" />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="" className="size-9 object-contain" />
           <span className="text-lg font-bold tracking-tight text-foreground">
-            AnaOkulCRM
+            Şeker CRM
           </span>
         </Link>
         <nav aria-label="Ana navigasyon" className="mt-8 flex flex-1 flex-col gap-1">
@@ -218,10 +217,9 @@ export function Nav({ fullName, role, notifications, unreadCount }: NavProps) {
             href="/"
             className="flex items-center gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
           >
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-on-primary">
-              <GraduationCap aria-hidden className="size-4.5" />
-            </span>
-            <span className="text-base font-bold tracking-tight">AnaOkulCRM</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="" className="size-8 object-contain" />
+            <span className="text-base font-bold tracking-tight">Şeker CRM</span>
           </Link>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <NotificationBell

@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createAdminSupabase } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
 import { normalizeTurkishPhone } from "@/lib/phone";
 import { canTransition, requiresLostReason, reopenTarget } from "@/lib/lead-state";
@@ -79,6 +80,32 @@ export async function updateLeadStatus(leadId: string, to: LeadStatus, lostReaso
 
 export async function reopenLead(leadId: string) {
   return updateLeadStatus(leadId, reopenTarget());
+}
+
+/** Lead'i ve bağlı kayıtlarını (not/randevu/teklif/görev) siler — yalnız yönetici.
+ *  Test/mükerrer/yanlış kayıtları temizlemek için. Geri alınamaz. */
+export async function deleteLead(leadId: string) {
+  const profile = await getSessionProfile();
+  if (profile.role !== "yonetici") return { error: "Bu işlem için yönetici yetkisi gerekir" };
+  if (!leadId) return { error: "Lead bulunamadı" };
+
+  const admin = createAdminSupabase();
+  const db = admin ?? (await createServerSupabase());
+  // lead_notes / appointments / offers / tasks ON DELETE CASCADE ile otomatik silinir.
+  const { error } = await db.from("leads").delete().eq("id", leadId);
+  if (error) return { error: "Lead silinemedi" };
+
+  const supabase = await createServerSupabase();
+  await logEvent(supabase, {
+    entityType: "lead",
+    entityId: leadId,
+    eventType: "lead_silindi",
+    actorId: profile.id,
+    payload: {},
+  });
+
+  revalidatePath("/pipeline");
+  return { ok: true };
 }
 
 export interface UpdateLeadFields {

@@ -5,6 +5,7 @@ import {
   type InstallmentTableItem,
 } from "@/components/installment-table";
 import { PlanWizard } from "@/components/plan-wizard";
+import { StudentEditForm } from "@/components/student-edit-form";
 import { RefundPanel, type RefundItem } from "@/components/refund-panel";
 import { StudentLeaveForm } from "@/components/student-leave-form";
 import {
@@ -286,6 +287,21 @@ export default async function StudentDetailPage({
           ) : null}
         </dl>
       </section>
+
+      <StudentEditForm
+        student={{
+          id: student.id,
+          full_name: student.full_name,
+          parent_name: student.parent_name,
+          phone: student.phone,
+          program: student.program,
+          birth_month: student.birth_month,
+          birth_year: student.birth_year,
+          start_date: student.start_date,
+          season: student.season,
+        }}
+        role={profile.role}
+      />
 
       {student.status === "aktif" && profile.role === "yonetici" ? (
         <StudentLeaveForm studentId={student.id} />

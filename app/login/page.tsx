@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { GraduationCap } from "lucide-react";
 import { signIn, type SignInState } from "@/actions/auth";
 
 const initialState: SignInState | null = null;
@@ -13,10 +12,9 @@ export default function LoginPage() {
     <main className="flex min-h-screen flex-1 items-center justify-center bg-background px-4 py-10 text-foreground">
       <section className="w-full max-w-sm rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8">
         <div className="mb-8 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary text-on-primary">
-            <GraduationCap aria-hidden="true" className="size-6" />
-          </div>
-          <p className="mt-3 text-sm font-bold text-foreground">AnaOkulCRM</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Şeker Anaokulu" className="mx-auto size-20 object-contain" />
+          <p className="mt-3 text-sm font-bold text-foreground">Şeker CRM</p>
           <h1 className="mt-2 text-2xl font-semibold">Giriş Yap</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Yönetici veya danışman hesabınızla devam edin.

@@ -8,6 +8,7 @@ import {
   type AppointmentListItem,
 } from "@/components/appointment-list";
 import { LeadConversionForm } from "@/components/lead-conversion-form";
+import { LeadEditForm } from "@/components/lead-edit-form";
 import { NoteForm } from "@/components/note-form";
 import { OfferForm, type ActivePriceItem } from "@/components/offer-form";
 import { OfferList, type OfferListItem } from "@/components/offer-list";
@@ -27,6 +28,7 @@ import {
   type Program,
 } from "@/lib/constants";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { getSessionProfile } from "@/lib/auth";
 import { formatTRY, tlToKurus } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -273,6 +275,7 @@ function LeadOffersSection({
 export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
   const { id } = await params;
   const supabase = await createServerSupabase();
+  const profile = await getSessionProfile();
 
   const [
     leadResult,
@@ -452,6 +455,26 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
               </div>
             ) : null}
           </section>
+
+          {converted ? null : (
+            <LeadEditForm
+              lead={{
+                id: lead.id,
+                parent_name: lead.parent_name,
+                phone: lead.phone,
+                source: lead.source,
+                source_detail: lead.source_detail,
+                child_name: lead.child_name,
+                child_birth_month: lead.child_birth_month,
+                child_birth_year: lead.child_birth_year,
+                ingilizce_gerekli: lead.ingilizce_gerekli,
+                ozel_durum: lead.ozel_durum,
+                ozel_durum_note: lead.ozel_durum_note,
+                wants_summer: lead.wants_summer,
+              }}
+              role={profile.role}
+            />
+          )}
 
           <LeadAppointmentsSection
             leadId={lead.id}

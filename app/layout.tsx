@@ -17,7 +17,7 @@ const firaCode = Fira_Code({
 });
 
 export const metadata: Metadata = {
-  title: "AnaOkulCRM",
+  title: "Şeker CRM",
   description: "Anaokulu lead ve kayıt takip sistemi",
 };
 

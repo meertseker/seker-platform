@@ -10,9 +10,9 @@
   --color-foreground: #0f172a; /* slate-900 */
   --color-surface: #ffffff;
 
-  --color-primary: #2563eb; /* blue-600 — ana eylem */
-  --color-primary-strong: #1d4ed8; /* hover/pressed */
-  --color-primary-soft: #eff6ff; /* seçili/rozet zemini */
+  --color-primary: #e11d48; /* rose-600 — ana eylem (marka kırmızısı) */
+  --color-primary-strong: #be123c; /* rose-700 hover/pressed */
+  --color-primary-soft: #fff1f2; /* rose-50 seçili/rozet zemini */
   --color-on-primary: #ffffff;
 
   --color-accent: #059669; /* emerald-600 — para/onay/kazanım */
@@ -29,7 +29,7 @@
   --color-muted: #f1f5f9; /* slate-100 */
   --color-muted-foreground: #475569; /* slate-600 — 4.5:1 beyaz üzerinde */
   --color-border: #e2e8f0; /* slate-200 */
-  --color-ring: #2563eb;
+  --color-ring: #e11d48;
 
   --font-sans: var(--font-fira-sans);
   --font-mono: var(--font-fira-code);
