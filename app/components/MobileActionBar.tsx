@@ -1,9 +1,10 @@
 'use client';
 import Link from 'next/link';
 import { SITE, WHATSAPP_URL } from '@/lib/site';
+import { trackEvent, type TrackedEvent } from '@/lib/analytics';
 
 export default function MobileActionBar() {
-  const track = (event: string) => () => window.dataLayer?.push({ event, location: 'mobile_bar' });
+  const track = (event: TrackedEvent) => () => trackEvent(event, { location: 'mobile_bar' });
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-3 border-t border-navy-100 bg-white shadow-[0_-2px_12px_rgba(0,0,0,0.08)] md:hidden">

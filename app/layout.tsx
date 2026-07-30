@@ -4,6 +4,7 @@ import "./globals.css";
 import Footer from "./components/Footer";
 import WhatsAppButton from "./components/WhatsAppButton";
 import MobileActionBar from "./components/MobileActionBar";
+import Analytics from "./components/Analytics";
 import { organizationSchema } from "../lib/schema";
 
 const geistSans = Geist({
@@ -37,6 +38,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased pb-14 md:pb-0`}
       >
+        <Analytics />
         {children}
         <Footer />
         <WhatsAppButton />

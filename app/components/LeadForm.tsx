@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AGE_GROUPS, PROGRAMS } from '@/lib/leadSchema';
+import { trackEvent } from '@/lib/analytics';
 
 const PROGRAM_LABELS: Record<(typeof PROGRAMS)[number], string> = {
   'tam-gun': 'Tam Gün',
@@ -49,7 +50,7 @@ export default function LeadForm({ variant = 'full' }: { variant?: 'full' | 'com
         return;
       }
 
-      window.dataLayer?.push({ event: 'lead_submit', child_age: payload.childAge });
+      trackEvent('lead_submit', { child_age: payload.childAge });
       router.push('/tesekkurler');
     } catch {
       setFormError('Bağlantı hatası. Lütfen telefonla ulaşın.');
