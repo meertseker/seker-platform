@@ -4,7 +4,7 @@ import LeadForm from '@/app/components/LeadForm';
 import { buildMetadata } from '@/lib/metadata';
 import { buildFaqSchema } from '@/lib/schema';
 import { SITE } from '@/lib/site';
-import { FAQ_ITEMS } from '@/content/faq';
+import { PUBLISHED_FAQ } from '@/content/faq';
 
 export const metadata = buildMetadata({
   title: 'Ücretler ve Ödeme',
@@ -29,7 +29,7 @@ const EXCLUDED = [
   'İsteğe bağlı ekstra atölyeler (binicilik, yüzme)',
 ];
 
-const FAQ_SUBSET = FAQ_ITEMS.filter((item) =>
+const FAQ_SUBSET = PUBLISHED_FAQ.filter((item) =>
   ['sinif-mevcudu', 'servis', 'yemek'].includes(item.id),
 );
 
