@@ -1,15 +1,18 @@
 import type { MetadataRoute } from 'next';
 import { SITE } from '@/lib/site';
+import { AGE_GROUPS_CONTENT } from '@/content/ageGroups';
 
 const ROUTES: { path: string; priority: number; changeFrequency: 'weekly' | 'monthly' }[] = [
   { path: '/', priority: 1, changeFrequency: 'weekly' },
   { path: '/kayit', priority: 0.9, changeFrequency: 'weekly' },
   { path: '/ucretler', priority: 0.9, changeFrequency: 'monthly' },
   { path: '/egitim-yaklasimimiz', priority: 0.8, changeFrequency: 'monthly' },
-  { path: '/yas-gruplari/2-3-yas', priority: 0.8, changeFrequency: 'monthly' },
-  { path: '/yas-gruplari/3-4-yas', priority: 0.8, changeFrequency: 'monthly' },
-  { path: '/yas-gruplari/4-5-yas', priority: 0.8, changeFrequency: 'monthly' },
-  { path: '/yas-gruplari/5-6-yas', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/yas-gruplari', priority: 0.8, changeFrequency: 'monthly' },
+  ...AGE_GROUPS_CONTENT.map((group) => ({
+    path: `/yas-gruplari/${group.slug}`,
+    priority: 0.8 as const,
+    changeFrequency: 'monthly' as const,
+  })),
   { path: '/kadromuz', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/gunluk-akis', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/guvenlik', priority: 0.7, changeFrequency: 'monthly' },
