@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import HeroSection from '../components/HeroSection';
 import TrustBar from '../components/TrustBar';
+import FeaturesSection from '../components/FeaturesSection';
+import ActivitiesSection from '../components/ActivitiesSection';
 import { ROSTER_STATUS } from '@/content/day';
 
 /**
@@ -11,21 +13,43 @@ import { ROSTER_STATUS } from '@/content/day';
  * content/__tests__/day.test.tsx içindeki desenin ana sayfaya genişletilmiş
  * hali: doğrulanmamış rakamlar iddia olarak yazılamaz, yasaklı kelimeler ve
  * klişeler geçmez, eski "rainbow" paleti (raw hex) sızmaz.
+ *
+ * Fix round 1/5 — FeaturesSection, ActivitiesSection ve FAQSection (bkz.
+ * content/__tests__/faqSafety.test.tsx) bu sayfada render edildiği için
+ * tarama kapsamına eklendi (reviewer: "in scope because it renders on this
+ * page").
  */
 
 const readSource = (...segments: string[]) =>
   readFileSync(path.join(process.cwd(), ...segments), 'utf8');
 
+/**
+ * Dekoratif SVG ikonların `d`/`viewBox` koordinat dizileri sayı bakımından
+ * yoğundur (ör. "l-.707.707") ve fiyat-deseni taramasında yanlış pozitif
+ * üretir. Metin taramaları için bu öznitelikleri temizlenmiş bir kopya
+ * kullanılır; ham kaynak (hex/mark taramaları için) ayrıca korunur.
+ */
+const stripSvgCoordinates = (source: string) =>
+  source.replace(/\s(?:d|viewBox)="[^"]*"/g, '');
+
+const readProse = (...segments: string[]) => stripSvgCoordinates(readSource(...segments));
+
 const HERO_SRC = readSource('app', 'components', 'HeroSection.tsx');
 const TRUSTBAR_SRC = readSource('app', 'components', 'TrustBar.tsx');
 const ANASAYFA_SRC = readSource('app', 'Anasayfa.tsx');
 const CONTACT_SRC = readSource('app', 'components', 'ContactSection.tsx');
+const FEATURES_SRC = readProse('app', 'components', 'FeaturesSection.tsx');
+const ACTIVITIES_SRC = readProse('app', 'components', 'ActivitiesSection.tsx');
+const FAQ_SECTION_SRC = readProse('app', 'components', 'FAQSection.tsx');
 
 const HOMEPAGE_FILES = {
   'app/components/HeroSection.tsx': HERO_SRC,
   'app/components/TrustBar.tsx': TRUSTBAR_SRC,
   'app/Anasayfa.tsx': ANASAYFA_SRC,
   'app/components/ContactSection.tsx': CONTACT_SRC,
+  'app/components/FeaturesSection.tsx': FEATURES_SRC,
+  'app/components/ActivitiesSection.tsx': ACTIVITIES_SRC,
+  'app/components/FAQSection.tsx': FAQ_SECTION_SRC,
 };
 
 describe('ana sayfa kaynak taraması — fiyat ve yasak kelime', () => {
@@ -151,5 +175,49 @@ describe('künye doğrulama kapısı — hero, ROSTER_STATUS kapalıyken rakamı
     const text = container.textContent ?? '';
     expect(text).toContain('Yaş grubu');
     expect(text).toMatch(/\d+ yıl/);
+  });
+});
+
+describe('FeaturesSection — doğrulanmamış güvenlik/beslenme özellikleri iddia edilmez (doğrulama kuyruğu #8, #9)', () => {
+  it('kaynakta "kamera" veya "beslenme uzmanı" gibi doğrulanmamış özellik iddiaları yok', () => {
+    const lower = FEATURES_SRC.toLowerCase();
+    expect(lower).not.toContain('kamera');
+    expect(lower).not.toContain('beslenme uzmanı');
+    expect(lower).not.toMatch(/7\s*\/\s*24|24\s*\/\s*7/);
+  });
+
+  it('render çıktısında da aynı iddialar yok, kart sayısı sabit kalmış', () => {
+    const { container, getAllByRole } = render(<FeaturesSection />);
+    const text = (container.textContent ?? '').toLowerCase();
+    expect(text).not.toContain('kamera');
+    expect(text).not.toContain('beslenme uzmanı');
+    expect(getAllByRole('heading', { level: 3 }).length).toBeGreaterThan(0);
+  });
+});
+
+describe('ActivitiesSection — zekâ iddiası içermez (asset dosyası §5.1)', () => {
+  it('kaynakta "zekâ/zeka" ile "geliştir/artır/yükselt" birlikte geçmiyor', () => {
+    const lower = ACTIVITIES_SRC.toLowerCase();
+    expect(lower).not.toMatch(/zek[aâ][^.]{0,40}(geliştir|artır|yükselt)/);
+    expect(lower).not.toContain('müzikal zeka');
+  });
+
+  it('render çıktısında da zekâ iddiası yok', () => {
+    const { container } = render(<ActivitiesSection />);
+    const text = (container.textContent ?? '').toLowerCase();
+    expect(text).not.toMatch(/zek[aâ][^.]{0,40}(geliştir|artır|yükselt)/);
+  });
+});
+
+describe('mobil kaydırma — gün önizlemesi tek satır yatay kaydırmaya düşer (Important 4)', () => {
+  it('Anasayfa.tsx, üç dikey çerçeveyi mobilde alt alta değil yatay kaydırmada dizer', () => {
+    expect(ANASAYFA_SRC).toMatch(/overflow-x-auto/);
+    expect(ANASAYFA_SRC).toMatch(/snap-x/);
+    // md: öneki olmadan grid-cols-3 hâlâ mobilde etkiliyse yığılma geri döner.
+    expect(ANASAYFA_SRC).not.toMatch(/className="mt-10 grid gap-8 md:grid-cols-3"/);
+  });
+
+  it('HeroSection künye kapalıyken görsel yarısı için kısa (wide) bir mobil oran kullanır, dikey 4:5 değil', () => {
+    expect(HERO_SRC).toMatch(/ratio="wide"/);
   });
 });

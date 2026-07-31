@@ -21,6 +21,16 @@ const GRADE_OPACITY: Record<Grade, string> = {
   none: '0',
 };
 
+const RATIO_CLASS: Record<'cinema' | 'portrait' | 'wide', string> = {
+  cinema: 'aspect-[4/5] md:aspect-[2.39/1]',
+  portrait: 'aspect-[4/5] md:aspect-[3/2]',
+  // 'wide' — mobilde de kısa bir oran (3:2). Dikey (4:5) çerçeveler tek
+  // sütuna düştüğünde (ör. künye kapalıyken hero'nun görsel yarısı) 375 px
+  // genişlikte ~470 px'e çıkıyor; bu, formu ilk kaydırmada erişilebilir
+  // tutma hedefiyle çakışıyor. 'wide' aynı genişlikte ~220 px'e düşer.
+  wide: 'aspect-[3/2]',
+};
+
 /**
  * Kadraj — bracketing. Fotoğrafı sinema oranında çerçeveler ve o sahnenin
  * ışığına göre derecelendirir.
@@ -35,13 +45,12 @@ export default function Frame({
 }: {
   mediaKey: MediaKey;
   grade?: Grade;
-  ratio?: 'cinema' | 'portrait';
+  ratio?: 'cinema' | 'portrait' | 'wide';
   priority?: boolean;
   sizes?: string;
 }) {
   const asset = MEDIA[mediaKey];
-  const ratioClass =
-    ratio === 'cinema' ? 'aspect-[4/5] md:aspect-[2.39/1]' : 'aspect-[4/5] md:aspect-[3/2]';
+  const ratioClass = RATIO_CLASS[ratio];
 
   return (
     <div className={`relative w-full overflow-hidden bg-paper-warm ${ratioClass}`}>

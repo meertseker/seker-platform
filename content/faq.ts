@@ -1,3 +1,5 @@
+import { ROSTER_STATUS, ENGLISH_COVERAGE_READY } from './day';
+
 export type FaqItem = {
   id: string;
   question: string;
@@ -6,6 +8,16 @@ export type FaqItem = {
   /** false ise cevap henüz okul tarafından doldurulmamıştır; hiçbir yerde render edilmez. */
   ready: boolean;
 };
+
+/**
+ * 🔴 Doğrulama kuyruğu #3 (asset dosyası §0.2, §5.2) — öğretmenin İngilizceyi
+ * gün boyunca kullandığı iddiası ENGLISH_COVERAGE_READY kapısı kapalıyken
+ * eklenmez. Temel cümle (davranış temelli vaat) her zaman güvenlidir; bkz.
+ * content/day.ts'nin 'ingilizce' bölümündeki aynı desen.
+ */
+const INGILIZCE_ANSWER = `İngilizce, ayrı bir ders saati değil; günün içinde kullanılan ikinci dildir. Mezun olurken çocuğunuz İngilizce yönergeyi çevirisiz anlıyor, kendini tanıtıyor ve tanıdık durumlarda kısa cümlelerle karşılık veriyor.${
+  ENGLISH_COVERAGE_READY ? ' Öğretmenimiz İngilizceyi gün boyunca kullanır.' : ''
+}`;
 
 export const FAQ_ITEMS: FaqItem[] = [
   {
@@ -22,13 +34,16 @@ export const FAQ_ITEMS: FaqItem[] = [
     answer:
       'Sınıflarımızda 10 çocuk bulunur ve her sınıfta iki öğretmen görev yapar — öğretmen başına beş çocuk düşer. Millî Eğitim Bakanlığı yönetmeliği bu yaş grubunda öğretmen başına 20 çocuğa kadar izin verirken, biz bu üst sınırın dörtte biriyle çalışıyoruz.',
     featured: true,
-    ready: true,
+    // 🔴 Doğrulama kuyruğu #1, #2 (asset dosyası §0.2) — sınıf mevcudu ve
+    // öğretmen sayısı okul tarafından doğrulanana kadar bu madde ne render
+    // edilir ne de FAQPage JSON-LD şemasına girer. Tek kaynak ROSTER_STATUS;
+    // burada ikinci bir "ready" anahtarı icat edilmiyor.
+    ready: ROSTER_STATUS.ready,
   },
   {
     id: 'ingilizce',
     question: 'İngilizce eğitiminiz nasıl işliyor?',
-    answer:
-      'Çocuklarımız mezun olduğunda İngilizce konuşuyor. Bunu haftada birkaç saatlik ders ile değil, native İngilizce öğretmenimizin günlük akışın doğal parçası olmasıyla sağlıyoruz.',
+    answer: INGILIZCE_ANSWER,
     featured: true,
     ready: true,
   },
