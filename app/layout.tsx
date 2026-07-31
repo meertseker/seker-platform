@@ -5,6 +5,8 @@ import Footer from "./components/Footer";
 import WhatsAppButton from "./components/WhatsAppButton";
 import MobileActionBar from "./components/MobileActionBar";
 import Analytics from "./components/Analytics";
+import ConsentDefaults from "./components/ConsentDefaults";
+import CookieBanner from "./components/CookieBanner";
 import JsonLd from "./components/JsonLd";
 import { preschoolSchema } from "../lib/schema";
 import { SITE } from "../lib/site";
@@ -53,11 +55,13 @@ export default function RootLayout({
       <body
         className={`${bricolage.variable} ${newsreader.variable} ${martian.variable} antialiased pb-14 md:pb-0`}
       >
+        <ConsentDefaults />
         <Analytics />
         {children}
         <Footer />
         <WhatsAppButton />
         <MobileActionBar />
+        <CookieBanner />
       </body>
     </html>
   );
