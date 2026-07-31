@@ -1,7 +1,7 @@
 "use client"
 import React from 'react'
-import Header from '../components/Header'
-import ContactSection from '../components/ContactSection'
+import Header from '@/app/components/Header'
+import ContactSection from '@/app/components/ContactSection'
 
 const IletisimPage = () => {
   return (

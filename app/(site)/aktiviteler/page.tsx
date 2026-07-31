@@ -1,6 +1,6 @@
 "use client"
 import React, { useState } from 'react'
-import Header from '../components/Header'
+import Header from '@/app/components/Header'
 import Image from 'next/image';
 
 // Define TypeScript types

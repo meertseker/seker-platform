@@ -1,7 +1,7 @@
 "use client"
 import React from 'react'
-import Header from '../components/Header'
-import AboutSection from '../components/AboutSection'
+import Header from '@/app/components/Header'
+import AboutSection from '@/app/components/AboutSection'
 import Image from 'next/image'
 
 const HakkimizdaPage = () => {

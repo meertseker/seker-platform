@@ -1,8 +1,8 @@
-import Header from '../components/Header';
-import JsonLd from '../components/JsonLd';
-import LeadForm from '../components/LeadForm';
-import TimeSpine from '../components/cine/TimeSpine';
-import DayChapters from '../components/cine/DayChapters';
+import Header from '@/app/components/Header';
+import JsonLd from '@/app/components/JsonLd';
+import LeadForm from '@/app/components/LeadForm';
+import TimeSpine from '@/app/components/cine/TimeSpine';
+import DayChapters from '@/app/components/cine/DayChapters';
 import { DAY_CHAPTERS } from '@/content/day';
 import { buildMetadata } from '@/lib/metadata';
 import { buildBreadcrumbSchema } from '@/lib/schema';

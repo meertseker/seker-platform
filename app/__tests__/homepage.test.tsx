@@ -36,7 +36,7 @@ const readProse = (...segments: string[]) => stripSvgCoordinates(readSource(...s
 
 const HERO_SRC = readSource('app', 'components', 'HeroSection.tsx');
 const TRUSTBAR_SRC = readSource('app', 'components', 'TrustBar.tsx');
-const ANASAYFA_SRC = readSource('app', 'Anasayfa.tsx');
+const ANASAYFA_SRC = readSource('app', '(site)', 'Anasayfa.tsx');
 const CONTACT_SRC = readSource('app', 'components', 'ContactSection.tsx');
 const FEATURES_SRC = readProse('app', 'components', 'FeaturesSection.tsx');
 const ACTIVITIES_SRC = readProse('app', 'components', 'ActivitiesSection.tsx');
@@ -45,7 +45,7 @@ const FAQ_SECTION_SRC = readProse('app', 'components', 'FAQSection.tsx');
 const HOMEPAGE_FILES = {
   'app/components/HeroSection.tsx': HERO_SRC,
   'app/components/TrustBar.tsx': TRUSTBAR_SRC,
-  'app/Anasayfa.tsx': ANASAYFA_SRC,
+  'app/(site)/Anasayfa.tsx': ANASAYFA_SRC,
   'app/components/ContactSection.tsx': CONTACT_SRC,
   'app/components/FeaturesSection.tsx': FEATURES_SRC,
   'app/components/ActivitiesSection.tsx': ACTIVITIES_SRC,

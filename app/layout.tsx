@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Newsreader, Martian_Mono } from "next/font/google";
 import "./globals.css";
-import Footer from "./components/Footer";
-import WhatsAppButton from "./components/WhatsAppButton";
-import MobileActionBar from "./components/MobileActionBar";
 import Analytics from "./components/Analytics";
 import ConsentDefaults from "./components/ConsentDefaults";
 import CookieBanner from "./components/CookieBanner";
@@ -58,9 +55,6 @@ export default function RootLayout({
         <ConsentDefaults />
         <Analytics />
         {children}
-        <Footer />
-        <WhatsAppButton />
-        <MobileActionBar />
         <CookieBanner />
       </body>
     </html>
