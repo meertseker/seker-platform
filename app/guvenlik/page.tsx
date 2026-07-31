@@ -84,7 +84,7 @@ export default function GuvenlikPage() {
       />
 
       <section className="bg-ink py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-mark">Güvenlik ve Sağlık</p>
+        <p className="text-sm uppercase tracking-[0.2em] text-paper/70">Güvenlik ve Sağlık</p>
         <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
           Çocuğunuzun güvenliği, tesadüfe bırakılmaz.
         </h1>
@@ -102,7 +102,7 @@ export default function GuvenlikPage() {
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="font-display text-xl text-ink">{section.title}</h2>
                   {section.todo && (
-                    <span className="shrink-0 rounded-full bg-mark px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink">
+                    <span className="shrink-0 rounded-full border border-rule bg-paper-warm px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink">
                       Doğrulanacak
                     </span>
                   )}

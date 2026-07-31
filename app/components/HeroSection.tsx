@@ -18,7 +18,7 @@ export default function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-b from-ink/85 via-ink/70 to-ink/90" />
 
       <div className="relative mx-auto max-w-4xl px-6 py-28 text-center md:py-36">
-        <p className="mb-6 text-sm uppercase tracking-[0.2em] text-mark">
+        <p className="mb-6 text-sm uppercase tracking-[0.2em] text-paper/70">
           Beykent · Büyükçekmece · {SITE.foundingYear}&apos;den beri
         </p>
 
@@ -39,7 +39,7 @@ export default function HeroSection() {
             href="/kayit"
             event="cta_click"
             payload={{ location: 'hero', target: 'kayit' }}
-            className="w-full rounded-full bg-mark px-10 py-4 font-medium text-ink transition-opacity hover:opacity-90 sm:w-auto"
+            className="w-full rounded-full bg-paper px-10 py-4 font-medium text-ink transition-colors hover:bg-paper-warm sm:w-auto"
           >
             Ön Görüşme Randevusu
           </TrackedLink>

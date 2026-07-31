@@ -24,7 +24,7 @@ export default function GunlukAkisPage() {
       />
 
       <section className="bg-ink py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-mark">07:15 – 19:15</p>
+        <p className="text-sm uppercase tracking-[0.2em] text-paper/70">07:15 – 19:15</p>
         <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
           Çocuğunuzun günü saat saat.
         </h1>
@@ -34,10 +34,10 @@ export default function GunlukAkisPage() {
       </section>
 
       <section className="mx-auto max-w-3xl px-6 py-16">
-        <ol className="relative space-y-10 border-l-2 border-mark pl-8">
+        <ol className="relative space-y-10 border-l-2 border-rule pl-8">
           {DAILY_FLOW.map((item) => (
             <li key={item.time} className="relative">
-              <span className="absolute -left-[2.55rem] top-1 h-4 w-4 rounded-full bg-mark" />
+              <span className="absolute -left-[2.55rem] top-1 h-4 w-4 rounded-full bg-ink-soft" />
               <p className="text-sm font-semibold uppercase tracking-wide text-ink-soft">
                 {item.time}
               </p>

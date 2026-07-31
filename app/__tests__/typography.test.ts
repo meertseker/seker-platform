@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 const css = readFileSync(path.join(process.cwd(), 'app', 'globals.css'), 'utf8');
@@ -36,5 +36,39 @@ describe('font yüklemesi', () => {
 
   it('Türkçe karakterler için latin-ext alt kümesi isteniyor', () => {
     expect(layout).toContain('latin-ext');
+  });
+});
+
+describe('mark disiplini — tek vurgu rengi, tek görev', () => {
+  // --color-mark yalnızca künye işaretleri (Roster bileşeni) ve odak halkaları için var.
+  // Yeni bir dosya bu listeye girmeden text-mark/bg-mark/border-mark/ring-mark kullanırsa
+  // bu test kırmızıya döner. Roster bileşeni eklendiğinde onun yolunu da listeye ekleyin.
+  const ALLOWED_MARK_FILES = [
+    path.join('app', 'components', 'LeadForm.tsx'), // focus:border-mark / focus:ring-mark — odak halkası
+    path.join('app', 'components', 'cine', 'Roster.tsx'), // künye işaretleri (henüz oluşturulmadı)
+  ];
+
+  function findMarkUsages(dir: string, offenders: string[] = []): string[] {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === '__tests__') continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        findMarkUsages(full, offenders);
+      } else if (/\.(tsx|ts)$/.test(entry.name)) {
+        const content = readFileSync(full, 'utf8');
+        if (/\b(?:text|bg|border|ring)-mark\b/.test(content)) {
+          const relative = path.relative(process.cwd(), full);
+          if (!ALLOWED_MARK_FILES.includes(relative)) {
+            offenders.push(relative);
+          }
+        }
+      }
+    }
+    return offenders;
+  }
+
+  it('mark sınıfı yalnızca izin verilen dosyalarda (künye işaretleri, odak halkaları) kullanılıyor', () => {
+    const offenders = findMarkUsages(path.join(process.cwd(), 'app'));
+    expect(offenders).toEqual([]);
   });
 });

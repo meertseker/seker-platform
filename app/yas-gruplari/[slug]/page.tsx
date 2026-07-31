@@ -41,7 +41,7 @@ export default async function AgeGroupPage({ params }: { params: Promise<{ slug:
       />
 
       <section className="bg-ink py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-mark">{group.ageLabel}</p>
+        <p className="text-sm uppercase tracking-[0.2em] text-paper/70">{group.ageLabel}</p>
         <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
           {group.headline}
         </h1>

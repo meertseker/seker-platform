@@ -34,7 +34,7 @@ export default function KadromuzPage() {
       />
 
       <section className="bg-ink py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-mark">Kadromuz</p>
+        <p className="text-sm uppercase tracking-[0.2em] text-paper/70">Kadromuz</p>
         <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
           10 çocuğa 2 öğretmen: öğretmen başına 5 çocuk.
         </h1>
@@ -67,7 +67,7 @@ export default function KadromuzPage() {
                   </div>
                 ) : (
                   <div
-                    className="flex h-64 items-center justify-center bg-mark"
+                    className="flex h-64 items-center justify-center bg-paper-warm"
                     role="img"
                     aria-label={person.name}
                   >

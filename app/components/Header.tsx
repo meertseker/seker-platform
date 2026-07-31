@@ -38,7 +38,7 @@ const Header = () => {
         {/* Contact Button - Desktop */}
         <Link
           href="/kayit"
-          className="hidden md:block rounded-full bg-mark px-5 py-2 text-sm font-medium text-ink shadow-sm transition-opacity duration-200 hover:opacity-90"
+          className="hidden md:block rounded-full bg-ink px-5 py-2 text-sm font-medium text-paper shadow-sm transition-colors duration-200 hover:bg-ink-soft"
         >
           Ön Görüşme Randevusu
         </Link>
@@ -75,7 +75,7 @@ const Header = () => {
           ))}
           <Link
             href="/kayit"
-            className="rounded-full bg-mark py-2 text-center font-medium text-ink shadow-sm transition-opacity duration-200 hover:opacity-90 mt-2"
+            className="rounded-full bg-ink py-2 text-center font-medium text-paper shadow-sm transition-colors duration-200 hover:bg-ink-soft mt-2"
           >
             Ön Görüşme Randevusu
           </Link>
