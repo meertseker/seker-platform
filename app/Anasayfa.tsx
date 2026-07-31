@@ -1,66 +1,70 @@
 import React from 'react'
+import Link from 'next/link'
 import Header from './components/Header'
 import HeroSection from './components/HeroSection'
 import TrustBar from './components/TrustBar'
-import AboutSection from './components/AboutSection'
+import Frame from './components/cine/Frame'
+import Timecode from './components/cine/Timecode'
 import FeaturesSection from './components/FeaturesSection'
 import ActivitiesSection from './components/ActivitiesSection'
 import FAQSection from './components/FAQSection'
 import ContactSection from './components/ContactSection'
-import Image from 'next/image'
+import { DAY_CHAPTERS, chapterLabel } from '@/content/day'
+
+const DAY_PREVIEW_IDS = ['sabah-cemberi', 'calisma-saati', 'atolye']
 
 const Anasayfa = () => {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-paper">
       <Header />
 
       <HeroSection />
       <TrustBar />
+
+      {/* Günün üç sahnesi — tam anlatı /gunluk-akis sayfasında */}
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <Timecode>Bir günümüz</Timecode>
+            <h2 className="mt-3 text-3xl text-ink md:text-4xl">
+              Çocuğunuz burada bütün gün ne yapıyor?
+            </h2>
+            <p className="mt-3 max-w-xl text-ink-soft">
+              Velilerin bize en çok sorduğu soru bu. Cevabı saat saat aşağıda.
+            </p>
+          </div>
+          <Link href="/gunluk-akis" className="text-ink underline underline-offset-4">
+            Günün tamamını görün
+          </Link>
+        </div>
+
+        <div className="mt-10 grid gap-8 md:grid-cols-3">
+          {DAY_PREVIEW_IDS.map((id) => {
+            const chapter = DAY_CHAPTERS.find((c) => c.id === id)
+            if (!chapter) return null
+            return (
+              <Link key={chapter.id} href={`/gunluk-akis#${chapter.id}`} className="group block">
+                <Frame
+                  mediaKey={chapter.mediaKey}
+                  grade={chapter.grade}
+                  ratio="portrait"
+                  sizes="(max-width: 768px) 100vw, 360px"
+                />
+                <Timecode className="mt-4 block">{chapterLabel(chapter)}</Timecode>
+                <h3 className="mt-1 text-xl text-ink group-hover:underline">{chapter.title}</h3>
+                <p className="mt-1 text-sm text-ink-soft">{chapter.lead}</p>
+              </Link>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* Form, günün önizlemesinden hemen sonra — ilk kaydırmada erişilebilir olmalı */}
+      <ContactSection />
+
       <FeaturesSection />
       <ActivitiesSection />
-      {/* About Section */}
-      <div className="py-16 bg-white">
-        <div className="container mx-auto px-4 md:px-6">
-          <AboutSection
-            title="Minik kalpler burada büyüyor."
-            description="Eğitim anlayışımız, çocukların kendi hızlarında öğrenmelerine olanak tanıyan oyun temelli ve etkileşimli bir yaklaşıma dayanır. Montessori ve Reggio Emilia yaklaşımlarından ilham alarak hazırladığımız programlarımızla çocukların zihinsel, sosyal, duygusal ve motor gelişimlerini bir bütün olarak destekliyoruz. Her gün yeni bir deneyim, yeni bir öğrenme fırsatı."
-            buttonText="Daha Fazla"
-            buttonLink="/hakkimizda"
-            imageSrc="/cocukklar.webp"
-            imageAlt="Şeker Anaokulu sınıfında çocuklar"
-            imagePosition="right"
-            backgroundColor="#3ba4cc"
-          />
-          
-          {/* Center Image */}
-          <div className="my-16 text-center md:hidden">
-            <Image
-              src="/montesori.webp"
-              alt="Montessori materyaliyle çalışan çocuk"
-              className="rounded-lg shadow-lg mx-auto"
-              width={300}
-              height={200}
-            />
-          </div>
-          
-          <div className="mt-16">
-            <AboutSection
-              title="Güvenli ve sevgi dolu ortamımız."
-              description="Anaokulumuzdaki her köşe, çocukların kendilerini güvende hissetmeleri için özel olarak tasarlanmıştır. Deneyimli öğretmen kadromuz ve modern eğitim anlayışımızla çocuklarınızın sosyal, duygusal ve akademik gelişimlerini destekliyoruz. Oyun alanlarımız, sanat atölyelerimiz ve kütüphanemizle çocukların hayal gücünü geliştiren bir öğrenme ortamı sunuyoruz."
-              buttonText="Keşfet"
-              buttonLink="/aktiviteler"
-              imageSrc="/art.webp"
-              imageAlt="Sanat atölyesinde çalışma"
-              imagePosition="left"
-              backgroundColor="#e657a2"
-            />
-          </div>
-        </div>
-      </div>
-
       <FAQSection />
-      
-      <ContactSection />
     </div>
   )
 }
