@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { trackEvent } from '../analytics';
+import { trackEvent, LEAD_VALUE_BY_AGE, leadValue, trackLead } from '../analytics';
+import { AGE_GROUPS } from '../leadSchema';
 
 describe('trackEvent', () => {
   beforeEach(() => {
@@ -19,5 +20,44 @@ describe('trackEvent', () => {
   it('dataLayer tanımsızsa hata fırlatmaz', () => {
     delete window.dataLayer;
     expect(() => trackEvent('tel_click')).not.toThrow();
+  });
+});
+
+describe('leadValue', () => {
+  it('her yaş grubu için değer tanımlı', () => {
+    for (const age of AGE_GROUPS) {
+      expect(LEAD_VALUE_BY_AGE[age]).toBeGreaterThan(0);
+    }
+  });
+
+  it('küçük yaş daha değerli — LTV sıralamasını korur', () => {
+    expect(LEAD_VALUE_BY_AGE['2-3']).toBeGreaterThan(LEAD_VALUE_BY_AGE['3-4']);
+    expect(LEAD_VALUE_BY_AGE['3-4']).toBeGreaterThan(LEAD_VALUE_BY_AGE['4-5']);
+    expect(LEAD_VALUE_BY_AGE['4-5']).toBeGreaterThan(LEAD_VALUE_BY_AGE['5-6']);
+  });
+
+  it('bilinmeyen yaş için en düşük değeri döner', () => {
+    expect(leadValue('9-10')).toBe(LEAD_VALUE_BY_AGE['5-6']);
+    expect(leadValue('')).toBe(LEAD_VALUE_BY_AGE['5-6']);
+  });
+});
+
+describe('trackLead', () => {
+  beforeEach(() => {
+    window.dataLayer = [];
+  });
+
+  it('yaşa göre değerli dönüşüm olayı gönderir', () => {
+    trackLead('2-3');
+    expect(window.dataLayer).toEqual([
+      { event: 'lead_submit', child_age: '2-3', value: LEAD_VALUE_BY_AGE['2-3'], currency: 'TRY' },
+    ]);
+  });
+
+  it('ek alanları olaya taşır', () => {
+    trackLead('4-5', { program: 'tam-gun' });
+    expect(window.dataLayer?.[0]).toMatchObject({
+      child_age: '4-5', program: 'tam-gun', currency: 'TRY',
+    });
   });
 });

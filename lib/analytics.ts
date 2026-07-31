@@ -13,3 +13,30 @@ export function trackEvent(name: TrackedEvent, payload: Record<string, unknown> 
   if (typeof window === 'undefined' || !window.dataLayer) return;
   window.dataLayer.push({ event: name, ...payload });
 }
+
+/**
+ * Lead'in beklenen değeri, çocuğun giriş yaşına göre.
+ * İki yaşında giren çocuk dört yıl kalabilir, beş yaşında giren bir yıl.
+ * Değerler yıllık ücret ve %80 yıllık kalma oranı varsayımıyla türetilmiştir.
+ */
+export const LEAD_VALUE_BY_AGE: Record<string, number> = {
+  '2-3': 3500,
+  '3-4': 2900,
+  '4-5': 2100,
+  '5-6': 1200,
+};
+
+const FALLBACK_LEAD_VALUE = LEAD_VALUE_BY_AGE['5-6'];
+
+export function leadValue(childAge: string): number {
+  return LEAD_VALUE_BY_AGE[childAge] ?? FALLBACK_LEAD_VALUE;
+}
+
+export function trackLead(childAge: string, extra: Record<string, unknown> = {}): void {
+  trackEvent('lead_submit', {
+    child_age: childAge,
+    value: leadValue(childAge),
+    currency: 'TRY',
+    ...extra,
+  });
+}
