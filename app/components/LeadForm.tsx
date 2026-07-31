@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AGE_GROUPS, PROGRAMS } from '@/lib/leadSchema';
 import { trackEvent } from '@/lib/analytics';
+import AttributionFields from './AttributionFields';
 
 const PROGRAM_LABELS: Record<(typeof PROGRAMS)[number], string> = {
   'tam-gun': 'Tam Gün',
@@ -34,6 +35,8 @@ export default function LeadForm({ variant = 'full' }: { variant?: 'full' | 'com
       program: String(data.get('program') ?? ''),
       startTerm: String(data.get('startTerm') ?? ''),
       message: String(data.get('message') ?? ''),
+      gclid: String(data.get('gclid') ?? ''),
+      landingPath: String(data.get('landingPath') ?? ''),
       kvkkConsent: data.get('kvkkConsent') === 'on',
     };
 
@@ -67,6 +70,7 @@ export default function LeadForm({ variant = 'full' }: { variant?: 'full' | 'com
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
+      <AttributionFields />
       <div className="grid gap-5 md:grid-cols-2">
         <div>
           <label htmlFor="parentName" className={label}>Adınız Soyadınız *</label>

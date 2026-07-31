@@ -55,6 +55,9 @@ export async function POST(request: Request) {
         '',
         `Mesaj: ${lead.message || '—'}`,
         '',
+        `Kaynak sayfa: ${lead.landingPath || '—'}`,
+        `GCLID: ${lead.gclid || '—'}`,
+        '',
         `⏱ Hedef yanıt süresi: 15 dakika`,
       ].join('\n'),
     });

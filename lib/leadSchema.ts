@@ -14,6 +14,8 @@ export const leadSchema = z.object({
   program: z.enum(PROGRAMS, { message: 'Program seçin' }),
   startTerm: z.string().trim().min(1, 'Başlangıç dönemi seçin').max(20),
   message: z.string().trim().max(1000).optional().default(''),
+  gclid: z.string().trim().max(200).optional().default(''),
+  landingPath: z.string().trim().max(200).optional().default(''),
   kvkkConsent: z.literal(true, { message: 'Devam etmek için aydınlatma metnini onaylayın' }),
 });
 
