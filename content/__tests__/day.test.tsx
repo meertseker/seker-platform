@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import { DAY_CHAPTERS, SCHEDULE_READY, ROSTER_STATUS, chapterLabel } from '../day';
+import { DAY_CHAPTERS, SCHEDULE_READY, ROSTER_STATUS, ENGLISH_COVERAGE_READY, chapterLabel } from '../day';
 import { MEDIA } from '../media';
 import TimeSpine from '@/app/components/cine/TimeSpine';
 import DayChapters from '@/app/components/cine/DayChapters';
@@ -47,6 +47,11 @@ describe('DAY_CHAPTERS', () => {
     expect(text).not.toContain('native');
     expect(text).not.toContain('mezun olan çocuklarımız ingilizce konuşuyor');
     expect(text).not.toContain('mezun olduğunda ingilizce konuşuyor');
+    // §5.2'nin kendi tablosunda bile ⚠️TEYİT işaretli tek satır — doğrulama
+    // kuyruğu #3 kapanmadan öğretmenin günlük İngilizce kapsamı/süresi
+    // iddia edilemez (bkz. ENGLISH_COVERAGE_READY kapısı aşağıda).
+    expect(text).not.toMatch(/gün boyunca kullan/);
+    expect(text).not.toContain('sadece ders saatinde değil');
   });
 
   it('bölüm metinleri kesin sınıf/öğretmen sayısını iddia olarak yazmaz (doğrulama kuyruğu #1, #2)', () => {
@@ -86,6 +91,20 @@ describe('saat doğrulama kapısı — SCHEDULE_READY', () => {
       expect(text).not.toContain(chapter.time);
     }
     expect(text).not.toMatch(/\d{2}:\d{2}/);
+  });
+});
+
+describe('İngilizce kapsam doğrulama kapısı — ENGLISH_COVERAGE_READY', () => {
+  it('öğretmenin günlük İngilizce kapsamı/süresi henüz doğrulanmadı, bu yüzden bayrak false olmalı', () => {
+    // Bu test, birisi veriyi doğrulamadan bayrağı unutup true yaparsa kırmızı olsun diye burada.
+    expect(ENGLISH_COVERAGE_READY).toBe(false);
+  });
+
+  it('ENGLISH_COVERAGE_READY false iken DayChapters öğretmenin günlük kapsamını iddia etmez', () => {
+    const { container } = render(<DayChapters chapters={DAY_CHAPTERS} />);
+    const text = (container.textContent ?? '').toLowerCase();
+    expect(text).not.toMatch(/gün boyunca kullan/);
+    expect(text).not.toContain('sadece ders saatinde değil');
   });
 });
 

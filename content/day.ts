@@ -44,6 +44,18 @@ export const ROSTER_STATUS: { ready: boolean; childCount: number; teacherCount: 
   limit: 20,
 };
 
+/**
+ * 🔴 DOĞRULANMADI — doğrulama kuyruğu madde 3 (asset dosyası §0.2).
+ * Öğretmenin İngilizceyi anadili olarak mı konuştuğu, günün hangi
+ * saatlerinde ve ne kadar kullandığı henüz teyit edilmedi. Asset
+ * dosyası §5.2'deki "Öğretmeni İngilizceyi gün boyu kullanır — sadece
+ * ders saatinde değil" cümlesi bile o tabloda ayrıca ⚠️TEYİT işaretlidir
+ * — diğer satırların aksine kayıtsız şartsız ✅ değildir. false iken bu
+ * kapsam/süre iddiası hiçbir bölümde geçmez. Okul kapsamı teyit edince
+ * bu bayrağı true yapmak, cümleyi tek noktadan geri getirir.
+ */
+export const ENGLISH_COVERAGE_READY = false;
+
 export const DAY_CHAPTERS: DayChapter[] = [
   {
     id: 'karsilama',
@@ -51,7 +63,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
     title: 'Kapı açılıyor',
     lead: 'Gün, çocuğun kendi hızında başlar.',
     body: [
-      'İlk gelen çocuk sabahın en sessiz saatini yakalar. Karşılamayı tanıdık bir yüz yapar; ayrılığın en kolay geçtiği an budur.',
+      'İlk gelen çocuk sabahın en sessiz saatini yakalar; ayrılık bu saatte en kolay geçer.',
       'Sonrasında geçen süre serbesttir. Kimse oyuna zorlanmaz, kimse uyandırılmaz.',
     ],
     mediaKey: 'classroomWide',
@@ -89,7 +101,10 @@ export const DAY_CHAPTERS: DayChapter[] = [
     lead: 'Ders saati değil, günün dili.',
     body: [
       'İngilizce, ayrı bir ders saati değil; günün içinde kullanılan ikinci dildir. Oyunun, yemeğin ve bahçenin bir parçası olur.',
-      'Öğretmenimiz İngilizceyi gün boyunca kullanır. Çocuk dili bir ders olarak değil, günlük iletişimin bir parçası olarak edinir.',
+      'Çocuk dili bir ders olarak değil, günlük iletişimin bir parçası olarak edinir.',
+      // 🔴 ENGLISH_COVERAGE_READY — doğrulama kuyruğu #3. Kapsam/süre teyit
+      // edilmeden bu cümle render edilmez (bkz. yukarıdaki bayrak yorumu).
+      ...(ENGLISH_COVERAGE_READY ? ['Öğretmenimiz İngilizceyi gün boyunca kullanır.'] : []),
     ],
     mediaKey: 'art',
     grade: 'morning',
@@ -123,7 +138,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
     title: 'Dinlenme',
     lead: 'Küçük gruplar dinlenir, büyükler sessiz çalışır.',
     body: [
-      'Küçük yaş gruplarında bu saat uykuya ayrılır; düzen evdekiyle uyumlu olacak şekilde aileyle birlikte planlanır.',
+      'Küçük yaş gruplarında bu saat dinlenmeye ayrılır.',
       'Uyumayan gruplar için bu saat sessiz çalışma zamanıdır: kitap, yapboz, bireysel proje.',
     ],
     mediaKey: 'psychologist',
@@ -136,7 +151,6 @@ export const DAY_CHAPTERS: DayChapter[] = [
     lead: 'Robotik, seramik, satranç, müzik, drama.',
     body: [
       'Atölyeler eğlence molası değil, programın parçasıdır. Satranç sırasını beklemeyi ve bir sonraki adımı düşünmeyi çalıştırır; hamur ve kalem işi el kaslarını yazıya hazırlar.',
-      'Atölye grupları sınıftan da küçüktür.',
     ],
     mediaKey: 'ceramics',
     grade: 'golden',
