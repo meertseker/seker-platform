@@ -1,9 +1,3 @@
-declare global {
-  interface Window {
-    dataLayer?: Record<string, unknown>[];
-  }
-}
-
 export const TRACKED_EVENTS = [
   'lead_submit',
   'whatsapp_click',

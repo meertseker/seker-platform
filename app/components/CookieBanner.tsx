@@ -1,25 +1,23 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CONSENT_KEY, readConsent, buildConsentUpdate, type ConsentChoice } from '@/lib/consent';
 
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void;
-  }
-}
-
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
-  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (readConsent(window.localStorage) === null) setVisible(true);
+    const stored = readConsent(window.localStorage);
+    if (stored === null) {
+      setVisible(true);
+      return;
+    }
+    // Replay the stored choice: ConsentDefaults resets all four signals to
+    // 'denied' on every page load, so a returning visitor's earlier choice
+    // (granted or denied) must be re-asserted to gtag, or a prior "granted"
+    // silently runs fully denied for the rest of the session.
+    window.gtag?.('consent', 'update', buildConsentUpdate(stored));
   }, []);
-
-  useEffect(() => {
-    if (visible) dialogRef.current?.focus();
-  }, [visible]);
 
   function choose(choice: ConsentChoice) {
     window.localStorage.setItem(CONSENT_KEY, choice);
@@ -31,11 +29,9 @@ export default function CookieBanner() {
 
   return (
     <div
-      ref={dialogRef}
       role="dialog"
       aria-modal="false"
       aria-label="Çerez tercihi"
-      tabIndex={-1}
       className="fixed inset-x-0 bottom-14 z-50 border-t border-rule bg-paper p-5 shadow-[0_-2px_16px_rgba(0,0,0,0.08)] md:bottom-0"
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
