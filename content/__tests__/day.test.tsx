@@ -1,0 +1,102 @@
+import { describe, it, expect } from 'vitest';
+import { render } from '@testing-library/react';
+import { DAY_CHAPTERS, SCHEDULE_READY, ROSTER_STATUS, chapterLabel } from '../day';
+import { MEDIA } from '../media';
+import TimeSpine from '@/app/components/cine/TimeSpine';
+import DayChapters from '@/app/components/cine/DayChapters';
+
+describe('DAY_CHAPTERS', () => {
+  it('en az sekiz bölüm içerir', () => {
+    expect(DAY_CHAPTERS.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('id değerleri benzersizdir', () => {
+    const ids = DAY_CHAPTERS.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('dahili saat referansları kronolojik sıradadır', () => {
+    const minutes = DAY_CHAPTERS.map((c) => {
+      const [h, m] = c.time.split(':').map(Number);
+      return h * 60 + m;
+    });
+    expect([...minutes].sort((a, b) => a - b)).toEqual(minutes);
+  });
+
+  it('her bölüm geçerli bir görsel anahtarı kullanır', () => {
+    for (const chapter of DAY_CHAPTERS) {
+      expect(MEDIA[chapter.mediaKey]).toBeDefined();
+    }
+  });
+
+  it('künye yalnızca tek bölümde öne çıkar — scaling disiplini', () => {
+    expect(DAY_CHAPTERS.filter((c) => c.feature === 'roster')).toHaveLength(1);
+  });
+
+  it('yasak kelime ve ücret rakamı içermez', () => {
+    const text = JSON.stringify(DAY_CHAPTERS);
+    for (const word of ['indirim', 'kampanya', 'uygun fiyat', 'bütçe dostu', 'fırsat']) {
+      expect(text.toLowerCase()).not.toContain(word);
+    }
+    expect(text).not.toMatch(/\d{3}\.\d{3}/);
+    expect(text).not.toContain('₺');
+  });
+
+  it('desteklenemeyen İngilizce ve "native" iddiası içermez (asset dosyası §5.2)', () => {
+    const text = JSON.stringify(DAY_CHAPTERS).toLowerCase();
+    expect(text).not.toContain('native');
+    expect(text).not.toContain('mezun olan çocuklarımız ingilizce konuşuyor');
+    expect(text).not.toContain('mezun olduğunda ingilizce konuşuyor');
+  });
+
+  it('bölüm metinleri kesin sınıf/öğretmen sayısını iddia olarak yazmaz (doğrulama kuyruğu #1, #2)', () => {
+    // title/lead/body metninde rakam yok — rakam yalnızca dahili `time` alanında olabilir.
+    for (const chapter of DAY_CHAPTERS) {
+      const prose = [chapter.title, chapter.lead, ...chapter.body].join(' ');
+      expect(prose).not.toMatch(/\d/);
+    }
+  });
+});
+
+describe('saat doğrulama kapısı — SCHEDULE_READY', () => {
+  it('okul saatlik akışı henüz doğrulamadı, bu yüzden bayrak false olmalı', () => {
+    // Bu test, birisi veriyi doğrulamadan bayrağı unutup true yaparsa kırmızı olsun diye burada.
+    expect(SCHEDULE_READY).toBe(false);
+  });
+
+  it('SCHEDULE_READY false iken chapterLabel hiçbir bölüm için gerçek saat döndürmez', () => {
+    for (const chapter of DAY_CHAPTERS) {
+      expect(chapterLabel(chapter)).not.toMatch(/^\d{2}:\d{2}$/);
+    }
+  });
+
+  it('TimeSpine, saat doğrulanmadan hiçbir HH:MM saatini render etmez', () => {
+    const { container } = render(<TimeSpine chapters={DAY_CHAPTERS} />);
+    const text = container.textContent ?? '';
+    for (const chapter of DAY_CHAPTERS) {
+      expect(text).not.toContain(chapter.time);
+    }
+    expect(text).not.toMatch(/\d{2}:\d{2}/);
+  });
+
+  it('DayChapters bölüm listesi de doğrulanmamış saatleri render etmez', () => {
+    const { container } = render(<DayChapters chapters={DAY_CHAPTERS} />);
+    const text = container.textContent ?? '';
+    for (const chapter of DAY_CHAPTERS) {
+      expect(text).not.toContain(chapter.time);
+    }
+    expect(text).not.toMatch(/\d{2}:\d{2}/);
+  });
+});
+
+describe('künye doğrulama kapısı — ROSTER_STATUS', () => {
+  it('sınıf mevcudu henüz doğrulanmadı, bu yüzden ready false olmalı', () => {
+    expect(ROSTER_STATUS.ready).toBe(false);
+  });
+
+  it('ROSTER_STATUS.ready false iken künye (Roster) DayChapters içinde render edilmez', () => {
+    const { container } = render(<DayChapters chapters={DAY_CHAPTERS} />);
+    expect(container.querySelectorAll('[data-mark="child"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-mark="teacher"]')).toHaveLength(0);
+  });
+});
