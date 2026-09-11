@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import {
   BadgePercent,
+  Banknote,
   BarChart3,
   GraduationCap,
   Home,
@@ -34,6 +35,7 @@ const mainItems = [
   { href: "/", label: "Bugün", icon: Home },
   { href: "/pipeline", label: "Veliler", icon: Users },
   { href: "/ogrenciler", label: "Öğrenciler", icon: GraduationCap },
+  { href: "/odemeler", label: "Ödemeler", icon: Banknote },
 ] as const;
 
 const NEW_LEAD_HREF = "/leads/new";
@@ -261,7 +263,7 @@ export function Nav({ fullName, role, notifications, unreadCount }: NavProps) {
         aria-label="Alt navigasyon"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface px-2 pb-[calc(env(safe-area-inset-bottom)+0.375rem)] pt-1.5 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] md:hidden"
       >
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {mainItems.map((item) => (
             <NavLink
               key={item.href}

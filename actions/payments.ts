@@ -133,6 +133,7 @@ export async function createPaymentPlan(
   });
 
   revalidatePath("/ogrenciler");
+  revalidatePath("/odemeler");
   revalidatePath(`/ogrenciler/${studentId}`);
   return { planId: plan.id };
 }
@@ -221,6 +222,7 @@ export async function markInstallmentPaid(
 
   const studentPath = await studentPathForPlan(supabase, installment.plan_id);
   revalidatePath("/ogrenciler");
+  revalidatePath("/odemeler");
   revalidatePath(studentPath);
   return {};
 }
@@ -262,6 +264,7 @@ export async function revertInstallment(installmentId: string) {
 
   const studentPath = await studentPathForPlan(supabase, installment.plan_id);
   revalidatePath("/ogrenciler");
+  revalidatePath("/odemeler");
   revalidatePath(studentPath);
   return {};
 }
@@ -330,6 +333,7 @@ export async function updateInstallment(
 
   const studentPath = await studentPathForPlan(supabase, installment.plan_id);
   revalidatePath("/ogrenciler");
+  revalidatePath("/odemeler");
   revalidatePath(studentPath);
   return {};
 }

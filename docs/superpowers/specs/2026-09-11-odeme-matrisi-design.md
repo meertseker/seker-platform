@@ -81,9 +81,12 @@ tarafı ve gerçek kullanıcıdan geldiği için ağır basıyor. Karar revize e
 
 ## 5. Ekran anatomisi
 
-Tek bir `<table>`. Sol sütunlar yatay kaydırmada sabit (`sticky left-0`),
-başlık satırı dikey kaydırmada sabit (`sticky top-0`), toplam satırı altta
-sabit (`sticky bottom-0`).
+Tek bir `<table>`. Öğrenci sütunu yatay kaydırmada sabit (`sticky left-0`,
+asgari genişlik `min-w-56` ki isimler satır kırmasın).
+
+Başlık satırı ve toplam satırı **sabitlenmez**: uygulama başlığı zaten
+`sticky top-0 z-20` ve tablo başlığı onun altına kayıp yarı görünmez oluyor.
+16 satırlık bir tabloda ikisi de ekranda kalıyor, karmaşıklığa değmez.
 
 ### 5.1 Sabit sol sütunlar
 
@@ -113,7 +116,9 @@ kendiliğinden belirir; boş aylar sütun açmaz. Başlık `Eyl 26` biçiminde k
 
 ### 5.3 Sağ özet sütunları
 
-`Toplam` (sezondaki tüm plan tutarları), `Ödenen`, `Kalan`. `Kalan`, gecikeni
+`Toplam`, `Ödenen`, `Kalan`. `Toplam`, satırın iptal olmayan taksitlerinin
+toplamı — plan başlığındaki `total_amount` değil; böylece sütun toplamlarıyla
+birebir tutuyor ve iptal edilen taksit toplamdan düşüyor. `Kalan`, gecikeni
 olan satırda kırmızı.
 
 ### 5.4 Toplam satırı
@@ -156,7 +161,10 @@ modellemek zorunda değil, aynı aydaki iki satırı toplaması yeter.
 
 ## 7. Hücre paneli ve yetkiler
 
-Her hücre bir `<button>`. Tıklayınca üzerinde küçük bir panel açılır:
+Her hücre bir `<button>`. Tıklayınca ortada bir panel açılır — hücreye
+tutturulmuş popover yerine `InstallmentTable`'ın kullandığı `fixed inset-0`
+modal deseni: yatay kaydırmalı ve `sticky` sütunlu bir tabloda tutturulmuş
+popover kırpılıyor. Sayfadan çıkılmadığı için akış aynı kalıyor.
 
 ```
 Ekim 2026 · Ayşe Yılmaz
@@ -230,6 +238,15 @@ export function buildPaymentMatrix(
   season: string,
 ): PaymentMatrix;
 
+/**
+ * Sayfa filtre çipleriyle satır süzdüğünde alt toplam ekranda görünenle
+ * tutsun diye ayrıca çağrılabilir; `months` sabit kalır, tablo daralmaz.
+ */
+export function summarizeRows(
+  months: string[],
+  rows: MatrixRow[],
+): Pick<PaymentMatrix, "columnTotals" | "grandTotal">;
+
 interface PaymentMatrix {
   months: string[];                    // sıralı "YYYY-MM"
   rows: MatrixRow[];
@@ -281,7 +298,7 @@ interface MatrixCell {
 | `components/payment-matrix-cell.tsx` | client: hücre butonu + panel + ödeme formu. Yeni. |
 | `components/nav.tsx` | `mainItems`'a `/odemeler` eklenir (mobil alt bar `grid-cols-4` → `grid-cols-5`). |
 | `actions/payments.ts` | yalnız `revalidatePath` eklemeleri (§11). |
-| `tests/payment-matrix.test.ts` | vitest. Yeni. |
+| `tests/unit/payment-matrix.test.ts` | vitest. Yeni; klasör deseni mevcut birim testleriyle aynı. |
 
 `page.tsx` büyümesin diye tablo iskeleti tek dosyada kalır ama satır/hücre
 render'ı `payment-matrix-cell.tsx`e taşınır; pivot mantığı sayfaya sızmaz.
@@ -303,7 +320,7 @@ diye her birine `revalidatePath("/odemeler")` eklenir:
 
 Mobilde kart görünümüne düşülmez — "tek bakış" isteğinin kendisi matrisin
 korunmasını gerektiriyor. Bunun yerine: ilk sütun `sticky left-0`, kapsayıcı
-yatay kaydırmalı, ay sütunları `min-w-24`. Özet kartları üstte kalır.
+yatay kaydırmalı. Özet kartları üstte kalır.
 
 - Gerçek `<table>`: aylar `<th scope="col">`, öğrenci `<th scope="row">`.
 - Hücre butonu `aria-label`: `"Ayşe Yılmaz, Ekim 2026, 23.000 ₺, gecikti"`.
@@ -314,7 +331,7 @@ yatay kaydırmalı, ay sütunları `min-w-24`. Özet kartları üstte kalır.
 
 ## 13. Test planı
 
-`tests/payment-matrix.test.ts` (vitest, canlı DB yok) — saf fonksiyon:
+`tests/unit/payment-matrix.test.ts` (vitest, canlı DB yok) — saf fonksiyon:
 
 - **Ay türetme:** taksit tarihlerinden sıralı benzersiz aylar; taksit yoksa boş
   dizi; boş aylar sütun açmaz.
@@ -331,6 +348,8 @@ yatay kaydırmalı, ay sütunları `min-w-24`. Özet kartları üstte kalır.
 - **Toplamlar:** sütun toplamları ve genel toplam satır toplamlarıyla tutarlı.
 - **Para:** kuruşta toplanır, yuvarlama kaybı yok (25.000 TL ÷ 10 gibi kalanlı
   bölmelerde).
+- **`summarizeRows`:** satır süzüldükten sonra sütun ve genel toplamlar yalnız
+  görünen satırları sayar, ay sütunları sabit kalır.
 
 Mevcut testler bozulmamalı; `InstallmentTable` ve `actions/payments.ts`
 davranışı değişmiyor.
