@@ -2,7 +2,6 @@
 import React, { useState } from 'react'
 import Header from '@/app/components/Header'
 import PageHero from '@/app/components/PageHero'
-import Image from 'next/image';
 
 // Define TypeScript types
 type AktiviteType = {
