@@ -1,104 +1,166 @@
-import Frame from './cine/Frame';
-import Roster from './cine/Roster';
+import Image from 'next/image';
 import Timecode from './cine/Timecode';
 import TrackedLink from './TrackedLink';
 import { SITE, WHATSAPP_URL } from '@/lib/site';
-import { ROSTER_STATUS } from '@/content/day';
+import { MEDIA } from '@/content/media';
+import { TESTIMONIALS } from '@/content/testimonials';
+import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from '@/content/day';
 
 /**
- * Künye odaklı hero. Sınıf mevcudu ve öğretmen sayısı doğrulanana kadar
- * (ROSTER_STATUS.ready) Roster hiç render edilmez ve gövde metni bu
- * sayıları iddia olarak yazmaz — bkz. content/day.ts. Görsel yarısı bu
- * durumda bir Frame fotoğrafına düşer, hero'da boşluk kalmaz.
+ * Hero — okulun kendi bahçe fotoğrafı zemin, üzerinde bento düzeninde
+ * kutular. Bahçe okulun en somut farkı olduğu için ilk ekranda o görünür;
+ * kutular sırayla teklifi, mekânı, rakamları ve bir veli sözünü taşır.
  */
+
+const HERO_QUOTE_ID = 'muge-ilkokul-olsa';
+
 export default function HeroSection() {
+  const yearsActive = new Date().getFullYear() - SITE.foundingYear;
+  const quote = TESTIMONIALS.find((item) => item.id === HERO_QUOTE_ID && item.ready);
+  const photo = MEDIA.candyCorner;
+
   return (
-    <section className="relative overflow-hidden px-6 pt-8 pb-6 md:pt-24 md:pb-12">
-      {/* Şeker konfetisi — ana sayfanın açılışını bantlarla aynı dile bağlar. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-        <span className="confetti-float absolute -left-10 top-4 h-40 w-40 rounded-full bg-bubble/10" />
-        <span className="confetti-float absolute right-[4%] top-1/3 h-24 w-24 rounded-full bg-sunny/15" />
-        <span className="confetti-float absolute left-1/3 -bottom-8 h-28 w-28 rounded-full bg-mint/10" />
-      </div>
+    <section className="relative">
+      <div className="relative overflow-hidden">
+        <Image
+          src={MEDIA.gardenWide.src}
+          alt={MEDIA.gardenWide.alt}
+          fill
+          priority
+          sizes="100vw"
+          /* Kadraj sağa kaydırılır: solda kalan bina duvarı yerine çim
+             alan, ağaçlar ve oyun yapıları kutuların çevresinde görünür. */
+          className="object-cover object-[68%_center]"
+        />
 
-      <div className="relative z-10 mx-auto grid max-w-6xl gap-6 md:grid-cols-[1.1fr_1fr] md:items-center md:gap-12">
-        <div>
-          <span className="inline-flex rounded-full bg-paper-warm px-4 py-1.5">
-            <Timecode>
-              Beykent · Büyükçekmece · {SITE.foundingYear}&apos;den beri
-            </Timecode>
-          </span>
+        {/* Bahçe olabildiğince açık kalır; kutular kendi zeminlerini
+            taşıdığı için fotoğrafa perde çekilmez. Alt kenar yalnızca
+            fisto geçişi için hafifçe koyulaşır. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-t from-ink/40 via-ink/5 to-ink/10"
+        />
 
-          <h1 className="mt-4 text-3xl text-ink md:mt-5 md:text-6xl lg:text-7xl">
-            Çocuğunuzu adıyla, huyuyla tanıyan bir okul.
-          </h1>
+        <div className="relative z-10 mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-20">
+          <div className="grid gap-3 md:grid-cols-3 md:gap-4">
+            {/* 1 — Teklif. Bento'nun en büyük kutusu. */}
+            <div className="rounded-[1.75rem] bg-white/95 p-6 shadow-2xl shadow-ink/25 backdrop-blur-md md:col-span-2 md:p-9">
+              <span className="inline-flex w-fit rounded-full bg-paper-warm px-4 py-1.5">
+                <Timecode>
+                  Beykent · Büyükçekmece · {SITE.foundingYear}&apos;den beri
+                </Timecode>
+              </span>
 
-          <p className="mt-4 max-w-xl text-base text-ink-soft md:mt-6 md:text-lg">
-            {ROSTER_STATUS.ready ? (
-              <>
+              <h1 className="mt-4 text-3xl text-ink md:mt-5 md:text-5xl lg:text-6xl">
+                Çocuğunuzu adıyla, huyuyla tanıyan bir okul.
+              </h1>
+
+              <p className="mt-4 max-w-xl text-base text-ink-soft md:text-lg">
                 Sınıfta {ROSTER_STATUS.childCount} çocuk var, başlarında iki
-                öğretmen. Gün içinde merak ederseniz kameradan bakabiliyorsunuz.
-                Beykent&apos;te {SITE.foundingYear}&apos;den beri buradayız; ilk
-                yıllarda uğurladığımız çocukların kardeşleri şimdi bizde okuyor.
-              </>
-            ) : (
-              <>
-                Çocuğunuzun günü, öğretmeniyle arasında geçenlerden ibaret.
-                Biz de bütün kararlarımızı buna göre veriyoruz.
-              </>
-            )}
-          </p>
+                öğretmen. Günün büyük bölümü de arkadaki bahçede geçiyor.
+              </p>
 
-          <div className="mt-5 flex flex-col gap-2.5 sm:flex-row md:mt-9 md:gap-3">
-            <TrackedLink
-              href="/kayit"
-              event="cta_click"
-              payload={{ location: 'hero', target: 'kayit' }}
-              className="rounded-full bg-grape px-8 py-3.5 text-center font-semibold text-white shadow-lg shadow-grape/30 hover:bg-ink md:py-4"
-            >
-              Ön Görüşme Randevusu Alın
-            </TrackedLink>
-            <TrackedLink
-              href={WHATSAPP_URL}
-              event="whatsapp_click"
-              payload={{ location: 'hero' }}
-              external
-              className="rounded-full border-2 border-mint-deep px-8 py-3.5 text-center font-semibold text-ink hover:bg-mint/10 md:py-4"
-            >
-              WhatsApp&apos;tan Yazın
-            </TrackedLink>
-          </div>
-          <p className="mt-2 text-xs text-ink-soft md:mt-3 md:text-sm">
-            Size uygun bir saat seçin. Kayıt zorunluluğu yok.
-          </p>
-        </div>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <TrackedLink
+                  href="/kayit"
+                  event="cta_click"
+                  payload={{ location: 'hero', target: 'kayit' }}
+                  className="rounded-full bg-bubble-deep px-7 py-3.5 text-center font-semibold text-white shadow-lg shadow-bubble-deep/30 hover:bg-ink md:py-4"
+                >
+                  Ön Görüşme Randevusu Alın
+                </TrackedLink>
+                <TrackedLink
+                  href={WHATSAPP_URL}
+                  event="whatsapp_click"
+                  payload={{ location: 'hero' }}
+                  external
+                  className="rounded-full border-2 border-mint-deep px-7 py-3.5 text-center font-semibold text-mint-deep hover:bg-mint-deep hover:text-white md:py-4"
+                >
+                  WhatsApp&apos;tan Yazın
+                </TrackedLink>
+              </div>
 
-        <div className="md:justify-self-end">
-          {ROSTER_STATUS.ready ? (
-            <Roster
-              childCount={ROSTER_STATUS.childCount}
-              teacherCount={ROSTER_STATUS.teacherCount}
-              limit={ROSTER_STATUS.limit}
-            />
-          ) : (
-            // Fotoğraf, künyenin yerini tutan ikincil bir görsel — birincil
-            // içerik değil. 375 px'te dikey olarak yığıldığında formu ilk
-            // kaydırmanın dışına iterdi, bu yüzden mobilde gizli; md+
-            // genişlikte iki sütun yan yana olduğunda tekrar görünür.
-            <div className="hidden w-full max-w-sm md:block">
-              <Frame
-                mediaKey="classroomWide"
-                grade="morning"
-                ratio="wide"
-                priority
-                sizes="(max-width: 768px) 100vw, 480px"
-              />
-              <Timecode className="mt-3 block">
-                Sınıfı ön görüşmede birlikte görün
-              </Timecode>
+              <p className="mt-3 text-sm text-ink-soft">
+                Size uygun bir saat seçin. Kayıt zorunluluğu yok.
+              </p>
             </div>
-          )}
+
+            {/* 2 — Mekân. Dikey fotoğraf kutusu, sağ rayda. */}
+            <div className="relative min-h-56 overflow-hidden rounded-[1.75rem] shadow-2xl shadow-ink/25 md:min-h-0">
+              <Image
+                src={photo.src}
+                alt={photo.alt}
+                fill
+                sizes="(max-width: 768px) 100vw, 360px"
+                className="object-cover object-center"
+              />
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"
+              />
+              <div className="absolute inset-x-0 bottom-0 p-5">
+                <p className="font-display text-xl text-white">Şeker Köşesi</p>
+                <p className="mt-1 text-sm text-white/85">
+                  İlk gün ve mezuniyet kareleri burada çekiliyor.
+                </p>
+              </div>
+            </div>
+
+            {/* 3 — Künye. Sınıfın iki rakamı tek kutuda. */}
+            <div className="rounded-[1.75rem] bg-grape p-6 shadow-xl shadow-grape/30">
+              <div className="flex items-end gap-5">
+                <div>
+                  <p className="font-display text-4xl text-white md:text-5xl">
+                    {ROSTER_STATUS.childCount}
+                  </p>
+                  <p className="mt-1 text-sm text-white/85">sınıfta çocuk</p>
+                </div>
+                <div className="h-12 w-px bg-white/30" />
+                <div>
+                  <p className="font-display text-4xl text-white md:text-5xl">
+                    {ROSTER_STATUS.teacherCount}
+                  </p>
+                  <p className="mt-1 text-sm text-white/85">öğretmen</p>
+                </div>
+              </div>
+              <p className="mt-4 text-sm leading-relaxed text-white/85">
+                Yönetmelik öğretmen başına {ROSTER_STATUS.limit} çocuğa kadar
+                izin veriyor. Bizde{' '}
+                {Math.round(ROSTER_STATUS.childCount / ROSTER_STATUS.teacherCount)} çocuk
+                düşüyor.
+              </p>
+            </div>
+
+            {/* 4 — Dil ve süreklilik. */}
+            <div className="rounded-[1.75rem] bg-mint-deep p-6 shadow-xl shadow-mint-deep/30">
+              <p className="font-display text-4xl text-white md:text-5xl">
+                {ENGLISH_HOURS_PER_DAY} saat
+              </p>
+              <p className="mt-1 text-sm text-white/85">her gün İngilizce</p>
+              <p className="mt-4 text-sm leading-relaxed text-white/85">
+                Haftada birkaç ders değil, her gün aynı saatte. {yearsActive} yıldır
+                aynı bahçede çalışıyoruz.
+              </p>
+            </div>
+
+            {/* 5 — Veli sözü. Google yorumundan, kısaltılmadan. */}
+            {quote ? (
+              <figure className="rounded-[1.75rem] bg-white/95 p-6 shadow-xl shadow-ink/20 backdrop-blur-md">
+                <span aria-hidden="true" className="font-display text-4xl leading-none text-bubble-deep">
+                  &ldquo;
+                </span>
+                <blockquote className="mt-1 text-base leading-relaxed text-ink">
+                  {quote.quote}
+                </blockquote>
+                <figcaption className="mt-3 text-sm text-ink-soft">
+                  {quote.author} · {quote.context}
+                </figcaption>
+              </figure>
+            ) : null}
+          </div>
         </div>
+
+        <div aria-hidden="true" className="scallop absolute inset-x-0 bottom-0" />
       </div>
     </section>
   );

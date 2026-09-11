@@ -95,9 +95,8 @@ describe('saat doğrulama kapısı — SCHEDULE_READY', () => {
 });
 
 describe('İngilizce kapsam doğrulama kapısı — ENGLISH_COVERAGE_READY', () => {
-  it('öğretmenin günlük İngilizce kapsamı/süresi henüz doğrulanmadı, bu yüzden bayrak false olmalı', () => {
-    // Bu test, birisi veriyi doğrulamadan bayrağı unutup true yaparsa kırmızı olsun diye burada.
-    expect(ENGLISH_COVERAGE_READY).toBe(false);
+  it('okul günlük İngilizce kapsamını doğruladı (1 Ağustos 2026)', () => {
+    expect(ENGLISH_COVERAGE_READY).toBe(true);
   });
 
   it('ENGLISH_COVERAGE_READY false iken DayChapters öğretmenin günlük kapsamını iddia etmez', () => {
@@ -109,13 +108,15 @@ describe('İngilizce kapsam doğrulama kapısı — ENGLISH_COVERAGE_READY', () 
 });
 
 describe('künye doğrulama kapısı — ROSTER_STATUS', () => {
-  it('sınıf mevcudu henüz doğrulanmadı, bu yüzden ready false olmalı', () => {
-    expect(ROSTER_STATUS.ready).toBe(false);
+  it('okul sınıf mevcudunu doğruladı (1 Ağustos 2026)', () => {
+    expect(ROSTER_STATUS.ready).toBe(true);
   });
 
-  it('ROSTER_STATUS.ready false iken künye (Roster) DayChapters içinde render edilmez', () => {
+  it('ROSTER_STATUS.ready true iken künye (Roster) çocuk ve öğretmen işaretlerini gösterir', () => {
     const { container } = render(<DayChapters chapters={DAY_CHAPTERS} />);
-    expect(container.querySelectorAll('[data-mark="child"]')).toHaveLength(0);
-    expect(container.querySelectorAll('[data-mark="teacher"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-mark="child"]')).toHaveLength(ROSTER_STATUS.childCount);
+    expect(container.querySelectorAll('[data-mark="teacher"]')).toHaveLength(
+      ROSTER_STATUS.teacherCount,
+    );
   });
 });

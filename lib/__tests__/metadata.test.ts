@@ -12,6 +12,15 @@ describe('buildMetadata', () => {
     expect(meta.title).toBe('Ücretler | Özel Şeker Anaokulu');
   });
 
+  it('çağıran taraf soneki kendi yazmışsa ikinci kez eklemez', () => {
+    const already = buildMetadata({
+      title: 'Az Mevcutlu Anaokulu | Özel Şeker Anaokulu',
+      description: 'x',
+      path: '/lp/az-mevcutlu-anaokulu',
+    });
+    expect(already.title).toBe('Az Mevcutlu Anaokulu | Özel Şeker Anaokulu');
+  });
+
   it('canonical URL üretir', () => {
     expect(meta.alternates?.canonical).toBe('https://sekeranaokulu.com/ucretler');
   });

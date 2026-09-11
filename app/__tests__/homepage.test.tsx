@@ -3,10 +3,12 @@ import { render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import HeroSection from '../components/HeroSection';
-import TrustBar from '../components/TrustBar';
+import GardenSection from '../components/GardenSection';
 import FeaturesSection from '../components/FeaturesSection';
 import ActivitiesSection from '../components/ActivitiesSection';
 import { ROSTER_STATUS } from '@/content/day';
+import { PUBLISHED_TESTIMONIALS } from '@/content/testimonials';
+import { MEDIA } from '@/content/media';
 
 /**
  * Ana sayfanın kaynak metnini ve render çıktısını tarayan testler.
@@ -35,7 +37,7 @@ const stripSvgCoordinates = (source: string) =>
 const readProse = (...segments: string[]) => stripSvgCoordinates(readSource(...segments));
 
 const HERO_SRC = readSource('app', 'components', 'HeroSection.tsx');
-const TRUSTBAR_SRC = readSource('app', 'components', 'TrustBar.tsx');
+const GARDEN_SRC = readSource('app', 'components', 'GardenSection.tsx');
 const ANASAYFA_SRC = readSource('app', '(site)', 'Anasayfa.tsx');
 const CONTACT_SRC = readSource('app', 'components', 'ContactSection.tsx');
 const FEATURES_SRC = readProse('app', 'components', 'FeaturesSection.tsx');
@@ -44,7 +46,7 @@ const FAQ_SECTION_SRC = readProse('app', 'components', 'FAQSection.tsx');
 
 const HOMEPAGE_FILES = {
   'app/components/HeroSection.tsx': HERO_SRC,
-  'app/components/TrustBar.tsx': TRUSTBAR_SRC,
+  'app/components/GardenSection.tsx': GARDEN_SRC,
   'app/(site)/Anasayfa.tsx': ANASAYFA_SRC,
   'app/components/ContactSection.tsx': CONTACT_SRC,
   'app/components/FeaturesSection.tsx': FEATURES_SRC,
@@ -139,22 +141,51 @@ describe('ana sayfa yapısı — form ilk kaydırmada erişilebilir', () => {
   });
 });
 
-describe('künye doğrulama kapısı — hero, ROSTER_STATUS kapalıyken rakamı iddia olarak yazmaz', () => {
-  it('ROSTER_STATUS henüz hazır değil (doğrulama kuyruğu #1, #2)', () => {
-    expect(ROSTER_STATUS.ready).toBe(false);
+describe('GardenSection — okulun kendi kareleri, stok görsel taşımaz', () => {
+  /** Bölümde adı geçen polaroid kareleri (dört tane) ve geniş çapa karesi. */
+  const SHOT_KEYS = ['mudKitchen', 'outdoorClass', 'giraffes', 'candyCorner'] as const;
+
+  it('yalnızca okulun kendi çektiği görselleri kullanır', () => {
+    for (const key of [...SHOT_KEYS, 'gardenWorkshops'] as const) {
+      expect(MEDIA[key].status, key).toBe('okul');
+    }
   });
 
-  it('HeroSection render çıktısı, kapı kapalıyken çocuk/öğretmen sayısını iddia olarak içermez', () => {
+  it('her karenin kendi başlığı var', () => {
+    const { getAllByRole } = render(<GardenSection />);
+    expect(getAllByRole('heading', { level: 3 }).length).toBe(SHOT_KEYS.length);
+  });
+
+  it('kaynakta stok görsel anahtarı geçmez', () => {
+    for (const key of Object.keys(MEDIA) as (keyof typeof MEDIA)[]) {
+      if (MEDIA[key].status !== 'stok') continue;
+      expect(GARDEN_SRC, key).not.toMatch(new RegExp(`MEDIA\\.${key}\\b`));
+    }
+  });
+});
+
+describe('künye — okul sayıyı doğruladı (1 Ağustos 2026), hero rakamı gösterir', () => {
+  it('ROSTER_STATUS doğrulanmış durumda', () => {
+    expect(ROSTER_STATUS.ready).toBe(true);
+    expect(ROSTER_STATUS.childCount).toBeGreaterThan(0);
+    expect(ROSTER_STATUS.teacherCount).toBeGreaterThan(0);
+  });
+
+  it('HeroSection doğrulanmış sınıf mevcudunu ve öğretmen sayısını gösterir', () => {
     const { container } = render(<HeroSection />);
     const text = container.textContent ?? '';
-    expect(text).not.toMatch(/sınıflarımızda\s+\d+\s+çocuk var/i);
-    expect(container.querySelectorAll('[data-mark="child"]')).toHaveLength(0);
-    expect(container.querySelectorAll('[data-mark="teacher"]')).toHaveLength(0);
+    expect(text).toContain(String(ROSTER_STATUS.childCount));
+    expect(text).toContain(String(ROSTER_STATUS.teacherCount));
   });
 
-  it('HeroSection, künye kapalıyken de görsel bir sağ sütuna sahiptir (Frame düşer) — hero boş kalmaz', () => {
+  it('HeroSection rakamı yönetmeliğin üst sınırıyla birlikte bağlama oturtur', () => {
     const { container } = render(<HeroSection />);
-    expect(container.querySelector('img')).not.toBeNull();
+    expect(container.textContent ?? '').toContain(String(ROSTER_STATUS.limit));
+  });
+
+  it('HeroSection görsel taşır — bahçe karesi ve mekân kutusu', () => {
+    const { container } = render(<HeroSection />);
+    expect(container.querySelectorAll('img').length).toBeGreaterThanOrEqual(2);
   });
 
   it('HeroSection birincil CTA metni asset dosyası §4.4 ile eşleşir', () => {
@@ -162,19 +193,11 @@ describe('künye doğrulama kapısı — hero, ROSTER_STATUS kapalıyken rakamı
     expect(getByText('Ön Görüşme Randevusu Alın')).toBeDefined();
   });
 
-  it('TrustBar render çıktısı, kapı kapalıyken sınıf mevcudu / öğretmen oranı rakamlarını göstermez', () => {
-    const { container } = render(<TrustBar />);
+  it('HeroSection veli sözünü kaynağıyla birlikte verir — uydurma alıntı taşımaz', () => {
+    const { container } = render(<HeroSection />);
     const text = container.textContent ?? '';
-    expect(text).not.toContain('Sınıf mevcudu');
-    expect(text).not.toContain('Öğretmen başına çocuk');
-    expect(text).not.toMatch(/1\s*:\s*\d/);
-  });
-
-  it('TrustBar, doğrulama gerektirmeyen kalemleri (yıl, yaş grubu) yine de gösterir', () => {
-    const { container } = render(<TrustBar />);
-    const text = container.textContent ?? '';
-    expect(text).toContain('Yaş grubu');
-    expect(text).toMatch(/\d+ yıl/);
+    const quoted = PUBLISHED_TESTIMONIALS.some((item) => text.includes(item.quote));
+    expect(quoted).toBe(true);
   });
 });
 
@@ -217,7 +240,15 @@ describe('mobil kaydırma — gün önizlemesi tek satır yatay kaydırmaya dü�
     expect(ANASAYFA_SRC).not.toMatch(/className="mt-10 grid gap-8 md:grid-cols-3"/);
   });
 
-  it('HeroSection künye kapalıyken görsel yarısı için kısa (wide) bir mobil oran kullanır, dikey 4:5 değil', () => {
-    expect(HERO_SRC).toMatch(/ratio="wide"/);
+  it('hero bento kutuları mobilde tek sütuna iner — çok sütun yalnızca md: ile açılır', () => {
+    // Önek almamış bir grid-cols-* 375 px'te kutuları yan yana sıkıştırır.
+    expect(HERO_SRC).toMatch(/md:grid-cols-\d/);
+    // Önek ayıracı ':' olmayan, yani kayıtsız şartsız uygulanan bir sütun sayısı.
+    expect(HERO_SRC).not.toMatch(/(?<![:\w-])grid-cols-\d/);
+  });
+
+  it('bahçe polaroidleri mobilde yatay kaydırmaya düşer, alt alta yığılmaz', () => {
+    expect(GARDEN_SRC).toMatch(/overflow-x-auto/);
+    expect(GARDEN_SRC).toMatch(/snap-x/);
   });
 });

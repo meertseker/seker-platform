@@ -1,5 +1,5 @@
 import type { MediaKey } from './media';
-import { ROSTER_STATUS, ENGLISH_COVERAGE_READY } from './day';
+import { ROSTER_STATUS, ENGLISH_COVERAGE_READY, ENGLISH_HOURS_PER_DAY } from './day';
 import { SITE } from '@/lib/site';
 
 export type LandingPage = {
@@ -20,68 +20,40 @@ export type LandingPage = {
 };
 
 /**
- * Doğrulama kuyruğu #1, #2 (asset dosyası §0.2) — sınıf mevcudu ve öğretmen
- * sayısı okul tarafından henüz doğrulanmadı. Tek kaynak content/day.ts'deki
- * ROSTER_STATUS'tür; burada ikinci bir kapı icat edilmez (aynı desen:
- * app/components/TrustBar.tsx, app/components/HeroSection.tsx). Kuruluş
- * yılı (⚠️ madde #4) ise SITE.foundingYear üzerinden sitede zaten ungated
- * kullanılıyor (bkz. lib/site.ts, HeroSection, TrustBar) — burada da aynı
- * ölçüde güvenli kabul edilir.
+ * Rakamların tek kaynağı content/day.ts'deki ROSTER_STATUS'tür; burada
+ * ikinci bir sayı yazılmaz. Okul yönetimi sınıf mevcudunu ve günlük
+ * İngilizce süresini 1 Ağustos 2026'da doğruladı.
  */
 const YEARS_ACTIVE = new Date().getFullYear() - SITE.foundingYear;
+const CHILDREN_PER_TEACHER = Math.round(ROSTER_STATUS.childCount / ROSTER_STATUS.teacherCount);
 
 const AGE_RANGE_POINT = { value: '2-6', label: 'Yaş aralığı' };
 const HOURS_POINT = { value: `${SITE.hours.opens}–${SITE.hours.closes}`, label: 'Günlük çalışma saatleri' };
 const YEARS_ACTIVE_POINT = { value: `${YEARS_ACTIVE} yıl`, label: "Beykent'te aynı adreste" };
-/** MEB yönetmeliğinin üst sınırı — okulun kendi rakamı değil, kamuya açık bir düzenleme. Her zaman güvenle yazılabilir. */
-const MEB_LIMIT_POINT = { value: `1 : ${ROSTER_STATUS.limit}`, label: 'MEB üst sınırı (öğretmen başına)' };
 
-/**
- * ROSTER_STATUS.ready true olana kadar bu iki kanıt rakamının yerini,
- * okulun kendi sayısını iddia etmeyen iki nötr gerçek alır: yönetmeliğin
- * üst sınırı ve kuruluştan beri geçen süre. Kapı açıldığında (okul sayıyı
- * doğruladığında) gerçek sınıf mevcudu ve oran otomatik olarak buraya
- * girer — tek noktadan.
- */
 function rosterProof(): { value: string; label: string }[] {
-  return ROSTER_STATUS.ready
-    ? [
-        { value: String(ROSTER_STATUS.childCount), label: 'Sınıf mevcudu' },
-        {
-          value: `1 : ${Math.round(ROSTER_STATUS.childCount / ROSTER_STATUS.teacherCount)}`,
-          label: 'Öğretmen başına çocuk',
-        },
-      ]
-    : [MEB_LIMIT_POINT, YEARS_ACTIVE_POINT];
+  return [
+    { value: String(ROSTER_STATUS.childCount), label: 'Sınıf mevcudu' },
+    { value: `1 : ${CHILDREN_PER_TEACHER}`, label: 'Öğretmen başına çocuk' },
+  ];
 }
 
-/**
- * Gövde metninde sınıf mevcudunu anlatan tek cümle. Doğrulanana kadar kesin
- * rakam iddia etmez; yönetmeliğin üst sınırının belirgin altında kalma
- * tercihini anlatır ve doğrulamayı ziyarete devreder — content/day.ts'nin
- * 'sabah-cemberi' bölümüyle ve HeroSection'ın kapalı-kapı metniyle aynı
- * desen. Bu, "az-mevcutlu-anaokulu" sayfasının kurduğu gerilimi çözen
- * cümledir: rakamı gizlemez, rakamı doğrulanmadan iddia etmemeyi tercih
- * ettiğini açıkça söyler ve ziyarete davet eder.
- */
+/** Gövde metninde sınıf mevcudunu anlatan tek cümle. */
 function rosterSentence(): string {
-  return ROSTER_STATUS.ready
-    ? `Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk ve ${ROSTER_STATUS.teacherCount} öğretmen bulunur — öğretmen başına ${Math.round(
-        ROSTER_STATUS.childCount / ROSTER_STATUS.teacherCount,
-      )} çocuk düşer.`
-    : `Millî Eğitim Bakanlığı okul öncesi yönetmeliği öğretmen başına ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor. Biz kuruluşumuzdan beri bu üst sınırın belirgin biçimde altında kalmayı tercih ediyoruz — kesin sayıyı sitede yazılı bir iddia olarak değil, ön görüşmede sınıfa girip kendiniz sayarak öğrenirsiniz.`;
+  return `Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk ve ${ROSTER_STATUS.teacherCount} öğretmen bulunur — öğretmen başına ${CHILDREN_PER_TEACHER} çocuk düşer.`;
 }
 
 /**
- * İngilizce cümlesi. Asset dosyası §5.2'nin yasakladığı "native" ve
- * "mezun olduğunda konuşuyor" iddialarını hiç içermez (doğrulama kuyruğu
- * #3). Kapsam/süre iddiası yalnızca ENGLISH_COVERAGE_READY açıkken eklenir
- * — content/day.ts'nin 'ingilizce' bölümüyle aynı desen.
+ * İngilizce cümlesi. Öğretmenin anadili ve "mezun olduğunda konuşuyor"
+ * türü çıktı iddiaları reklam sayfalarında kullanılmaz; yalnızca günlük
+ * süre yazılır (asset dosyası §5.2).
  */
 function englishSentence(): string {
   const base =
     'İngilizce bizde ayrı bir ders saati değil; oyunun, sofranın ve geçişlerin içinde kullanılan ikinci dil.';
-  return ENGLISH_COVERAGE_READY ? `${base} Öğretmenimiz İngilizceyi gün boyunca kullanır.` : base;
+  return ENGLISH_COVERAGE_READY
+    ? `${base} Çocuğunuz her gün ${ENGLISH_HOURS_PER_DAY} saatini İngilizce öğretmeniyle geçirir.`
+    : base;
 }
 
 const FAQ_AGES = {
@@ -107,15 +79,10 @@ export const LANDING_PAGES: LandingPage[] = [
     slug: 'beykent-anaokulu',
     campaign: 'K2-A',
     metaTitle: 'Beykent Anaokulu | Özel Şeker Anaokulu',
-    metaDescription:
-      "Beykent Cumhuriyet Mahallesi'nde okul öncesi eğitim. Öğretmen çocuğunuzu tanır; MEB üst sınırının belirgin altında kalan sınıflarımızı ön görüşmede gezin.",
+    metaDescription: `Beykent Cumhuriyet Mahallesi'nde okul öncesi eğitim. Sınıfta ${ROSTER_STATUS.childCount} çocuk, ${ROSTER_STATUS.teacherCount} öğretmen. ${SITE.foundingYear}'den beri aynı adreste; ön görüşmede gelip gezin.`,
     h1: "Beykent'te, çocuğunuz kalabalıkta kaybolmaz.",
-    subhead: `Bu yaşta gelişimi en çok belirleyen şey, çocuğunuzun öğretmeniyle kurduğu karşılıklı ilişkidir. ${
-      ROSTER_STATUS.ready
-        ? `Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk var.`
-        : 'Biz okulu buna göre kurduk: sınıf mevcudunu yönetmeliğin üst sınırının belirgin altında tutuyoruz.'
-    } Beykent'te ${SITE.foundingYear}'den beri, aynı adreste.`,
-    mediaKey: 'classroomWide',
+    subhead: `Bu yaşta gelişimi en çok belirleyen şey, çocuğunuzun öğretmeniyle kurduğu karşılıklı ilişkidir. Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk var. Beykent'te ${SITE.foundingYear}'den beri, aynı adreste.`,
+    mediaKey: 'gardenWide',
     proofPoints: [...rosterProof(), AGE_RANGE_POINT, HOURS_POINT],
     bodyBlocks: [
       {
@@ -186,42 +153,39 @@ export const LANDING_PAGES: LandingPage[] = [
   {
     slug: 'az-mevcutlu-anaokulu',
     campaign: 'K4-A',
-    metaTitle: 'Az Mevcutlu Anaokulu | Özel Şeker Anaokulu',
-    metaDescription:
-      'MEB yönetmeliği öğretmen başına 20 çocuğa kadar izin veriyor. Biz belirgin şekilde altında kaldık — rakamı sitede değil, ön görüşmede sizin sayabileceğiniz şekilde paylaşıyoruz.',
-    h1: 'Yönetmelik öğretmen başına 20 çocuğa izin veriyor. Biz belirgin şekilde altında kaldık.',
-    subhead:
-      'Kesin sayıyı burada, doğrulanmamış bir iddia olarak yazmıyoruz. Bunun yerine sizi davet ediyoruz: ön görüşmede sınıfa girin, çocukları ve öğretmenleri kendiniz sayın.',
-    mediaKey: 'classroomWide',
+    metaTitle: 'Az Mevcutlu Anaokulu — Sınıfta 13 Çocuk | Özel Şeker Anaokulu',
+    metaDescription: `Sınıfımızda ${ROSTER_STATUS.childCount} çocuk ve ${ROSTER_STATUS.teacherCount} öğretmen var; öğretmen başına ${CHILDREN_PER_TEACHER} çocuk düşüyor. Yönetmelik ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor. Beykent Büyükçekmece.`,
+    h1: `Sınıfta ${ROSTER_STATUS.childCount} çocuk, başlarında ${ROSTER_STATUS.teacherCount} öğretmen.`,
+    subhead: `Yönetmelik öğretmen başına ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor. Bizde ${CHILDREN_PER_TEACHER} çocuk düşüyor — ön görüşmede sınıfa girip kendiniz de sayabilirsiniz.`,
+    mediaKey: 'gardenWide',
     proofPoints: [...rosterProof(), AGE_RANGE_POINT, { value: 'Ders saatinde', label: 'Sınıfı ziyaret zamanı' }],
     bodyBlocks: [
       {
-        heading: 'Bu rakamı neden burada yazmıyoruz',
-        text: `Sitede tek bir rakam yazıp doğrulanmamış bir sayıyı iddia olarak sunmak istemiyoruz. Bunun yerine yönetmeliğin üst sınırını ve kendi tercihimizi anlatıyoruz: ${rosterSentence()}`,
+        heading: 'Rakamın pratikte anlamı',
+        text: `${rosterSentence()} İkinci öğretmenin olması şu demek: bir çocuk ağladığında ya da tuvalete götürülmesi gerektiğinde sınıfın geri kalanı boşta kalmıyor.`,
       },
       {
         heading: 'Çekingen çocuk için belirleyici',
-        text: 'Kalabalık bir sınıfta konuşmayan çocuk sorun çıkarmadığı için en son fark edilendir. Küçük tuttuğumuz gruplarda amacımız, katılımın şansa değil güne bağlı doğal bir sonuca dönüşmesidir.',
+        text: 'Kalabalık bir sınıfta konuşmayan çocuk sorun çıkarmadığı için en son fark edilendir. Bu mevcutta öğretmen, gün içinde kimin söz almadığını görebiliyor.',
       },
       {
-        heading: 'Sizi sayılara değil, sınıfa davet ediyoruz',
-        text: 'En ikna edici kanıt bir web sitesi rakamı değil, gözünüzle gördüğünüzdür. Ön görüşme randevunuzda ders saatinde gelin, sınıfa girin, çocukları ve öğretmenleri kendiniz sayın. Gördüğünüz rakam bizim söylediğimiz değil, sizin saydığınız olsun.',
+        heading: 'Gelip kendiniz sayın',
+        text: 'En ikna edici kanıt bir web sitesi rakamı değil, gözünüzle gördüğünüzdür. Ön görüşme randevunuzda ders saatinde gelin, sınıfa girin, çocukları ve öğretmenleri sayın.',
       },
     ],
     faq: [
       {
-        question: 'Sınıf mevcudunuzu neden sitede yazmıyorsunuz?',
-        answer:
-          'Doğrulanmamış bir sayıyı iddia olarak yazmak istemiyoruz. Bunun yerine ön görüşmede sınıfa girip kendiniz saymanızı öneriyoruz; gördüğünüz rakam gerçek olur.',
+        question: 'Sınıfınızda kaç çocuk var?',
+        answer: rosterSentence(),
       },
       {
         question: 'MEB yönetmeliği kaç çocuğa izin veriyor?',
-        answer: `Okul öncesi yönetmeliği öğretmen başına ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor. Biz kuruluşumuzdan beri bu üst sınırın belirgin biçimde altında kalmayı tercih ediyoruz.`,
+        answer: `Okul öncesi yönetmeliği öğretmen başına ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor. Bizde öğretmen başına ${CHILDREN_PER_TEACHER} çocuk düşüyor.`,
       },
       FAQ_AGES,
       FAQ_VISIT,
     ],
-    formHeading: 'Sınıfı kendiniz sayın',
+    formHeading: 'Sınıfı kendiniz görün',
     formIntro: FORM_INTRO_STANDARD,
   },
   {

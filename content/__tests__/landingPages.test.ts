@@ -71,31 +71,26 @@ describe('LANDING_PAGES', () => {
  * doğrulamadan biri unutup true yaparsa veya birisi metne doğrulanmamış bir
  * rakam yapıştırırsa bu blok kırmızı olur.
  */
-describe('LANDING_PAGES — 🔴 doğrulanmamış iddialar kapı disiplinine uyar', () => {
-  it('ROSTER_STATUS henüz hazır değil (doğrulama kuyruğu #1, #2)', () => {
-    expect(ROSTER_STATUS.ready).toBe(false);
+describe('LANDING_PAGES — rakamlar tek kaynaktan, aşırı iddia yok', () => {
+  it('okul sınıf mevcudunu doğruladı (1 Ağustos 2026)', () => {
+    expect(ROSTER_STATUS.ready).toBe(true);
   });
 
-  it('ENGLISH_COVERAGE_READY henüz hazır değil (doğrulama kuyruğu #3)', () => {
-    expect(ENGLISH_COVERAGE_READY).toBe(false);
+  it('okul günlük İngilizce kapsamını doğruladı', () => {
+    expect(ENGLISH_COVERAGE_READY).toBe(true);
   });
 
-  it.each(LANDING_PAGES)('$slug ROSTER_STATUS kapalıyken kanıt rakamlarında sınıf mevcudunu iddia etmez', (page) => {
-    const claimsChildCount = page.proofPoints.some((p) => p.label === 'Sınıf mevcudu');
-    const claimsRatio = page.proofPoints.some((p) => p.label === 'Öğretmen başına çocuk');
-    expect(claimsChildCount).toBe(ROSTER_STATUS.ready);
-    expect(claimsRatio).toBe(ROSTER_STATUS.ready);
+  it.each(LANDING_PAGES)('$slug kanıt rakamlarında doğrulanmış sınıf mevcudunu taşır', (page) => {
+    expect(page.proofPoints.some((p) => p.label === 'Sınıf mevcudu')).toBe(true);
+    expect(page.proofPoints.some((p) => p.label === 'Öğretmen başına çocuk')).toBe(true);
   });
 
-  it.each(LANDING_PAGES)('$slug metninde kesin sınıf/öğretmen sayısı doğrulanmadan iddia edilmez (kuyruk #1, #2)', (page) => {
+  it.each(LANDING_PAGES)('$slug sınıf mevcudunu ROSTER_STATUS dışında bir rakamla yazmaz', (page) => {
     const text = JSON.stringify(page).toLowerCase();
-    // MEB'in yönetmelik üst sınırı (20) nötr bir kamu bilgisidir ve
-    // yazılabilir; okulun kendi rakamı (örn. "10 çocuk", "öğretmen başına
-    // beş/5") ROSTER_STATUS.ready olmadan hiçbir yerde geçmez.
+    // Eski taslakların bıraktığı rakamlar. Tek kaynak content/day.ts'dir;
+    // metne elle yazılmış bir mevcut sızarsa bu blok kırmızı olur.
     expect(text).not.toMatch(/\b10\s+çocuk\b/);
     expect(text).not.toMatch(/öğretmen başına (beş|5)\b/);
-    expect(text).not.toMatch(/\bsınıfta iki öğretmen\b/);
-    expect(text).not.toMatch(/\biki öğretmen (var|bulunur|bulunması)\b/);
   });
 
   it.each(LANDING_PAGES)('$slug "native" veya desteklenemeyen mezuniyet iddiası içermez (asset dosyası §5.2, kuyruk #3)', (page) => {
@@ -108,8 +103,10 @@ describe('LANDING_PAGES — 🔴 doğrulanmamış iddialar kapı disiplinine uya
     expect(text).not.toContain('bilingual');
   });
 
-  it.each(LANDING_PAGES)('$slug ENGLISH_COVERAGE_READY kapalıyken öğretmenin günlük İngilizce kapsamını iddia etmez', (page) => {
+  it.each(LANDING_PAGES)('$slug İngilizce kapsamını doğrulanmış süreden fazlasıyla anlatmaz', (page) => {
     const text = JSON.stringify(page).toLowerCase();
+    // Okulun doğruladığı şey günde iki saat; "gün boyu" bunun ötesinde
+    // bir iddiadır ve reklam sayfasında yazılmaz.
     expect(text).not.toMatch(/gün boyunca kullan/);
     expect(text).not.toContain('sadece ders saatinde değil');
   });
@@ -146,13 +143,23 @@ describe('LANDING_PAGES — 🔴 doğrulanmamış iddialar kapı disiplinine uya
     expect(text).not.toMatch(/ilk (üç|3|iki|2) gün/);
   });
 
-  it('az-mevcutlu-anaokulu gerilimi görmezden gelmez: rakamı doğrulanmadan iddia etmediğini açıkça anlatır', () => {
+  it('az-mevcutlu-anaokulu rakamı açıkça verir ve yönetmelik sınırıyla karşılaştırır', () => {
     const page = getLandingPage('az-mevcutlu-anaokulu')!;
     const text = JSON.stringify(page).toLowerCase();
-    // Sayfa, doğrulanmamış "10 çocuk" iddiası yazmak yerine MEB üst
-    // sınırını ve ziyarete davet çerçevesini kullanır — bkz. rosterSentence().
-    expect(text).toContain('meb');
+    expect(page.h1).toContain(String(ROSTER_STATUS.childCount));
+    expect(text).toContain(String(ROSTER_STATUS.limit));
+    // Sayfa hâlâ ziyarete davet eder; iddia yerine sayılabilir kanıt sunar.
     expect(text).toMatch(/kendiniz say/);
-    expect(text).not.toMatch(/\b10\s+çocuk\b/);
+  });
+
+  it('hiçbir sayfa rakamı yazmamayı gerekçelendiren meta-anlatı taşımaz', () => {
+    // Sitenin kendi epistemolojisini anlatması velinin işine yaramıyor;
+    // bu cümleler "yazan bir insan yok" hissinin ana kaynağıydı.
+    for (const page of LANDING_PAGES) {
+      const text = JSON.stringify(page).toLowerCase();
+      expect(text, page.slug).not.toMatch(/doğrulanmamış/);
+      expect(text, page.slug).not.toMatch(/neden (burada )?yazmıyoruz/);
+      expect(text, page.slug).not.toMatch(/iddia olarak (sunmak|yazmak)/);
+    }
   });
 });

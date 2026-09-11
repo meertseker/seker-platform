@@ -9,9 +9,11 @@ describe('veli yorumları', () => {
     }
   });
 
-  it('tam isim yerine kısaltma kullanır (KVKK)', () => {
+  it('soyadı açık yazılmaz (KVKK) — ya yalnızca ad, ya ad + kısaltılmış soyadı', () => {
     for (const item of TESTIMONIALS) {
-      expect(item.author).toMatch(/\.$/);
+      // Kabul edilen: "Emre", "Arzu Ö.", "Gizem K.Ç."
+      // Reddedilen: "Arzu Öztürk" gibi açık soyadı taşıyan her biçim.
+      expect(item.author, item.id).toMatch(/^\p{Lu}\p{Ll}+(?: (?:\p{Lu}\.)+)?$/u);
     }
   });
 });
@@ -33,7 +35,9 @@ describe('veli yorumları yayın güvenliği', () => {
   });
 
   it('hazır olmayan taslaklar TESTIMONIALS içinde korunur ama yayınlanmaz', () => {
-    expect(TESTIMONIALS.length).toBeGreaterThan(PUBLISHED_TESTIMONIALS.length);
+    // Şu an bütün yorumlar Google'da herkese açık ve yayına uygun; taslak
+    // kalmadığında liste eşitlenir. Kapı yine de çalışır durumda kalmalı.
+    expect(TESTIMONIALS.length).toBeGreaterThanOrEqual(PUBLISHED_TESTIMONIALS.length);
     for (const item of TESTIMONIALS.filter((t) => !t.ready)) {
       expect(PUBLISHED_TESTIMONIALS).not.toContain(item);
     }

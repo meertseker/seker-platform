@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AGE_GROUPS_CONTENT, getAgeGroup } from '../ageGroups';
+import { ROSTER_STATUS } from '../day';
 
 describe('ageGroups içeriği', () => {
   it('dört yaş grubu tanımlar (2-6 yaş)', () => {
@@ -11,10 +12,10 @@ describe('ageGroups içeriği', () => {
     expect(slugs).toEqual(['2-3-yas', '3-4-yas', '4-5-yas', '5-6-yas']);
   });
 
-  it('her grup sınıf mevcudunu 10 çocuk / 2 öğretmen olarak belirtir', () => {
+  it('her grup sınıf mevcudunu tek kaynaktan (ROSTER_STATUS) alır, rakamı kendi yazmaz', () => {
     for (const group of AGE_GROUPS_CONTENT) {
-      expect(group.classSize).toContain('10');
-      expect(group.classSize).toContain('2 öğretmen');
+      expect(group.classSize).toContain(String(ROSTER_STATUS.childCount));
+      expect(group.classSize).toContain(`${ROSTER_STATUS.teacherCount} öğretmen`);
     }
   });
 

@@ -15,7 +15,11 @@ export function buildMetadata({
   noindex?: boolean;
 }): Metadata {
   const url = `${SITE.url}${path === '/' ? '' : path}`;
-  const fullTitle = title === SITE.name ? title : `${title} | ${SITE.name}`;
+  // Çağıran taraf soneki kendi yazmışsa iki kez eklenmesin; aksi hâlde
+  // başlık arama sonucunda kırpılıyor.
+  const suffix = ` | ${SITE.name}`;
+  const base = title.endsWith(suffix) ? title.slice(0, -suffix.length) : title;
+  const fullTitle = base === SITE.name ? SITE.name : `${base}${suffix}`;
 
   return {
     title: fullTitle,

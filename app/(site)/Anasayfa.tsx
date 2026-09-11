@@ -2,7 +2,7 @@ import React from 'react'
 import Link from 'next/link'
 import Header from '@/app/components/Header'
 import HeroSection from '@/app/components/HeroSection'
-import TrustBar from '@/app/components/TrustBar'
+import GardenSection from '@/app/components/GardenSection'
 import Frame from '@/app/components/cine/Frame'
 import Timecode from '@/app/components/cine/Timecode'
 import FeaturesSection from '@/app/components/FeaturesSection'
@@ -19,10 +19,9 @@ const Anasayfa = () => {
       <Header />
 
       <HeroSection />
-      <TrustBar />
 
       {/* Günün üç sahnesi — tam anlatı /gunluk-akis sayfasında */}
-      <section className="mx-auto max-w-6xl px-6 py-6 md:py-16">
+      <section className="mx-auto max-w-6xl px-6 py-8 md:py-16">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <Timecode>Bir günümüz</Timecode>
@@ -75,6 +74,9 @@ const Anasayfa = () => {
 
       {/* Form, günün önizlemesinden hemen sonra — ilk kaydırmada erişilebilir olmalı */}
       <ContactSection />
+
+      {/* Okulun kendi bahçe ve atölye kareleri — formu geçenler için derin kanıt */}
+      <GardenSection />
 
       <FeaturesSection />
       <ActivitiesSection />
