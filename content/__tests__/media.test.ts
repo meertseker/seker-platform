@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { MEDIA, pendingShootAssets } from '../media';
 
@@ -20,13 +20,66 @@ describe('MEDIA kataloğu', () => {
     expect(asset.height).toBeGreaterThan(0);
   });
 
-  it('sınıf geniş açı görseli tanımlı — hero ve LP zorunlu varlığı', () => {
-    expect(MEDIA.classroomWide).toBeDefined();
+  it('bahçe geniş açı görseli tanımlı — hero, OG ve LP zorunlu varlığı', () => {
+    expect(MEDIA.gardenWide).toBeDefined();
   });
 
   it('pendingShootAssets yalnızca stok işaretlileri döndürür', () => {
     for (const key of pendingShootAssets()) {
       expect(MEDIA[key].status).toBe('stok');
     }
+  });
+});
+
+/**
+ * Sitede bir dönem filigranı silinmiş 16 lisanssız Shutterstock önizlemesi
+ * yayındaydı (IMAGE-LICENSES.md her birinin Image ID'sini listeler).
+ * Hepsi kaldırıldı. Bu blok geri gelmelerini engeller.
+ */
+describe('lisanssız stok görsel yasağı', () => {
+  const STOCK_FILES = [
+    'cocukklar', 'montesori', 'art', 'seramik', 'robotic', 'satranc',
+    'yuzme', 'muzik', 'drama', 'dans', 'binincilik', 'psikolog',
+    'motorskills', 'sportiffaaliyetler', 'beden', 'yazaktiviteleri',
+  ];
+
+  it('MEDIA kataloğunda stok işaretli görsel kalmadı', () => {
+    expect(pendingShootAssets()).toEqual([]);
+  });
+
+  it('her MEDIA kaydı okulun kendi çekimi', () => {
+    for (const [key, asset] of entries) {
+      expect(asset.status, key).toBe('okul');
+    }
+  });
+
+  it.each(STOCK_FILES)('public/%s.webp silinmiş durumda', (name) => {
+    expect(existsSync(path.join(PUBLIC_DIR, `${name}.webp`))).toBe(false);
+  });
+
+  it('kaynak kodda hiçbir stok dosyaya referans kalmadı', () => {
+    const roots = ['app', 'content', 'lib'];
+    const offenders: string[] = [];
+
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+          walk(full);
+          continue;
+        }
+        if (!/\.(ts|tsx)$/.test(entry.name)) continue;
+        const source = readFileSync(full, 'utf8');
+        for (const name of STOCK_FILES) {
+          if (source.includes(`/${name}.webp`)) {
+            offenders.push(`${path.relative(process.cwd(), full)} → /${name}.webp`);
+          }
+        }
+      }
+    };
+
+    for (const root of roots) walk(path.join(process.cwd(), root));
+    expect(offenders).toEqual([]);
   });
 });

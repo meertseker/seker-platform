@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import React from 'react'
 import Header from '@/app/components/Header'
 import PageHero from '@/app/components/PageHero'
@@ -54,8 +54,8 @@ const HakkimizdaPage = () => {
             description="Çocukların doğal meraklarını körükleyerek, yaratıcılıklarını geliştirmek ve sosyal becerilerini güçlendirmek. Her çocuğun bireysel özelliklerini keşfetmesine yardımcı olarak, onları hayata hazırlamak. Modern eğitim yaklaşımları ile geleneksel değerleri harmanlayarak, çocuklarımızın hem akademik hem de kişisel gelişimlerini desteklemek."
             buttonText="İletişim"
             buttonLink="/iletisim"
-            imageSrc="/cocukklar.webp"
-            imageAlt="Şeker Anaokulu sınıfında çocuklar"
+            imageSrc="/bahce-genis.webp"
+            imageAlt="Şeker Anaokulu bahçesi: çim alan, ağaçlar, ahşap oyun evi ve piknik masası"
             imagePosition="right"
             accent="mint"
           />
@@ -63,8 +63,8 @@ const HakkimizdaPage = () => {
           {/* Center Image */}
           <div className="my-16 text-center md:hidden">
             <Image
-              src="/montesori.webp"
-              alt="Montessori materyaliyle çalışan çocuk"
+              src="/mutfak-atolyesi.webp"
+              alt="Bahçedeki ahşap oyun mutfağı: tencereler, kepçeler ve kara tahta"
               className="mx-auto rounded-3xl shadow-lg shadow-ink/10"
               width={300}
               height={200}
@@ -77,8 +77,8 @@ const HakkimizdaPage = () => {
               description="Türkiye'nin en kaliteli okul öncesi eğitim kurumu olmak. Çocukların potansiyellerini en üst düzeyde kullanabilecekleri, özgüven sahibi, yaratıcı, problem çözme becerileri gelişmiş bireyler yetiştirebilmek. Ailelerin güvenle tercih ettiği, çocukların sevgi ile hatırladığı bir eğitim yuva olmak."
               buttonText="Aktivitelerimiz"
               buttonLink="/aktiviteler"
-              imageSrc="/art.webp"
-              imageAlt="Sanat atölyesinde çalışma"
+              imageSrc="/bahce-atolyeler.webp"
+              imageAlt="Bahçedeki ahşap mutfak atölyesi, açık hava sınıfı ve ağacı çevreleyen oturma bankı"
               imagePosition="left"
               accent="bubble"
             />

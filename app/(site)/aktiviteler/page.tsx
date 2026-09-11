@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import React, { useState } from 'react'
 import Header from '@/app/components/Header'
 import PageHero from '@/app/components/PageHero'
@@ -9,10 +9,12 @@ type AktiviteType = {
   id: number;
   başlık: string;
   açıklama: string;
-  resim: string;
   özellikler: string[];
   yaşGrubu: string;
 };
+
+/** Kart başlık bloklarının zemin sırası — sitenin aksan renkleri. */
+const BANDS = ['band-bubble', 'band-sunny', 'band-mint', 'band-sky', 'band-grape'];
 
 type MevsimType = "kış" | "yaz";
 
@@ -32,7 +34,6 @@ const Aktiviteler = () => {
         id: 1,
         başlık: "Robotik Kodlama",
         açıklama: "Çocukların problem çözme ve mantıksal düşünme yeteneklerini geliştiren, eğlenceli robotik kodlama atölyeleri.",
-        resim: "/robotic.webp",
         özellikler: ["Algoritmik düşünme", "Problem çözme becerileri", "Yaratıcı düşünme", "Takım çalışması"],
         yaşGrubu: "3-6 yaş"
       },
@@ -40,7 +41,6 @@ const Aktiviteler = () => {
         id: 2,
         başlık: "Seramik",
         açıklama: "El becerilerini ve üç boyutlu düşünme yeteneğini geliştiren, çocukların kendi eserlerini yarattığı seramik atölyeleri.",
-        resim: "/seramik.webp",
         özellikler: ["İnce motor becerileri", "Yaratıcı ifade", "Doku algısı", "Sabır ve odaklanma"],
         yaşGrubu: "3-6 yaş"
       },
@@ -48,7 +48,6 @@ const Aktiviteler = () => {
         id: 3,
         başlık: "Görsel Sanatlar",
         açıklama: "Farklı sanat teknikleri ve malzemeleriyle çocukların kendilerini ifade etmelerini sağlayan görsel sanatlar etkinlikleri.",
-        resim: "/art.webp",
         özellikler: ["Renk algısı", "Kompozisyon", "Sanatsal ifade", "El-göz koordinasyonu"],
         yaşGrubu: "3-6 yaş"
       },
@@ -56,7 +55,6 @@ const Aktiviteler = () => {
         id: 4,
         başlık: "Bale ve Dans",
         açıklama: "Vücut koordinasyonu, ritim duygusu ve özgüven geliştiren, eğlenceli bale ve dans dersleri.",
-        resim: "/dans.webp",
         özellikler: ["Ritim duygusu", "Denge ve koordinasyon", "Esneklik", "Sahne özgüveni"],
         yaşGrubu: "3-6 yaş"
       },
@@ -64,7 +62,6 @@ const Aktiviteler = () => {
         id: 5,
         başlık: "Müzik ve Ritim",
         açıklama: "Çocukların müzikal zekalarını ve ritim duygularını geliştiren, çeşitli enstrümanlarla tanıştıkları müzik dersleri.",
-        resim: "/muzik.webp",
         özellikler: ["Ses algısı", "Ritim yeteneği", "Müzikal ifade", "Dinleme becerisi"],
         yaşGrubu: "3-6 yaş"
       },
@@ -72,7 +69,6 @@ const Aktiviteler = () => {
         id: 6,
         başlık: "Drama",
         açıklama: "Kendini ifade etme, empati ve sosyal beceriler kazandıran, yaratıcı drama etkinlikleri.",
-        resim: "/drama.webp",
         özellikler: ["Empati", "Kendini ifade etme", "Rol yapma", "Sosyal beceriler"],
         yaşGrubu: "3-6 yaş"
       },
@@ -80,7 +76,6 @@ const Aktiviteler = () => {
         id: 7,
         başlık: "Montessori Aktiviteleri",
         açıklama: "Montessori felsefesine uygun, çocukların bağımsız öğrenmelerini destekleyen, özel tasarlanmış materyallerle aktiviteler.",
-        resim: "/montesori.webp",
         özellikler: ["Bağımsız öğrenme", "Pratik yaşam becerileri", "Düzen ve disiplin", "Odaklanma"],
         yaşGrubu: "3-6 yaş"
       },
@@ -88,7 +83,6 @@ const Aktiviteler = () => {
         id: 8,
         başlık: "Satranç",
         açıklama: "Stratejik düşünme, planlama ve konsantrasyon becerilerini geliştiren, eğlenceli satranç dersleri.",
-        resim: "/satranc.webp",
         özellikler: ["Stratejik düşünme", "Planlama", "Sabır", "Analitik zeka"],
         yaşGrubu: "3-6 yaş"
       },
@@ -96,7 +90,6 @@ const Aktiviteler = () => {
         id: 9,
         başlık: "Beden Eğitimi",
         açıklama: "Çocukların fiziksel gelişimlerini destekleyen, temel motor becerileri geliştiren, eğlenceli spor etkinlikleri.",
-        resim: "/beden.webp",
         özellikler: ["Temel motor beceriler", "Dayanıklılık", "Koordinasyon", "Takım ruhu"],
         yaşGrubu: "3-6 yaş"
       },
@@ -104,7 +97,6 @@ const Aktiviteler = () => {
         id: 10,
         başlık: "Beceri Koordinasyon",
         açıklama: "İnce ve kaba motor becerileri geliştiren, el-göz koordinasyonunu güçlendiren özel tasarlanmış aktiviteler.",
-        resim: "/motorskills.webp",
         özellikler: ["El-göz koordinasyonu", "Denge", "Hassas motor beceriler", "Vücut farkındalığı"],
         yaşGrubu: "3-6 yaş"
       },
@@ -112,7 +104,6 @@ const Aktiviteler = () => {
         id: 11,
         başlık: "Psikolog ile Oyun Saati",
         açıklama: "Uzman psikolog eşliğinde, çocukların duygusal ve sosyal gelişimlerini destekleyen terapi oyunları.",
-        resim: "/psikolog.webp",
         özellikler: ["Duygusal ifade", "Sosyal beceriler", "Problem çözme", "Özgüven geliştirme"],
         yaşGrubu: "3-6 yaş"
       }
@@ -122,7 +113,6 @@ const Aktiviteler = () => {
         id: 12,
         başlık: "Yaz Okulu Aktiviteleri",
         açıklama: "Yaz boyunca çocukların eğlenerek öğrenmeye devam etmelerini sağlayan, zengin içerikli yaz okulu programı.",
-        resim: "/yazaktiviteleri.webp",
         özellikler: ["Eğlenceli öğrenme", "Sosyal etkileşim", "Yaratıcı etkinlikler", "Açık hava aktiviteleri"],
         yaşGrubu: "3-6 yaş"
       },
@@ -130,7 +120,6 @@ const Aktiviteler = () => {
         id: 13,
         başlık: "Binicilik",
         açıklama: "Çocukların atlarla bağ kurarak sorumluluk, güven ve denge becerilerini geliştirdiği binicilik dersleri.",
-        resim: "/binincilik.webp",
         özellikler: ["Denge ve duruş", "Hayvan sevgisi", "Sorumluluk bilinci", "Özgüven"],
         yaşGrubu: "3-6 yaş"
       },
@@ -138,7 +127,6 @@ const Aktiviteler = () => {
         id: 14,
         başlık: "Yüzme",
         açıklama: "Profesyonel eğitmenler eşliğinde, su korkusunu yenme ve temel yüzme becerilerini kazandıran yüzme dersleri.",
-        resim: "/yuzme.webp",
         özellikler: ["Su güvenliği", "Temel yüzme teknikleri", "Nefes kontrolü", "Fiziksel dayanıklılık"],
         yaşGrubu: "3-6 yaş"
       },
@@ -146,7 +134,6 @@ const Aktiviteler = () => {
         id: 15,
         başlık: "Sportif Faaliyetler",
         açıklama: "Açık havada gerçekleştirilen, çocukların enerjilerini pozitif bir şekilde harcamalarını sağlayan çeşitli spor aktiviteleri.",
-        resim: "/sportiffaaliyetler.webp",
         özellikler: ["Takım çalışması", "Koordinasyon", "Motor beceriler", "Sosyal etkileşim"],
         yaşGrubu: "3-6 yaş"
       }
@@ -238,29 +225,23 @@ const Aktiviteler = () => {
             </h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {aktiviteler[mevsim].map((aktivite) => (
+              {aktiviteler[mevsim].map((aktivite, index) => (
                 <div 
                   key={aktivite.id} 
                   className={`bg-white rounded-3xl shadow-sm overflow-hidden cursor-pointer transition-transform duration-300 hover:shadow-lg hover:-translate-y-1 ${seçiliAktivite.id === aktivite.id ? "ring-2 ring-grape" : ""}`}
                   onClick={() => aktiviteSeç(aktivite)}
                 >
-                  {/* Aktivite Resmi */}
-                  <div className="relative h-48 bg-paper-warm">
-                    <Image
-                      src={aktivite.resim || "/cocukklar.webp"}
-                      alt={aktivite.başlık}
-                      className="object-cover w-full h-full"
-                      width={400}
-                      height={300}
-                    />
-                    <div className="absolute top-3 right-3 bg-white rounded-full px-3 py-1 text-xs font-medium text-ink">
+                  {/* Atölyelerin okul çekimi henüz yok; kart fotoğraf
+                      yerine renkli bir başlık bloğuyla açılıyor. */}
+                  <div className={`relative flex h-40 items-end p-5 ${BANDS[index % BANDS.length]}`}>
+                    <div className="absolute top-3 right-3 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-ink">
                       {aktivite.yaşGrubu}
                     </div>
+                    <h3 className="font-display text-2xl leading-tight text-white">{aktivite.başlık}</h3>
                   </div>
                   
                   {/* Aktivite Bilgileri */}
                   <div className="p-5">
-                    <h3 className="text-lg font-bold text-ink mb-2">{aktivite.başlık}</h3>
                     <p className="text-ink-soft text-sm line-clamp-2">{aktivite.açıklama}</p>
                     
                     <div className="mt-4 flex justify-between items-center">
@@ -284,19 +265,15 @@ const Aktiviteler = () => {
           <div className="container mx-auto px-4 md:px-6">
             <div className="bg-white rounded-3xl shadow-lg shadow-ink/5 overflow-hidden">
               <div className="grid grid-cols-1 md:grid-cols-2">
-                {/* Aktivite Resmi */}
-                <div className="relative h-80 md:h-auto bg-paper-warm">
-                  <Image
-                    src={seçiliAktivite.resim || "/cocukklar.webp"}
-                    alt={seçiliAktivite.başlık}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    width={600}
-                    height={600}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                  <div className="absolute bottom-4 left-4 bg-white rounded-lg px-3 py-1 text-sm font-medium text-ink">
+                {/* Seçilen atölyenin başlık bloğu. Atölye içinden okul
+                    çekimi geldiğinde buraya fotoğraf girecek. */}
+                <div className="relative flex h-64 items-end p-8 md:h-auto band-grape">
+                  <div className="absolute right-4 top-4 rounded-full bg-white/95 px-3 py-1 text-sm font-medium text-ink">
                     {seçiliAktivite.yaşGrubu}
                   </div>
+                  <p className="font-display text-3xl leading-tight text-white md:text-4xl">
+                    {seçiliAktivite.başlık}
+                  </p>
                 </div>
                 
                 {/* Aktivite Bilgileri */}

@@ -118,7 +118,7 @@ export const LANDING_PAGES: LandingPage[] = [
       "Beykent'te, Beylikdüzü'ne yakın bir anaokulu. Hizmet bölgemiz Beylikdüzü'nü kapsar; servis ihtiyacınızı ön görüşmede birlikte planlıyoruz.",
     h1: "Beylikdüzü'ne yakın, Beykent'te bir anaokulu.",
     subhead: `Hizmet bölgemiz Beylikdüzü'nü de kapsar. Servis ihtiyacınız varsa güzergâhı ve saatleri adresinize göre ön görüşmede birlikte planlıyoruz.`,
-    mediaKey: 'sports',
+    mediaKey: 'gardenWorkshops',
     proofPoints: [...rosterProof(), AGE_RANGE_POINT, { value: String(SITE.areaServed.length), label: 'Hizmet verdiğimiz bölge sayısı' }],
     bodyBlocks: [
       {
@@ -197,7 +197,7 @@ export const LANDING_PAGES: LandingPage[] = [
     h1: 'Kreş değil, anaokulu. İki yaşından itibaren.',
     subhead:
       'İki yaş, çocuğun aileden ilk kez ayrıldığı dönemdir. Bu yaşta önceliğimiz akademik kazanım değil, güvenli bağlanma ve çocuğunuzun kendi temposunda uyum sağlamasıdır.',
-    mediaKey: 'motorSkills',
+    mediaKey: 'giraffesGarden',
     proofPoints: [...rosterProof(), { value: '2', label: 'Başlangıç yaşı' }, HOURS_POINT],
     bodyBlocks: [
       {
@@ -241,7 +241,7 @@ export const LANDING_PAGES: LandingPage[] = [
     h1: 'Ücreti belirleyen unsurlar',
     subhead:
       'Ücreti sitede yayımlamıyoruz; sebebi saklamak değil, bir rakamın tek başına neyin karşılığı olduğunu anlatamamasıdır. Aşağıda neyin neyi belirlediğini anlatıyoruz; net rakamı ön görüşmede paylaşıyoruz.',
-    mediaKey: 'montessori',
+    mediaKey: 'mudKitchen',
     proofPoints: [...rosterProof(), AGE_RANGE_POINT, { value: '2026-2027', label: 'Eğitim yılı' }],
     bodyBlocks: [
       {

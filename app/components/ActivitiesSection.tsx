@@ -1,19 +1,19 @@
-import Image from 'next/image'
 import Link from 'next/link'
 
 /**
- * Fix round 1/5, Important 3/4 — bu bölüm eski gradyan/hex paletini
- * taşıyordu ve bir açıklama cümlesi asset dosyası §5.1'in yasakladığı
- * türden bir zekâ-gelişimi iddiası içeriyordu. Kart metinleri artık §7.1
- * Bölüm 4'ün onaylı aktivite kartı tablosundan (satır 677-690) birebir
- * alınmıştır — zekâ değil, gözlemlenebilir beceri diliyle yazılmıştır.
+ * Atölye kartları bilinçli olarak fotoğrafsızdır: okulun seramik, müzik,
+ * dans ve robotik atölyelerinden kendi çekimi henüz yok. Buraya bahçe
+ * karesi koymak, fotoğrafın anlatmadığı bir şeyi anlatıyormuş gibi
+ * gösterirdi — daha önce bu kartlarda duran stok görseller tam olarak
+ * bunu yapıyordu. Çekim geldiğinde kartlara fotoğraf eklenir.
  */
 type Activity = {
   id: number
   baslik: string
   aciklama: string
-  resim: string
   yasGrubu: string
+  /** Kartın üst bloğunun zemini — sitenin aksan sırası. */
+  band: string
 }
 
 const FEATURED_ACTIVITIES: Activity[] = [
@@ -21,34 +21,31 @@ const FEATURED_ACTIVITIES: Activity[] = [
     id: 1,
     baslik: 'Seramik ve Sanat',
     aciklama: 'Hamur, makas ve fırça işi; el kaslarını yazıya hazırlayan çalışmalar.',
-    resim: '/seramik.webp',
     yasGrubu: '3-6 yaş',
+    band: 'band-bubble',
   },
   {
     id: 2,
     baslik: 'Müzik',
     aciklama: 'Ritim ve şarkı, dinleme becerisinin ve dilin günlük parçası.',
-    resim: '/muzik.webp',
     yasGrubu: '3-6 yaş',
+    band: 'band-sunny',
   },
   {
     id: 3,
     baslik: 'Dans',
     aciklama: 'Bedenini tanımak, ritmi takip etmek, grupla uyumlanmak.',
-    resim: '/dans.webp',
     yasGrubu: '3-6 yaş',
+    band: 'band-mint',
   },
   {
     id: 4,
     baslik: 'Robotik Kodlama',
     aciklama: '"Önce bu, sonra şu" — sıralı düşünmenin oyunla ilk deneyimi.',
-    resim: '/robotic.webp',
     yasGrubu: '3-6 yaş',
+    band: 'band-sky',
   },
 ]
-
-/** Aktivite kartlarının şerit renkleri — sitenin aksan sırası. */
-const STRIPES = ['bg-bubble', 'bg-sunny', 'bg-mint', 'bg-sky']
 
 const ActivitiesSection = () => {
   return (
@@ -63,24 +60,18 @@ const ActivitiesSection = () => {
         </div>
 
         <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURED_ACTIVITIES.map((aktivite, index) => (
+          {FEATURED_ACTIVITIES.map((aktivite) => (
             <div key={aktivite.id} className="card-lift overflow-hidden rounded-3xl bg-white shadow-sm">
-              <div className={`h-1.5 ${STRIPES[index % STRIPES.length]}`} />
-              <div className="relative h-48 bg-paper-warm">
-                <Image
-                  src={aktivite.resim}
-                  alt={aktivite.baslik}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 25vw"
-                  className="object-cover"
-                />
+              <div className={`relative flex h-40 items-end p-5 ${aktivite.band}`}>
                 <span className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-grape shadow-sm">
                   {aktivite.yasGrubu}
                 </span>
+                <h3 className="font-display text-2xl leading-tight text-white">
+                  {aktivite.baslik}
+                </h3>
               </div>
               <div className="p-5">
-                <h3 className="text-lg text-ink">{aktivite.baslik}</h3>
-                <p className="mt-2 text-sm text-ink-soft">{aktivite.aciklama}</p>
+                <p className="text-sm text-ink-soft">{aktivite.aciklama}</p>
               </div>
             </div>
           ))}

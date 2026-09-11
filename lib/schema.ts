@@ -10,7 +10,7 @@ export const preschoolSchema = {
   description: SITE.description,
   url: SITE.url,
   logo: `${SITE.url}/logo.png`,
-  image: `${SITE.url}/cocukklar.webp`,
+  image: `${SITE.url}/bahce-genis.webp`,
   telephone: SITE.phone.e164,
   email: SITE.email,
   foundingDate: String(SITE.foundingYear),

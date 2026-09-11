@@ -1,4 +1,4 @@
-import type { MediaKey } from './media';
+﻿import type { MediaKey } from './media';
 import type { Grade } from '@/app/components/cine/Frame';
 
 export type DayChapter = {
@@ -64,7 +64,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
       'İlk gelen çocuk sabahın en sessiz saatini yakalar; ayrılık bu saatte en kolay geçer.',
       'Sonrasında geçen süre serbesttir. Kimse oyuna zorlanmaz, kimse uyandırılmaz.',
     ],
-    mediaKey: 'classroomWide',
+    mediaKey: 'giraffesGarden',
     grade: 'dawn',
   },
   {
@@ -76,7 +76,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
       'Sınıfın tamamı bu çemberde toplanır: kim ne yapacak, hangi atölye açık, bahçeye ne zaman çıkılacak burada konuşulur.',
       'Sınıfta on üç çocuk var ve iki öğretmen birden. Yani çemberde söz sırası herkese geliyor — kimse konuşmadan güne başlamıyor.',
     ],
-    mediaKey: 'motorSkills',
+    mediaKey: 'outdoorClass',
     grade: 'morning',
     feature: 'roster',
   },
@@ -89,7 +89,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
       'Materyaller açık raflarda, çocuğun boyunda durur. Bir çalışmayı seçmek, bitirmek ve yerine kaldırmak çocuğun sorumluluğundadır.',
       'Öğretmen araya girmiyor, izliyor. Bir çocuk takıldığında yanına gidebiliyor — çünkü sınıfta ikinci bir öğretmen daha var.',
     ],
-    mediaKey: 'montessori',
+    mediaKey: 'gardenWorkshops',
     grade: 'morning',
   },
   {
@@ -102,7 +102,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
       'Bu saatlerde Türkçeye dönülmüyor. Çocuk önce anlıyor, sonra tek kelimelerle karşılık veriyor, en sonunda cümle kuruyor. Aceleye getirilmiyor.',
       'Mezun olan çocuklarımız İngilizce konuşuyor. Bunun sihirli bir yöntemi yok — günde iki saatin üç yıl boyunca birikmesi.',
     ],
-    mediaKey: 'art',
+    mediaKey: 'outdoorClass',
     grade: 'morning',
   },
   {
@@ -114,7 +114,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
       'Bahçe zamanı programın en az müdahale edilen bölümüdür. Çocuklar kendi oyununu kurar; öğretmen gözler, gerektiğinde araya girer.',
       'Bahçe kapalı ve gözetim altındadır.',
     ],
-    mediaKey: 'sports',
+    mediaKey: 'gardenWide',
     grade: 'midday',
   },
   {
@@ -125,7 +125,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
     body: [
       'Çocuklar kendi tabağını taşır, kendi suyunu koyar, sofrayı birlikte toplar. Öz bakım becerileri ayrı bir ders değil, günün doğal bir parçasıdır.',
     ],
-    mediaKey: 'physicalEducation',
+    mediaKey: 'mudKitchen',
     grade: 'midday',
   },
   {
@@ -137,7 +137,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
       'Küçük yaş gruplarında bu saat dinlenmeye ayrılır.',
       'Uyumayan gruplar için bu saat sessiz çalışma zamanıdır: kitap, yapboz, bireysel proje.',
     ],
-    mediaKey: 'psychologist',
+    mediaKey: 'gardenWorkshops',
     grade: 'midday',
   },
   {
@@ -148,7 +148,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
     body: [
       'Atölyeler eğlence molası değil, programın parçasıdır. Satranç sırasını beklemeyi ve bir sonraki adımı düşünmeyi çalıştırır; hamur ve kalem işi el kaslarını yazıya hazırlar.',
     ],
-    mediaKey: 'ceramics',
+    mediaKey: 'mudKitchen',
     grade: 'golden',
   },
   {
@@ -160,7 +160,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
       'Her çocuk alınırken öğretmeni size o günü anlatır: ne yaptı, neyi zor buldu, neye ilk kez cesaret etti.',
       'Zaten gün içinde merak ettiyseniz kameradan bakmışsınızdır. Çıkışta konuştuğumuz şey, gördüğünüzün arkasındaki hikâye oluyor.',
     ],
-    mediaKey: 'dance',
+    mediaKey: 'candyCorner',
     grade: 'dusk',
   },
   {
@@ -171,7 +171,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
     body: [
       'Geç kalan veliler için telaş yoktur; çalışan ailelerin gerçeğine göre planlanmış bir gündür.',
     ],
-    mediaKey: 'summer',
+    mediaKey: 'giraffes',
     grade: 'dusk',
   },
 ];

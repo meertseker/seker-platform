@@ -15,9 +15,13 @@ export type MediaAsset = {
 };
 
 /**
- * Okulun kendi fotoğrafları — 11 Eylül 2026'da okul sahibi tarafından
- * gönderildi. Bahçe ve atölyeler okulun en güçlü farkı olduğu için
- * ana sayfa bu karelerin üzerine kuruludur.
+ * Sitenin kullandığı bütün görseller. Hepsi okulun kendi çekimidir —
+ * 11 Eylül 2026'da okul sahibi tarafından gönderildi.
+ *
+ * Daha önce burada 16 adet lisanssız Shutterstock önizlemesi duruyordu
+ * (IMAGE-LICENSES.md her birinin Image ID'sini listeler); filigranları
+ * silinmiş hâlde yayındaydılar. Hepsi kaldırıldı. Buraya stok görsel
+ * eklenmesi content/__tests__/media.test.ts tarafından engellenir.
  */
 export const MEDIA = {
   gardenWide: {
@@ -73,35 +77,19 @@ export const MEDIA = {
     status: 'okul',
     hasChildFaces: true,
   },
-
-  /* ------------------------------------------------------------------
-     Aşağıdakilerin hepsi lisanssız Shutterstock önizlemesidir —
-     IMAGE-LICENSES.md her birinin Image ID'sini ve fotoğrafçısını
-     listeler. Okulun kendi çekimi geldikçe tek tek düşürülmeli.
-  ------------------------------------------------------------------ */
-  classroomWide: { src: '/cocukklar.webp', alt: 'Anaokulu sınıfında çocuklar ve öğretmenleri', width: 1500, height: 890, status: 'stok' },
-  montessori: { src: '/montesori.webp', alt: 'Montessori materyaliyle çalışan çocuk', width: 1500, height: 1100, status: 'stok' },
-  art: { src: '/art.webp', alt: 'Sanat atölyesinde resim çalışması', width: 1500, height: 1100, status: 'stok' },
-  ceramics: { src: '/seramik.webp', alt: 'Seramik atölyesinde çamur çalışması', width: 1500, height: 1101, status: 'stok' },
-  robotics: { src: '/robotic.webp', alt: 'Robotik ve kodlama atölyesi', width: 1500, height: 1101, status: 'stok' },
-  chess: { src: '/satranc.webp', alt: 'Satranç dersinde çocuklar', width: 1500, height: 1101, status: 'stok' },
-  swimming: { src: '/yuzme.webp', alt: 'Yüzme etkinliği', width: 1500, height: 1101, status: 'stok' },
-  music: { src: '/muzik.webp', alt: 'Müzik dersinde enstrüman çalışması', width: 1500, height: 1101, status: 'stok' },
-  drama: { src: '/drama.webp', alt: 'Drama atölyesinde canlandırma', width: 1500, height: 1100, status: 'stok' },
-  dance: { src: '/dans.webp', alt: 'Dans dersinde çocuklar', width: 1500, height: 1101, status: 'stok' },
-  riding: { src: '/binincilik.webp', alt: 'Binicilik etkinliği', width: 1500, height: 1101, status: 'stok' },
-  psychologist: { src: '/psikolog.webp', alt: 'Uzman psikolog eşliğinde bireysel çalışma', width: 1500, height: 1101, status: 'stok' },
-  motorSkills: { src: '/motorskills.webp', alt: 'İnce motor becerileri çalışması', width: 1500, height: 944, status: 'stok' },
-  sports: { src: '/sportiffaaliyetler.webp', alt: 'Sportif faaliyetler', width: 1500, height: 1101, status: 'stok' },
-  physicalEducation: { src: '/beden.webp', alt: 'Beden eğitimi dersi', width: 1500, height: 1101, status: 'stok' },
-  summer: { src: '/yazaktiviteleri.webp', alt: 'Yaz dönemi etkinlikleri', width: 1500, height: 1070, status: 'stok' },
 } satisfies Record<string, MediaAsset>;
 
 export type MediaKey = keyof typeof MEDIA;
 
-/** Okulun kendi çekimiyle değiştirilmesi gereken lisanssız stok görseller. */
+/**
+ * Okulun kendi çekimiyle değiştirilmesi gereken lisanssız stok görseller.
+ * Şu an boş; biri kataloğa 'stok' kayıt eklerse burada görünür ve
+ * content/__tests__/media.test.ts kırmızıya döner.
+ */
 export function pendingShootAssets(): MediaKey[] {
-  return (Object.keys(MEDIA) as MediaKey[]).filter((key) => MEDIA[key].status === 'stok');
+  return (Object.entries(MEDIA) as [MediaKey, MediaAsset][])
+    .filter(([, asset]) => asset.status === 'stok')
+    .map(([key]) => key);
 }
 
 /** Veli izni gerektiren kareler — izin onayı alınmadan yayına çıkmamalı. */

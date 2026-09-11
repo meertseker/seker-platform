@@ -5,7 +5,7 @@ export function buildMetadata({
   title,
   description,
   path,
-  image = '/cocukklar.webp',
+  image = '/bahce-genis.webp',
   noindex = false,
 }: {
   title: string;
