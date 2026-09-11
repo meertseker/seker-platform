@@ -53,9 +53,17 @@ const FEATURES = [
   },
 ]
 
+/** Kart aksanları — dört kartın her biri sitenin şeker paletinden bir ton alır. */
+const ACCENTS = [
+  { chip: 'bg-grape', ring: 'ring-grape/20' },
+  { chip: 'bg-bubble-deep', ring: 'ring-bubble/30' },
+  { chip: 'bg-mint-deep', ring: 'ring-mint/30' },
+  { chip: 'bg-tangerine-deep', ring: 'ring-tangerine/30' },
+]
+
 const FeaturesSection = () => {
   return (
-    <div className="border-t border-rule bg-paper py-16">
+    <div className="bg-paper py-16">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">
           <h2 className="text-3xl text-ink md:text-4xl">Neden Şeker Anaokulu?</h2>
@@ -65,10 +73,15 @@ const FeaturesSection = () => {
           </p>
         </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((feature) => (
-            <div key={feature.title} className="rounded-2xl border border-rule bg-paper p-6 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-rule bg-paper-warm text-ink">
+        <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {FEATURES.map((feature, index) => (
+            <div
+              key={feature.title}
+              className={`card-lift rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ${ACCENTS[index % ACCENTS.length].ring}`}
+            >
+              <div
+                className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-white ${ACCENTS[index % ACCENTS.length].chip}`}
+              >
                 {feature.icon}
               </div>
               <h3 className="text-lg text-ink">{feature.title}</h3>
@@ -80,7 +93,7 @@ const FeaturesSection = () => {
         <div className="mt-12 text-center">
           <Link
             href="/kayit"
-            className="inline-block rounded-full bg-ink px-8 py-4 font-medium text-paper hover:bg-ink-soft"
+            className="inline-block rounded-full bg-grape px-8 py-4 font-semibold text-white shadow-lg shadow-grape/30 hover:bg-ink"
           >
             Ön Görüşme Randevusu Alın
           </Link>

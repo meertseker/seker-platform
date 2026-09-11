@@ -1,5 +1,5 @@
 import { SITE } from '@/lib/site';
-import { ROSTER_STATUS } from '@/content/day';
+import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from '@/content/day';
 
 /**
  * Sınıf mevcudu ve öğretmen oranı yalnızca ROSTER_STATUS.ready true iken
@@ -19,23 +19,32 @@ export default function TrustBar() {
   const stats = [
     ...(ROSTER_STATUS.ready
       ? [
-          { value: String(ROSTER_STATUS.childCount), label: 'Sınıf mevcudu' },
+          { value: String(ROSTER_STATUS.childCount), label: 'Sınıfta çocuk' },
           {
-            value: `1 : ${Math.round(ROSTER_STATUS.childCount / ROSTER_STATUS.teacherCount)}`,
-            label: 'Öğretmen başına çocuk',
+            value: String(ROSTER_STATUS.teacherCount),
+            label: 'Her sınıfta öğretmen',
           },
         ]
       : []),
+    { value: `${ENGLISH_HOURS_PER_DAY} saat`, label: 'Her gün İngilizce' },
     { value: `${yearsActive} yıl`, label: "Beykent'te aynı adreste" },
-    { value: '2-6', label: 'Yaş grubu' },
   ];
 
   return (
-    <section className="hidden border-y border-rule bg-paper md:block">
-      <div className="mx-auto flex max-w-6xl flex-wrap justify-center gap-x-12 gap-y-8 px-6 py-12">
-        {stats.map((stat) => (
-          <div key={stat.label} className="text-center">
-            <p className="font-display text-2xl text-ink md:text-3xl">{stat.value}</p>
+    <section className="hidden px-6 pb-4 md:block">
+      <div className="mx-auto flex max-w-6xl flex-wrap justify-center gap-4 rounded-3xl bg-paper-warm px-6 py-8">
+        {stats.map((stat, index) => (
+          <div
+            key={stat.label}
+            className="min-w-48 flex-1 rounded-2xl bg-white px-6 py-5 text-center shadow-sm"
+          >
+            <p
+              className={`font-display text-2xl md:text-3xl ${
+                index % 2 === 0 ? 'text-grape' : 'text-bubble-deep'
+              }`}
+            >
+              {stat.value}
+            </p>
             <p className="mt-1 text-xs text-ink-soft md:mt-2 md:text-sm">{stat.label}</p>
           </div>
         ))}

@@ -5,5 +5,5 @@ export default function Timecode({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <span className={`timecode text-ink-soft ${className}`}>{children}</span>;
+  return <span className={`timecode text-grape ${className}`}>{children}</span>;
 }

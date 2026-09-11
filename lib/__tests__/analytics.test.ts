@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { trackEvent, LEAD_VALUE_BY_AGE, leadValue, trackLead } from '../analytics';
-import { AGE_GROUPS } from '../leadSchema';
+import { AGE_GROUPS } from '@/content/ageGroups';
 
 describe('trackEvent', () => {
   beforeEach(() => {

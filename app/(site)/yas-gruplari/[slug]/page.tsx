@@ -2,11 +2,15 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import Header from '@/app/components/Header';
+import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
 import { AGE_GROUPS_CONTENT, getAgeGroup } from '@/content/ageGroups';
 import { buildMetadata } from '@/lib/metadata';
 import { buildBreadcrumbSchema } from '@/lib/schema';
+
+/** Odak alanı kartlarının şerit renkleri — sitenin aksan sırası. */
+const FOCUS_STRIPES = ['bg-grape', 'bg-bubble', 'bg-mint', 'bg-sunny'];
 
 export function generateStaticParams() {
   return AGE_GROUPS_CONTENT.map((group) => ({ slug: group.slug }));
@@ -40,30 +44,31 @@ export default async function AgeGroupPage({ params }: { params: Promise<{ slug:
         ])}
       />
 
-      <section className="bg-ink py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-paper/70">{group.ageLabel}</p>
-        <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
-          {group.headline}
-        </h1>
-      </section>
+      <PageHero eyebrow={group.ageLabel} title={group.headline} tone="bubble" />
 
       <section className="mx-auto max-w-3xl px-6 py-16">
         <p className="text-lg text-ink-soft">{group.intro}</p>
-        <p className="mt-6 rounded-xl bg-paper px-6 py-4 text-ink">
+        <p className="mt-6 rounded-2xl bg-paper-warm px-6 py-4 text-ink">
           <strong>Sınıf mevcudu:</strong> {group.classSize}
         </p>
       </section>
 
-      <section className="bg-paper py-16">
+      <section className="bg-paper-warm py-16">
         <div className="mx-auto max-w-5xl px-6">
           <h2 className="text-center font-display text-3xl text-ink">
             {group.ageLabel} programında odak alanlarımız
           </h2>
           <div className="mt-12 grid gap-8 md:grid-cols-2">
-            {group.focusAreas.map((area) => (
-              <div key={area.title} className="rounded-xl bg-white p-8">
-                <h3 className="font-display text-xl text-ink">{area.title}</h3>
-                <p className="mt-3 text-ink-soft">{area.description}</p>
+            {group.focusAreas.map((area, index) => (
+              <div
+                key={area.title}
+                className="card-lift overflow-hidden rounded-3xl bg-white shadow-sm"
+              >
+                <div className={`h-1.5 ${FOCUS_STRIPES[index % FOCUS_STRIPES.length]}`} />
+                <div className="p-8">
+                  <h3 className="font-display text-xl text-ink">{area.title}</h3>
+                  <p className="mt-3 text-ink-soft">{area.description}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -77,26 +82,29 @@ export default async function AgeGroupPage({ params }: { params: Promise<{ slug:
             alt={`${group.title} etkinlikleri`}
             width={640}
             height={480}
-            className="rounded-2xl object-cover"
+            className="rounded-3xl object-cover ring-1 ring-rule"
           />
           <div>
             <h2 className="font-display text-3xl text-ink">Günün akışından</h2>
             <ul className="mt-6 space-y-3">
               {group.dailyHighlights.map((item) => (
                 <li key={item} className="flex gap-3 text-ink-soft">
-                  <span className="text-ink-soft">—</span>
+                  <span aria-hidden="true" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-bubble" />
                   {item}
                 </li>
               ))}
             </ul>
-            <Link href="/gunluk-akis" className="mt-8 inline-block text-ink underline">
+            <Link
+              href="/gunluk-akis"
+              className="mt-8 inline-block rounded-full border-2 border-grape px-6 py-3 font-semibold text-grape hover:bg-grape hover:text-white"
+            >
               Tam günlük akışı görün
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="bg-paper py-16">
+      <section className="bg-paper-warm py-16">
         <div className="mx-auto max-w-2xl px-6">
           <h2 className="text-center font-display text-3xl text-ink">
             {group.ageLabel} kontenjanımızı sorun
@@ -104,8 +112,8 @@ export default async function AgeGroupPage({ params }: { params: Promise<{ slug:
           <p className="mt-4 text-center text-ink-soft">
             Sınıf mevcudumuz sınırlı olduğu için kayıtları dönem başında kapatıyoruz.
           </p>
-          <div className="mt-10">
-            <LeadForm variant="compact" />
+          <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 md:p-8">
+            <LeadForm />
           </div>
         </div>
       </section>

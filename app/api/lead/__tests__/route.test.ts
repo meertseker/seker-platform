@@ -4,11 +4,6 @@ import { POST } from '../route';
 const valid = {
   parentName: 'Ayşe Yılmaz',
   phone: '05301018875',
-  email: 'ayse@example.com',
-  childAge: '3-4',
-  program: 'tam-gun',
-  startTerm: '2026-2027',
-  message: 'Bilgi almak istiyorum',
   kvkkConsent: true,
 };
 
@@ -43,7 +38,7 @@ describe('POST /api/lead', () => {
   });
 
   it('şemaya uymayan payload 400 döner ve errors doludur', async () => {
-    const res = await POST(makeRequest(JSON.stringify({ ...valid, childAge: '15-16' })));
+    const res = await POST(makeRequest(JSON.stringify({ ...valid, phone: '123' })));
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.ok).toBe(false);

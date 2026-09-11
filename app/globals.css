@@ -1,25 +1,44 @@
 @import "tailwindcss";
 
 @theme {
-  /* Kâğıt ve mürekkep — sabit. Okunaklılık pazarlık konusu değil. */
-  --color-paper:      #F7F6F2;
-  --color-paper-warm: #EFEDE5;
-  --color-ink:        #14170F;
-  --color-ink-soft:   #4A4E42;
-  --color-rule:       #D8D5C9;
+  /* Kâğıt ve mürekkep — okulun adından türeyen şeker paleti.
+     Mürekkep koyu üzüm; sayfa zemini leylak beyazı. Okunaklılık pazarlık
+     konusu değil: ink/paper kontrastı 15:1'in üzerindedir. */
+  --color-paper:      #FDFAFF;
+  --color-paper-warm: #F4EAFF;
+  --color-ink:        #2E1065;
+  --color-ink-soft:   #6B5A93;
+  --color-rule:       #E8DBFB;
+
+  /* Şeker aksanları — iki katman.
+     Canlı ton: dolgu, şerit, konfeti, tint. Beyaz üzerinde metin taşımaz.
+     -deep ton: metin, kenarlık ve beyaz ikon taşıyan dolgu — hepsi beyaz
+     üzerinde AA (≥4.5:1) geçer. Renk seçimi bu ayrımı bozmadan yapılır. */
+  --color-grape:     #7C3AED;
+  --color-bubble:    #EC4899;
+  --color-sunny:     #F59E0B;
+  --color-mint:      #10B981;
+  --color-sky:       #38BDF8;
+  --color-tangerine: #F97316;
+
+  --color-bubble-deep:    #BE185D;
+  --color-sunny-deep:     #B45309;
+  --color-mint-deep:      #047857;
+  --color-sky-deep:       #0369A1;
+  --color-tangerine-deep: #C2410C;
 
   /* Gün ışığı dereceleri — yalnızca kadraj grading'i ve bölüm vurgusu. */
-  --color-dawn:    #3E4A5B;
-  --color-morning: #2F5A45;
-  --color-midday:  #C98A2E;
-  --color-golden:  #A8763A;
-  --color-dusk:    #232742;
+  --color-dawn:    #38BDF8;
+  --color-morning: #10B981;
+  --color-midday:  #F59E0B;
+  --color-golden:  #F97316;
+  --color-dusk:    #5B21B6;
 
-  /* Künye işareti — tek vurgu rengi, tek görev. */
-  --color-mark: #C98A2E;
+  /* Odak işareti — tek görev: odak halkası ve künye işaretleri. */
+  --color-mark: #7C3AED;
 
-  --font-display: var(--font-bricolage), Georgia, serif;
-  --font-body:    var(--font-newsreader), Georgia, serif;
+  --font-display: var(--font-fredoka), "Trebuchet MS", sans-serif;
+  --font-body:    var(--font-nunito), "Segoe UI", sans-serif;
   --font-mono:    var(--font-martian), ui-monospace, monospace;
 }
 
@@ -37,8 +56,8 @@ body {
 
 h1, h2, h3 {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
-  line-height: 1.08;
+  letter-spacing: -0.01em;
+  line-height: 1.12;
   font-weight: 600;
 }
 
@@ -54,7 +73,7 @@ p {
   text-transform: uppercase;
 }
 
-/* Odak halkası — künye rengiyle aynı, tek vurgu disiplini */
+/* Odak halkası — işaret rengiyle aynı, tek vurgu disiplini */
 :focus-visible {
   outline: 2px solid var(--color-mark);
   outline-offset: 3px;
@@ -63,6 +82,90 @@ p {
 @media (prefers-reduced-motion: no-preference) {
   a, button {
     transition: color 200ms ease, background-color 200ms ease, border-color 200ms ease;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Şeker kabuğu — sitenin imza öğeleri.
+   Her bölüm başlığı mor bir banttır ve alt kenarı şeker ambalajı gibi
+   fisto (scallop) kesilir. Tek yerde tanımlanır, her sayfada tekrarlanır.
+--------------------------------------------------------------------------- */
+
+.band-grape {
+  background-image:
+    radial-gradient(120% 120% at 15% 0%, #6D28D9 0%, transparent 55%),
+    radial-gradient(110% 110% at 95% 30%, #A21CAF 0%, transparent 60%),
+    linear-gradient(135deg, #2E1065 0%, #4C1D95 55%, #6B21A8 100%);
+}
+
+.band-bubble {
+  background-image:
+    radial-gradient(120% 120% at 10% 0%, #DB2777 0%, transparent 55%),
+    radial-gradient(110% 110% at 95% 25%, #7C3AED 0%, transparent 60%),
+    linear-gradient(135deg, #2E1065 0%, #6D28D9 60%, #BE185D 100%);
+}
+
+.band-mint {
+  background-image:
+    radial-gradient(120% 120% at 12% 0%, #0D9488 0%, transparent 55%),
+    radial-gradient(110% 110% at 92% 25%, #7C3AED 0%, transparent 60%),
+    linear-gradient(135deg, #2E1065 0%, #4C1D95 55%, #0F766E 100%);
+}
+
+.band-sunny {
+  background-image:
+    radial-gradient(120% 120% at 12% 0%, #7C3AED 0%, transparent 55%),
+    radial-gradient(110% 110% at 92% 25%, #D97706 0%, transparent 55%),
+    linear-gradient(135deg, #2E1065 0%, #5B21B6 55%, #B45309 100%);
+}
+
+.band-sky {
+  background-image:
+    radial-gradient(120% 120% at 12% 0%, #0284C7 0%, transparent 55%),
+    radial-gradient(110% 110% at 92% 25%, #7C3AED 0%, transparent 60%),
+    linear-gradient(135deg, #2E1065 0%, #4C1D95 55%, #0369A1 100%);
+}
+
+/* Fisto kenar — bandın altına yerleşir, alttaki bölümün rengiyle boyanır. */
+.scallop {
+  --scallop-color: var(--color-paper);
+  height: 1.25rem;
+  background-image: radial-gradient(
+    circle at 0.75rem 1.25rem,
+    var(--scallop-color) 0.75rem,
+    transparent calc(0.75rem + 0.5px)
+  );
+  background-size: 1.5rem 1.25rem;
+  background-repeat: repeat-x;
+}
+
+.scallop-warm { --scallop-color: var(--color-paper-warm); }
+.scallop-white { --scallop-color: #FFFFFF; }
+
+/* Kart yükselmesi — hover'da tek ve tutarlı bir hareket. */
+@media (prefers-reduced-motion: no-preference) {
+  .card-lift {
+    transition: transform 220ms cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 220ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-4px);
+  }
+}
+
+/* Konfeti — bantlarda yüzen dekoratif şekiller. Yalnızca aria-hidden
+   kaplarda kullanılır; hareket kapalıyken sabit durur. */
+@media (prefers-reduced-motion: no-preference) {
+  .confetti-float {
+    animation: confetti-drift 9s ease-in-out infinite alternate;
+  }
+  .confetti-float:nth-child(even) {
+    animation-duration: 12s;
+    animation-direction: alternate-reverse;
+  }
+
+  @keyframes confetti-drift {
+    from { transform: translateY(0) rotate(0deg); }
+    to   { transform: translateY(-14px) rotate(12deg); }
   }
 }
 

@@ -1,4 +1,5 @@
 import Header from '@/app/components/Header';
+import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
 import { buildMetadata } from '@/lib/metadata';
@@ -72,6 +73,9 @@ const SAFETY_SECTIONS: SafetySection[] = [
   },
 ];
 
+/** Güvenlik kartlarının şerit renkleri — sitenin aksan sırası. */
+const SAFETY_STRIPES = ['bg-grape', 'bg-mint', 'bg-sky', 'bg-bubble'];
+
 export default function GuvenlikPage() {
   return (
     <div className="min-h-screen bg-paper">
@@ -83,31 +87,34 @@ export default function GuvenlikPage() {
         ])}
       />
 
-      <section className="bg-ink py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-paper/70">Güvenlik ve Sağlık</p>
-        <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
-          Çocuğunuzun güvenliği, tesadüfe bırakılmaz.
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl px-6 text-paper">
-          Aşağıdaki başlıklar okulumuzun güvenlik ve sağlık uygulamalarını özetler. İşaretli
-          bölümler, doğrulanmış belge ve rakamlarla yakında güncellenecektir.
-        </p>
-      </section>
+      <PageHero
+        eyebrow="Güvenlik ve Sağlık"
+        title="Çocuğunuzun güvenliği, tesadüfe bırakılmaz."
+        lead="Aşağıdaki başlıklar okulumuzun güvenlik ve sağlık uygulamalarını özetler. İşaretli bölümler, doğrulanmış belge ve rakamlarla yakında güncellenecektir."
+        tone="mint"
+        scallopTone="paper-warm"
+      />
 
-      <section className="bg-paper py-16">
+      <section className="bg-paper-warm py-16">
         <div className="mx-auto max-w-4xl px-6">
           <div className="grid gap-6 md:grid-cols-2">
-            {SAFETY_SECTIONS.map((section) => (
-              <div key={section.id} className="rounded-xl bg-white p-8">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="font-display text-xl text-ink">{section.title}</h2>
-                  {section.todo && (
-                    <span className="shrink-0 rounded-full border border-rule bg-paper-warm px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink">
-                      Doğrulanacak
-                    </span>
-                  )}
+            {SAFETY_SECTIONS.map((section, index) => (
+              <div
+                key={section.id}
+                className="card-lift overflow-hidden rounded-3xl bg-white shadow-sm"
+              >
+                <div className={`h-1.5 ${SAFETY_STRIPES[index % SAFETY_STRIPES.length]}`} />
+                <div className="p-8">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="font-display text-xl text-ink">{section.title}</h2>
+                    {section.todo && (
+                      <span className="shrink-0 rounded-full bg-tangerine/12 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-tangerine-deep">
+                        Doğrulanacak
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-3 text-ink-soft">{section.body}</p>
                 </div>
-                <p className="mt-3 text-ink-soft">{section.body}</p>
               </div>
             ))}
           </div>
@@ -122,8 +129,8 @@ export default function GuvenlikPage() {
           <p className="mt-4 text-center text-ink-soft">
             Ön görüşme sırasında bina güvenlik önlemlerini birlikte gözden geçirebiliriz.
           </p>
-          <div className="mt-10">
-            <LeadForm variant="compact" />
+          <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 ring-1 ring-rule md:p-8">
+            <LeadForm />
           </div>
         </div>
       </section>

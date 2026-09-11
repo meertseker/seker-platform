@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import Header from '@/app/components/Header';
+import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
 import { AGE_GROUPS_CONTENT } from '@/content/ageGroups';
@@ -14,6 +15,9 @@ export const metadata = buildMetadata({
   path: '/yas-gruplari',
 });
 
+/** Yaş grubu kartlarının şerit renkleri — küçükten büyüğe sabit sıra. */
+const AGE_STRIPES = ['bg-bubble', 'bg-sunny', 'bg-mint', 'bg-sky'];
+
 export default function AgeGroupsIndexPage() {
   return (
     <div className="min-h-screen bg-paper">
@@ -25,25 +29,22 @@ export default function AgeGroupsIndexPage() {
         ])}
       />
 
-      <section className="bg-ink py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-paper/70">2 yaştan ilkokula hazırlığa</p>
-        <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
-          Her yaşın kendi programı, kendi sınıfı var.
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl px-6 text-paper">
-          Dört yaş grubu, dört ayrı gelişim dönemi. Çocuğunuzun bulunduğu gruba tıklayarak
-          o yaşa özel programı, günlük akışı ve sınıf mevcudunu inceleyin.
-        </p>
-      </section>
+      <PageHero
+        eyebrow="2 yaştan ilkokula hazırlığa"
+        title="Her yaşın kendi programı, kendi sınıfı var."
+        lead="Dört yaş grubu, dört ayrı gelişim dönemi. Çocuğunuzun bulunduğu gruba tıklayarak o yaşa özel programı, günlük akışı ve sınıf mevcudunu inceleyin."
+        tone="grape"
+      />
 
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="grid gap-8 md:grid-cols-2">
-          {AGE_GROUPS_CONTENT.map((group) => (
+          {AGE_GROUPS_CONTENT.map((group, index) => (
             <Link
               key={group.slug}
               href={`/yas-gruplari/${group.slug}`}
-              className="group overflow-hidden rounded-2xl bg-white shadow-sm transition hover:shadow-md"
+              className="card-lift group overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-rule hover:shadow-xl hover:shadow-ink/10"
             >
+              <div className={`h-2 ${AGE_STRIPES[index % AGE_STRIPES.length]}`} />
               <div className="relative h-56 w-full">
                 <Image
                   src={group.image}
@@ -53,11 +54,12 @@ export default function AgeGroupsIndexPage() {
                 />
               </div>
               <div className="p-8">
-                <p className="text-sm uppercase tracking-[0.2em] text-ink-soft">{group.ageLabel}</p>
+                <p className="timecode text-grape">{group.ageLabel}</p>
                 <h2 className="mt-3 font-display text-2xl text-ink">{group.title}</h2>
                 <p className="mt-3 text-ink-soft">{group.headline}</p>
-                <span className="mt-6 inline-block text-ink underline">
+                <span className="mt-6 inline-flex items-center gap-2 font-semibold text-grape">
                   Programı incele
+                  <span aria-hidden="true" className="transition group-hover:translate-x-1">→</span>
                 </span>
               </div>
             </Link>
@@ -65,7 +67,7 @@ export default function AgeGroupsIndexPage() {
         </div>
       </section>
 
-      <section className="bg-paper py-16">
+      <section className="bg-paper-warm py-16">
         <div className="mx-auto max-w-2xl px-6">
           <h2 className="text-center font-display text-3xl text-ink">
             Çocuğunuzun yaş grubu için kontenjan sorun
@@ -73,8 +75,8 @@ export default function AgeGroupsIndexPage() {
           <p className="mt-4 text-center text-ink-soft">
             Sınıf mevcudumuz sınırlı olduğu için kayıtları dönem başında kapatıyoruz.
           </p>
-          <div className="mt-10">
-            <LeadForm variant="compact" />
+          <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 md:p-8">
+            <LeadForm />
           </div>
         </div>
       </section>

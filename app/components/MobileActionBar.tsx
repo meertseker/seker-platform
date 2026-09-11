@@ -27,7 +27,7 @@ export default function MobileActionBar() {
       <Link
         href="/kayit"
         onClick={track('cta_click')}
-        className="bg-ink py-3.5 text-center text-sm font-medium text-white"
+        className="bg-grape py-3.5 text-center text-sm font-semibold text-white"
       >
         Randevu
       </Link>

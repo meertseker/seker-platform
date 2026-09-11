@@ -21,7 +21,7 @@ const FAQSection = () => {
 
   return (
     <>
-    <section className="border-t border-rule bg-paper py-16">
+    <section className="bg-paper py-16">
       <div className="mx-auto max-w-6xl px-6">
         {/* Section Header */}
         <div className="text-center mb-12">
@@ -39,7 +39,7 @@ const FAQSection = () => {
             {featuredFAQs.map((faq) => (
               <div
                 key={faq.id}
-                className="overflow-hidden rounded-2xl border border-rule bg-paper"
+                className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-rule"
               >
                 <button
                   onClick={() => toggleItem(faq.id)}
@@ -49,7 +49,7 @@ const FAQSection = () => {
                     {faq.question}
                   </h3>
                   <svg
-                    className={`h-5 w-5 shrink-0 text-ink-soft transition-transform duration-200 ${
+                    className={`h-5 w-5 shrink-0 text-grape transition-transform duration-200 ${
                       openItems.includes(faq.id) ? 'rotate-180' : ''
                     }`}
                     fill="none"
@@ -78,7 +78,7 @@ const FAQSection = () => {
         <div className="text-center">
           <Link
             href="/sss"
-            className="text-ink underline underline-offset-4"
+            className="inline-block rounded-full border-2 border-grape px-8 py-3 font-semibold text-grape hover:bg-grape hover:text-white"
           >
             Tüm soruları görüntüle
           </Link>

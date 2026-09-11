@@ -8,15 +8,22 @@ import { chapterLabel, ROSTER_STATUS, type DayChapter } from '@/content/day';
  * Header/LeadForm gibi router bağımlılığı olan bileşenler olmadan,
  * yalnızca bu anlatının doğrulanmamış saat/sayı sızdırmadığı test edilebilsin.
  */
+/** Bölüm şeritleri — günün sırası boyunca dönen aksan renkleri. */
+const CHAPTER_STRIPES = ['bg-sunny', 'bg-mint', 'bg-sky', 'bg-bubble', 'bg-grape', 'bg-tangerine'];
+
 export default function DayChapters({ chapters }: { chapters: DayChapter[] }) {
   return (
-    <div>
+    <div className="space-y-8">
       {chapters.map((chapter, index) => (
         <section
           key={chapter.id}
           id={chapter.id}
-          className="cine-chapter scroll-mt-24 border-t border-rule py-14 first:border-t-0 first:pt-0"
+          className="cine-chapter scroll-mt-24 overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-rule md:p-10"
         >
+          <span
+            aria-hidden="true"
+            className={`mb-4 block h-1.5 w-14 rounded-full ${CHAPTER_STRIPES[index % CHAPTER_STRIPES.length]}`}
+          />
           <Timecode>{chapterLabel(chapter)}</Timecode>
           <h2 className="mt-3 text-3xl text-ink md:text-4xl">{chapter.title}</h2>
           <p className="mt-3 text-lg text-ink-soft">{chapter.lead}</p>

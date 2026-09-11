@@ -32,10 +32,16 @@ export function leadValue(childAge: string): number {
   return LEAD_VALUE_BY_AGE[childAge] ?? FALLBACK_LEAD_VALUE;
 }
 
-export function trackLead(childAge: string, extra: Record<string, unknown> = {}): void {
+/**
+ * Form artık yaş grubu sormadığı için `childAge` çoğu çağrıda boştur ve
+ * lead değeri FALLBACK_LEAD_VALUE'ya düşer — yani Google Ads'e giden
+ * dönüşüm değeri yaşa göre ayrışmaz. Yaş bilinen bir kanaldan gelirse
+ * (ör. yaş grubu sayfasına özel bir form) parametre yine geçilebilir.
+ */
+export function trackLead(childAge?: string, extra: Record<string, unknown> = {}): void {
   trackEvent('lead_submit', {
-    child_age: childAge,
-    value: leadValue(childAge),
+    ...(childAge ? { child_age: childAge } : {}),
+    value: leadValue(childAge ?? ''),
     currency: 'TRY',
     ...extra,
   });

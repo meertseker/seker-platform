@@ -5,13 +5,6 @@ import { SITE } from '@/lib/site';
 
 export const runtime = 'nodejs';
 
-const PROGRAM_LABELS: Record<string, string> = {
-  'tam-gun': 'Tam Gün',
-  'yarim-gun': 'Yarım Gün',
-  'oyun-grubu': 'Oyun Grubu (2-3 yaş)',
-  'yaz-okulu': 'Yaz Okulu',
-};
-
 export async function POST(request: Request) {
   let body: unknown;
   try {
@@ -43,18 +36,13 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'Şeker Anaokulu Web <onboarding@resend.dev>', // TODO: doğrulanmış alan adıyla değiştir
       to,
-      replyTo: lead.email || undefined,
-      subject: `Yeni ön görüşme talebi — ${lead.parentName} (${lead.childAge} yaş)`,
+      subject: `Yeni geri arama talebi — ${lead.parentName}`,
       text: [
         `Veli: ${lead.parentName}`,
         `Telefon: ${lead.phone}`,
-        `E-posta: ${lead.email || '—'}`,
-        `Çocuk yaş grubu: ${lead.childAge}`,
-        `Program: ${PROGRAM_LABELS[lead.program] ?? lead.program}`,
-        `Başlangıç dönemi: ${lead.startTerm}`,
         '',
-        `Mesaj: ${lead.message || '—'}`,
-        '',
+        // Yaş grubu, program ve başlangıç dönemi artık formda sorulmuyor;
+        // bu bilgiler geri aramada alınır (bkz. lib/leadSchema.ts).
         `Kaynak sayfa: ${lead.landingPath || '—'}`,
         `GCLID: ${lead.gclid || '—'}`,
         '',

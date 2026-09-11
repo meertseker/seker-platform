@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Newsreader, Martian_Mono } from "next/font/google";
+import { Fredoka, Nunito, Martian_Mono } from "next/font/google";
 import "./globals.css";
 import Analytics from "./components/Analytics";
 import ConsentDefaults from "./components/ConsentDefaults";
@@ -9,17 +9,17 @@ import { preschoolSchema } from "../lib/schema";
 import { SITE } from "../lib/site";
 import { buildMetadata } from "../lib/metadata";
 
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
   subsets: ["latin", "latin-ext"],
-  weight: ["400", "600", "700"],
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin", "latin-ext"],
-  weight: ["300", "400", "500"],
+  weight: ["400", "600", "700"],
   display: "swap",
 });
 
@@ -50,7 +50,7 @@ export default function RootLayout({
         <JsonLd data={preschoolSchema} />
       </head>
       <body
-        className={`${bricolage.variable} ${newsreader.variable} ${martian.variable} antialiased pb-14 md:pb-0`}
+        className={`${fredoka.variable} ${nunito.variable} ${martian.variable} antialiased pb-14 md:pb-0`}
       >
         <ConsentDefaults />
         <Analytics />

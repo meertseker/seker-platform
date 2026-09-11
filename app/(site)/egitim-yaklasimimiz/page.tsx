@@ -1,4 +1,5 @@
 import Header from '@/app/components/Header';
+import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
 import { buildMetadata } from '@/lib/metadata';
@@ -16,6 +17,9 @@ export const metadata = buildMetadata({
 const FAQ_SUBSET = PUBLISHED_FAQ.filter((item) =>
   ['egitim-programi', 'ingilizce', 'yas-araligi', 'sinif-mevcudu'].includes(item.id),
 );
+
+/** Bölüm kartlarının şerit renkleri — sitenin aksan sırası. */
+const SECTION_STRIPES = ['bg-grape', 'bg-bubble', 'bg-sunny', 'bg-mint', 'bg-sky'];
 
 const SECTIONS = [
   {
@@ -71,52 +75,52 @@ export default function EgitimYaklasimimizPage() {
       />
       <JsonLd data={buildFaqSchema(FAQ_SUBSET)} />
 
-      <section className="bg-ink py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-paper/70">
-          Montessori · High Scope · Çoklu Zeka
-        </p>
-        <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
-          Eğitim Yaklaşımımız
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl px-6 text-paper">
-          Beykent Büyükçekmece&apos;de 2-6 yaş arası çocuklar için Montessori, High Scope ve
-          Çoklu Zeka kuramlarını temel alan, oyun temelli bir program uyguluyoruz.
-        </p>
-      </section>
+      <PageHero
+        eyebrow="Montessori · High Scope · Çoklu Zeka"
+        title="Eğitim Yaklaşımımız"
+        lead="Beykent Büyükçekmece'de 2-6 yaş arası çocuklar için Montessori, High Scope ve Çoklu Zeka kuramlarını temel alan, oyun temelli bir program uyguluyoruz."
+        tone="grape"
+      />
 
       <section className="mx-auto max-w-3xl px-6 py-16">
-        <div className="space-y-16">
-          {SECTIONS.map((section) => (
-            <div key={section.question}>
-              <h2 className="font-display text-2xl text-ink md:text-3xl">
-                {section.question}
-              </h2>
-              <div className="mt-5 space-y-4 text-ink-soft">
-                {section.answer.map((paragraph, index) => (
-                  <p key={index} className={index === 0 ? 'text-lg text-ink' : undefined}>
-                    {paragraph}
-                  </p>
-                ))}
+        <div className="space-y-8">
+          {SECTIONS.map((section, sectionIndex) => (
+            <div
+              key={section.question}
+              className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-rule"
+            >
+              <div className={`h-1.5 ${SECTION_STRIPES[sectionIndex % SECTION_STRIPES.length]}`} />
+              <div className="p-8 md:p-10">
+                <h2 className="font-display text-2xl text-ink md:text-3xl">
+                  {section.question}
+                </h2>
+                <div className="mt-5 space-y-4 text-ink-soft">
+                  {section.answer.map((paragraph, index) => (
+                    <p key={index} className={index === 0 ? 'text-lg text-ink' : undefined}>
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="bg-paper py-16">
+      <section className="bg-paper-warm py-16">
         <div className="mx-auto max-w-4xl px-6">
           <h2 className="text-center font-display text-3xl text-ink">
             Yaş grubuna göre program
           </h2>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: '2-3 yaş', name: 'Oyun Grubu' },
-              { label: '3-4 yaş', name: 'Anaokulu' },
-              { label: '4-5 yaş', name: 'Anaokulu' },
-              { label: '5-6 yaş', name: 'İlkokula Hazırlık' },
+              { label: '2-3 yaş', name: 'Oyun Grubu', accent: 'text-bubble-deep' },
+              { label: '3-4 yaş', name: 'Anaokulu', accent: 'text-sunny-deep' },
+              { label: '4-5 yaş', name: 'Anaokulu', accent: 'text-mint-deep' },
+              { label: '5-6 yaş', name: 'İlkokula Hazırlık', accent: 'text-sky-deep' },
             ].map((group) => (
-              <div key={group.label} className="rounded-xl bg-white p-6 text-center">
-                <p className="font-display text-xl text-ink">{group.label}</p>
+              <div key={group.label} className="card-lift rounded-3xl bg-white p-6 text-center shadow-sm">
+                <p className={`font-display text-2xl ${group.accent}`}>{group.label}</p>
                 <p className="mt-2 text-sm text-ink-soft">{group.name}</p>
               </div>
             ))}
@@ -136,8 +140,8 @@ export default function EgitimYaklasimimizPage() {
         <p className="mt-4 text-center text-ink-soft">
           Sınıflarımızı ziyaret edip öğretmenlerimizle tanışmak için ön görüşme randevusu alın.
         </p>
-        <div className="mt-10">
-          <LeadForm variant="compact" />
+        <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 ring-1 ring-rule md:p-8">
+          <LeadForm />
         </div>
       </section>
     </div>

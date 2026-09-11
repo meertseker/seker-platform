@@ -1,20 +1,17 @@
 'use client';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AGE_GROUPS, PROGRAMS } from '@/lib/leadSchema';
 import { trackLead } from '@/lib/analytics';
 import AttributionFields from './AttributionFields';
 
-const PROGRAM_LABELS: Record<(typeof PROGRAMS)[number], string> = {
-  'tam-gun': 'Tam Gün',
-  'yarim-gun': 'Yarım Gün',
-  'oyun-grubu': 'Oyun Grubu (2-3 yaş)',
-  'yaz-okulu': 'Yaz Okulu',
-};
-
 type FieldErrors = Partial<Record<string, string[]>>;
 
-export default function LeadForm({ variant = 'full' }: { variant?: 'full' | 'compact' }) {
+/**
+ * Geri arama formu — yalnızca ad ve telefon. Yaş grubu, program, başlangıç
+ * dönemi, e-posta ve mesaj alanları kaldırıldı; bunlar aramada konuşuluyor.
+ * Alan sayısı düştükçe form doldurma oranı yükselir.
+ */
+export default function LeadForm() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -30,11 +27,6 @@ export default function LeadForm({ variant = 'full' }: { variant?: 'full' | 'com
     const payload = {
       parentName: String(data.get('parentName') ?? ''),
       phone: String(data.get('phone') ?? ''),
-      email: String(data.get('email') ?? ''),
-      childAge: String(data.get('childAge') ?? ''),
-      program: String(data.get('program') ?? ''),
-      startTerm: String(data.get('startTerm') ?? ''),
-      message: String(data.get('message') ?? ''),
       gclid: String(data.get('gclid') ?? ''),
       landingPath: String(data.get('landingPath') ?? ''),
       kvkkConsent: data.get('kvkkConsent') === 'on',
@@ -54,10 +46,7 @@ export default function LeadForm({ variant = 'full' }: { variant?: 'full' | 'com
         return;
       }
 
-      trackLead(payload.childAge, {
-        program: payload.program,
-        landing_path: payload.landingPath,
-      });
+      trackLead(undefined, { landing_path: payload.landingPath });
       router.push('/tesekkurler');
     } catch {
       setFormError('Bağlantı hatası. Lütfen telefonla ulaşın.');
@@ -66,82 +55,43 @@ export default function LeadForm({ variant = 'full' }: { variant?: 'full' | 'com
     }
   }
 
-  const field = 'w-full rounded-lg border border-rule bg-white px-4 py-3 text-ink focus:border-mark focus:outline-none focus:ring-1 focus:ring-mark';
-  const label = 'mb-1.5 block text-sm font-medium text-ink';
+  const field =
+    'w-full rounded-xl border-2 border-rule bg-white px-4 py-3 text-ink transition-colors focus:border-mark focus:outline-none focus:ring-1 focus:ring-mark';
+  const label = 'mb-1.5 block text-sm font-semibold text-ink';
   const err = (name: string) =>
     errors[name] ? <p className="mt-1 text-sm text-red-600">{errors[name]![0]}</p> : null;
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
       <AttributionFields />
+
       <div className="grid gap-5 md:grid-cols-2">
         <div>
-          <label htmlFor="parentName" className={label}>Adınız Soyadınız *</label>
-          <input id="parentName" name="parentName" className={field} required />
+          <label htmlFor="parentName" className={label}>Adınız</label>
+          <input id="parentName" name="parentName" autoComplete="name" className={field} required />
           {err('parentName')}
         </div>
         <div>
-          <label htmlFor="phone" className={label}>Telefon *</label>
-          <input id="phone" name="phone" type="tel" inputMode="tel" placeholder="05XX XXX XX XX" className={field} required />
+          <label htmlFor="phone" className={label}>Telefon numaranız</label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="05XX XXX XX XX"
+            className={field}
+            required
+          />
           {err('phone')}
         </div>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2">
-        <div>
-          <label htmlFor="childAge" className={label}>Çocuğunuzun yaş grubu *</label>
-          <select id="childAge" name="childAge" className={field} required defaultValue="">
-            <option value="" disabled>Seçiniz</option>
-            {AGE_GROUPS.map((age) => (
-              <option key={age} value={age}>{age} yaş</option>
-            ))}
-          </select>
-          {err('childAge')}
-        </div>
-        <div>
-          <label htmlFor="program" className={label}>İlgilendiğiniz program *</label>
-          <select id="program" name="program" className={field} required defaultValue="">
-            <option value="" disabled>Seçiniz</option>
-            {PROGRAMS.map((program) => (
-              <option key={program} value={program}>{PROGRAM_LABELS[program]}</option>
-            ))}
-          </select>
-          {err('program')}
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="startTerm" className={label}>Başlamayı düşündüğünüz dönem *</label>
-        <select id="startTerm" name="startTerm" className={field} required defaultValue="">
-          <option value="" disabled>Seçiniz</option>
-          <option value="2026-2027">2026-2027 eğitim yılı</option>
-          <option value="donem-ici">Dönem içi</option>
-          <option value="yaz-2027">2027 yaz dönemi</option>
-          <option value="arastiriyorum">Henüz araştırma aşamasındayım</option>
-        </select>
-        {err('startTerm')}
-      </div>
-
-      {variant === 'full' && (
-        <div>
-          <label htmlFor="email" className={label}>E-posta</label>
-          <input id="email" name="email" type="email" className={field} />
-          {err('email')}
-        </div>
-      )}
-
-      {variant === 'full' && (
-        <div>
-          <label htmlFor="message" className={label}>Eklemek istedikleriniz</label>
-          <textarea id="message" name="message" rows={4} className={field} />
-        </div>
-      )}
-
       <label className="flex items-start gap-3 text-sm text-ink-soft">
         <input type="checkbox" name="kvkkConsent" required className="mt-1 h-4 w-4" />
         <span>
-          <a href="/gizlilik" className="underline">KVKK Aydınlatma Metni</a>&apos;ni okudum, iletişim
-          kurulmasına onay veriyorum. *
+          <a href="/gizlilik" className="underline">KVKK Aydınlatma Metni</a>&apos;ni okudum,
+          aranmama onay veriyorum.
         </span>
       </label>
       {err('kvkkConsent')}
@@ -151,13 +101,13 @@ export default function LeadForm({ variant = 'full' }: { variant?: 'full' | 'com
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-full bg-ink px-8 py-4 font-medium text-white transition hover:bg-ink-soft disabled:opacity-60"
+        className="w-full rounded-full bg-grape px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-grape/30 transition hover:bg-ink disabled:opacity-60"
       >
-        {submitting ? 'Gönderiliyor…' : 'Ön Görüşme Randevusu'}
+        {submitting ? 'Gönderiliyor…' : 'Beni Arayın'}
       </button>
 
       <p className="text-center text-sm text-ink-soft">
-        Talebinize ortalama <strong>15 dakika</strong> içinde dönüş yapıyoruz.
+        Numaranızı bırakın, <strong>15 dakika</strong> içinde sizi arayalım.
       </p>
     </form>
   );

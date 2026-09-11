@@ -31,30 +31,28 @@ export type DayChapter = {
 export const SCHEDULE_READY = false;
 
 /**
- * 🔴 DOĞRULANMADI — doğrulama kuyruğu madde 1 ve 2 (asset dosyası §0.2).
- * Sınıf başına çocuk ve öğretmen sayısı okul tarafından henüz teyit
- * edilmedi. false iken künye (Roster) hiçbir yerde render edilmez ve bu
- * sayılar sayfada iddia olarak geçmez. Sayılar doğrulanınca burası
- * güncellenir ve `ready: true` yapılır — künye otomatik olarak görünür.
+ * ✅ DOĞRULANDI — okul yönetimi, 1 Ağustos 2026.
+ * Sınıf mevcudu 13, her sınıfta iki öğretmen. MEB yönetmeliğinin dört yaş
+ * üstü gruplar için izin verdiği üst sınır öğretmen başına 20 çocuktur;
+ * bizde öğretmen başına 6-7 çocuk düşer. Sayı değişirse tek yer burasıdır.
  */
 export const ROSTER_STATUS: { ready: boolean; childCount: number; teacherCount: number; limit: number } = {
-  ready: false,
-  childCount: 10,
+  ready: true,
+  childCount: 13,
   teacherCount: 2,
   limit: 20,
 };
 
 /**
- * 🔴 DOĞRULANMADI — doğrulama kuyruğu madde 3 (asset dosyası §0.2).
- * Öğretmenin İngilizceyi anadili olarak mı konuştuğu, günün hangi
- * saatlerinde ve ne kadar kullandığı henüz teyit edilmedi. Asset
- * dosyası §5.2'deki "Öğretmeni İngilizceyi gün boyu kullanır — sadece
- * ders saatinde değil" cümlesi bile o tabloda ayrıca ⚠️TEYİT işaretlidir
- * — diğer satırların aksine kayıtsız şartsız ✅ değildir. false iken bu
- * kapsam/süre iddiası hiçbir bölümde geçmez. Okul kapsamı teyit edince
- * bu bayrağı true yapmak, cümleyi tek noktadan geri getirir.
+ * ✅ DOĞRULANDI — okul yönetimi, 1 Ağustos 2026.
+ * İngilizce öğretmeni anadili İngilizce olan bir öğretmendir ve her çocuk
+ * her gün iki saat İngilizce görür. Günlük doz bu kadar yüksek olduğu için
+ * mezuniyette konuşma çıktısı sayfalarda iddia edilebiliyor.
  */
-export const ENGLISH_COVERAGE_READY = false;
+export const ENGLISH_COVERAGE_READY = true;
+
+/** Günlük İngilizce süresi (saat). Metinlerde tek kaynak budur. */
+export const ENGLISH_HOURS_PER_DAY = 2;
 
 export const DAY_CHAPTERS: DayChapter[] = [
   {
@@ -76,7 +74,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
     lead: 'Herkes bir aradadır. Gün burada planlanır.',
     body: [
       'Sınıfın tamamı bu çemberde toplanır: kim ne yapacak, hangi atölye açık, bahçeye ne zaman çıkılacak burada konuşulur.',
-      'Millî Eğitim Bakanlığı okul öncesi yönetmeliği, dört yaş üstü gruplarda öğretmen başına yirmi çocuğa kadar izin verir. Biz bu üst sınırın belirgin biçimde altında kalmayı tercih ediyoruz — kesin sayıyı ön görüşmede paylaşıyoruz.',
+      'Sınıfta on üç çocuk var ve iki öğretmen birden. Yani çemberde söz sırası herkese geliyor — kimse konuşmadan güne başlamıyor.',
     ],
     mediaKey: 'motorSkills',
     grade: 'morning',
@@ -89,7 +87,7 @@ export const DAY_CHAPTERS: DayChapter[] = [
     lead: 'Montessori: çocuk seçer, öğretmen gözler.',
     body: [
       'Materyaller açık raflarda, çocuğun boyunda durur. Bir çalışmayı seçmek, bitirmek ve yerine kaldırmak çocuğun sorumluluğundadır.',
-      'Öğretmen araya girmez, gözlemler. Bu yaklaşımın işlemesi, sınıf mevcudunun sınırlı tutulmasına bağlıdır.',
+      'Öğretmen araya girmiyor, izliyor. Bir çocuk takıldığında yanına gidebiliyor — çünkü sınıfta ikinci bir öğretmen daha var.',
     ],
     mediaKey: 'montessori',
     grade: 'morning',
@@ -98,13 +96,11 @@ export const DAY_CHAPTERS: DayChapter[] = [
     id: 'ingilizce',
     time: '11:00',
     title: 'İngilizce',
-    lead: 'Ders saati değil, günün dili.',
+    lead: 'Her gün iki saat, anadili İngilizce olan bir öğretmenle.',
     body: [
-      'İngilizce, ayrı bir ders saati değil; günün içinde kullanılan ikinci dildir. Oyunun, yemeğin ve bahçenin bir parçası olur.',
-      'Çocuk dili bir ders olarak değil, günlük iletişimin bir parçası olarak edinir.',
-      // 🔴 ENGLISH_COVERAGE_READY — doğrulama kuyruğu #3. Kapsam/süre teyit
-      // edilmeden bu cümle render edilmez (bkz. yukarıdaki bayrak yorumu).
-      ...(ENGLISH_COVERAGE_READY ? ['Öğretmenimiz İngilizceyi gün boyunca kullanır.'] : []),
+      'Çocuğunuz her gün iki saatini anadili İngilizce olan öğretmeniyle geçiriyor. Haftada bir iki ders değil; her gün, aynı saatte, aynı öğretmenle.',
+      'Bu saatlerde Türkçeye dönülmüyor. Çocuk önce anlıyor, sonra tek kelimelerle karşılık veriyor, en sonunda cümle kuruyor. Aceleye getirilmiyor.',
+      'Mezun olan çocuklarımız İngilizce konuşuyor. Bunun sihirli bir yöntemi yok — günde iki saatin üç yıl boyunca birikmesi.',
     ],
     mediaKey: 'art',
     grade: 'morning',
@@ -161,8 +157,8 @@ export const DAY_CHAPTERS: DayChapter[] = [
     title: 'Çıkış',
     lead: 'Günün anlatıldığı an.',
     body: [
-      'Her çocuk alınırken öğretmeni velisine o günü anlatır: ne yaptı, neyi zor buldu, neye ilk kez cesaret etti.',
-      'Bu ayrıntılı paylaşım, sınıf mevcudunun sınırlı tutulmasıyla mümkün olur.',
+      'Her çocuk alınırken öğretmeni size o günü anlatır: ne yaptı, neyi zor buldu, neye ilk kez cesaret etti.',
+      'Zaten gün içinde merak ettiyseniz kameradan bakmışsınızdır. Çıkışta konuştuğumuz şey, gördüğünüzün arkasındaki hikâye oluyor.',
     ],
     mediaKey: 'dance',
     grade: 'dusk',

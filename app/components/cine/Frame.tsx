@@ -53,7 +53,7 @@ export default function Frame({
   const ratioClass = RATIO_CLASS[ratio];
 
   return (
-    <div className={`relative w-full overflow-hidden bg-paper-warm ${ratioClass}`}>
+    <div className={`relative w-full overflow-hidden rounded-3xl bg-paper-warm ring-1 ring-rule ${ratioClass}`}>
       <Image
         src={asset.src}
         alt={asset.alt}

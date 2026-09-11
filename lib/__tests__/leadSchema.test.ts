@@ -4,16 +4,11 @@ import { leadSchema } from '../leadSchema';
 const valid = {
   parentName: 'Ayşe Yılmaz',
   phone: '05301018875',
-  email: 'ayse@example.com',
-  childAge: '3-4',
-  program: 'tam-gun',
-  startTerm: '2026-2027',
-  message: 'Bilgi almak istiyorum',
   kvkkConsent: true,
 };
 
 describe('leadSchema', () => {
-  it('geçerli bir lead kabul eder', () => {
+  it('yalnızca ad, telefon ve KVKK onayıyla geçerli bir lead kabul eder', () => {
     expect(leadSchema.safeParse(valid).success).toBe(true);
   });
 
@@ -33,23 +28,35 @@ describe('leadSchema', () => {
     if (r.success) expect(r.data.phone).toBe('05301018875');
   });
 
-  it('e-posta boş bırakılabilir', () => {
-    const r = leadSchema.safeParse({ ...valid, email: '' });
-    expect(r.success).toBe(true);
-  });
-
-  it('geçersiz yaş grubunu reddeder', () => {
-    const r = leadSchema.safeParse({ ...valid, childAge: '15-16' });
+  it('tek harflik adı reddeder', () => {
+    const r = leadSchema.safeParse({ ...valid, parentName: 'A' });
     expect(r.success).toBe(false);
   });
 
-  it('2-3 yaş grubunu kabul eder', () => {
-    const r = leadSchema.safeParse({ ...valid, childAge: '2-3' });
+  it('kaldırılan alanlar artık sorulmuyor — şema çıktısında yer almaz', () => {
+    const r = leadSchema.safeParse({
+      ...valid,
+      // Eski istemcilerden gelebilecek fazladan alanlar sessizce düşer.
+      email: 'ayse@example.com',
+      childAge: '3-4',
+      program: 'tam-gun',
+      startTerm: '2026-2027',
+      message: 'Bilgi almak istiyorum',
+    });
     expect(r.success).toBe(true);
+    if (r.success) {
+      for (const key of ['email', 'childAge', 'program', 'startTerm', 'message']) {
+        expect(r.data).not.toHaveProperty(key);
+      }
+    }
   });
 
-  it('oyun grubu programını kabul eder', () => {
-    const r = leadSchema.safeParse({ ...valid, program: 'oyun-grubu' });
+  it('gclid ve landingPath gizli alanları taşınmaya devam eder', () => {
+    const r = leadSchema.safeParse({ ...valid, gclid: 'Cj0ABC', landingPath: '/lp/x' });
     expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.gclid).toBe('Cj0ABC');
+      expect(r.data.landingPath).toBe('/lp/x');
+    }
   });
 });

@@ -27,7 +27,7 @@ describe('tasarım tokenları', () => {
 });
 
 describe('font yüklemesi', () => {
-  it.each(['Bricolage_Grotesque', 'Newsreader', 'Martian_Mono'])(
+  it.each(['Fredoka', 'Nunito', 'Martian_Mono'])(
     '%s next/font ile yükleniyor',
     (family) => {
       expect(layout).toContain(family);

@@ -47,6 +47,9 @@ const FEATURED_ACTIVITIES: Activity[] = [
   },
 ]
 
+/** Aktivite kartlarının şerit renkleri — sitenin aksan sırası. */
+const STRIPES = ['bg-bubble', 'bg-sunny', 'bg-mint', 'bg-sky']
+
 const ActivitiesSection = () => {
   return (
     <section className="bg-paper-warm py-16">
@@ -60,8 +63,9 @@ const ActivitiesSection = () => {
         </div>
 
         <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURED_ACTIVITIES.map((aktivite) => (
-            <div key={aktivite.id} className="overflow-hidden rounded-2xl border border-rule bg-paper">
+          {FEATURED_ACTIVITIES.map((aktivite, index) => (
+            <div key={aktivite.id} className="card-lift overflow-hidden rounded-3xl bg-white shadow-sm">
+              <div className={`h-1.5 ${STRIPES[index % STRIPES.length]}`} />
               <div className="relative h-48 bg-paper-warm">
                 <Image
                   src={aktivite.resim}
@@ -70,7 +74,7 @@ const ActivitiesSection = () => {
                   sizes="(max-width: 768px) 50vw, 25vw"
                   className="object-cover"
                 />
-                <span className="absolute right-3 top-3 rounded-full bg-ink px-3 py-1 text-xs font-medium text-paper">
+                <span className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-grape shadow-sm">
                   {aktivite.yasGrubu}
                 </span>
               </div>
@@ -83,7 +87,10 @@ const ActivitiesSection = () => {
         </div>
 
         <div className="mt-10 text-center">
-          <Link href="/aktiviteler" className="text-ink underline underline-offset-4">
+          <Link
+            href="/aktiviteler"
+            className="inline-block rounded-full border-2 border-grape px-8 py-3 font-semibold text-grape hover:bg-grape hover:text-white"
+          >
             Tüm aktivitelerimizi görün
           </Link>
         </div>

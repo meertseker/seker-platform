@@ -1,0 +1,65 @@
+import React from 'react';
+
+export type BandTone = 'grape' | 'bubble' | 'mint' | 'sunny' | 'sky';
+
+/**
+ * Sayfa bandı — sitenin imza öğesi. Okulun adından (şeker) türeyen mor
+ * gradyan, üzerinde yüzen konfeti şekilleri ve alt kenarda şeker ambalajı
+ * fistosu. Her iç sayfa aynı bantla açılır; ton, sayfanın konusuna göre
+ * değişir ama yapı sabittir.
+ *
+ * `scallopTone`, bandın hemen altındaki bölümün zeminini bildirir — fisto
+ * o rengi kullanır, aksi hâlde kenar sayfaya oturmaz.
+ */
+export default function PageHero({
+  eyebrow,
+  title,
+  lead,
+  tone = 'grape',
+  scallopTone = 'paper',
+  children,
+}: {
+  eyebrow?: React.ReactNode;
+  title: React.ReactNode;
+  lead?: React.ReactNode;
+  tone?: BandTone;
+  scallopTone?: 'paper' | 'paper-warm' | 'white';
+  children?: React.ReactNode;
+}) {
+  const scallopClass =
+    scallopTone === 'paper-warm' ? 'scallop scallop-warm'
+    : scallopTone === 'white' ? 'scallop scallop-white'
+    : 'scallop';
+
+  return (
+    <section className={`band-${tone} relative overflow-hidden pb-16 pt-14 md:pb-20 md:pt-20`}>
+      <Confetti />
+
+      <div className="relative z-10 mx-auto max-w-3xl px-6 text-center">
+        {eyebrow ? (
+          <p className="timecode text-white/70">{eyebrow}</p>
+        ) : null}
+        <h1 className="mt-4 font-display text-3xl text-white md:text-5xl">{title}</h1>
+        {lead ? (
+          <p className="mx-auto mt-5 max-w-2xl text-base text-white/85 md:text-lg">{lead}</p>
+        ) : null}
+        {children ? <div className="mt-8">{children}</div> : null}
+      </div>
+
+      <div aria-hidden="true" className={`absolute inset-x-0 bottom-0 ${scallopClass}`} />
+    </section>
+  );
+}
+
+/** Bantta yüzen dekoratif şekiller. Tamamen dekoratif — okuyucuya sunulmaz. */
+function Confetti() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+      <span className="confetti-float absolute left-[6%] top-8 h-16 w-16 rounded-full bg-sunny/25" />
+      <span className="confetti-float absolute right-[8%] top-6 h-24 w-24 rounded-full bg-bubble/20" />
+      <span className="confetti-float absolute right-[22%] bottom-12 h-10 w-10 rotate-12 rounded-xl bg-mint/25" />
+      <span className="confetti-float absolute left-[18%] bottom-10 h-8 w-8 rotate-45 rounded-md bg-sky/25" />
+      <span className="confetti-float absolute left-[46%] top-4 h-6 w-6 rounded-full bg-white/20" />
+    </div>
+  );
+}

@@ -82,7 +82,7 @@ export default async function LandingPageRoute({
           <h2 className="text-3xl text-paper">{page.formHeading}</h2>
           <p className="mt-4 text-paper/80">{page.formIntro}</p>
           <div className="mt-8 rounded-2xl bg-paper p-6 md:p-8">
-            <LeadForm variant="compact" />
+            <LeadForm />
           </div>
         </div>
       </section>

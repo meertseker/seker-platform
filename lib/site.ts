@@ -29,7 +29,8 @@ export const SITE = {
     `${address.street} ${address.district}/${address.city}`,
   )}`,
   hours: { opens: '07:15', closes: '19:15' },
-  areaServed: ['Beykent', 'Büyükçekmece', 'Beylikdüzü', 'Bahçeşehir', 'Esenyurt', 'Avcılar'],
+  /** Servis güzergâhının kapsadığı bölgeler — okul yönetimi tarafından doğrulandı (1 Ağustos 2026). */
+  areaServed: ['Beykent', 'Beylikdüzü', 'Mimaroba', 'Gürpınar', 'Yakuplu', 'Büyükçekmece'],
   social: {
     // TODO: hesaplar açıldığında gerçek URL'lerle değiştir; boş bırakılanlar render edilmez
     instagram: '',

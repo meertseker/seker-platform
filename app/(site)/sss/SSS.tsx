@@ -1,6 +1,7 @@
 "use client"
 import React, { useState } from 'react'
 import Header from '@/app/components/Header'
+import PageHero from '@/app/components/PageHero'
 
 interface FAQItem {
   id: number
@@ -78,53 +79,42 @@ const SSS = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-paper">
       <Header />
-      
-      {/* Hero Section */}
-      <div className="relative py-16 bg-indigo-900">
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/90 to-purple-700/80"></div>
-        
-        {/* Dekoratif Şekiller */}
-        <div className="absolute top-6 right-8 w-16 h-16 bg-yellow-400 rounded-full opacity-20"></div>
-        <div className="absolute bottom-6 left-12 w-20 h-20 bg-red-500 rounded-full opacity-20"></div>
-        
-        <div className="container mx-auto px-4 md:px-6 relative z-10 text-center">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-white">
-            Sık Sorulan Sorular
-          </h1>
-          <p className="text-white text-lg opacity-90 max-w-3xl mx-auto">
-            Anaokulumuza dair merak ettiğiniz soruların cevaplarını burada bulabilirsiniz. 
-            Başka sorularınız için bizimle iletişime geçmekten çekinmeyin.
-          </p>
-        </div>
-      </div>
+
+      <PageHero
+        eyebrow="Sık sorulan sorular"
+        title="Merak ettikleriniz"
+        lead="Anaokulumuza dair merak ettiğiniz soruların cevaplarını burada bulabilirsiniz. Başka sorularınız için bizimle iletişime geçmekten çekinmeyin."
+        tone="grape"
+      />
 
       {/* FAQ Section */}
-      <div className="py-16 bg-white">
+      <div className="py-16">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-4xl mx-auto">
             <div className="grid gap-4">
               {faqData.map((item) => (
-                <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div key={item.id} className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-rule">
                   <button
                     onClick={() => toggleItem(item.id)}
-                    className="w-full px-6 py-4 text-left hover:bg-gray-50 transition-colors duration-200 flex items-center justify-between"
+                    className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left transition-colors duration-200 hover:bg-paper-warm"
                   >
-                    <h3 className="text-lg font-semibold text-gray-800 pr-4">
+                    <h3 className="pr-4 text-lg font-semibold text-ink">
                       {item.question}
                     </h3>
                     <div className="flex-shrink-0">
-                      <div 
-                        className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
-                        style={{ backgroundColor: openItems.includes(item.id) ? '#ef6700' : '#3ba4cc' }}
+                      <div
+                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ${
+                          openItems.includes(item.id) ? 'bg-bubble' : 'bg-grape'
+                        }`}
                       >
-                        <svg 
+                        <svg
                           className={`w-5 h-5 text-white transition-transform duration-200 ${
                             openItems.includes(item.id) ? 'rotate-45' : ''
-                          }`} 
-                          fill="none" 
-                          stroke="currentColor" 
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
                           viewBox="0 0 24 24"
                         >
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -132,11 +122,11 @@ const SSS = () => {
                       </div>
                     </div>
                   </button>
-                  
+
                   {openItems.includes(item.id) && (
                     <div className="px-6 pb-4">
-                      <div className="pt-2 border-t border-gray-100">
-                        <p className="text-gray-700 leading-relaxed">
+                      <div className="border-t border-rule pt-3">
+                        <p className="leading-relaxed text-ink-soft">
                           {item.answer}
                         </p>
                       </div>
@@ -150,21 +140,20 @@ const SSS = () => {
       </div>
 
       {/* Contact CTA Section */}
-      <div className="py-12" style={{ backgroundColor: 'rgba(7, 25, 151, 0.05)' }}>
+      <div className="bg-paper-warm py-12">
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold mb-4" style={{ color: '#071997' }}>
+            <h2 className="mb-4 font-display text-2xl text-ink md:text-3xl">
               Başka sorularınız mı var?
             </h2>
-            <p className="text-gray-700 mb-6">
+            <p className="mb-6 text-ink-soft">
               Merak ettiğiniz herhangi bir konu varsa bizimle iletişime geçmekten çekinmeyin. 
               Size yardımcı olmaktan mutluluk duyarız.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a 
                 href="tel:0530 101 88 75"
-                className="inline-flex items-center gap-2 text-white font-medium px-6 py-3 rounded-full transition-colors duration-200 shadow-sm hover:opacity-80"
-                style={{ backgroundColor: '#ef6700' }}
+                className="inline-flex items-center gap-2 rounded-full bg-grape px-6 py-3 font-semibold text-white shadow-lg shadow-grape/30 transition-colors duration-200 hover:bg-ink"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
@@ -173,19 +162,7 @@ const SSS = () => {
               </a>
               <a 
                 href="mailto:sekerakademi@gmail.com"
-                className="inline-flex items-center gap-2 font-medium px-6 py-3 rounded-full border-2 transition-colors duration-200"
-                style={{ 
-                  borderColor: '#3ba4cc',
-                  color: '#3ba4cc'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3ba4cc';
-                  e.currentTarget.style.color = 'white';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#3ba4cc';
-                }}
+                className="inline-flex items-center gap-2 rounded-full border-2 border-mint-deep px-6 py-3 font-semibold text-mint-deep transition-colors duration-200 hover:bg-mint-deep hover:text-white"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

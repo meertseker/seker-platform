@@ -1,4 +1,5 @@
 import Header from '@/app/components/Header';
+import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
 import TrackedLink from '@/app/components/TrackedLink';
@@ -12,6 +13,9 @@ export const metadata = buildMetadata({
     'Özel Şeker Anaokulu 2026-2027 ön kayıt. Beykent Büyükçekmece\'de sınırlı kontenjanlı, 2-6 yaş okul öncesi eğitim. Ön görüşme randevusu alın.',
   path: '/kayit',
 });
+
+/** Adım rozetlerinin renkleri — üç adım, üç ton. */
+const STEP_ACCENTS = ['bg-grape', 'bg-bubble-deep', 'bg-mint-deep'];
 
 const STEPS = [
   {
@@ -42,43 +46,39 @@ export default function KayitPage() {
         ])}
       />
 
-      <section className="bg-ink py-20 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-paper/70">
-          2-6 yaş · Beykent Büyükçekmece
-        </p>
-        <h1 className="mx-auto mt-4 max-w-3xl px-6 font-display text-4xl text-white md:text-5xl">
-          2026-2027 kayıtlarımız açık
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl px-6 text-paper">
-          Sınıflarımız 10 kişilik ve her sınıfta iki öğretmen görev yapıyor. Bu düzeni korumak
-          için kontenjanımız sınırlı — 2-3 yaş oyun grubundan 5-6 yaş ilkokula hazırlık sınıfına
-          kadar tüm gruplarda yer ayırmak için erken başvurmanızı öneririz.
-        </p>
-      </section>
+      <PageHero
+        eyebrow="2-6 yaş · Beykent Büyükçekmece"
+        title="2026-2027 kayıtlarımız açık"
+        lead="Sınıflarımız 10 kişilik ve her sınıfta iki öğretmen görev yapıyor. Bu düzeni korumak için kontenjanımız sınırlı — 2-3 yaş oyun grubundan 5-6 yaş ilkokula hazırlık sınıfına kadar tüm gruplarda yer ayırmak için erken başvurmanızı öneririz."
+        tone="bubble"
+      />
 
       <section className="mx-auto max-w-5xl px-6 py-16">
         <h2 className="text-center font-display text-3xl text-ink">Kayıt süreci üç adımdan oluşur</h2>
-        <div className="mt-12 grid gap-8 md:grid-cols-3">
+        {/* Numaralandırma burada gerçek bir sıra taşır: adımlar birbirini izler. */}
+        <ol className="mt-12 grid gap-8 md:grid-cols-3">
           {STEPS.map((step, index) => (
-            <div key={step.title} className="rounded-xl bg-paper p-8">
-              <span className="font-display text-3xl text-ink">{index + 1}</span>
+            <li key={step.title} className="card-lift rounded-3xl bg-white p-8 shadow-sm ring-1 ring-rule">
+              <span
+                className={`flex h-12 w-12 items-center justify-center rounded-2xl font-display text-2xl text-white ${STEP_ACCENTS[index % STEP_ACCENTS.length]}`}
+              >
+                {index + 1}
+              </span>
               <h3 className="mt-4 font-display text-xl text-ink">{step.title}</h3>
               <p className="mt-3 text-ink-soft">{step.description}</p>
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
 
-      <section className="bg-paper py-16">
+      <section className="bg-paper-warm py-16">
         <div className="mx-auto max-w-2xl px-6">
           <h2 className="text-center font-display text-3xl text-ink">
             Ön görüşme randevunuzu alın
           </h2>
-          <p className="mt-4 text-center text-ink-soft">
-            Formu gönderdiğinizde okul yönetimimiz ortalama 15 dakika içinde sizi arar.
-          </p>
-          <div className="mt-10">
-            <LeadForm variant="full" />
+          {/* Geri arama süresi formun kendi alt satırında yazıyor — burada tekrarlanmaz. */}
+          <div className="mt-8 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 md:p-8">
+            <LeadForm />
           </div>
         </div>
       </section>
@@ -94,7 +94,7 @@ export default function KayitPage() {
             href={`tel:${SITE.phone.e164}`}
             event="tel_click"
             payload={{ page: 'kayit' }}
-            className="rounded-full bg-ink px-8 py-4 font-medium text-white transition hover:bg-ink-soft"
+            className="rounded-full bg-grape px-8 py-4 font-semibold text-white shadow-lg shadow-grape/30 transition hover:bg-ink"
           >
             {SITE.phone.display}
           </TrackedLink>
@@ -103,7 +103,7 @@ export default function KayitPage() {
             event="whatsapp_click"
             payload={{ page: 'kayit' }}
             external
-            className="rounded-full border border-ink px-8 py-4 font-medium text-ink transition hover:bg-paper-warm"
+            className="rounded-full border-2 border-mint-deep px-8 py-4 font-semibold text-ink transition hover:bg-mint/10"
           >
             WhatsApp&apos;tan Yazın
           </TrackedLink>

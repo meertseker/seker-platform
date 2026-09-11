@@ -12,16 +12,17 @@ export default function TimeSpine({ chapters }: { chapters: DayChapter[] }) {
   return (
     <nav
       aria-label="Günün bölümleri"
-      className="hidden lg:block sticky top-24 h-fit border-l border-rule pl-5"
+      className="sticky top-24 hidden h-fit rounded-3xl bg-paper-warm p-5 lg:block"
     >
-      <ol className="space-y-3">
+      <ol className="space-y-1">
         {chapters.map((chapter) => (
           <li key={chapter.id} className="cine-spine-item">
-            <a href={`#${chapter.id}`} className="group block hover:opacity-100">
-              <Timecode className="block group-hover:text-ink">
-                {chapterLabel(chapter)}
-              </Timecode>
-              <span className="text-sm text-ink-soft group-hover:text-ink">
+            <a
+              href={`#${chapter.id}`}
+              className="group block rounded-xl px-3 py-2 transition-colors hover:bg-white"
+            >
+              <Timecode className="block">{chapterLabel(chapter)}</Timecode>
+              <span className="text-sm font-semibold text-ink group-hover:text-grape">
                 {chapter.title}
               </span>
             </a>

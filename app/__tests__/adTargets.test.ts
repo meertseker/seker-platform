@@ -2,9 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { LANDING_SLUGS } from '@/content/landingPages';
-import { AGE_GROUPS_CONTENT } from '@/content/ageGroups';
+import { AGE_GROUPS, AGE_GROUPS_CONTENT } from '@/content/ageGroups';
 import { DAY_CHAPTERS } from '@/content/day';
-import { AGE_GROUPS } from '@/lib/leadSchema';
 
 const APP_DIR = path.join(process.cwd(), 'app');
 
@@ -14,10 +13,11 @@ function siteRouteExists(routePath: string): boolean {
 }
 
 /** Reklam planındaki site hedefleri (K1-K10 arama kampanyaları, `/lib/leadSchema`
- * ve `content/nav.ts` ile aynı 9 hedef sayfa). */
+ * ve `content/nav.ts` ile aynı hedef sayfalar). `/kadromuz` okul kararıyla
+ * kaldırıldı — ekipten kimse sitede tanıtılmıyor. */
 const AD_SITE_TARGETS = [
   '/', '/kayit', '/ucretler', '/egitim-yaklasimimiz', '/veli-yorumlari',
-  '/guvenlik', '/gunluk-akis', '/kadromuz', '/yas-gruplari',
+  '/guvenlik', '/gunluk-akis', '/yas-gruplari',
 ];
 
 const EXPECTED_LPS = [

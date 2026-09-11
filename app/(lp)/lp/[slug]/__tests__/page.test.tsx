@@ -130,7 +130,7 @@ describe('bölüm sırası — form gövde içeriğinden önce gelir (kasıtlı 
     const jsx = await LandingPageRoute(params('beykent-anaokulu'));
     const { container } = render(jsx);
     const html = container.innerHTML;
-    const formFieldIndex = html.indexOf('Adınız Soyadınız');
+    const formFieldIndex = html.indexOf('Telefon numaranız');
     const faqHeadingIndex = html.indexOf('Sıkça Sorulanlar');
     expect(formFieldIndex).toBeGreaterThan(-1);
     expect(faqHeadingIndex).toBeGreaterThan(-1);

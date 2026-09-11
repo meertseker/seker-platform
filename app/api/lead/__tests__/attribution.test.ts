@@ -18,11 +18,6 @@ vi.mock('resend', () => ({
 const valid = {
   parentName: 'Ayşe Yılmaz',
   phone: '05301018875',
-  email: 'ayse@example.com',
-  childAge: '3-4',
-  program: 'tam-gun',
-  startTerm: '2026-2027',
-  message: 'Bilgi almak istiyorum',
   kvkkConsent: true,
 };
 

@@ -13,7 +13,6 @@ const ROUTES: { path: string; priority: number; changeFrequency: 'weekly' | 'mon
     priority: 0.8 as const,
     changeFrequency: 'monthly' as const,
   })),
-  { path: '/kadromuz', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/gunluk-akis', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/guvenlik', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/veli-yorumlari', priority: 0.7, changeFrequency: 'monthly' },

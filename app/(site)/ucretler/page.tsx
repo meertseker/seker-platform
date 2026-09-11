@@ -1,4 +1,5 @@
 import Header from '@/app/components/Header';
+import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
 import { buildMetadata } from '@/lib/metadata';
@@ -39,20 +40,23 @@ export default function UcretlerPage() {
       <Header />
       <JsonLd data={buildFaqSchema(FAQ_SUBSET)} />
 
-      <section className="bg-ink py-20 text-center">
-        <h1 className="px-6 font-display text-4xl text-white md:text-5xl">
-          Ücretimiz ve neye karşılık geldiği
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl px-6 text-paper">
-          Ücretimizi web sitesinde yayımlamıyoruz — çünkü bir rakam, tek başına
-          neyi kapsadığını anlatmıyor. Okulu gezmeden ve sınıfı görmeden verilen
-          bir fiyat, doğru karar vermenize yardımcı olmaz.
-        </p>
-      </section>
+      <PageHero
+        eyebrow="Ücretler ve ödeme"
+        title="Ücretimiz ve neye karşılık geldiği"
+        lead="Ücretimizi web sitesinde yayımlamıyoruz — çünkü bir rakam, tek başına neyi kapsadığını anlatmıyor. Okulu gezmeden ve sınıfı görmeden verilen bir fiyat, doğru karar vermenize yardımcı olmaz."
+        tone="sunny"
+      />
 
       <section className="mx-auto max-w-3xl px-6 py-16">
-        <div className="rounded-2xl border border-rule bg-paper p-10 text-center">
-          <p className="text-sm uppercase tracking-[0.2em] text-ink-soft">
+        <div className="overflow-hidden rounded-3xl bg-white shadow-lg shadow-ink/5">
+          <div aria-hidden="true" className="grid h-2 grid-cols-4">
+            <span className="bg-grape" />
+            <span className="bg-bubble" />
+            <span className="bg-sunny" />
+            <span className="bg-mint" />
+          </div>
+          <div className="p-10 text-center">
+          <p className="timecode text-grape">
             2026-2027 eğitim yılı
           </p>
           <p className="mt-5 font-display text-3xl leading-snug text-ink">
@@ -67,28 +71,29 @@ export default function UcretlerPage() {
             Ücret, ödeme planı, kardeş ve peşin ödeme koşulları ön görüşmede
             size özel olarak paylaşılır.
           </p>
+          </div>
         </div>
       </section>
 
-      <section className="bg-paper py-16">
-        <div className="mx-auto grid max-w-4xl gap-12 px-6 md:grid-cols-2">
-          <div>
+      <section className="bg-paper-warm py-16">
+        <div className="mx-auto grid max-w-4xl gap-8 px-6 md:grid-cols-2">
+          <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-mint/40">
             <h2 className="font-display text-2xl text-ink">Ücrete dahil</h2>
             <ul className="mt-6 space-y-3">
               {INCLUDED.map((item) => (
                 <li key={item} className="flex gap-3 text-ink-soft">
-                  <span className="text-ink">✓</span>
+                  <span aria-hidden="true" className="mt-0.5 font-semibold text-mint-deep">✓</span>
                   {item}
                 </li>
               ))}
             </ul>
           </div>
-          <div>
+          <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-tangerine/40">
             <h2 className="font-display text-2xl text-ink">Ayrıca fiyatlanır</h2>
             <ul className="mt-6 space-y-3">
               {EXCLUDED.map((item) => (
                 <li key={item} className="flex gap-3 text-ink-soft">
-                  <span className="text-ink-soft">—</span>
+                  <span aria-hidden="true" className="mt-0.5 font-semibold text-tangerine-deep">+</span>
                   {item}
                 </li>
               ))}
@@ -119,13 +124,13 @@ export default function UcretlerPage() {
         </div>
       </section>
 
-      <section className="bg-paper py-16">
+      <section className="bg-paper-warm py-16">
         <div className="mx-auto max-w-2xl px-6">
           <h2 className="text-center font-display text-3xl text-ink">
             Size özel ödeme planı için görüşelim
           </h2>
-          <div className="mt-10">
-            <LeadForm variant="full" />
+          <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 md:p-8">
+            <LeadForm />
           </div>
         </div>
       </section>

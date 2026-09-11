@@ -1,6 +1,7 @@
 "use client"
 import React, { useState } from 'react'
 import Header from '@/app/components/Header'
+import PageHero from '@/app/components/PageHero'
 import Image from 'next/image';
 
 // Define TypeScript types
@@ -173,38 +174,29 @@ const Aktiviteler = () => {
 
   return (
     <div>
-      <div className="min-h-screen bg-orange-50">
+      <div className="min-h-screen bg-paper-warm">
         <Header />
         
         {/* Hero Section */}
-        <div className="relative py-12 bg-indigo-900">
-          <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/90 to-purple-700/80"></div>
-          
-          {/* Dekoratif Şekiller */}
-          <div className="absolute top-6 right-8 w-16 h-16 bg-yellow-400 rounded-full opacity-20"></div>
-          <div className="absolute bottom-6 left-12 w-20 h-20 bg-red-500 rounded-full opacity-20"></div>
-          
-          <div className="container mx-auto px-4 md:px-6 relative z-10 text-center">
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Aktivitelerimiz
-            </h1>
-            <p className="text-white text-lg opacity-90 max-w-2xl mx-auto">
-              Çocuklarımızın yeteneklerini keşfetmelerini sağlayan, gelişimlerini destekleyen eğlenceli ve eğitici aktivitelerimiz.
-            </p>
-          </div>
-        </div>
-        
+        <PageHero
+          eyebrow="Kış ve yaz programı"
+          title="Aktivitelerimiz"
+          lead="Çocuklarımızın yeteneklerini keşfetmelerini sağlayan, gelişimlerini destekleyen eğlenceli ve eğitici aktivitelerimiz."
+          tone="grape"
+          scallopTone="white"
+        />
+
         {/* Mevsim Seçim Bölümü */}
         <div className="py-8 bg-white">
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex items-center justify-center gap-4">
-              <span className={`text-lg font-medium ${mevsim === "kış" ? "text-indigo-600" : "text-gray-400"}`}>Kış Dönemi</span>
+              <span className={`text-lg font-medium ${mevsim === "kış" ? "text-grape font-semibold" : "text-ink-soft"}`}>Kış Dönemi</span>
               
               {/* Toggle Switch */}
               <button 
                 onClick={mevsimDeğiştir} 
-                className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                  mevsim === "yaz" ? "bg-orange-500" : "bg-indigo-600"
+                className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-grape focus:ring-offset-2 ${
+                  mevsim === "yaz" ? "bg-paper-warm0" : "bg-grape"
                 }`}
               >
                 <span
@@ -233,15 +225,15 @@ const Aktiviteler = () => {
                 </svg>
               </button>
               
-              <span className={`text-lg font-medium ${mevsim === "yaz" ? "text-orange-500" : "text-gray-400"}`}>Yaz Dönemi</span>
+              <span className={`text-lg font-medium ${mevsim === "yaz" ? "text-tangerine-deep font-semibold" : "text-ink-soft"}`}>Yaz Dönemi</span>
             </div>
           </div>
         </div>
         
         {/* Aktivite Kartları Grid */}
-        <div className="py-12 bg-orange-50">
+        <div className="py-12 bg-paper-warm">
           <div className="container mx-auto px-4 md:px-6">
-            <h2 className="text-2xl md:text-3xl font-bold text-center text-indigo-900 mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-ink mb-12">
               {mevsim === "kış" ? "Kış Dönemi Aktivitelerimiz" : "Yaz Dönemi Aktivitelerimiz"}
             </h2>
             
@@ -249,11 +241,11 @@ const Aktiviteler = () => {
               {aktiviteler[mevsim].map((aktivite) => (
                 <div 
                   key={aktivite.id} 
-                  className={`bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer transition-transform duration-300 hover:shadow-lg hover:-translate-y-1 ${seçiliAktivite.id === aktivite.id ? "ring-2 ring-indigo-600" : ""}`}
+                  className={`bg-white rounded-3xl shadow-sm overflow-hidden cursor-pointer transition-transform duration-300 hover:shadow-lg hover:-translate-y-1 ${seçiliAktivite.id === aktivite.id ? "ring-2 ring-grape" : ""}`}
                   onClick={() => aktiviteSeç(aktivite)}
                 >
                   {/* Aktivite Resmi */}
-                  <div className="relative h-48 bg-gray-200">
+                  <div className="relative h-48 bg-paper-warm">
                     <Image
                       src={aktivite.resim || "/cocukklar.webp"}
                       alt={aktivite.başlık}
@@ -261,19 +253,19 @@ const Aktiviteler = () => {
                       width={400}
                       height={300}
                     />
-                    <div className="absolute top-3 right-3 bg-white rounded-full px-3 py-1 text-xs font-medium text-indigo-900">
+                    <div className="absolute top-3 right-3 bg-white rounded-full px-3 py-1 text-xs font-medium text-ink">
                       {aktivite.yaşGrubu}
                     </div>
                   </div>
                   
                   {/* Aktivite Bilgileri */}
                   <div className="p-5">
-                    <h3 className="text-lg font-bold text-indigo-900 mb-2">{aktivite.başlık}</h3>
-                    <p className="text-gray-600 text-sm line-clamp-2">{aktivite.açıklama}</p>
+                    <h3 className="text-lg font-bold text-ink mb-2">{aktivite.başlık}</h3>
+                    <p className="text-ink-soft text-sm line-clamp-2">{aktivite.açıklama}</p>
                     
                     <div className="mt-4 flex justify-between items-center">
-                      <span className="text-xs text-indigo-600 font-medium">{aktivite.özellikler.length} özellik</span>
-                      <button className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center gap-1">
+                      <span className="text-xs text-grape font-medium">{aktivite.özellikler.length} özellik</span>
+                      <button className="text-grape hover:text-ink text-sm font-medium flex items-center gap-1">
                         Detaylar
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -290,10 +282,10 @@ const Aktiviteler = () => {
         {/* Seçilen Aktivite Detayları */}
         <div id="aktivite-detay" className="py-16 bg-white">
           <div className="container mx-auto px-4 md:px-6">
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-lg shadow-ink/5 overflow-hidden">
               <div className="grid grid-cols-1 md:grid-cols-2">
                 {/* Aktivite Resmi */}
-                <div className="relative h-80 md:h-auto bg-gray-200">
+                <div className="relative h-80 md:h-auto bg-paper-warm">
                   <Image
                     src={seçiliAktivite.resim || "/cocukklar.webp"}
                     alt={seçiliAktivite.başlık}
@@ -302,38 +294,38 @@ const Aktiviteler = () => {
                     height={600}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                  <div className="absolute bottom-4 left-4 bg-white rounded-lg px-3 py-1 text-sm font-medium text-indigo-900">
+                  <div className="absolute bottom-4 left-4 bg-white rounded-lg px-3 py-1 text-sm font-medium text-ink">
                     {seçiliAktivite.yaşGrubu}
                   </div>
                 </div>
                 
                 {/* Aktivite Bilgileri */}
                 <div className="p-6 md:p-8">
-                  <h2 className="text-2xl md:text-3xl font-bold text-indigo-900 mb-4">{seçiliAktivite.başlık}</h2>
-                  <p className="text-gray-700 mb-6">{seçiliAktivite.açıklama}</p>
+                  <h2 className="text-2xl md:text-3xl font-bold text-ink mb-4">{seçiliAktivite.başlık}</h2>
+                  <p className="text-ink-soft mb-6">{seçiliAktivite.açıklama}</p>
                   
                   <div className="mb-8">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Kazanımlar</h3>
+                    <h3 className="text-lg font-semibold text-ink mb-3">Kazanımlar</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {seçiliAktivite.özellikler.map((özellik, index) => (
-                        <div key={index} className="flex items-center gap-2 bg-indigo-50 p-3 rounded-lg">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
+                        <div key={index} className="flex items-center gap-2 bg-paper-warm p-3 rounded-lg">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-grape" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
-                          <span className='text-black'>{özellik}</span>
+                          <span className='text-ink'>{özellik}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                   
                   <div className="flex flex-wrap gap-4">
-                    <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-full transition-colors flex items-center gap-2">
+                    <button className="bg-grape hover:bg-ink text-white px-6 py-2 rounded-full transition-colors flex items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                       </svg>
                       Bilgi Al
                     </button>
-                    <button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full transition-colors flex items-center gap-2">
+                    <button className="flex items-center gap-2 rounded-full bg-tangerine-deep px-6 py-2 text-white transition-colors hover:bg-ink">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                       </svg>
@@ -353,8 +345,8 @@ const Aktiviteler = () => {
           <div className="container mx-auto px-4 md:px-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Aktivite Programı */}
-              <div className="bg-gradient-to-br from-green-600 to-teal-700 text-white rounded-2xl shadow-lg p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
-                <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="bg-gradient-to-br from-mint to-grape text-white rounded-3xl shadow-lg shadow-ink/5 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                   </svg>
@@ -362,15 +354,15 @@ const Aktiviteler = () => {
                 <div>
                   <h3 className="text-xl font-bold mb-2">Aktivite Programını İndir</h3>
                   <p className="mb-4 opacity-90">Tüm aktivitelerimizin detaylı açıklamaları ve haftalık programını indirin.</p>
-                  <button className="bg-white text-green-700 font-medium px-5 py-2 rounded-lg hover:bg-green-50 transition-colors">
+                  <button className="bg-white text-mint-deep font-semibold px-5 py-2 rounded-lg hover:bg-paper-warm transition-colors">
                     PDF İndir
                   </button>
                 </div>
               </div>
               
               {/* İletişim */}
-              <div className="bg-gradient-to-br from-purple-600 to-indigo-700 text-white rounded-2xl shadow-lg p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
-                <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="bg-gradient-to-br from-grape to-ink text-white rounded-3xl shadow-lg shadow-ink/5 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -378,7 +370,7 @@ const Aktiviteler = () => {
                 <div>
                   <h3 className="text-xl font-bold mb-2">Bizimle İletişime Geçin</h3>
                   <p className="mb-4 opacity-90">Sorularınız için bize ulaşın, en kısa sürede dönüş yapacağız.</p>
-                  <button className="bg-white text-indigo-700 font-medium px-5 py-2 rounded-lg hover:bg-indigo-50 transition-colors">
+                  <button className="bg-white text-grape font-medium px-5 py-2 rounded-lg hover:bg-paper-warm transition-colors">
                     İletişim Formu
                   </button>
                 </div>
@@ -388,13 +380,13 @@ const Aktiviteler = () => {
         </div>
         
         {/* SSS Bölümü */}
-        <div className="py-16 bg-orange-50">
+        <div className="py-16 bg-paper-warm">
           <div className="container mx-auto px-4 md:px-6">
             <div className="text-center mb-12">
-              <h2 className="text-2xl md:text-3xl font-bold text-indigo-900 mb-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-ink mb-4">
                 Sıkça Sorulan Sorular
               </h2>
-              <p className="text-gray-700 max-w-2xl mx-auto">
+              <p className="text-ink-soft max-w-2xl mx-auto">
                 Aktivitelerimiz hakkında merak edilen soruların cevaplarını burada bulabilirsiniz.
               </p>
             </div>
@@ -415,16 +407,16 @@ const Aktiviteler = () => {
                   cevap: "Evet, tüm aktivitelerimiz için ön kayıt gerekmektedir. Kontenjanlarımız sınırlı olduğundan, çocuğunuzun katılmak istediği aktivite için önceden kayıt yaptırmanızı öneririz."
                 }
               ].map((item, index) => (
-                <div key={index} className="bg-white rounded-xl shadow-md mb-4 overflow-hidden">
+                <div key={index} className="bg-white rounded-2xl shadow-sm mb-4 overflow-hidden">
                   <div className="p-5">
-                    <h3 className="text-lg font-bold text-indigo-900 mb-2">{item.soru}</h3>
-                    <p className="text-gray-700">{item.cevap}</p>
+                    <h3 className="text-lg font-bold text-ink mb-2">{item.soru}</h3>
+                    <p className="text-ink-soft">{item.cevap}</p>
                   </div>
                 </div>
               ))}
               
               <div className="text-center mt-8">
-                <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-full transition-colors inline-flex items-center gap-2">
+                <button className="bg-grape hover:bg-ink text-white px-6 py-3 rounded-full transition-colors inline-flex items-center gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                   </svg>
@@ -436,13 +428,13 @@ const Aktiviteler = () => {
         </div>
         
         {/* Call to Action */}
-        <div className="py-16 bg-indigo-900 relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/90 to-purple-800/90"></div>
-          
+        <div className="band-grape relative overflow-hidden py-16">
           {/* Dekoratif Şekiller */}
-          <div className="absolute top-12 left-8 w-24 h-24 bg-yellow-400 rounded-full opacity-10"></div>
-          <div className="absolute bottom-12 right-12 w-32 h-32 bg-red-500 rounded-full opacity-10"></div>
-          
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+            <span className="confetti-float absolute left-8 top-12 h-24 w-24 rounded-full bg-sunny/20" />
+            <span className="confetti-float absolute bottom-12 right-12 h-32 w-32 rounded-full bg-bubble/20" />
+          </div>
+
           <div className="container mx-auto px-4 md:px-6 relative z-10 text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
               Çocuğunuz İçin En İyi Başlangıç
@@ -451,7 +443,7 @@ const Aktiviteler = () => {
               Kaliteli eğitim, uzman kadro ve modern tesislerimizle çocuğunuzun geleceğine yatırım yapın.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <button className="bg-white text-indigo-900 hover:bg-indigo-50 px-8 py-3 rounded-full font-medium transition-colors">
+              <button className="bg-white text-ink hover:bg-paper-warm px-8 py-3 rounded-full font-medium transition-colors">
                 Hemen Kayıt Ol
               </button>
               <button className="bg-transparent border-2 border-white text-white hover:bg-white/10 px-8 py-3 rounded-full font-medium transition-colors">

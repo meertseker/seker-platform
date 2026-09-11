@@ -1,4 +1,4 @@
-import { ROSTER_STATUS, ENGLISH_COVERAGE_READY } from './day';
+import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from './day';
 
 export type FaqItem = {
   id: string;
@@ -9,79 +9,72 @@ export type FaqItem = {
   ready: boolean;
 };
 
-/**
- * 🔴 Doğrulama kuyruğu #3 (asset dosyası §0.2, §5.2) — öğretmenin İngilizceyi
- * gün boyunca kullandığı iddiası ENGLISH_COVERAGE_READY kapısı kapalıyken
- * eklenmez. Temel cümle (davranış temelli vaat) her zaman güvenlidir; bkz.
- * content/day.ts'nin 'ingilizce' bölümündeki aynı desen.
- */
-const INGILIZCE_ANSWER = `İngilizce, ayrı bir ders saati değil; günün içinde kullanılan ikinci dildir. Mezun olurken çocuğunuz İngilizce yönergeyi çevirisiz anlıyor, kendini tanıtıyor ve tanıdık durumlarda kısa cümlelerle karşılık veriyor.${
-  ENGLISH_COVERAGE_READY ? ' Öğretmenimiz İngilizceyi gün boyunca kullanır.' : ''
-}`;
-
 export const FAQ_ITEMS: FaqItem[] = [
   {
     id: 'yas-araligi',
-    question: 'Anaokulunuza kaç yaş arası çocuklar kabul ediliyor?',
+    question: 'Kaç yaşındaki çocukları kabul ediyorsunuz?',
     answer:
-      'Özel Şeker Anaokulu 2 yaşından itibaren, çocuk 5 yaşını tamamlayana kadar kabul eder. 2-3 yaş oyun grubu, 3-4 yaş, 4-5 yaş ve 5-6 yaş için ayrı sınıflarımız ve her gruba özel eğitim programlarımız vardır.',
+      'İki yaşından itibaren alıyoruz ve çocuğunuz beş yaşını tamamlayana kadar bize katılabilir. Dört ayrı grubumuz var: 2-3 yaş oyun grubu, 3-4 yaş, 4-5 yaş ve 5-6 yaş ilkokula hazırlık. Her grubun kendi sınıfı, kendi öğretmenleri ve kendi programı var.',
     featured: true,
     ready: true,
   },
   {
     id: 'sinif-mevcudu',
-    question: 'Sınıf mevcudunuz ve öğretmen başına düşen çocuk sayısı nedir?',
-    answer:
-      'Sınıflarımızda 10 çocuk bulunur ve her sınıfta iki öğretmen görev yapar — öğretmen başına beş çocuk düşer. Millî Eğitim Bakanlığı yönetmeliği bu yaş grubunda öğretmen başına 20 çocuğa kadar izin verirken, biz bu üst sınırın dörtte biriyle çalışıyoruz.',
+    question: 'Bir sınıfta kaç çocuk var?',
+    answer: `Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk var ve her sınıfta iki öğretmen birden bulunuyor. Yani bir öğretmene altı-yedi çocuk düşüyor. Millî Eğitim yönetmeliği bu yaş grubunda öğretmen başına ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor; biz bunun çok altında kalmayı tercih ediyoruz. İkinci öğretmenin olması şu demek: bir çocuk ağladığında ya da tuvalete götürülmesi gerektiğinde sınıfın geri kalanı boşta kalmıyor.`,
     featured: true,
-    // 🔴 Doğrulama kuyruğu #1, #2 (asset dosyası §0.2) — sınıf mevcudu ve
-    // öğretmen sayısı okul tarafından doğrulanana kadar bu madde ne render
-    // edilir ne de FAQPage JSON-LD şemasına girer. Tek kaynak ROSTER_STATUS;
-    // burada ikinci bir "ready" anahtarı icat edilmiyor.
     ready: ROSTER_STATUS.ready,
   },
   {
     id: 'ingilizce',
     question: 'İngilizce eğitiminiz nasıl işliyor?',
-    answer: INGILIZCE_ANSWER,
+    answer: `Çocuğunuz her gün ${ENGLISH_HOURS_PER_DAY} saatini anadili İngilizce olan öğretmeniyle geçiriyor. Haftada birkaç ders değil; her gün. Bu saatlerde Türkçeye dönülmüyor, çocuk dili kullanarak öğreniyor. Mezun olan çocuklarımız İngilizce konuşuyor — bunun sırrı yok, günde iki saatin yıllar içinde birikmesi.`,
     featured: true,
     ready: true,
   },
   {
-    id: 'calisma-saatleri',
-    question: 'Çalışma saatleriniz nelerdir?',
+    id: 'kamera',
+    question: 'Çocuğumu gün içinde görebilir miyim?',
     answer:
-      'Hafta içi 07:15-19:15 saatleri arasında hizmet veriyoruz. Tam gün ve yarım gün seçeneklerimiz mevcuttur; yarım gün programı 07:15-13:00 arasındadır.',
-    featured: true,
-    ready: true,
-  },
-  {
-    id: 'egitim-programi',
-    question: 'Eğitim yaklaşımınız nedir?',
-    answer:
-      'Montessori, High Scope ve Çoklu Zeka kuramlarını temel alan, oyun temelli bir program uyguluyoruz. Sanat, müzik, drama, fen, matematik ve dil gelişimi alanlarında günlük etkinlikler düzenlenir.',
-    featured: true,
-    ready: true,
-  },
-  {
-    id: 'guvenlik',
-    question: 'Güvenlik önlemleriniz nelerdir?',
-    answer:
-      '24 saat kamera sistemi, kontrollü giriş-çıkış, yangın alarm sistemi ve ilk yardım sertifikalı personel bulunmaktadır.',
+      'Görebilirsiniz. Okulun her yeri kamerayla izleniyor ve velilerimiz bu görüntülere kendileri erişebiliyor. İşten çıkmadan önce telefonu açıp çocuğunuzun ne yaptığına bakabilirsiniz. Bunu bir denetim aracı olarak değil, içiniz rahat etsin diye sunuyoruz.',
     featured: true,
     ready: true,
   },
   {
     id: 'servis',
-    question: 'Servis hizmetiniz hangi bölgeleri kapsıyor?',
+    question: 'Servisiniz hangi bölgelere geliyor?',
     answer:
-      'TODO: Gerçek güzergâhları yazın. Beykent, Büyükçekmece, Beylikdüzü gibi bölge adlarını açıkça geçirin — yerel arama görünürlüğü için kritik.',
-    featured: false,
-    ready: false,
+      'Beykent, Beylikdüzü, Mimaroba, Gürpınar, Yakuplu ve Büyükçekmece taraflarına servisimiz var. Oturduğunuz sokağa göre güzergâhı ön görüşmede birlikte bakalım.',
+    featured: true,
+    ready: true,
+  },
+  {
+    id: 'calisma-saatleri',
+    question: 'Çalışma saatleriniz nedir?',
+    answer:
+      'Hafta içi sabah erkenden akşama kadar açığız. Tam gün ve yarım gün seçeneklerimiz var. Kesin saatleri ve size uygun olanı görüşmede konuşalım.',
+    featured: true,
+    ready: true,
+  },
+  {
+    id: 'egitim-programi',
+    question: 'Nasıl bir eğitim programı uyguluyorsunuz?',
+    answer:
+      'Montessori ve High Scope temelli, oyunun içinden ilerleyen bir program uyguluyoruz. Somut olarak şöyle işliyor: materyaller çocuğun boyundaki açık raflarda duruyor, çocuk ne çalışacağını kendi seçiyor, öğretmen araya girmeden izliyor. Bunun yanında müzik, drama, seramik, sanat, dans, satranç, robotik kodlama ve beden eğitimi atölyeleri var.',
+    featured: true,
+    ready: true,
+  },
+  {
+    id: 'ucret',
+    question: 'Ücretleriniz ne kadar?',
+    answer:
+      'Ücreti siteye yazmıyoruz. Sebebi şu: bir rakam tek başına neyin karşılığı olduğunu anlatmıyor ve sınıfı görmeden duyduğunuz fiyat karşılaştırma yapmanıza da yaramıyor. Gelin, okulu gezin, sonra oturup konuşalım.',
+    featured: true,
+    ready: true,
   },
   {
     id: 'yemek',
-    question: 'Yemekler nerede ve nasıl hazırlanıyor?',
+    question: 'Yemekler nerede hazırlanıyor?',
     answer: 'TODO: Mutfak, diyetisyen onayı, menü döngüsü bilgisini yazın.',
     featured: false,
     ready: false,
@@ -95,18 +88,10 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     id: 'ucret-taksit',
-    question: 'Ödeme planı ve taksit seçenekleriniz nelerdir?',
+    question: 'Ödeme planınız ve taksit seçenekleriniz var mı?',
     answer: 'TODO: Ödeme planı ve kardeş/peşin ödeme koşullarını okuldan alıp yazın.',
     featured: false,
     ready: false,
-  },
-  {
-    id: 'ucret-dahil',
-    question: 'Yıllık ücrete yemek ve branş dersleri dahil mi?',
-    answer:
-      'Tam gün programımıza günlük İngilizce, tüm branş dersleri, rehberlik desteği ve eğitim materyalleri dahildir. Servis ve okul kıyafeti ayrıca fiyatlanır. Güncel ücret ve ödeme planı ön görüşmede paylaşılır.',
-    featured: false,
-    ready: true,
   },
 ];
 
