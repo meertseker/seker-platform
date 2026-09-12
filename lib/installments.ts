@@ -1,6 +1,7 @@
 export interface InstallmentDraft { dueDate: string; amountKurus: number }
 
-function addMonthsClamped(iso: string, months: number): string {
+/** ISO tarihe ay ekler; hedef ayda gün yoksa ayın son gününe kırpar (31 Oca + 1 ay -> 28 Şub). */
+export function addMonthsClamped(iso: string, months: number): string {
   const [y, m, d] = iso.split("-").map(Number);
   const target = new Date(Date.UTC(y, m - 1 + months, 1));
   const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
