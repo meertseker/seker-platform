@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/*
+ * AnaOkulCRM tasarım sistemi (ui-ux-pro-max önerisi):
+ * profesyonel mavi + anlaşma yeşili, slate yüzeyler, WCAG AA kontrast.
+ * Bileşenlerde ham hex kullanmayın; bu semantik token'ları kullanın.
+ */
+@theme {
+  --color-background: #f8fafc; /* slate-50 */
+  --color-foreground: #0f172a; /* slate-900 */
+  --color-surface: #ffffff;
+
+  --color-primary: #e11d48; /* rose-600 — ana eylem (marka kırmızısı) */
+  --color-primary-strong: #be123c; /* rose-700 hover/pressed */
+  --color-primary-soft: #fff1f2; /* rose-50 seçili/rozet zemini */
+  --color-on-primary: #ffffff;
+
+  --color-accent: #059669; /* emerald-600 — para/onay/kazanım */
+  --color-accent-strong: #047857;
+  --color-accent-soft: #ecfdf5;
+
+  --color-destructive: #dc2626; /* red-600 */
+  --color-destructive-strong: #b91c1c;
+  --color-destructive-soft: #fef2f2;
+
+  --color-warning: #d97706; /* amber-600 — geciken/bekleyen */
+  --color-warning-soft: #fffbeb;
+
+  --color-muted: #f1f5f9; /* slate-100 */
+  --color-muted-foreground: #475569; /* slate-600 — 4.5:1 beyaz üzerinde */
+  --color-border: #e2e8f0; /* slate-200 */
+  --color-ring: #e11d48;
+
+  --font-sans: var(--font-fira-sans);
+  --font-mono: var(--font-fira-code);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Hareket azaltma tercihine saygı (WCAG / Apple HIG) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
