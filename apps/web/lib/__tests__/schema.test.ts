@@ -29,7 +29,7 @@ describe('preschoolSchema', () => {
 describe('buildFaqSchema', () => {
   it('soruları FAQPage yapısına çevirir', () => {
     const schema = buildFaqSchema([
-      { id: 'a', question: 'Kaç yaş?', answer: '2-6 yaş.', featured: true },
+      { id: 'a', question: 'Kaç yaş?', answer: '2-6 yaş.', featured: true, ready: true },
     ]);
     expect(schema['@type']).toBe('FAQPage');
     expect(schema.mainEntity[0].name).toBe('Kaç yaş?');

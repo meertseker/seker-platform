@@ -158,7 +158,7 @@ describe('GardenSection — okulun kendi kareleri, stok görsel taşımaz', () =
 
   it('kaynakta stok görsel anahtarı geçmez', () => {
     for (const key of Object.keys(MEDIA) as (keyof typeof MEDIA)[]) {
-      if (MEDIA[key].status !== 'stok') continue;
+      if ((MEDIA[key].status as string) !== 'stok') continue;
       expect(GARDEN_SRC, key).not.toMatch(new RegExp(`MEDIA\\.${key}\\b`));
     }
   });

@@ -1,6 +1,6 @@
 'use client'
 
-import { unstable_ViewTransition as ViewTransition } from 'react'
+import { ViewTransition } from 'react'
 
 /**
  * Sayfa gövdesi — layout'taki header kalır, template her rotada yeniden

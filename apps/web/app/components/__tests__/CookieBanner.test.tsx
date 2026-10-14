@@ -28,7 +28,7 @@ describe('CookieBanner', () => {
 
   beforeEach(() => {
     gtag = vi.fn();
-    window.gtag = gtag;
+    window.gtag = gtag as unknown as (...args: unknown[]) => void;
   });
 
   afterEach(() => {
