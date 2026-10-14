@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
         destination: '/kayit',
         permanent: true,
       },
+      {
+        source: '/admin/:path*',
+        destination: process.env.PANEL_URL ?? 'https://panel.sekeranaokulu.com',
+        permanent: false,
+      },
     ];
   },
 };

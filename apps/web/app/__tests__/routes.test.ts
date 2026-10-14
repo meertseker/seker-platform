@@ -4,6 +4,7 @@ import path from 'node:path';
 import { NAV_ITEMS, FOOTER_LINKS } from '@/content/nav';
 import sitemap from '../sitemap';
 import { SITE } from '@/lib/site';
+import nextConfig from '../../next.config';
 
 const APP_DIR = path.join(process.cwd(), 'app');
 const ROUTE_GROUPS = ['', '(site)', '(lp)'];
@@ -47,5 +48,14 @@ describe('sitemap rotaları', () => {
 
   it('landing page rotalarını listelemez', () => {
     expect(paths.some((p) => p.startsWith('/lp/'))).toBe(false);
+  });
+});
+
+describe('eski admin', () => {
+  it('/admin panele yönlendirilir', async () => {
+    const redirects = await nextConfig.redirects!();
+    const admin = redirects.find((r) => r.source === '/admin/:path*');
+    expect(admin?.destination).toMatch(/^https:\/\/panel\./);
+    expect(admin?.permanent).toBe(false);
   });
 });
