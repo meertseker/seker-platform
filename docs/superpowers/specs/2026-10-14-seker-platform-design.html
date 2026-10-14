@@ -1,0 +1,641 @@
+<title>Şeker Okul Platformu Planı</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sabit sol içindekiler + 70ch okuma sütunu; dar ekranda tek sütun. Palet okulun "şeker" tonlarından. */
+:root{
+  --bg:#fbf8fe; --surface:#ffffff; --sunk:#f3edfa; --line:#e2d7f0;
+  --fg:#2a1840; --muted:#5f4f75; --accent:#6d33b8; --accent-soft:#efe4fb;
+  --ok:#1f7a55; --ok-soft:#e2f4ec; --warn:#9a5a00; --warn-soft:#fff1d9; --bad:#b4234e; --bad-soft:#fde6ee;
+  --display:"Fredoka","Nunito",system-ui,sans-serif; --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#16101f; --surface:#1f1730; --sunk:#251c38; --line:#3a2d52;
+  --fg:#efe8f8; --muted:#b9abd0; --accent:#c09cf5; --accent-soft:#2f2346;
+  --ok:#6fd3a5; --ok-soft:#173329; --warn:#f2bf66; --warn-soft:#352a14; --bad:#f58aa8; --bad-soft:#3a1824; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#16101f; --surface:#1f1730; --sunk:#251c38; --line:#3a2d52;
+  --fg:#efe8f8; --muted:#b9abd0; --accent:#c09cf5; --accent-soft:#2f2346;
+  --ok:#6fd3a5; --ok-soft:#173329; --warn:#f2bf66; --warn-soft:#352a14; --bad:#f58aa8; --bad-soft:#3a1824; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16.5px;line-height:1.65;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:230px minmax(0,1fr);gap:56px;padding-block:40px 96px}
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:14px;max-height:calc(100vh - 48px);overflow:auto}
+nav.toc p{font-family:var(--display);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:var(--muted);margin:0 0 10px}
+nav.toc ol{list-style:none;margin:0;padding:0;display:grid;gap:2px;counter-reset:t}
+nav.toc a{display:block;padding:5px 10px;border-radius:8px;color:var(--fg);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{background:var(--accent-soft);color:var(--accent);outline:none}
+main{min-width:0}
+main>section{max-width:760px;padding-top:28px}
+main>section+section{border-top:1px solid var(--line);margin-top:44px}
+h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;line-height:1.2;margin:0}
+h1{font-size:clamp(34px,5vw,48px);letter-spacing:-.01em}
+h2{font-size:28px;margin-bottom:14px}
+h3{font-size:19px;margin:28px 0 8px}
+p{margin:0 0 14px}
+a{color:var(--accent)}
+.eyebrow{font-family:var(--display);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;font-weight:600}
+.lede{font-size:19px;color:var(--muted);max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0}
+.chip{font-size:13px;padding:3px 10px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.ac{background:var(--accent-soft);color:var(--accent)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+code{background:var(--sunk);padding:1px 6px;border-radius:5px;overflow-wrap:anywhere}
+ul,ol{padding-left:22px;margin:0 0 14px} li{margin:4px 0}
+.summary{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:26px}
+.summary ol{margin:0}
+.summary li{margin:8px 0}
+.tbl{overflow-x:auto;margin:12px 0 18px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+th{font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:.03em;color:var(--muted);background:var(--sunk)}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{border-left:3px solid var(--warn);background:var(--warn-soft);padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0}
+.note.ok{border-color:var(--ok);background:var(--ok-soft)}
+.note.ac{border-color:var(--accent);background:var(--accent-soft)}
+.note p:last-child{margin:0}
+.persona{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:14px 0 8px}
+.persona div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
+.persona b{font-family:var(--display);font-weight:600;font-size:16px;display:block;margin-bottom:4px}
+.persona span{font-size:14.5px;color:var(--muted);display:block}
+.steps{list-style:none;padding:0;counter-reset:s;display:grid;gap:10px}
+.steps>li{counter-increment:s;display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;margin:0}
+.steps>li::before{content:counter(s);font-family:var(--display);font-weight:600;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-size:14px;margin-top:1px}
+.mock{font-family:var(--mono);font-size:13px;background:var(--surface);border:1px dashed var(--accent);border-radius:12px;padding:14px 16px;overflow-x:auto;white-space:pre;line-height:1.55;color:var(--fg);margin:12px 0 16px}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto;margin:12px 0 18px;font-size:13px}
+.phase{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:16px 18px;margin:12px 0}
+.phase header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin-bottom:6px}
+.phase h3{margin:0}
+.phase .days{font-family:var(--mono);font-size:13px;color:var(--accent)}
+.phase p.done{font-size:14.5px;color:var(--muted);margin:8px 0 0}
+.decide{display:grid;gap:12px;margin-top:10px}
+.decide>div{border:1px solid var(--line);border-radius:14px;padding:14px 18px;background:var(--surface)}
+.decide b{font-family:var(--display);font-weight:600}
+.small{font-size:14px;color:var(--muted)}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr);gap:24px}nav.toc{position:static;max-height:none;border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface)}nav.toc ol{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="İçindekiler">
+  <p>İçindekiler</p>
+  <ol>
+    <li><a href="#ozet">Kısa özet</a></li>
+    <li><a href="#gecmis">İki oturumda ne oldu</a></li>
+    <li><a href="#hedef">Hedef ve MVP sınırı</a></li>
+    <li><a href="#ogretmen">Öğretmen gözünden</a></li>
+    <li><a href="#mimari">Mimari</a></li>
+    <li><a href="#veri">Veri modeli</a></li>
+    <li><a href="#akislar">Teknik akışlar</a></li>
+    <li><a href="#guvenlik">Güvenlik ve KVKK</a></li>
+    <li><a href="#altyapi">Altyapı ve maliyet</a></li>
+    <li><a href="#fazlar">Fazlar ve takvim</a></li>
+    <li><a href="#riskler">Riskler</a></li>
+    <li><a href="#kararlar">Bekleyen kararlar</a></li>
+    <li><a href="#ilk-hafta">İlk hafta</a></li>
+    <li><a href="#elenen">Elenen seçenekler</a></li>
+  </ol>
+</nav>
+
+<main>
+<section id="ozet" style="padding-top:0">
+  <div class="eyebrow">Şeker Anaokulu · Final plan · 14 Ekim 2026</div>
+  <h1>Okulun kendi yönettiği tek platform</h1>
+  <p class="lede" style="margin-top:14px">Site ve CRM birleşip okulun kendi sistemine dönüşüyor. Okul sitesini kendisi düzenler, reklamın sonucunu kendisi görür, gelen veliyi ve ödemeleri tek panelden takip eder. Bu sayfa son iki oturumdaki her kararı tek bir plana bağlıyor.</p>
+  <div class="meta">
+    <span class="chip ac">Mimari onayı bekliyor</span>
+    <span class="chip">Aylık ~13 $ altyapı</span>
+    <span class="chip">~24 geliştirici günü</span>
+    <span class="chip">5–6 haftalık takvim</span>
+  </div>
+
+  <div class="summary">
+    <h3 style="margin-top:0">Beş cümlede plan</h3>
+    <ol>
+      <li><b>İki uygulama, tek veritabanı.</b> <code>sekeranaokulu.com</code> (site) ve <code>panel.sekeranaokulu.com</code> (bugünkü CRM) aynı Supabase projesini kullanır. Siteden gelen her form doğrudan CRM'deki <code>leads</code> tablosuna düşer.</li>
+      <li><b>Barındırma AWS Lightsail'de.</b> Tek sunucu, Docker Compose ve Caddy. Vercel ve Amplify bırakılır. Supabase ücretsiz planda kalır, yedekler her gece S3'e alınır.</li>
+      <li><b>Site yerinde düzenlenir.</b> Editör öğretmen panelden "Siteyi düzenle"ye basar, gerçek sayfada çift tıklar, yazar, "Kaydet"e basar. Değişiklik birkaç saniye içinde herkese görünür, yeniden yayın gerekmez.</li>
+      <li><b>Reklam ölçülür, panelden yönetilmez.</b> Kampanyalar Google Ads'in kendi ekranında kalır. Panel harcamayı çeker, her adayın hangi reklamdan geldiğini bilir ve kayıt olan veliyi Google'a geri bildirir.</li>
+      <li><b>Ödemeler zaten CRM'de.</b> MVP'de sadece gecikme listesi, hatırlatma ve aylık özet eklenir. Online tahsilat ve veli portalı MVP sonrası "okul ağı" fazındadır.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="gecmis">
+  <h2>İki oturumda ne oldu</h2>
+  <p>Plan iki ayrı sohbetten çıktı. İlki yalnızca "siteyi yerinde nasıl düzenleriz" araştırmasıydı. İkincisi işi büyüttü: site ve CRM tek okul platformu oluyor. İkinci oturumdaki kararlar birincidekilerin bir kısmını geçersiz kıldı. Aşağıdaki tablo hangisinin geçerli olduğunu gösteriyor.</p>
+
+  <h3>Oturum 1 · Yerinde düzenleme araştırması</h3>
+  <ul>
+    <li>Hazır CMS'ler tek tek kontrol edildi (Directus, Tina, Payload, Sanity, Strapi, Puck, Plasmic, Builder, Decap, Keystatic). Hiçbiri mevcut, elle yazılmış bir Next.js sitesinde gerçek "çift tıkla, yaz" deneyimi sunmuyor. Payload ve Sanity o gün Next 15.5'i desteklemiyordu.</li>
+    <li>Öneri: Supabase (giriş, Postgres, RLS) + Server Action + gerektiği yerde Tiptap ile ince bir düzenleme katmanı.</li>
+    <li>Senin cevapların: site Amplify'da canlı; tek bir öğretmen her şeyi düzenleyecek; fotoğrafları da aynı öğretmen yükleyecek; reklam sayfaları dahil sitedeki her şey düzenlenebilir olacak.</li>
+    <li>Amplify araştırması: isteğe bağlı önbellek yenileme (<code>revalidateTag</code>) Amplify'da desteklenmiyor. Rapor bu yüzden "60 saniyede bir yenile" modeline çekildi ve tahmin 12 güne çıktı.</li>
+    <li>Ek bulgu: <code>amplify.yml</code> sunucu sırlarını <code>.env.production</code>'a yazmıyor. Canlı sitede form kaydı veya e-postası şu an çalışmıyor olabilir.</li>
+  </ul>
+
+  <h3>Oturum 2 · Okul platformu</h3>
+  <ul>
+    <li>CRM incelendi: Next.js 16.2, Supabase, 16 tablo, 47 RLS kuralı, yönetici ve danışman rolleri, günlük cron, ödeme ızgarası. Ayrı bir Vercel projesinde.</li>
+    <li>En önemli kopukluk bulundu: site, CRM'de tanımlı olmayan bir Supabase fonksiyonuna (<code>insert_seker_website_lead</code>) yazıyor. Başvurular CRM'e hiç düşmüyor, muhtemelen başka bir veritabanında duruyor.</li>
+    <li>Sen "bağlantılı ama ayrı iki uygulama" seçeneğini onayladın: CRM panel alt alan adında açılır, form CRM'e yazar, sitedeki <code>/admin</code> kalkar.</li>
+    <li>Kapsam büyüdü: okul düzenleyecek, reklam çalıştıracak ve inceleyecek, adayları ve ödemeleri kendi sisteminden takip edecek. Sonra "okulun ağı"na dönüşecek.</li>
+    <li>Vercel ve Supabase'e para verilmeyecek. AWS üzerinde en ucuz, kolay ve sağlam yol istendi. Öneri Lightsail + Supabase Free + S3 oldu. Oturum bu öneri onay beklerken bitti.</li>
+  </ul>
+
+  <h3>Hangi karar geçerli</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Konu</th><th>İlk karar</th><th>Geçerli karar</th><th>Durum</th></tr></thead>
+    <tbody>
+      <tr><td>Site ile CRM</td><td>Sitede ayrı <code>/admin</code></td><td>Ayrı iki uygulama, tek veritabanı, panel alt alan adında</td><td><span class="chip ok">Onaylandı</span></td></tr>
+      <tr><td>Barındırma</td><td>Vercel Pro, sonra Amplify'da 60 sn</td><td>AWS Lightsail tek sunucu, Docker Compose</td><td><span class="chip warn">Onay bekliyor</span></td></tr>
+      <tr><td>Yayınlama hızı</td><td>Amplify yüzünden 60 sn'ye kadar gecikme</td><td>Tek sunucuda anında (<code>updateTag</code>)</td><td><span class="chip ok">Lightsail'e bağlı</span></td></tr>
+      <tr><td>Veritabanı</td><td>Sitenin kendi Supabase'i</td><td>CRM'in Supabase projesi, ücretsiz plan</td><td><span class="chip ok">Önerildi</span></td></tr>
+      <tr><td>Düzenleme yetkisi</td><td>Anahtar bazlı <code>can_edit(key)</code></td><td>Tek editör + yönetici yedek hesap, basit "editör mü" kontrolü</td><td><span class="chip ok">Onaylandı</span></td></tr>
+      <tr><td>Fotoğraf yükleme</td><td>Tarayıcıdan Supabase'e imzalı URL (Amplify 4,3 MB sınırı)</td><td>Sunucu üstünden yükle, sharp ile işle, S3'e koy</td><td><span class="chip ok">Sadeleşti</span></td></tr>
+      <tr><td>Reklam</td><td>Sadece LP metinleri</td><td>LP düzenleme + harcama çekme + offline dönüşüm + huni raporu</td><td><span class="chip ok">Önerildi</span></td></tr>
+      <tr><td>"Okulun ağı"</td><td colspan="2">Sorulduysa da cevaplanmadı. Veritabanı tasarımını en çok bu etkiliyor</td><td><span class="chip bad">Cevap gerekli</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="hedef">
+  <h2>Hedef ve MVP sınırı</h2>
+  <p>Başarı şu demek: okul bir geliştiriciye haber vermeden sitesindeki bir metni veya fotoğrafı değiştirebiliyor, bir reklamın kaç kayıt getirdiğini görebiliyor, hiçbir başvuruyu kaçırmıyor ve hangi velinin hangi taksidi geciktirdiğini tek ekranda görüyor.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>MVP içinde</th><th>MVP dışında (sonra)</th></tr></thead>
+    <tbody>
+      <tr><td>Sitedeki her metin, liste ve fotoğrafın yerinde düzenlenmesi (5 reklam sayfası dahil)</td><td>Yeni sayfa veya bölüm oluşturma, sayfa tasarımı değiştirme</td></tr>
+      <tr><td>Duyurular (ekle, yayınla, bitiş tarihi)</td><td>Blog, etkinlik takvimi sitede</td></tr>
+      <tr><td>Siteden gelen her başvurunun panele kaynağıyla düşmesi</td><td>Instagram ve Meta reklam entegrasyonu</td></tr>
+      <tr><td>Google Ads harcaması, aday ve kayıt hunisi, kayıt dönüşümünün Google'a geri gönderilmesi</td><td>Panel içinden kampanya oluşturma veya bütçe değiştirme</td></tr>
+      <tr><td>Ödeme planı, taksit, gecikme listesi, WhatsApp hatırlatma, aylık özet</td><td>Online kart ile tahsilat, e-fatura</td></tr>
+      <tr><td>Yönetici, danışman ve editör girişleri</td><td>Veli portalı, öğretmen günlüğü, gelişim raporu, fotoğraf paylaşımı</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="ogretmen">
+  <h2>Öğretmen gözünden</h2>
+  <p>Sistemi kullanacak kişiler yazılımcı değil. Bu yüzden her ekran "okulda bu iş nasıl yapılıyor" sorusundan tasarlanıyor. Teknik ayrıntılar bu bölümde yok; onlar sonraki bölümlerde.</p>
+
+  <h3>Kim ne yapar</h3>
+  <div class="persona">
+    <div><b>Yönetici (okul sahibi)</b><span>Her şeyi görür. Ödemeleri, fiyat listelerini, raporları ve kullanıcıları yönetir. Editör hesabının yedeğidir.</span></div>
+    <div><b>Danışman (kayıt sorumlusu)</b><span>Gelen veliyi arar, randevu verir, teklif hazırlar, kaydı tamamlar. Ödeme ızgarasını işaretler.</span></div>
+    <div><b>Editör öğretmen</b><span>Sitedeki metin, fotoğraf, duyuru ve reklam sayfalarını düzenler. Tek kişidir. Panelde de hesabı vardır.</span></div>
+  </div>
+  <p class="small">Bir kişi birden fazla rolde olabilir. Örneğin danışman aynı zamanda editör olabilir. Rol değil yetki bayrağı olarak tutulur.</p>
+
+  <h3>Sabah: panelde "Bugün" ekranı</h3>
+  <p>Panel açıldığında ilk ekran "Bugün". Bu ekran CRM'de zaten var, sadece genişliyor:</p>
+  <ul>
+    <li>Gece gelen yeni başvurular, yanında kaynak etiketi: <span class="chip">Google Ads · Beylikdüzü kampanyası</span> veya <span class="chip">Site · İletişim sayfası</span>.</li>
+    <li>Bugünkü randevular ve görüşmeler.</li>
+    <li>Geciken taksitler, vadesi bu hafta dolanlar.</li>
+    <li>Bekleyen görevler (örneğin "3 gün önce aranan veliyi tekrar ara").</li>
+  </ul>
+
+  <h3>Bir veli formu doldurduğunda</h3>
+  <ol class="steps">
+    <li><div>Veli sitede veya reklam sayfasında ön görüşme formunu doldurur. Teşekkür sayfasını görür.</div></li>
+    <li><div>Birkaç saniye içinde panelde "Yeni" sütununda belirir. Yöneticiye ve danışmana e-posta ve panel bildirimi gider.</div></li>
+    <li><div>Danışman kartı açar. Velinin hangi sayfadan, hangi reklamdan geldiği yazar. Tek dokunuşla WhatsApp'tan yazar veya arar.</div></li>
+    <li><div>Aynı telefon numarası daha önce başvurduysa yeni kart açılmaz. Eski karta "tekrar başvurdu" notu düşer. Böylece aynı veli iki kez aranmaz.</div></li>
+    <li><div>Görüşme, randevu, teklif adımları bugünkü CRM'deki gibi ilerler. Kayıt "kazanıldı" olunca öğrenci ve ödeme planı açılır.</div></li>
+    <li><div>Arka planda sistem bu kaydı Google'a "bu reklamdan bir kayıt çıktı" diye bildirir. Öğretmenin bir şey yapması gerekmez.</div></li>
+  </ol>
+
+  <h3>Siteyi düzenlemek</h3>
+  <p>Ayrı bir yönetim ekranı yok. Öğretmen sitenin kendisini düzenler, gördüğü neyse veli de onu görür.</p>
+  <ol class="steps">
+    <li><div>Panelde sol menüden <b>Siteyi düzenle</b>'ye basar. Yeni giriş istenmez, panel hesabı yeter.</div></li>
+    <li><div>Site açılır, üstte ince bir düzenleme çubuğu vardır. Ziyaretçiler bu çubuğu hiçbir zaman görmez.</div></li>
+    <li><div>Düzenlenebilir her yazının etrafında, fare üstüne gelince kesikli bir çerçeve çıkar. Çift tıklayınca yazı yazılabilir hale gelir. Altında karakter sayacı vardır (örneğin <span class="mono">34 / 120</span>), böylece başlık kutudan taşmaz.</div></li>
+    <li><div>Fotoğrafın üzerinde "Fotoğrafı değiştir" düğmesi çıkar. SSS, yorumlar, yaş grupları gibi listelerde "madde ekle", "sil", "yukarı/aşağı taşı" düğmeleri vardır.</div></li>
+    <li><div>Çubuktaki <b>Telefon görünümü</b> sayfayı telefon genişliğinde gösterir. Velilerin çoğu siteye telefondan girer.</div></li>
+    <li><div><b>Kaydet</b>'e basınca "Yayında" yazan bir bildirim çıkar. Değişiklik birkaç saniye içinde tüm ziyaretçilere görünür. <b>Vazgeç</b> kaydedilmemiş her şeyi geri alır.</div></li>
+  </ol>
+  <div class="mock" aria-label="Düzenleme çubuğu taslağı">✎ Düzenleme modu   ·   2 kaydedilmemiş değişiklik      [Telefon görünümü] [Geçmiş] [Vazgeç] [ Kaydet ] [Çık]
+───────────────────────────────────────────────────────────────────────────────────────────
+┆ Çocuğunuzu gerçekten tanıyan bir anaokulu ┆   ← çift tıkla, yaz          42 / 120
+───────────────────────────────────────────────────────────────────────────────────────────</div>
+
+  <h3>Bir hata yaparsam</h3>
+  <ul>
+    <li>Her kayıt geçmişe yazılır: kim, ne zaman, eski metin, yeni metin. <b>Geçmiş</b> panelinden herhangi bir değişiklik tek tıkla geri alınır.</li>
+    <li>Sayfa düzeni, renkler, form alanları ve reklam takip kodları düzenlenemez. Öğretmen yanlışlıkla bir formu veya reklam ölçümünü bozamaz.</li>
+    <li>Bir metin silinip boş bırakılırsa kayıt reddedilir. Sayfada boş başlık kalmaz.</li>
+    <li>Veritabanına ulaşılamazsa site, kodun içindeki son bilinen metinle açılmaya devam eder.</li>
+  </ul>
+
+  <h3>Fotoğraf yüklerken KVKK</h3>
+  <p>Bugün çocuk yüzleri elle bulanıklaştırılıyor. Fotoğrafı artık öğretmen yükleyeceği için bu kontrol yükleme ekranına taşınır. Yükleme penceresi şu iki seçenekten birini işaretlemeden kaydetmez:</p>
+  <ul>
+    <li>"Fotoğrafta çocuk yüzü yok"</li>
+    <li>"Yüzler bulanıklaştırıldı veya velinin yazılı izni dosyada"</li>
+  </ul>
+  <p>Ayrıca her fotoğraf için kısa bir açıklama (görme engelli ziyaretçiler ve Google için) zorunlu. Telefon fotoğraflarındaki konum bilgisi sistem tarafından otomatik silinir.</p>
+
+  <h3>Duyurular</h3>
+  <p>Bültenler sayfasında ve istenirse ana sayfada bir şerit olarak görünür. Öğretmen düzenleme modunda "Yeni duyuru"ya basar, mevcut kart tasarımında boş bir kart açılır. Başlık, metin, fotoğraf ve isteğe bağlı bitiş tarihi girilir. Bitiş tarihi geçen duyuru kendiliğinden kalkar.</p>
+
+  <h3>Reklam raporunu okumak</h3>
+  <p>Panelde <b>Pazarlama</b> ekranı. Yönetici ayda bir veya haftada bir bakar:</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Kampanya</th><th class="num">Harcama</th><th class="num">Aday</th><th class="num">Randevu</th><th class="num">Kayıt</th><th class="num">Aday başı</th><th class="num">Kayıt başı</th></tr></thead>
+    <tbody>
+      <tr><td>Beylikdüzü anaokulu</td><td class="num">₺ —</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+      <tr><td>Kreş 2 yaş</td><td class="num">₺ —</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+      <tr><td>Instagram, referans, tabela (reklamsız)</td><td class="num">₺ 0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">Ekranın taslağıdır; rakamlar sistem kurulunca gerçek veriden dolacak. Reklamsız kaynaklar da aynı tabloda durur, böylece "referanstan gelen veli reklamdan gelenden daha çok kayıt oluyor mu" sorusu cevaplanır.</p>
+  <p>Kampanya açmak, bütçe değiştirmek, reklam metni yazmak Google Ads'in kendi ekranında yapılır. Reklamın tıklandığı sayfa (LP) ise sitede olduğu için öğretmen onu panelden düzenler.</p>
+
+  <h3>Ödeme takibi</h3>
+  <p>Ödeme ızgarası (öğrenciler × aylar) bugünkü CRM'de var ve aynen kalır. MVP'de eklenenler:</p>
+  <ul>
+    <li><b>Gecikenler listesi:</b> vadesi geçmiş taksitler, kaç gün geçtiği, toplam tutar.</li>
+    <li><b>Hatırlatma:</b> her satırda hazır metinli WhatsApp düğmesi ("Sayın veli, Ekim aidatı…"). Mesaj öğretmenin kendi telefonundan gider, sistem otomatik mesaj atmaz.</li>
+    <li><b>Aylık özet:</b> beklenen, tahsil edilen, geciken. Yönetici için tek bakışlık rapor.</li>
+  </ul>
+
+  <h3>Öğretmenler için eğitim</h3>
+  <ul>
+    <li>Tek sayfalık Türkçe kılavuz, ekran görüntüleriyle: giriş, düzenleme, fotoğraf, duyuru, geri alma.</li>
+    <li>Editör öğretmenle 45 dakikalık bir oturum, gerçek bir düzenleme yaptırarak.</li>
+    <li>İlk iki hafta değişiklik geçmişi haftada bir kontrol edilir, sorun çıkan yer kılavuza eklenir.</li>
+  </ul>
+</section>
+
+<section id="mimari">
+  <h2>Mimari</h2>
+  <p>İki Next.js uygulaması tek bir sunucuda, tek bir kod deposunda yaşar ve tek bir veritabanını konuşur. Site ziyaretçiye hızlı ve sade kalır. Panel girişli ve tamamen dinamiktir. Birindeki hata diğerini etkilemez çünkü ayrı süreçlerde çalışırlar.</p>
+<pre class="mermaid">
+flowchart LR
+  V[Veli / ziyaretçi] --> C
+  O[Okul ekibi] --> C
+  G[Google Ads] -. tıklama + gclid .-> V
+  subgraph LS[AWS Lightsail · Frankfurt · 2 GB]
+    C[Caddy<br/>HTTPS + yönlendirme]
+    C --> W[web<br/>sekeranaokulu.com]
+    C --> P[panel<br/>panel.sekeranaokulu.com]
+    K[cron<br/>gece işleri]
+  end
+  W --> DB[(Supabase Free<br/>Postgres + RLS + Auth)]
+  P --> DB
+  W --> S3[(S3<br/>fotoğraflar)]
+  P --> S3
+  K --> P
+  K --> B[(S3<br/>gece yedekleri)]
+  P <--> GA[Google Ads API<br/>harcama + dönüşüm]
+  P --> R[Resend<br/>e-posta]
+</pre>
+
+  <h3>Kod deposu</h3>
+<div class="mock">seker-platform/                 (tek git deposu, pnpm workspaces + Turborepo)
+├─ apps/
+│  ├─ web/        bugünkü react-kindergarten-site, Next 16'ya yükseltilmiş
+│  └─ panel/      bugünkü annem/anaokulcrm, olduğu gibi taşınır
+├─ packages/
+│  ├─ db/         SQL migration'lar, üretilmiş TypeScript tipleri, RLS testleri
+│  ├─ auth/       Supabase istemcileri, ortak çerez ayarı, rol kontrolleri
+│  └─ ui/         ortak tema token'ları (şeker paleti), birkaç ortak bileşen
+├─ infra/
+│  ├─ docker-compose.yml, Caddyfile, Dockerfile.web, Dockerfile.panel
+│  └─ backup/     pg_dump → S3 betiği
+└─ .github/workflows/deploy.yml</div>
+
+  <h3>Neden bu şekil</h3>
+  <ul>
+    <li><b>İki uygulama.</b> Reklam trafiği siteye iner. Site panelin kodunu, oturum kontrollerini, ağır bileşenlerini taşımamalı. Ayrı uygulama olunca sayfa hızı ve Google Ads kalite puanı korunur.</li>
+    <li><b>Tek depo.</b> <code>leads</code> tablosunun şekli değişince hem form hem panel aynı commit'te güncellenir. Bugünkü sorun tam olarak iki ayrı yerde iki ayrı tanım olmasıydı.</li>
+    <li><b>Tek veritabanı.</b> Başvuru, öğrenci, ödeme ve site içeriği aynı yerde. Rapor yazmak tek sorgu.</li>
+    <li><b>Tek sunucu.</b> Next.js tek bir süreçte çalışınca önbelleği de tek yerdedir. "Kaydet → herkes görsün" (<code>updateTag</code>) Amplify'daki gibi belirsiz değil, kesin çalışır.</li>
+    <li><b>Next 16 her iki uygulamada.</b> Panel zaten 16.2'de. Site 15.5'ten yükseltilir, ortak paketler tek sürümle çalışır.</li>
+  </ul>
+
+  <h3>Ortak giriş nasıl çalışır</h3>
+  <p>İki uygulama aynı Supabase projesine bağlanır ve oturum çerezini <code>.sekeranaokulu.com</code> alan adına yazar (<code>@supabase/ssr</code> <code>cookieOptions.domain</code>). Panelde giriş yapan editör siteye geçtiğinde site aynı oturumu okur. Site tarafında sadece <code>/api/edit/*</code> ve düzenleme sırasında oturum okunur; ziyaretçi sayfaları oturuma hiç bakmaz ve önbellekten gelir.</p>
+</section>
+
+<section id="veri">
+  <h2>Veri modeli</h2>
+  <p>CRM'in 16 tablosu (profiles, students, families, leads, lead_notes, appointments, price_lists, price_list_items, offers, payment_plans, installments, refunds, tasks, notifications, events, app_settings) olduğu gibi kalır. Eklenen ve değişenler:</p>
+
+  <h3>Mevcut tablolarda değişiklik</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Tablo</th><th>Değişiklik</th><th>Neden</th></tr></thead>
+    <tbody>
+      <tr><td><code>leads</code></td><td><code>source</code> listesine <code>web_sitesi</code> eklenir. Yeni kolonlar: <code>gclid</code>, <code>utm_source</code>, <code>utm_medium</code>, <code>utm_campaign</code>, <code>landing_path</code>, <code>consent_at</code>, <code>web_payload jsonb</code></td><td>Her adayın nereden geldiği bilinir. KVKK onay zamanı saklanır</td></tr>
+      <tr><td><code>profiles</code></td><td><code>can_edit_site boolean default false</code></td><td>Editör yetkisi rolden bağımsız bir bayrak</td></tr>
+      <tr><td><code>installments</code></td><td>Değişiklik yok; gecikme listesi bir view ile çözülür (<code>v_overdue_installments</code>)</td><td>Ödeme modeli zaten doğru kurulmuş</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Yeni tablolar</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Tablo</th><th>Kolonlar</th><th>Ne işe yarar</th></tr></thead>
+    <tbody>
+      <tr><td><code>site_content</code></td><td><code>key</code> (pk, ör. <code>home.hero.title</code>), <code>value jsonb</code>, <code>kind</code> (text, rich, image, list, meta), <code>updated_by</code>, <code>updated_at</code></td><td>Düzenlenen her alan bir satır. Satır yoksa koddaki varsayılan metin gösterilir</td></tr>
+      <tr><td><code>content_revisions</code></td><td><code>id</code>, <code>key</code>, <code>old_value</code>, <code>new_value</code>, <code>editor_id</code>, <code>created_at</code></td><td>Geçmiş ve tek tıkla geri alma</td></tr>
+      <tr><td><code>announcements</code></td><td><code>id</code>, <code>title</code>, <code>body</code>, <code>image_id</code>, <code>starts_on</code>, <code>ends_on</code>, <code>published</code>, <code>sort</code></td><td>Eklenip silinebilen duyurular</td></tr>
+      <tr><td><code>media_assets</code></td><td><code>id</code>, <code>s3_key</code>, <code>width</code>, <code>height</code>, <code>alt</code>, <code>faces</code> (yok / bulanık_veya_izinli), <code>uploaded_by</code>, <code>created_at</code></td><td>Yüklenen her fotoğraf ve KVKK beyanı</td></tr>
+      <tr><td><code>ad_spend_daily</code></td><td><code>date</code>, <code>campaign_id</code>, <code>campaign_name</code>, <code>cost_micros</code>, <code>clicks</code>, <code>impressions</code></td><td>Google Ads'ten her sabah çekilen harcama</td></tr>
+      <tr><td><code>conversion_uploads</code></td><td><code>lead_id</code>, <code>gclid</code>, <code>conversion_action</code>, <code>value</code>, <code>uploaded_at</code>, <code>status</code>, <code>error</code></td><td>Google'a gönderilen kayıt bildirimleri; aynı kayıt iki kez gönderilmez</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Yetki kuralları (RLS)</h3>
+  <ul>
+    <li><code>site_content</code>, yayında olan <code>announcements</code>, <code>media_assets</code>: herkes okur. Sadece <code>can_edit_site</code> olan giriş yapmış kullanıcı yazar.</li>
+    <li><code>leads</code>: ziyaretçi doğrudan yazamaz. Site, sunucu tarafında güvenlik tanımlı bir fonksiyonu (<code>create_web_lead</code>) çağırır; bu fonksiyon sadece izin verilen alanları alır.</li>
+    <li><code>ad_spend_daily</code>, <code>conversion_uploads</code>: sadece yönetici okur, sadece sunucu işleri yazar.</li>
+    <li>Mevcut 47 kural aynen kalır. Kontrol fonksiyonları <code>security definer</code> ve <code>search_path = ''</code> ile yazılır.</li>
+  </ul>
+  <p class="small">Bugün sitenin kullandığı fonksiyonlar sadece Supabase panelinde tanımlı, depoda yok. Yeni düzende her SQL değişikliği <code>packages/db/migrations</code> altında dosya olarak durur.</p>
+</section>
+
+<section id="akislar">
+  <h2>Teknik akışlar</h2>
+
+  <h3>1 · Başvuru akışı</h3>
+<pre class="mermaid">
+sequenceDiagram
+  participant V as Veli (tarayıcı)
+  participant W as web (Server Action)
+  participant DB as Supabase
+  participant P as panel
+  V->>W: Form gönder (ad, telefon, KVKK, gclid, utm, sayfa)
+  W->>W: zod doğrulama, honeypot, IP başına sınır
+  W->>DB: rpc create_web_lead(...)
+  DB-->>DB: telefon açık bir adayda var mı?
+  alt yeni veli
+    DB->>DB: leads satırı (status=yeni, source=web_sitesi/reklam)
+  else tekrar başvuru
+    DB->>DB: lead_notes "tekrar başvurdu"
+  end
+  DB->>DB: notifications satırı
+  W->>W: Resend ile e-posta (hata olursa sadece loglanır)
+  W-->>V: /tesekkurler + GTM dönüşüm olayı
+  P->>DB: "Bugün" ve pipeline ekranı yeni adayı gösterir
+</pre>
+  <ul>
+    <li>E-posta gönderilemezse başvuru yine kaydedilir. Kayıt önce, e-posta sonra.</li>
+    <li>Telefon numarası tek bir biçime çevrilerek karşılaştırılır (CRM'de zaten <code>lib/phone</code> var).</li>
+    <li>Kaynak kuralı: <code>gclid</code> varsa <code>reklam</code>, yoksa <code>web_sitesi</code>; ayrıntı <code>source_detail</code>'e kampanya veya sayfa olarak yazılır.</li>
+  </ul>
+
+  <h3>2 · İçerik okuma ve yayınlama</h3>
+  <ul>
+    <li><code>apps/web/lib/content.ts</code>: <code>getContent()</code> fonksiyonu <code>"use cache"</code> + <code>cacheTag('site-content')</code> ile Supabase'ten tüm içeriği tek sorguda okur. Ziyaretçi isteğinde veritabanına gidilmez.</li>
+    <li>Her düzenlenebilir alan koddaki bugünkü metni varsayılan olarak taşır: <code>&lt;Editable k="home.hero.title" as="h1" max={120}&gt;Çocuğunuzu…&lt;/Editable&gt;</code>. Ziyaretçiye aynı <code>h1</code>, aynı sınıflarla sunucuda HTML olarak gider. SEO değişmez.</li>
+    <li>Kayıt: tek Server Action <code>saveContent(edits)</code>. Sırasıyla oturumu doğrular (<code>getUser()</code>), <code>can_edit_site</code> bakar, her alanı zod ile doğrular (anahtar kodda var mı, uzunluk, izinli HTML etiketleri), <code>site_content</code>'e yazar, <code>content_revisions</code>'a satır ekler, <code>updateTag('site-content')</code> çağırır.</li>
+    <li>Çakışma: her düzenleme <code>updated_at</code> ile gider. Arada başka biri kaydettiyse "Bu metin siz düzenlerken değişti" uyarısı çıkar.</li>
+    <li>Düzenleme modu: <code>/api/edit/enable</code> oturumu ve bayrağı kontrol edip <code>draftMode().enable()</code> çağırır. Bu modda sayfa önbelleksiz üretilir ve düzenleme çubuğu <code>next/dynamic</code> ile yüklenir. Ziyaretçi bu JavaScript'i hiç indirmez.</li>
+    <li>Zengin metin (duyuru gövdesi) için Tiptap; düz metin için yalın <code>contentEditable</code>.</li>
+  </ul>
+
+  <h3>3 · Fotoğraf yükleme</h3>
+  <ol>
+    <li>Öğretmen dosyayı seçer, KVKK kutusunu ve açıklamayı doldurur.</li>
+    <li>Dosya Server Action'a gider (sınır 10 MB; kendi sunucumuzda Amplify'daki 4,3 MB sınırı yok).</li>
+    <li>Sunucu yetkiyi kontrol eder, <code>sharp</code> ile en fazla 2400 px'e küçültür, WebP'ye çevirir, EXIF ve GPS bilgisini siler.</li>
+    <li>S3'e <code>site-images/2026/10/&lt;uuid&gt;.webp</code> olarak koyar, <code>media_assets</code> satırını yazar, alanı bu fotoğrafa bağlar.</li>
+    <li>Ziyaretçiye <code>next/image</code> üzerinden AVIF/WebP ve doğru boyutlarda sunulur; optimize edilmiş kopya sunucunun diskinde önbellekte tutulur.</li>
+  </ol>
+
+  <h3>4 · Reklam ölçümü</h3>
+  <ul>
+    <li><b>Yakalama:</b> sitedeki mevcut atıf kodu <code>gclid</code> ve UTM'yi zaten tutuyor. Faz 1'de bunlar <code>leads</code>'e yazılır.</li>
+    <li><b>Harcama:</b> her sabah 06:00'da panelin cron işi Google Ads API'den dünün kampanya bazlı harcamasını çeker, <code>ad_spend_daily</code>'ye yazar.</li>
+    <li><b>Offline dönüşüm:</b> aday "randevu" ve "kazanıldı" olunca, <code>gclid</code>'i varsa ve tıklama 90 günden yeni ise Google Ads'e "Randevu" ve "Kayıt" dönüşümü yüklenir. Kayıt dönüşümüne aylık aidat değeri eklenebilir. Google böylece form dolduranı değil, kayıt olanı bulmayı öğrenir.</li>
+    <li><b>Gereken erişim:</b> Google Ads yönetici hesabı (MCC), developer token (Basic access başvurusu), OAuth istemcisi. Başvuru günler ile haftalar sürebileceği için Faz 0'da yapılır.</li>
+  </ul>
+
+  <h3>5 · Gece işleri</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Saat (İstanbul)</th><th>İş</th><th>Not</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">02:30</td><td>Veritabanı yedeği: <code>pg_dump</code> → gzip → S3</td><td>30 gün saklanır, S3 versiyonlama açık</td></tr>
+      <tr><td class="mono">03:00</td><td>CRM'in mevcut günlük işi (<code>/api/cron/daily</code>)</td><td>Bugün Vercel cron'da; <code>CRON_SECRET</code> ile aynen çağrılır</td></tr>
+      <tr><td class="mono">06:00</td><td>Google Ads harcama çekme + bekleyen dönüşümleri yükleme</td><td>Hata olursa yöneticiye bildirim</td></tr>
+      <tr><td class="mono">Pazar 04:00</td><td>Lightsail sunucu snapshot'ı</td><td>Son 2 snapshot tutulur</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="guvenlik">
+  <h2>Güvenlik ve KVKK</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Katman</th><th>Kural</th></tr></thead>
+    <tbody>
+      <tr><td>Ziyaretçi</td><td>Sadece okur. Yazabildiği tek şey başvuru formu, o da sunucudaki doğrulanmış fonksiyon üzerinden</td></tr>
+      <tr><td>Server Action</td><td>Her action kendi içinde oturumu ve yetkiyi yeniden kontrol eder. Server Action'lar herkese açık POST uç noktasıdır; middleware'e güvenilmez</td></tr>
+      <tr><td>Veritabanı</td><td>RLS ikinci duvar. Sızan bir publishable anahtar ile içerik değiştirilemez</td></tr>
+      <tr><td>Girdi</td><td>zod ile anahtar, uzunluk, biçim. Zengin metin izinli etiket listesine göre temizlenir (kalın, italik, bağlantı)</td></tr>
+      <tr><td>Hesaplar</td><td>Herkese açık kayıt yok. Hesapları yönetici açar (CRM'deki <code>create-staff</code> betiği). Sitedeki ortak <code>ADMIN_PASSWORD</code> kaldırılır</td></tr>
+      <tr><td>Anahtarlar</td><td>Supabase'in eski <code>anon</code>/<code>service_role</code> anahtarları 2026 sonunda kaldırılıyor. Faz 0'da <code>sb_publishable_</code> ve <code>sb_secret_</code> anahtarlarına geçilir. Gizli anahtar sadece sunucudaki <code>.env</code> dosyasında durur, Docker imajına girmez</td></tr>
+      <tr><td>Sunucu</td><td>Sadece 80, 443 ve anahtarla SSH açık. Otomatik güvenlik güncellemeleri, fail2ban, root girişi kapalı</td></tr>
+      <tr><td>Spam</td><td>Formda honeypot alanı ve IP başına dakikalık sınır. Gerekirse Cloudflare Turnstile (ücretsiz)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>KVKK kontrol listesi</h3>
+  <ul>
+    <li>Velinin telefon ve adı, çocuğun doğum ayı ve ödeme bilgileri kişisel veri. Formdaki açık rıza metni ve <code>consent_at</code> kaydı tutulur.</li>
+    <li>Supabase ve Lightsail sunucuları yurt dışında (Frankfurt). Bu bir yurt dışına aktarım. 2024 değişikliğiyle standart sözleşme yolu açık; aydınlatma metninde bu aktarım belirtilmeli. Bir hukukçuya bir kez kontrol ettirilmesi önerilir.</li>
+    <li>Çocuk fotoğrafları: yükleme ekranındaki zorunlu beyan, beyanın <code>media_assets</code>'te saklanması, EXIF ve konumun silinmesi.</li>
+    <li>Silme talebi: veli isterse adayın kaydı panelden silinir, yedekler 30 günde kendiliğinden döner.</li>
+    <li>Eski başvuru veritabanındaki kayıtlar CRM'e aktarıldıktan sonra o proje silinir; veri iki yerde durmaz.</li>
+  </ul>
+</section>
+
+<section id="altyapi">
+  <h2>Altyapı ve maliyet</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Kalem</th><th>Seçim</th><th class="num">Aylık</th></tr></thead>
+    <tbody>
+      <tr><td>Sunucu</td><td>AWS Lightsail Linux, 2 GB RAM, 2 vCPU, 60 GB SSD, Frankfurt</td><td class="num">~12 $</td></tr>
+      <tr><td>Veritabanı + giriş</td><td>Supabase Free (500 MB veri, 50 bin aktif kullanıcı)</td><td class="num">0 $</td></tr>
+      <tr><td>Fotoğraf + yedek</td><td>S3 (birkaç GB)</td><td class="num">&lt; 1 $</td></tr>
+      <tr><td>E-posta</td><td>Resend Free (ayda 3.000 e-posta), alan adı doğrulanmış</td><td class="num">0 $</td></tr>
+      <tr><td>Derleme ve dağıtım</td><td>GitHub Actions + GitHub Container Registry</td><td class="num">0 $</td></tr>
+      <tr><td>İzleme</td><td>UptimeRobot veya Healthchecks.io ücretsiz plan</td><td class="num">0 $</td></tr>
+      <tr><td>Google Ads API</td><td>API ücretsiz; reklam bütçesi ayrı</td><td class="num">0 $</td></tr>
+      <tr><td colspan="2"><b>Toplam (alan adı ve reklam bütçesi hariç)</b></td><td class="num"><b>~13 $</b></td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">Lightsail fiyatı kurulum günü güncel tarifeden teyit edilecek. Supabase projesi de Frankfurt (eu-central-1) bölgesindeyse gecikme en düşük olur; değilse sunucu onun bölgesine kurulur.</p>
+
+  <h3>Sunucu düzeni</h3>
+<div class="mock">docker compose servisleri
+  caddy   :80 :443   otomatik Let's Encrypt; sekeranaokulu.com → web:3000, panel.… → panel:3000
+  web     Next 16 output: "standalone", sharp dahil, ~250 MB RAM
+  panel   Next 16 output: "standalone", ~300 MB RAM
+  cron    küçük alpine imajı, crontab: yedek + /api/cron/daily + ads senkronu
+restart: unless-stopped · healthcheck: /api/health · 2 GB swap dosyası</div>
+
+  <h3>Dağıtım akışı</h3>
+  <ol>
+    <li><code>main</code> dalına push.</li>
+    <li>GitHub Actions: lint, tip kontrolü, Vitest, RLS testleri.</li>
+    <li>Sadece değişen uygulamanın Docker imajı derlenir (Turborepo), GHCR'a <code>sha</code> etiketiyle gönderilir.</li>
+    <li>Action SSH ile sunucuda <code>docker compose pull &amp;&amp; docker compose up -d</code> çalıştırır. Kesinti birkaç saniye.</li>
+    <li>Geri dönüş: <code>.env</code>'deki imaj etiketi bir önceki <code>sha</code>'ya çekilir, aynı komut tekrar çalışır.</li>
+    <li>Veritabanı migration'ları ayrı ve elle onaylanan bir iş (<code>supabase db push</code>); otomatik çalışmaz.</li>
+  </ol>
+  <p>Derleme sunucuda yapılmaz. 2 GB'lık sunucu Next.js derlerken zorlanır; GitHub'ın makinesi bu işi ücretsiz yapar.</p>
+
+  <h3>Amplify'dan taşınma</h3>
+  <ol>
+    <li>Yeni düzen önce <code>yeni.sekeranaokulu.com</code>'da yayına alınır, test başvurusu panelde görülür.</li>
+    <li>DNS TTL'i bir gün önce 300 saniyeye düşürülür.</li>
+    <li>A kaydı Lightsail'in sabit IP'sine çevrilir. Caddy sertifikayı kendisi alır.</li>
+    <li>Amplify bir hafta geri dönüş için açık kalır, sonra kapatılır. Vercel'deki <code>anaokulcrm</code> ve <code>seker-anaokulu-onizleme</code> projeleri de aynı şekilde kapatılır.</li>
+  </ol>
+</section>
+
+<section id="fazlar">
+  <h2>Fazlar ve takvim</h2>
+  <p>Her faz kendi küçük spec'i ve planıyla yürür ve sonunda site çalışır durumdadır. Gün sayıları tek geliştirici için tahmindir, ölçülmüş değildir.</p>
+
+  <div class="phase">
+    <header><h3>Faz 0 · Temel ve taşınma</h3><span class="days">~4 gün</span></header>
+    <ul>
+      <li>Sitedeki commit edilmemiş değişiklikler commit edilir (son sayım 83 dosya).</li>
+      <li>Monorepo kurulur, iki proje git geçmişiyle taşınır. Site Next 16'ya yükseltilir.</li>
+      <li>Supabase anahtarları yeni biçime geçer. CRM projesi tek veritabanı olarak sabitlenir.</li>
+      <li>Lightsail, Docker Compose, Caddy, GitHub Actions, gece yedeği, uptime izleme kurulur. Yedekten geri yükleme bir kez denenir.</li>
+      <li>Google Ads API developer token başvurusu yapılır (paralel bekler).</li>
+      <li>Alan adı taşıması.</li>
+    </ul>
+    <p class="done">Bitti sayılır: iki uygulama yeni sunucuda yayında, Amplify ve Vercel trafiği almıyor, gece yedeği S3'te görünüyor.</p>
+  </div>
+
+  <div class="phase">
+    <header><h3>Faz 1 · Başvuru akışı</h3><span class="days">~2 gün</span></header>
+    <ul>
+      <li><code>leads</code> kolonları ve <code>create_web_lead</code> fonksiyonu.</li>
+      <li>Site formu yeni fonksiyona bağlanır; tekrar başvuru birleştirme, bildirim, e-posta.</li>
+      <li>Eski veritabanındaki başvurular CRM'e aktarılır, eski proje kapatılır.</li>
+      <li>Sitedeki <code>/admin</code> ve <code>ADMIN_PASSWORD</code> kaldırılır.</li>
+    </ul>
+    <p class="done">Bitti sayılır: reklam sayfasından gönderilen test formu panelde kampanya adıyla görünüyor.</p>
+  </div>
+
+  <div class="phase">
+    <header><h3>Faz 2 · Yerinde düzenleme</h3><span class="days">~10–11 gün</span></header>
+    <ul>
+      <li>Ortak oturum, düzenleme modu, içerik tabloları ve RLS (1,5 gün).</li>
+      <li><code>Editable</code>, <code>EditableImage</code>, <code>EditableList</code> bileşenleri ve <code>getContent()</code> (1,5 gün).</li>
+      <li>17 site sayfası ve 5 reklam sayfasının alanlarının sarılması; <code>content/*.ts</code> ve <code>lib/site.ts</code>'deki metinler varsayılan olur (4 gün).</li>
+      <li>Düzenleme çubuğu: çerçeveler, çift tıklama, sayaç, telefon görünümü, kaydet/vazgeç, geçmiş ve geri al (2 gün).</li>
+      <li>Fotoğraf yükleme ve KVKK beyanı, duyurular (1 gün).</li>
+      <li>Testler, Türkçe kılavuz, editörle eğitim oturumu (1 gün).</li>
+    </ul>
+    <p class="done">Bitti sayılır: editör öğretmen kılavuza bakarak ana sayfa başlığını, bir fotoğrafı ve bir reklam sayfası metnini değiştirip geri alabiliyor.</p>
+  </div>
+
+  <div class="phase">
+    <header><h3>Faz 3 · Pazarlama ekranı</h3><span class="days">~4–5 gün</span></header>
+    <ul>
+      <li>Google Ads harcama senkronu ve offline dönüşüm yükleme.</li>
+      <li>Pazarlama ekranı: kampanya ve kaynak bazında harcama, aday, randevu, kayıt, aday başı ve kayıt başı maliyet.</li>
+    </ul>
+    <p class="done">Bitti sayılır: dünkü harcama sabah panelde, bir test kaydı Google Ads'te dönüşüm olarak görünüyor. Developer token onayı gelmediyse bu faz bekler, diğerleri etkilenmez.</p>
+  </div>
+
+  <div class="phase">
+    <header><h3>Faz 4 · Ödeme cilası</h3><span class="days">~2 gün</span></header>
+    <ul>
+      <li>Gecikenler listesi, WhatsApp hatırlatma düğmesi, aylık tahsilat özeti, "Bugün" ekranına gecikme kartı.</li>
+    </ul>
+    <p class="done">Bitti sayılır: yönetici ay sonunda tek ekrandan beklenen, tahsil edilen ve geciken tutarı görüyor.</p>
+  </div>
+
+  <div class="note ac"><p><b>Toplam:</b> yaklaşık 22–24 geliştirici günü, takvimde 5–6 hafta. Faz 1 ve Faz 4 birbirinden bağımsız; Faz 2 ile paralel de yürüyebilir.</p></div>
+
+  <h3>MVP sonrası: okulun ağı</h3>
+  <p>Aşağıdaki "Bekleyen kararlar" bölümündeki cevaba göre şekillenir. Varsayılan yol (bu okulun ağı) için sıra:</p>
+  <ol>
+    <li>Veli portalı: velinin kendi telefonuyla girişi, duyurular, ödeme durumu, belge indirme.</li>
+    <li>Online tahsilat (iyzico veya PayTR), taksit ödenince ızgaranın kendiliğinden işaretlenmesi.</li>
+    <li>Öğretmen tarafı: günlük akış notu, fotoğraf paylaşımı (sınıf bazlı, sadece o sınıfın velileri görür), gelişim gözlemleri.</li>
+    <li>Instagram ve Meta reklamlarının aynı huniye eklenmesi.</li>
+  </ol>
+</section>
+
+<section id="riskler">
+  <h2>Riskler</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Risk</th><th>Etkisi</th><th>Önlem</th></tr></thead>
+    <tbody>
+      <tr><td>Supabase Free bir hafta işlem görmezse projeyi durdurur</td><td>Panel ve form çalışmaz; site koddaki varsayılan metinle açılır</td><td>Günlük cron ve gelen başvurular projeyi aktif tutar. Uptime izleme panelin veritabanına dokunan bir sağlık ucunu çağırır</td></tr>
+      <tr><td>Supabase Free'de otomatik yedek yok</td><td>Veri kaybı</td><td>Gece <code>pg_dump</code> → S3, ayda bir geri yükleme denemesi</td></tr>
+      <tr><td>Tek sunucu</td><td>Sunucu düşerse dakikalar ile bir saat arası kesinti</td><td>Otomatik yeniden başlatma, uptime alarmı, haftalık snapshot'tan 15 dakikada yeni sunucu</td></tr>
+      <tr><td>Google Ads developer token gecikir veya reddedilir</td><td>Faz 3 bekler</td><td>Faz 0'da başvuru; beklerken harcama Google Ads'ten aylık CSV ile içeri alınabilir</td></tr>
+      <tr><td>Eski anahtarların 2026 sonunda kaldırılması</td><td>Bugünkü site ve CRM kodu bağlanamaz</td><td>Faz 0'da yeni anahtarlara geçiş</td></tr>
+      <tr><td>Canlı sitede formun bugün çalışmıyor olması (<code>amplify.yml</code>)</td><td>Şu anda başvuru kaçıyor olabilir</td><td>Bugün sekeranaokulu.com'dan bir test formu gönderip kontrol etmek; taşınmayı beklemeden</td></tr>
+      <tr><td>Öğretmen bir metni bozar</td><td>Sayfada yanlış bilgi</td><td>Uzunluk sınırı, boş metin engeli, geçmiş ve tek tıkla geri alma</td></tr>
+      <tr><td>Çocuk yüzü içeren fotoğraf yüklenmesi</td><td>KVKK ihlali</td><td>Zorunlu beyan, beyanın kaydı, istenirse yönetici onayından sonra yayın</td></tr>
+      <tr><td>Supabase 500 MB sınırı</td><td>Yıllar sonra veri büyür</td><td>Fotoğraflar S3'te. Sınıra yaklaşınca Postgres aynı sunucuya veya RDS'e planlı taşınır; migration'lar düz SQL</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="kararlar">
+  <h2>Bekleyen kararlar</h2>
+  <p>Kod yazmaya başlamadan senden cevap gereken noktalar. Her birinde önerim ilk sırada.</p>
+  <div class="decide">
+    <div>
+      <b>1 · Barındırma: Lightsail + Supabase Free + S3</b>
+      <p style="margin:6px 0 0">Oturum 2'nin sonunda sorulmuştu. Önerim bu. Alternatifler (Amplify + Lambda, kendi Postgres'imiz, Lambda + RDS) aşağıdaki "Elenen seçenekler"de.</p>
+    </div>
+    <div>
+      <b>2 · "Okulun ağı" ne demek</b>
+      <p style="margin:6px 0 0"><b>Öneri: bu okulun ağı</b> (veli ve öğretmen portalı). Tabloya rol katmanı eklenir, mimari olduğu gibi büyür. Şeker'in birden fazla şubesi olacaksa her tabloya baştan <code>sube_id</code> eklemek gerekir ve bu Faz 0'a 1–2 gün ekler. Başka okullara satılacak bir ürün (SaaS) ise <code>okul_id</code>, okul başına alan adı ve tema gerekir; bu tasarımı ciddi biçimde değiştirir ve ayrıca konuşulmalı.</p>
+    </div>
+    <div>
+      <b>3 · Fotoğraf yayın onayı</b>
+      <p style="margin:6px 0 0"><b>Öneri: beyanla doğrudan yayın.</b> Daha sıkı istenirse fotoğraf yönetici onaylayana kadar yayına girmez.</p>
+    </div>
+    <div>
+      <b>4 · Erişimler</b>
+      <p style="margin:6px 0 0">Alan adının DNS paneli, AWS hesabı, Google Ads hesabına yönetici erişimi ve hangi Supabase projesinin sitenin eski başvurularını tuttuğu bilgisi.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ilk-hafta">
+  <h2>İlk hafta</h2>
+  <ol class="steps">
+    <li><div>Bugün: sekeranaokulu.com'dan bir test formu gönder, e-postanın ve kaydın geldiğini kontrol et.</div></li>
+    <li><div>Yukarıdaki 1 ve 2 numaralı kararları ver.</div></li>
+    <li><div>Sitedeki bekleyen değişiklikleri commit et.</div></li>
+    <li><div>Google Ads API developer token başvurusunu yap.</div></li>
+    <li><div>Faz 0 için kısa spec yazılır, onaydan sonra uygulama planı ve kurulum başlar.</div></li>
+  </ol>
+</section>
+
+<section id="elenen">
+  <h2>Elenen seçenekler</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Seçenek</th><th class="num">Aylık</th><th>Neden değil</th></tr></thead>
+    <tbody>
+      <tr><td>Vercel Pro + Supabase Pro</td><td class="num">~45 $</td><td>En sorunsuzu, ama para verilmesi istenmedi. Vercel ücretsiz planı ticari kullanıma izin vermiyor</td></tr>
+      <tr><td>Amplify + Lambda</td><td class="num">1–5 $</td><td>En ucuzu. Ama isteğe bağlı önbellek yenileme desteklenmiyor, Next 16 desteği resmi değil, istek gövdesi 4,3 MB ile sınırlı, cron için ayrıca EventBridge gerekir</td></tr>
+      <tr><td>Lightsail + kendi Postgres'imiz</td><td class="num">~12 $</td><td>Dış bağımlılık kalmaz. Ama CRM'deki 128 Supabase sorgusu ve 47 RLS kuralı nedeniyle 3–5 günlük yeniden yazım ve veritabanı bakımı bize kalır. Supabase sınırına gelince planlı yapılır</td></tr>
+      <tr><td>Lambda + RDS/Aurora + Cognito</td><td class="num">15–45 $</td><td>Hem daha pahalı hem en karmaşık</td></tr>
+      <tr><td>Tek uygulama (CRM sitenin <code>/admin</code>'i)</td><td class="num">—</td><td>Reklam trafiği alan site panelin yükünü taşır, bir hatası ikisini birden düşürür</td></tr>
+      <tr><td>Hazır CMS (Directus, Payload, Sanity, Tina, Strapi, Puck…)</td><td class="num">—</td><td>Hiçbiri mevcut sitede gerçek yerinde düzenleme sunmuyor; çoğu ya form ekranı ya da sitenin baştan yazılmasını istiyor</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">Kaynaklar ilk oturumdaki araştırma raporunda (Next.js, Supabase, Vercel, AWS Amplify belgeleri ve GitHub kayıtları, 14 Ekim 2026'da kontrol edildi).</p>
+</section>
+</main>
+</div>

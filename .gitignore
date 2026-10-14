@@ -1,0 +1,20 @@
+node_modules/
+.turbo/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+.env
+.env.*
+!.env.example
+!infra/env.example
+.vercel/
+.DS_Store
+*.log
+# Kişisel veri — asla commit edilmez
+apps/panel/scripts/seed/out/
+**/whatsapp_export/
+*.xlsx
+apps/web/photos/
+apps/web/public-originals-backup/

@@ -1,8 +1,0 @@
-.next
-node_modules
-scripts/seed/out
-
-# Yerel .env dosyaları asla yüklenmesin: .env.local yereldeki 127.0.0.1
-# Supabase'i işaret ediyor ve yüklenirse Vercel ortam değişkenlerini ezer.
-.env
-.env.*
