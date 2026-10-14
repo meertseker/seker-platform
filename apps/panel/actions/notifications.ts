@@ -9,7 +9,8 @@ export type NotificationType =
   | "teklif_onay_bekliyor"
   | "teklifiniz_onaylandi"
   | "teklif_revize_edildi"
-  | "teklif_reddedildi";
+  | "teklif_reddedildi"
+  | "web_basvuru";
 
 export async function notify(
   supabase: SupabaseClient,

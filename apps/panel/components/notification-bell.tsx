@@ -7,7 +7,7 @@ import {
   markNotificationsRead,
   type NotificationType,
 } from "@/actions/notifications";
-import { formatTRY, tlToKurus } from "@/lib/money";
+import { notificationText } from "@/lib/notification-text";
 
 export interface NotificationItem {
   id: string;
@@ -38,32 +38,6 @@ function relativeTime(value: string) {
     return relativeFormatter.format(Math.round(diffSeconds / 3600), "hour");
   }
   return relativeFormatter.format(Math.round(diffSeconds / 86400), "day");
-}
-
-function moneyFromPayload(value: unknown) {
-  return typeof value === "number" ? formatTRY(tlToKurus(value)) : null;
-}
-
-function notificationText(notification: NotificationItem) {
-  const offered = moneyFromPayload(notification.payload.offered);
-  const counterPrice = moneyFromPayload(notification.payload.counterPrice);
-
-  switch (notification.type) {
-    case "teklif_onay_bekliyor":
-      return offered
-        ? `Onay bekleyen yeni teklif: ${offered}`
-        : "Yeni teklif onay bekliyor.";
-    case "teklifiniz_onaylandi":
-      return "Teklifiniz onaylandı.";
-    case "teklif_revize_edildi":
-      return counterPrice
-        ? `Teklif için karşı rakam girildi: ${counterPrice}`
-        : "Teklif için karşı rakam girildi.";
-    case "teklif_reddedildi":
-      return "Teklifiniz reddedildi.";
-    default:
-      return "Yeni bildirim var.";
-  }
 }
 
 function notificationHref(notification: NotificationItem) {

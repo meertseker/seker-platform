@@ -9,7 +9,7 @@ export type LeadStatus = keyof typeof LEAD_STATUSES;
 export const LEAD_SOURCES = {
   referans: "Referans", instagram: "Instagram", reklam: "Reklam",
   tabela_gecerken: "Tabela / Geçerken", telefon: "Telefon",
-  etkinlik: "Etkinlik", diger: "Diğer",
+  etkinlik: "Etkinlik", web_sitesi: "Web Sitesi", diger: "Diğer",
 } as const;
 export type LeadSource = keyof typeof LEAD_SOURCES;
 
@@ -86,6 +86,8 @@ export const EVENT_LABELS = {
   ogrenci_ayrildi: "Öğrenci ayrıldı",
   iade_kaydedildi: "İade kaydedildi",
   aileye_baglandi: "Aileye bağlandı",
+  web_basvuru: "Web sitesinden başvurdu",
+  web_tekrar_basvuru: "Web sitesinden tekrar başvurdu",
 } as const;
 
 export function label(group: Record<string, string>, value: string): string {

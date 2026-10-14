@@ -30,6 +30,7 @@ import {
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { formatTRY, tlToKurus } from "@/lib/money";
+import { attributionLines, type LeadAttribution } from "@/lib/lead-attribution";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ interface ProfileJoin {
   full_name: string;
 }
 
-interface LeadRow {
+interface LeadRow extends LeadAttribution {
   id: string;
   parent_name: string;
   phone: string;
@@ -288,7 +289,7 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
     supabase
       .from("leads")
       .select(
-        "id, parent_name, phone, child_name, child_birth_month, child_birth_year, source, source_detail, status, lost_reason, ingilizce_gerekli, ozel_durum, ozel_durum_note, wants_summer, assigned_to, converted_student_id, last_activity_at, created_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
+        "id, parent_name, phone, child_name, child_birth_month, child_birth_year, source, source_detail, gclid, utm_source, utm_medium, utm_campaign, landing_path, status, lost_reason, ingilizce_gerekli, ozel_durum, ozel_durum_note, wants_summer, assigned_to, converted_student_id, last_activity_at, created_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -419,6 +420,18 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
                   </dt>
                   <dd className="mt-1 rounded-2xl bg-muted px-3 py-2 text-sm text-slate-700">
                     {lead.source_detail}
+                  </dd>
+                </div>
+              ) : null}
+              {attributionLines(lead).length > 0 ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-xs font-medium text-muted-foreground">
+                    Web kaynağı
+                  </dt>
+                  <dd className="mt-1 space-y-1 rounded-2xl bg-muted px-3 py-2 text-sm text-slate-700">
+                    {attributionLines(lead).map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
                   </dd>
                 </div>
               ) : null}
