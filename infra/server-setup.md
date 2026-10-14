@@ -18,8 +18,10 @@ Supabase projesinin bölgesini kontrol et (Supabase → Project Settings → Gen
     sudo apt update && sudo apt -y full-upgrade
     sudo apt -y install unattended-upgrades fail2ban
     sudo dpkg-reconfigure -f noninteractive unattended-upgrades
-    sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/; s/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+    printf 'PasswordAuthentication no\nPermitRootLogin no\n' | sudo tee /etc/ssh/sshd_config.d/00-hardening.conf
+    sudo sshd -t
     sudo systemctl restart ssh
+    sudo sshd -T | grep -Ei '^(passwordauthentication|permitrootlogin) '   # ikisi de "no" olmalı
     sudo timedatectl set-timezone Europe/Istanbul
 
 ## 3. Swap (2 GB)
