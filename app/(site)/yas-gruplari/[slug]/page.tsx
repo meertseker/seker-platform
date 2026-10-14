@@ -1,7 +1,5 @@
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
-import Header from '@/app/components/Header';
 import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
@@ -35,7 +33,6 @@ export default async function AgeGroupPage({ params }: { params: Promise<{ slug:
 
   return (
     <div className="min-h-screen bg-paper">
-      <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
           { name: 'Ana Sayfa', path: '/' },
@@ -44,7 +41,16 @@ export default async function AgeGroupPage({ params }: { params: Promise<{ slug:
         ])}
       />
 
-      <PageHero eyebrow={group.ageLabel} title={group.headline} tone="bubble" />
+      <PageHero
+        eyebrow={group.ageLabel}
+        title={group.headline}
+        tone="bubble"
+        media={{
+          src: group.image,
+          alt: `${group.title} etkinlikleri`,
+          transitionName: `age-${group.slug}`,
+        }}
+      />
 
       <section className="mx-auto max-w-3xl px-6 py-16">
         <p className="text-lg text-ink-soft">{group.intro}</p>
@@ -75,33 +81,22 @@ export default async function AgeGroupPage({ params }: { params: Promise<{ slug:
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl px-6 py-16">
-        <div className="grid items-center gap-12 md:grid-cols-2">
-          <Image
-            src={group.image}
-            alt={`${group.title} etkinlikleri`}
-            width={640}
-            height={480}
-            className="rounded-3xl object-cover ring-1 ring-rule"
-          />
-          <div>
-            <h2 className="font-display text-3xl text-ink">Günün akışından</h2>
-            <ul className="mt-6 space-y-3">
-              {group.dailyHighlights.map((item) => (
-                <li key={item} className="flex gap-3 text-ink-soft">
-                  <span aria-hidden="true" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-bubble" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/gunluk-akis"
-              className="mt-8 inline-block rounded-full border-2 border-grape px-6 py-3 font-semibold text-grape hover:bg-grape hover:text-white"
-            >
-              Tam günlük akışı görün
-            </Link>
-          </div>
-        </div>
+      <section className="mx-auto max-w-3xl px-6 py-16">
+        <h2 className="font-display text-3xl text-ink">Günün akışından</h2>
+        <ul className="mt-6 space-y-3">
+          {group.dailyHighlights.map((item) => (
+            <li key={item} className="flex gap-3 text-ink-soft">
+              <span aria-hidden="true" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-bubble" />
+              {item}
+            </li>
+          ))}
+        </ul>
+        <Link
+          href="/gunluk-akis"
+          className="mt-8 inline-block rounded-full border-2 border-grape px-6 py-3 font-semibold text-grape hover:bg-grape hover:text-white"
+        >
+          Tam günlük akışı görün
+        </Link>
       </section>
 
       <section className="bg-paper-warm py-16">

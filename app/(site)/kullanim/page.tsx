@@ -1,11 +1,9 @@
 "use client"
 import React from 'react'
-import Header from '@/app/components/Header'
 
 const KullanimPage = () => {
   return (
     <div className="min-h-screen bg-paper">
-      <Header />
       
       <div className="py-16">
         <div className="container mx-auto px-4 md:px-6">

@@ -4,6 +4,8 @@ import path from 'node:path';
 
 const css = readFileSync(path.join(process.cwd(), 'app', 'globals.css'), 'utf8');
 const layout = readFileSync(path.join(process.cwd(), 'app', 'layout.tsx'), 'utf8');
+const siteLayout = readFileSync(path.join(process.cwd(), 'app', '(site)', 'layout.tsx'), 'utf8');
+const nextConfig = readFileSync(path.join(process.cwd(), 'next.config.ts'), 'utf8');
 
 describe('tasarım tokenları', () => {
   it.each([
@@ -70,5 +72,21 @@ describe('mark disiplini — tek vurgu rengi, tek görev', () => {
   it('mark sınıfı yalnızca izin verilen dosyalarda (künye işaretleri, odak halkaları) kullanılıyor', () => {
     const offenders = findMarkUsages(path.join(process.cwd(), 'app'));
     expect(offenders).toEqual([]);
+  });
+});
+
+describe('kesintisiz kabuk', () => {
+  it('site layout Header taşır — sayfalar yeniden doğurmaz', () => {
+    expect(siteLayout).toContain('<Header');
+  });
+
+  it('view transition açılmıştır', () => {
+    expect(nextConfig).toContain('viewTransition: true');
+    expect(css).toContain('@view-transition');
+  });
+
+  it('hareket azaltılınca view transition kapanır', () => {
+    expect(css).toContain('prefers-reduced-motion: reduce');
+    expect(css).toContain('navigation: none');
   });
 });

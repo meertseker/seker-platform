@@ -1,75 +1,55 @@
-import Header from '@/app/components/Header';
 import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
 import { buildMetadata } from '@/lib/metadata';
 import { buildBreadcrumbSchema } from '@/lib/schema';
+import { SITE } from '@/lib/site';
+import { SUPPORT } from '@/content/program';
 
 export const metadata = buildMetadata({
   title: 'Güvenlik ve Sağlık',
   description:
-    'Kamera sistemi, kontrollü giriş-çıkış, yangın güvenliği ve hijyen protokolleriyle Beykent\'te güvenli anaokulu ortamı.',
+    "Kamera sistemi ve veli erişimi, gözetim altındaki iki bahçe, okulun kendi mutfağı ve uzman psikolog desteği. Beykent Büyükçekmece Özel Şeker Anaokulu.",
   path: '/guvenlik',
 });
 
-type SafetySection = {
-  id: string;
-  title: string;
-  /** true while the fact is unverified — do not fabricate specifics. */
-  todo: boolean;
-  body: string;
-};
-
-// TODO: Her bölüm okuldan doğrulanmış bilgiyle güncellenmeli. Gerçek belge/sertifika
-// numaraları ve tarihleri olmadan spesifik iddia yazılmamalı.
-const SAFETY_SECTIONS: SafetySection[] = [
+/**
+ * Bu sayfa daha önce sekiz adet "TODO: ... eklenecek" kartını doğrudan
+ * yayında gösteriyordu. Artık yalnızca okulun doğruladığı uygulamalar
+ * yazılıyor; belge gerektiren başlıklar (yangın onayı, deprem raporu,
+ * hijyen protokolü, acil durum planı) sayfada iddia olarak yer almaz —
+ * bunlar ön görüşmede yerinde gösterilir.
+ */
+const SAFETY_SECTIONS = [
   {
     id: 'kamera',
-    title: 'Kamera sistemi',
-    todo: true,
-    body: 'TODO: Kamera kapsamı (giriş, koridor, bahçe, sınıflar mı?), kayıt süresi ve kimlerin erişebildiği bilgisi eklenecek.',
+    title: 'Kamera sistemi ve veli erişimi',
+    body: 'Okulun her yeri kamerayla izleniyor ve velilerimiz bu görüntülere kendileri erişebiliyor. İşten çıkmadan önce telefonu açıp çocuğunuzun ne yaptığına bakabilirsiniz. Bunu bir denetim aracı olarak değil, içiniz rahat etsin diye sunuyoruz.',
   },
   {
-    id: 'giris-cikis',
-    title: 'Kontrollü giriş-çıkış',
-    todo: true,
-    body: 'TODO: Kapı/turnike sistemi, veli teslim-alım protokolü ve yetkisiz giriş önlemleri açıklanacak.',
+    id: 'bahce',
+    title: 'Gözetim altındaki iki bahçe',
+    body: 'Çocuklar günün büyük bölümünü bahçede geçiriyor. İki bahçemiz de kapalı ve gözetim altında; oyun alanları öğretmenin görebileceği mesafede kurulu. Çocuk kendi oyununu kurar, öğretmen gözler ve gerektiğinde araya girer.',
   },
   {
-    id: 'yangin',
-    title: 'Yangın güvenliği',
-    todo: true,
-    body: 'TODO: Yangın alarm sistemi, söndürme tüpleri, tatbikat sıklığı ve itfaiye onay belgesi bilgisi eklenecek.',
+    id: 'teslim',
+    title: 'Günü birlikte kapatıyoruz',
+    body: 'Her çocuk alınırken öğretmeni size o günü anlatır: ne yaptı, neyi zor buldu, neye ilk kez cesaret etti. Çocuğunuzu kimin alacağı değişecekse bunu önceden bize bildirmeniz gerekiyor.',
   },
   {
-    id: 'deprem',
-    title: 'Deprem dayanıklılık belgesi',
-    todo: true,
-    body: 'TODO: Bina deprem dayanıklılık raporu, yapı yılı ve ilgili mühendislik belgesi eklenecek.',
+    id: 'mutfak',
+    title: 'Okulun kendi mutfağı',
+    body: 'Yemeklerimiz okulun kendi mutfağında, her gün taze olarak hazırlanıyor. Aylık yemek listesini velilerimizle önceden paylaşıyoruz. Çocuğunuzun alerjisi ya da özel bir beslenme durumu varsa kayıt sırasında not alıyor ve mutfağa iletiyoruz.',
   },
   {
-    id: 'hijyen',
-    title: 'Hijyen protokolü',
-    todo: true,
-    body: 'TODO: Temizlik sıklığı, dezenfeksiyon rutini ve gıda hijyeni protokolü eklenecek.',
-  },
-  {
-    id: 'saglik-personeli',
-    title: 'Sağlık personeli',
-    todo: true,
-    body: 'TODO: İlk yardım sertifikalı personel sayısı, hemşire/doktor varlığı ve acil sağlık protokolü eklenecek.',
+    id: 'psikolog',
+    title: 'Uzman psikolog desteği',
+    body: SUPPORT.psychologist,
   },
   {
     id: 'servis',
-    title: 'Servis güvenliği',
-    todo: true,
-    body: 'TODO: Servis araçlarının güvenlik donanımı, şoför/rehber personel kontrolü ve güzergâh bilgisi eklenecek.',
-  },
-  {
-    id: 'acil-durum',
-    title: 'Acil durum planı',
-    todo: true,
-    body: 'TODO: Tahliye planı, acil durum iletişim zinciri ve veli bilgilendirme süreci eklenecek.',
+    title: 'Servis',
+    body: `${SITE.areaServed.join(', ')} taraflarına servisimiz var. Güzergâh ve saatler kayıtlı ailelerin adreslerine göre şekillendiği için, adresinizin uygunluğunu ön görüşmede birlikte değerlendiriyoruz.`,
   },
 ];
 
@@ -79,7 +59,6 @@ const SAFETY_STRIPES = ['bg-grape', 'bg-mint', 'bg-sky', 'bg-bubble'];
 export default function GuvenlikPage() {
   return (
     <div className="min-h-screen bg-paper">
-      <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
           { name: 'Ana Sayfa', path: '/' },
@@ -90,7 +69,7 @@ export default function GuvenlikPage() {
       <PageHero
         eyebrow="Güvenlik ve Sağlık"
         title="Çocuğunuzun güvenliği, tesadüfe bırakılmaz."
-        lead="Aşağıdaki başlıklar okulumuzun güvenlik ve sağlık uygulamalarını özetler. İşaretli bölümler, doğrulanmış belge ve rakamlarla yakında güncellenecektir."
+        lead="Aşağıda okulumuzda her gün işleyen güvenlik ve sağlık uygulamalarını bulacaksınız. Yangın, deprem ve acil durum belgelerimizi ise ön görüşmede yerinde gösteriyoruz — bir web sayfasında okuduğunuz cümle yerine belgenin kendisini görmeniz daha anlamlı."
         tone="mint"
         scallopTone="paper-warm"
       />
@@ -105,14 +84,7 @@ export default function GuvenlikPage() {
               >
                 <div className={`h-1.5 ${SAFETY_STRIPES[index % SAFETY_STRIPES.length]}`} />
                 <div className="p-8">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="font-display text-xl text-ink">{section.title}</h2>
-                    {section.todo && (
-                      <span className="shrink-0 rounded-full bg-tangerine/12 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-tangerine-deep">
-                        Doğrulanacak
-                      </span>
-                    )}
-                  </div>
+                  <h2 className="font-display text-xl text-ink">{section.title}</h2>
                   <p className="mt-3 text-ink-soft">{section.body}</p>
                 </div>
               </div>
@@ -127,7 +99,8 @@ export default function GuvenlikPage() {
             Güvenlik uygulamalarımızı yerinde inceleyin
           </h2>
           <p className="mt-4 text-center text-ink-soft">
-            Ön görüşme sırasında bina güvenlik önlemlerini birlikte gözden geçirebiliriz.
+            Ön görüşmede binayı birlikte gezip giriş-çıkış düzenini, bahçeleri ve
+            belgelerimizi gözden geçirebiliriz.
           </p>
           <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 ring-1 ring-rule md:p-8">
             <LeadForm />

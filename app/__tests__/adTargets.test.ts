@@ -16,7 +16,7 @@ function siteRouteExists(routePath: string): boolean {
  * ve `content/nav.ts` ile aynı hedef sayfalar). `/kadromuz` okul kararıyla
  * kaldırıldı — ekipten kimse sitede tanıtılmıyor. */
 const AD_SITE_TARGETS = [
-  '/', '/kayit', '/ucretler', '/egitim-yaklasimimiz', '/veli-yorumlari',
+  '/', '/kayit', '/egitim-yaklasimimiz', '/veli-yorumlari',
   '/guvenlik', '/gunluk-akis', '/yas-gruplari',
 ];
 

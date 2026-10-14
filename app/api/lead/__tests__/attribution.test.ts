@@ -7,6 +7,10 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
  * ulaştığını ve attribution'sız (organik) bir başvurunun da kabul edilip
  * e-posta gönderdiğini doğrular.
  */
+vi.mock('@/lib/websiteLeads', () => ({
+  insertWebsiteLead: vi.fn().mockResolvedValue('skipped'),
+}));
+
 const send = vi.fn().mockResolvedValue({ data: { id: 'test' }, error: null });
 
 vi.mock('resend', () => ({

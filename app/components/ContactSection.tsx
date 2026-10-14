@@ -2,6 +2,7 @@
 import React from 'react'
 import LeadForm from './LeadForm'
 import ContactInfo from './ContactInfo'
+import Timecode from './cine/Timecode'
 
 const ContactSection = () => {
   return (
@@ -14,11 +15,13 @@ const ContactSection = () => {
         <div className="max-w-3xl mx-auto">
           {/* Section Header */}
           <div className="text-center mb-4 md:mb-10">
-            <h2 className="text-xl md:text-3xl text-ink mb-1.5 md:mb-4">
+            <Timecode>Ön görüşme</Timecode>
+            <h2 className="mt-1.5 text-xl text-ink md:mt-2 md:mb-4 md:text-3xl">
               Ön Görüşme Randevusu Alın
             </h2>
             <p className="text-sm text-ink-soft md:text-base">
-              Sorularınız mı var? Formu doldurarak bize ulaşabilirsiniz. En kısa sürede size geri dönüş yapacağız.
+              Okulu gezin, sınıfları ve bahçeleri görün, öğretmenlerimizle tanışın.
+              Size uygun bir saat seçin; kayıt zorunluluğu yok.
             </p>
           </div>
 

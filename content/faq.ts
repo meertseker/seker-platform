@@ -1,4 +1,11 @@
 import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from './day';
+import {
+  FULL_DAY_LABEL,
+  HALF_DAY_LABEL,
+  MONTESSORI_DAYS_PER_WEEK,
+  SUPPORT,
+  YEAR_ROUND_BRANCHES,
+} from './program';
 
 export type FaqItem = {
   id: string;
@@ -9,26 +16,41 @@ export type FaqItem = {
   ready: boolean;
 };
 
+const BRANCH_NAMES = YEAR_ROUND_BRANCHES.map((branch) => branch.name).join(', ');
+
 export const FAQ_ITEMS: FaqItem[] = [
   {
     id: 'yas-araligi',
-    question: 'Kaç yaşındaki çocukları kabul ediyorsunuz?',
-    answer:
-      'İki yaşından itibaren alıyoruz ve çocuğunuz beş yaşını tamamlayana kadar bize katılabilir. Dört ayrı grubumuz var: 2-3 yaş oyun grubu, 3-4 yaş, 4-5 yaş ve 5-6 yaş ilkokula hazırlık. Her grubun kendi sınıfı, kendi öğretmenleri ve kendi programı var.',
+    question: 'Kaç yaş arası çocukları kabul ediyorsunuz?',
+    answer: `2-6 yaş arası çocukları kabul ediyoruz. Dört grubumuz var: 2-3 yaş oyun grubu, 3-4 yaş, 4-5 yaş ve 5-6 yaş ilkokula hazırlık. ${SUPPORT.classPlacement}`,
     featured: true,
     ready: true,
   },
   {
     id: 'sinif-mevcudu',
     question: 'Bir sınıfta kaç çocuk var?',
-    answer: `Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk var ve her sınıfta iki öğretmen birden bulunuyor. Yani bir öğretmene altı-yedi çocuk düşüyor. Millî Eğitim yönetmeliği bu yaş grubunda öğretmen başına ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor; biz bunun çok altında kalmayı tercih ediyoruz. İkinci öğretmenin olması şu demek: bir çocuk ağladığında ya da tuvalete götürülmesi gerektiğinde sınıfın geri kalanı boşta kalmıyor.`,
+    answer: `Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk var ve her sınıfta iki öğretmen birden görev yapıyor. Millî Eğitim yönetmeliği bu yaş grubunda öğretmen başına ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor; biz bunun belirgin biçimde altında kalmayı tercih ediyoruz. İkinci öğretmenin olması şu demek: bir çocuk ağladığında ya da tuvalete götürülmesi gerektiğinde sınıfın geri kalanı boşta kalmıyor.`,
     featured: true,
     ready: ROSTER_STATUS.ready,
   },
   {
+    id: 'calisma-saatleri',
+    question: 'Çalışma saatleriniz nedir?',
+    answer: `Anaokulumuz hafta içi ${FULL_DAY_LABEL} saatleri arasında hizmet veriyor. Tam gün ve yarım gün olmak üzere iki seçeneğimiz var: tam gün ${FULL_DAY_LABEL}, yarım gün ${HALF_DAY_LABEL}. Ailelerin çalışma düzenine uygun olanı birlikte seçiyoruz.`,
+    featured: true,
+    ready: true,
+  },
+  {
+    id: 'montessori',
+    question: 'Montessori eğitimi haftada kaç gün uygulanıyor?',
+    answer: `Montessori eğitimi okulumuzda haftanın ${MONTESSORI_DAYS_PER_WEEK} günü uygulanıyor; ayrı bir etkinlik saati değil, günün omurgası. Çocuklar günlük yaşam, duyusal çalışmalar, dil, matematik, dikkat ve konsantrasyon alanlarında özel olarak hazırlanmış materyallerle çalışıyor. Materyaller çocuğun boyundaki açık raflarda duruyor; ne çalışacağını kendisi seçiyor, öğretmen araya girmeden gözlemliyor.`,
+    featured: true,
+    ready: true,
+  },
+  {
     id: 'ingilizce',
     question: 'İngilizce eğitiminiz nasıl işliyor?',
-    answer: `Çocuğunuz her gün ${ENGLISH_HOURS_PER_DAY} saatini anadili İngilizce olan öğretmeniyle geçiriyor. Haftada birkaç ders değil; her gün. Bu saatlerde Türkçeye dönülmüyor, çocuk dili kullanarak öğreniyor. Mezun olan çocuklarımız İngilizce konuşuyor — bunun sırrı yok, günde iki saatin yıllar içinde birikmesi.`,
+    answer: `Çocuğunuz her gün ${ENGLISH_HOURS_PER_DAY} saatini İngilizce öğretmeniyle geçiriyor — haftada birkaç ders değil, her gün. İngilizce çalışmaları oyun, şarkı, hikâye ve günlük iletişimin içinden yürüyor. English Play Time ve English Kids Club etkinliklerinde dil ders masasından çıkıyor; Speaking çalışmalarında çocuk öğrendiği ifadeleri konuşurken kullanıyor. İngilizcenin yanında Almanca çalışmalarına da yer veriyoruz.`,
     featured: true,
     ready: true,
   },
@@ -41,43 +63,57 @@ export const FAQ_ITEMS: FaqItem[] = [
     ready: true,
   },
   {
-    id: 'servis',
-    question: 'Servisiniz hangi bölgelere geliyor?',
+    id: 'ucret',
+    question: 'Ücretleriniz ne kadar?',
     answer:
-      'Beykent, Beylikdüzü, Mimaroba, Gürpınar, Yakuplu ve Büyükçekmece taraflarına servisimiz var. Oturduğunuz sokağa göre güzergâhı ön görüşmede birlikte bakalım.',
+      'Ücreti siteye yazmıyoruz. Bir rakam tek başına neyin karşılığı olduğunu anlatmıyor; sınıfı görmeden duyduğunuz fiyat karşılaştırma yapmanıza da yaramıyor. Gelin, okulu gezin, sonra oturup konuşalım. Ücret, ödeme planı, kardeş ve peşin ödeme koşullarını ön görüşmede yazılı olarak paylaşıyoruz.',
     featured: true,
     ready: true,
   },
   {
-    id: 'calisma-saatleri',
-    question: 'Çalışma saatleriniz nedir?',
+    id: 'brans-dersleri',
+    question: 'Hangi branş dersleri var?',
+    answer: `Eğitim programımızı şu branş ve çalışmalarla zenginleştiriyoruz: ${BRANCH_NAMES}. Her biri alanında uzman bir öğretmenle yürüyor. Amacımız çocuğun farklı ilgi ve yetenek alanlarını denemesine fırsat sunmak — hangi çocuğun neyle açılacağını önceden bilemiyorsunuz.`,
+    featured: false,
+    ready: true,
+  },
+  {
+    id: 'psikolog',
+    question: 'Okulda psikolog var mı?',
+    answer: `${SUPPORT.psychologist} Uyum dönemi, kardeş kıskançlığı, tuvalet eğitimi ya da uyku düzeni gibi başlıklarda evde ve okulda tutarlı bir yaklaşım kurmak için birlikte çalışıyoruz.`,
+    featured: false,
+    ready: true,
+  },
+  {
+    id: 'bahce',
+    question: 'Okulun bahçesi ve fiziksel alanı nasıl?',
     answer:
-      'Hafta içi sabah erkenden akşama kadar açığız. Tam gün ve yarım gün seçeneklerimiz var. Kesin saatleri ve size uygun olanı görüşmede konuşalım.',
-    featured: true,
+      'İki ayrı binamız ve geniş metrekareye sahip iki büyük bahçemiz var. Çocuklar günün önemli bir bölümünü bahçede geçiriyor: ahşap oyun mutfağı, açık hava sınıfı, denge yolu, dev satranç tahtası ve ağacın etrafındaki oturma bankı hep aynı bahçede. Bu alanı yıllar içinde kendimiz kurduk.',
+    featured: false,
     ready: true,
   },
   {
     id: 'egitim-programi',
     question: 'Nasıl bir eğitim programı uyguluyorsunuz?',
-    answer:
-      'Montessori ve High Scope temelli, oyunun içinden ilerleyen bir program uyguluyoruz. Somut olarak şöyle işliyor: materyaller çocuğun boyundaki açık raflarda duruyor, çocuk ne çalışacağını kendi seçiyor, öğretmen araya girmeden izliyor. Bunun yanında müzik, drama, seramik, sanat, dans, satranç, robotik kodlama ve beden eğitimi atölyeleri var.',
-    featured: true,
+    answer: `Montessori yaklaşımını merkeze alan, oyunun içinden ilerleyen bir program uyguluyoruz. Somut olarak şöyle işliyor: materyaller çocuğun boyundaki açık raflarda duruyor, çocuk ne çalışacağını kendi seçiyor, öğretmen araya girmeden gözlemliyor. Bunun üzerine branş derslerini ekliyoruz. Eğitim programımız çocukların zihinsel, sosyal, duygusal, fiziksel ve sanatsal gelişimlerini bir bütün olarak destekleyecek şekilde planlanıyor.`,
+    featured: false,
     ready: true,
   },
   {
-    id: 'ucret',
-    question: 'Ücretleriniz ne kadar?',
+    id: 'servis',
+    question: 'Servisiniz hangi bölgelere geliyor?',
     answer:
-      'Ücreti siteye yazmıyoruz. Sebebi şu: bir rakam tek başına neyin karşılığı olduğunu anlatmıyor ve sınıfı görmeden duyduğunuz fiyat karşılaştırma yapmanıza da yaramıyor. Gelin, okulu gezin, sonra oturup konuşalım.',
-    featured: true,
+      'Beykent, Beylikdüzü, Mimaroba, Gürpınar, Yakuplu ve Büyükçekmece taraflarına servisimiz var. Oturduğunuz sokağa göre güzergâhı ön görüşmede birlikte bakalım.',
+    featured: false,
     ready: true,
   },
   {
     id: 'yemek',
     question: 'Yemekler nerede hazırlanıyor?',
-    answer: 'TODO: Mutfak, diyetisyen onayı, menü döngüsü bilgisini yazın.',
+    answer:
+      'Yemeklerimiz okulun kendi mutfağında, her gün taze olarak hazırlanıyor. Aylık yemek listesini velilerimizle önceden paylaşıyoruz; çocuğunuzun alerjisi ya da özel bir beslenme durumu varsa kayıt sırasında not alıyor ve mutfağa iletiyoruz.',
     featured: false,
-    ready: false,
+    ready: true,
   },
   {
     id: 'uyum-sureci',

@@ -1,6 +1,13 @@
 import React from 'react';
+import Image from 'next/image';
 
 export type BandTone = 'grape' | 'bubble' | 'mint' | 'sunny' | 'sky';
+
+export type PageHeroMedia = {
+  src: string;
+  alt: string;
+  transitionName?: string;
+};
 
 /**
  * Sayfa bandı — sitenin imza öğesi. Okulun adından (şeker) türeyen mor
@@ -17,6 +24,7 @@ export default function PageHero({
   lead,
   tone = 'grape',
   scallopTone = 'paper',
+  media,
   children,
 }: {
   eyebrow?: React.ReactNode;
@@ -24,6 +32,7 @@ export default function PageHero({
   lead?: React.ReactNode;
   tone?: BandTone;
   scallopTone?: 'paper' | 'paper-warm' | 'white';
+  media?: PageHeroMedia;
   children?: React.ReactNode;
 }) {
   const scallopClass =
@@ -42,6 +51,21 @@ export default function PageHero({
         <h1 className="mt-4 font-display text-3xl text-white md:text-5xl">{title}</h1>
         {lead ? (
           <p className="mx-auto mt-5 max-w-2xl text-base text-white/85 md:text-lg">{lead}</p>
+        ) : null}
+        {media ? (
+          <div
+            className="relative mx-auto mt-8 aspect-[16/10] w-full max-w-xl overflow-hidden rounded-3xl ring-1 ring-white/20"
+            style={media.transitionName ? { viewTransitionName: media.transitionName } : undefined}
+          >
+            <Image
+              src={media.src}
+              alt={media.alt}
+              fill
+              sizes="(max-width: 768px) 100vw, 576px"
+              className="object-cover"
+              priority
+            />
+          </div>
         ) : null}
         {children ? <div className="mt-8">{children}</div> : null}
       </div>

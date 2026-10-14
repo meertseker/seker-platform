@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Header from '@/app/components/Header';
 import PageHero from '@/app/components/PageHero';
 import { SITE, WHATSAPP_URL } from '@/lib/site';
 
@@ -12,7 +11,6 @@ export const metadata: Metadata = {
 export default function TesekkurlerPage() {
   return (
     <div className="min-h-screen bg-paper">
-      <Header />
       <PageHero
         eyebrow="Teşekkürler"
         title="Talebiniz bize ulaştı."

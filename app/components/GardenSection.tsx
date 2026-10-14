@@ -83,7 +83,7 @@ export default function GardenSection() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl px-6">
-        <Timecode>Bahçemiz</Timecode>
+        <Timecode>Bahçelerimiz</Timecode>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
           <h2 className="max-w-2xl text-2xl text-ink md:text-4xl">
             En büyük sınıfımız çatının altında değil.
@@ -96,9 +96,10 @@ export default function GardenSection() {
           </Link>
         </div>
         <p className="mt-3 max-w-2xl text-ink-soft">
-          Bahçeyi yıllar içinde kendimiz kurduk: ahşap mutfak, tamir köşesi, denge
-          yolu, ağacın etrafındaki bank. Çocuklar günün büyük bölümünü burada
-          geçiriyor.
+          İki ayrı binamız ve geniş metrekareye sahip iki büyük bahçemiz var.
+          Bahçeleri yıllar içinde kendimiz kurduk: ahşap mutfak, tamir köşesi,
+          denge yolu, dev satranç tahtası, ağacın etrafındaki bank. Çocuklar
+          günün büyük bölümünü burada geçiriyor.
         </p>
 
         {/* Geniş bahçe karesi — bölümün çapası. */}
@@ -118,7 +119,7 @@ export default function GardenSection() {
           </div>
           <p className="absolute bottom-0 left-0 right-0 p-5 text-base text-white md:p-8 md:text-lg">
             Ağacın etrafındaki bank, denge yolu ve açık hava sınıfı — hepsi aynı
-            bahçede, birbirini görecek mesafede.
+            bahçede, öğretmenin görebileceği mesafede.
           </p>
         </div>
 

@@ -1,4 +1,5 @@
 ﻿import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from './day';
+import { MONTESSORI_DAYS_PER_WEEK } from './program';
 
 export type AgeGroup = {
   slug: string;
@@ -28,19 +29,39 @@ export const AGE_GROUPS_CONTENT: AgeGroup[] = [
     slug: '2-3-yas',
     title: '2-3 Yaş Oyun Grubu',
     ageLabel: '2-3 yaş',
-    headline: 'İlk ayrılık en zoru. Bunu biliyoruz.',
+    headline: 'İlk ayrılık en zoru. Acele ettirmiyoruz.',
     metaTitle: '2-3 Yaş Oyun Grubu — Beykent',
     metaDescription:
-      'Beykent Büyükçekmece\'de 2-3 yaş oyun grubu. Sınıfta 13 çocuk, iki öğretmen. Çocuğunuzun ilk okul deneyimi için gelin tanışalım.',
+      "Beykent Büyükçekmece'de 2-3 yaş oyun grubu. Sınıfta iki öğretmen, Montessori duyusal çalışmalar ve iki büyük bahçe. Gelin tanışalım.",
     intro:
-      'İki yaş, çocuğun evden ilk kez ayrıldığı yaş. Bu dönemde harf ya da sayı derdimiz yok; çocuğunuzun kendini güvende hissetmesi ve buraya alışması var. Sınıfta iki öğretmenin birden olması bu yaşta tercih değil, mecburiyet: bir çocuk kucağa alınırken diğerlerinin başında birinin durması gerekiyor.',
+      'İki yaş, çocuğun evden ilk kez ayrıldığı dönem. Bu yaşta önceliğimiz harf ya da sayı değil; çocuğun kendini güvende hissetmesi ve buraya alışması. Sınıfta iki öğretmenin birden olması bu yaşta bir tercih değil, gereklilik: bir çocuk kucağa alınırken diğerlerinin başında birinin durması gerekiyor.',
     focusAreas: [
-      { title: 'Alışma dönemi', description: 'Ayrılığı acele ettirmiyoruz. Çocuğunuz hazır olduğu hızda ilerliyor.' },
-      { title: 'Kendi işini görme', description: 'Tuvalet eğitimine destek, kendi başına yemek yeme, el yıkama.' },
-      { title: 'Dokunarak öğrenme', description: 'Kum, su, hamur. Bu yaşta öğrenmenin yolu ellerden geçiyor.' },
-      { title: 'Konuşma', description: 'Şarkı, tekerleme, hikâye. İngilizce öğretmeniyle de ilk tanışma burada oluyor.' },
+      {
+        title: 'Alışma dönemi',
+        description:
+          'Ayrılığı acele ettirmiyoruz; çocuğunuz hazır olduğu hızda ilerliyor. Uzman psikoloğumuz bu süreçte hem çocuğun hem sizin yanınızda.',
+      },
+      {
+        title: 'Günlük yaşam becerileri',
+        description:
+          'Tuvalet eğitimine destek, kendi başına yemek yeme, el yıkama. Montessori günlük yaşam çalışmalarının ilk basamağı.',
+      },
+      {
+        title: 'Duyusal çalışmalar',
+        description: 'Kum, su, hamur. Bu yaşta öğrenmenin yolu elden geçiyor.',
+      },
+      {
+        title: 'Dil',
+        description: 'Şarkı, tekerleme, hikâye. İngilizce ile ilk tanışma da bu grupta oluyor.',
+      },
     ],
-    dailyHighlights: ['Karşılama ve serbest oyun', 'Duyusal atölye', 'Bahçe zamanı', 'Öğle uykusu', 'Müzik ve hareket'],
+    dailyHighlights: [
+      'Karşılama ve serbest oyun',
+      'Montessori duyusal çalışmalar',
+      'Bahçe zamanı',
+      'Öğle uykusu',
+      'Müzik & Ritim',
+    ],
     classSize: CLASS_SIZE,
     image: '/zurafalar-bahce.webp',
   },
@@ -50,17 +71,35 @@ export const AGE_GROUPS_CONTENT: AgeGroup[] = [
     ageLabel: '3-4 yaş',
     headline: 'Her şeyi sorduğu yaş.',
     metaTitle: '3-4 Yaş Anaokulu — Beykent',
-    metaDescription:
-      'Beykent\'te 3-4 yaş anaokulu. Sınıfta 13 çocuk ve iki öğretmen, her gün 2 saat İngilizce, sanat ve drama atölyeleri.',
+    metaDescription: `Beykent'te 3-4 yaş anaokulu. Haftanın ${MONTESSORI_DAYS_PER_WEEK} günü Montessori, her gün İngilizce, seramik ve drama. Sınıfta iki öğretmen.`,
     intro:
       'Üç yaş "neden" yaşı. Bu merakı susturmak yerine peşine düşüyoruz. Sınıfta iki öğretmenin olmasının en çok işe yaradığı yaş da bu: çocuğunuz bir şey sorduğunda cevabını o an alıyor, sıraya girmiyor.',
     focusAreas: [
-      { title: 'Montessori çalışmaları', description: 'Kendi seçtiği işi, kendi hızında bitiriyor. Öğretmen izliyor, karışmıyor.' },
-      { title: 'Arkadaşlık', description: 'Sıra beklemek, paylaşmak, küsüp barışmak. Hepsi öğreniliyor.' },
-      { title: 'İngilizce', description: `Her gün ${ENGLISH_HOURS_PER_DAY} saat, anadili İngilizce olan öğretmeniyle.` },
-      { title: 'Kendini anlatma', description: 'Seramik, resim, drama. Söyleyemediğini yapıyor.' },
+      {
+        title: 'Montessori çalışması',
+        description: `Haftanın ${MONTESSORI_DAYS_PER_WEEK} günü. Kendi seçtiği işi kendi hızında bitiriyor; öğretmen gözlemliyor, araya girmiyor.`,
+      },
+      {
+        title: 'Arkadaşlık',
+        description:
+          'Sıra beklemek, paylaşmak, küsüp barışmak. Pazartesi oyuncak paylaşım günü tam bu yaşa göre kurulmuş bir alışkanlık.',
+      },
+      {
+        title: 'İngilizce',
+        description: `Her gün ${ENGLISH_HOURS_PER_DAY} saat; oyun, şarkı ve hikâyenin içinden.`,
+      },
+      {
+        title: 'Kendini anlatma',
+        description: 'Seramik, görsel sanatlar, drama. Söyleyemediğini yapıyor.',
+      },
     ],
-    dailyHighlights: ['Sabah çemberi', 'Montessori çalışma saati', 'İngilizce', 'Bahçe zamanı', 'Atölye'],
+    dailyHighlights: [
+      'Sabah çemberi',
+      'Montessori çalışma saati',
+      'İngilizce',
+      'Bahçe zamanı',
+      'Branş dersi',
+    ],
     classSize: CLASS_SIZE,
     image: '/mutfak-atolyesi.webp',
   },
@@ -71,16 +110,37 @@ export const AGE_GROUPS_CONTENT: AgeGroup[] = [
     headline: 'Bir işe oturup bitirebildiği yıl.',
     metaTitle: '4-5 Yaş Anaokulu — Beykent',
     metaDescription:
-      'Beykent\'te 4-5 yaş anaokulu. Robotik kodlama, satranç, bilim atölyesi ve her gün 2 saat İngilizce. Sınıfta 13 çocuk, iki öğretmen.',
+      "Beykent'te 4-5 yaş anaokulu. Robotik & kodlama, satranç, seramik, matematik ve fen çalışmaları; her gün İngilizce. Sınıfta iki öğretmen.",
     intro:
       'Dört yaşında çocuk artık bir işe başlayıp bitirebiliyor, kurala uyabiliyor ve "sonra ne olacak" diye düşünebiliyor. Program da buna göre değişiyor: daha çok problem çözme, daha çok sırayla düşünme.',
     focusAreas: [
-      { title: 'Robotik kodlama', description: '"Önce bu, sonra şu." Sıralı düşünmeyi oyun oynarken öğreniyor.' },
-      { title: 'Satranç', description: 'Sırasını beklemek ve bir sonraki hamleyi düşünmek.' },
-      { title: 'Sayılarla tanışma', description: 'Sayı, örüntü, ölçme, şekiller.' },
-      { title: 'Bilim atölyesi', description: 'Deney yapıyor, ne olduğunu kendi görüyor.' },
+      {
+        title: 'Robotik & Kodlama',
+        description:
+          'Manyetik lego setleriyle kurduğu robota ileri, geri, sağ ve sol komutlarını kendisi yazıyor.',
+      },
+      {
+        title: 'Satranç',
+        description:
+          'Taşları ve hamleleri bahçedeki dev satranç tahtasında tanıyor. Sırasını beklemek ve bir sonraki hamleyi düşünmek.',
+      },
+      {
+        title: 'Matematik ve fen',
+        description: 'Merak etmek, gözlem yapmak ve öğrendiğini deneyerek görmek.',
+      },
+      {
+        title: 'Seramik',
+        description:
+          'Kendi tasarımını çamurdan şekillendiriyor; okulun fırınında pişen eser elinde kalıyor.',
+      },
     ],
-    dailyHighlights: ['Sabah çemberi', 'Bilim veya robotik atölyesi', 'İngilizce', 'Satranç', 'Bahçe zamanı'],
+    dailyHighlights: [
+      'Sabah çemberi',
+      'Montessori çalışma saati',
+      'İngilizce',
+      'Robotik & Kodlama veya Satranç',
+      'Bahçe zamanı',
+    ],
     classSize: CLASS_SIZE,
     image: '/acik-hava-sinifi.webp',
   },
@@ -91,16 +151,37 @@ export const AGE_GROUPS_CONTENT: AgeGroup[] = [
     headline: 'İlkokula hazır. Ama hâlâ çocuk.',
     metaTitle: '5-6 Yaş İlkokula Hazırlık Sınıfı — Beykent',
     metaDescription:
-      'Beykent\'te 5-6 yaş ilkokula hazırlık. Kalem tutuş ve dikkat çalışmaları, her gün 2 saat İngilizce. Sınıfta 13 çocuk, iki öğretmen.',
+      "Beykent'te 5-6 yaş ilkokula hazırlık. Kalem tutuş ve dikkat çalışmaları, satranç turnuva hazırlığı, her gün İngilizce. Sınıfta iki öğretmen.",
     intro:
       'Bu yaşta amacımız okuma yazma öğretmek değil. İlkokulda gerçekten işine yarayacak üç şeyi kurmak: oturup bir işi bitirebilmek, kalemi doğru tutmak ve öğrenmeyi sevmek. Beş yaşında okuma yazma öğretilen çocuk birinci sınıfa sıkılmış başlıyor.',
     focusAreas: [
-      { title: 'Yazıya hazırlık', description: 'Sesleri ayırt etme, çizgi çalışmaları, kalemi doğru tutma.' },
-      { title: 'Dikkat', description: 'Oturup çalışabildiği süre haftalar içinde kendiliğinden uzuyor.' },
-      { title: 'Sorumluluk', description: 'Kendi çantasını toplamak, görev almak, sözünü tutmak.' },
-      { title: 'İngilizce', description: `Üç yılın sonunda konuşarak mezun oluyor. Her gün ${ENGLISH_HOURS_PER_DAY} saatin birikmiş hâli.` },
+      {
+        title: 'Yazıya hazırlık',
+        description:
+          'Sesleri ayırt etme, çizgi çalışmaları, kalemi doğru tutma. Seramik ve kalem işi el kaslarını yazıya hazırlıyor.',
+      },
+      {
+        title: 'Dikkat',
+        description:
+          'Montessori çalışmasında oturup çalışabildiği süre haftalar içinde kendiliğinden uzuyor.',
+      },
+      {
+        title: 'Sorumluluk',
+        description: 'Kendi çantasını toplamak, görev almak, sözünü tutmak.',
+      },
+      {
+        title: 'Satranç turnuvası',
+        description:
+          'Bu yaş grubunda çocuklar turnuva çalışmalarına hazırlanıyor; planlamak ve öngörmek oyunun içinde öğreniliyor.',
+      },
     ],
-    dailyHighlights: ['Sabah çemberi', 'Hazırlık çalışması', 'İngilizce', 'Proje saati', 'Bahçe zamanı'],
+    dailyHighlights: [
+      'Sabah çemberi',
+      'İlkokula hazırlık çalışması',
+      'İngilizce',
+      'Matematik ve fen',
+      'Bahçe zamanı',
+    ],
     classSize: CLASS_SIZE,
     image: '/bahce-atolyeler.webp',
   },

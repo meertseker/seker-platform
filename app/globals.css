@@ -85,6 +85,31 @@ p {
   }
 }
 
+/* Sayfa kesmesi — rota değişince kök soluklaşır; paylaşılmış kadrajlar
+   (view-transition-name) kendi gruplarında morph olur. Header layout'ta
+   kaldığı için bu animasyona girmez. */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 /* ---------------------------------------------------------------------------
    Şeker kabuğu — sitenin imza öğeleri.
    Her bölüm başlığı mor bir banttır ve alt kenarı şeker ambalajı gibi

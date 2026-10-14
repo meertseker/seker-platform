@@ -1,6 +1,7 @@
 "use client"
 import React, { useState } from 'react'
 import Link from 'next/link'
+import Timecode from './cine/Timecode'
 import { FEATURED_FAQ } from '@/content/faq'
 import { buildFaqSchema } from '@/lib/schema'
 import JsonLd from './JsonLd'
@@ -25,7 +26,8 @@ const FAQSection = () => {
       <div className="mx-auto max-w-6xl px-6">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl text-ink md:text-4xl">
+          <Timecode>Velilerin sorduğu</Timecode>
+          <h2 className="mt-2 text-3xl text-ink md:text-4xl">
             Sık Sorulan Sorular
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-ink-soft">

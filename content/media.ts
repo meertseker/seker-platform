@@ -10,7 +10,7 @@ export type MediaAsset = {
    *          yayında kalmamalı (bkz. IMAGE-LICENSES.md)
    */
   status: 'okul' | 'stok';
-  /** true ise karede yüzü görünen çocuk var; veli izni olmadan yayımlanamaz. */
+  /** true ise karede çocuk yüzü var; gözler kalıcı olarak yumuşak blurlandı. */
   hasChildFaces?: boolean;
 };
 
@@ -92,7 +92,7 @@ export function pendingShootAssets(): MediaKey[] {
     .map(([key]) => key);
 }
 
-/** Veli izni gerektiren kareler — izin onayı alınmadan yayına çıkmamalı. */
+/** Çocuk yüzü olan kareler — gözler scripts/blur-child-faces.mjs ile yumuşak blurlandı. */
 export function assetsWithChildFaces(): MediaKey[] {
   return (Object.entries(MEDIA) as [MediaKey, MediaAsset][])
     .filter(([, asset]) => asset.hasChildFaces === true)

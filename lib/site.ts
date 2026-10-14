@@ -1,3 +1,5 @@
+import { PROGRAM_HOURS } from '@/content/program';
+
 const address = {
   street: 'Cumhuriyet Mahallesi, Uludağ Sokak No:6',
   district: 'Beykent, Büyükçekmece',
@@ -13,7 +15,7 @@ export const SITE = {
   url: 'https://sekeranaokulu.com',
   foundingYear: 2011,
   description:
-    'Beykent Büyükçekmece\'de 2011\'den beri, 2-6 yaş için Montessori ve High Scope temelli okul öncesi eğitim.',
+    'Beykent Büyükçekmece\'de 2011\'den beri. 2-6 yaş için haftanın 5 günü Montessori, her gün İngilizce ve uzman öğretmenlerle branş dersleri.',
   phone: {
     display: '0530 101 88 75',
     e164: '+905301018875',
@@ -28,7 +30,8 @@ export const SITE = {
   mapsUrl: `https://maps.google.com/?q=${encodeURIComponent(
     `${address.street} ${address.district}/${address.city}`,
   )}`,
-  hours: { opens: '07:15', closes: '19:15' },
+  /** Tam gün programının saatleri — tek kaynak content/program.ts'dir. */
+  hours: { opens: PROGRAM_HOURS.full.opens, closes: PROGRAM_HOURS.full.closes },
   /** Servis güzergâhının kapsadığı bölgeler — okul yönetimi tarafından doğrulandı (1 Ağustos 2026). */
   areaServed: ['Beykent', 'Beylikdüzü', 'Mimaroba', 'Gürpınar', 'Yakuplu', 'Büyükçekmece'],
   social: {

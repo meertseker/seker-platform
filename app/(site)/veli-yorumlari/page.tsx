@@ -1,4 +1,3 @@
-import Header from '@/app/components/Header';
 import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import TrackedLink from '@/app/components/TrackedLink';
@@ -26,7 +25,6 @@ const QUOTE_ACCENTS = ['bg-grape', 'bg-bubble-deep', 'bg-mint-deep', 'bg-sunny-d
 export default function VeliYorumlariPage() {
   return (
     <div className="min-h-screen bg-paper">
-      <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
           { name: 'Ana Sayfa', path: '/' },

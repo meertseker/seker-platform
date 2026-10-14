@@ -42,18 +42,24 @@ export default function Frame({
   ratio = 'cinema',
   priority = false,
   sizes = '(max-width: 768px) 100vw, 1100px',
+  transitionName,
 }: {
   mediaKey: MediaKey;
   grade?: Grade;
   ratio?: 'cinema' | 'portrait' | 'wide';
   priority?: boolean;
   sizes?: string;
+  /** Anasayfa kadrajı ile günlük akış sahnesini aynı nesne gibi bağlar. */
+  transitionName?: string;
 }) {
   const asset = MEDIA[mediaKey];
   const ratioClass = RATIO_CLASS[ratio];
 
   return (
-    <div className={`relative w-full overflow-hidden rounded-3xl bg-paper-warm ring-1 ring-rule ${ratioClass}`}>
+    <div
+      className={`relative w-full overflow-hidden rounded-3xl bg-paper-warm ring-1 ring-rule ${ratioClass}`}
+      style={transitionName ? { viewTransitionName: transitionName } : undefined}
+    >
       <Image
         src={asset.src}
         alt={asset.alt}

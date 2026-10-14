@@ -8,36 +8,18 @@
  * Omurga öğeleri eskiden opacity: 0.4 ile sönükleştiriliyordu; leylak zemin
  * üzerinde bu, metni okunamaz hâle getiriyordu (kontrast AA'nın altına
  * düşüyordu). Dinlenme durumu artık şeffaflıkla değil renkle anlatılır:
- * yumuşak mürekkep, hover/odakta tam mürekkep — bkz. TimeSpine.tsx.
+ * yumuşak mürekkep, hover/odakta ve aktif sahnede tam mürekkep.
+ *
+ * Aktif sahne TimeSpine'daki IntersectionObserver ile `data-active` olarak
+ * yazılır — CSS view-timeline "tam olarak biri" durumunu veremez.
  */
 .cine-spine-item {
   opacity: 1;
 }
 
-/*
- * A `[data-active='true']` rule previously lived here to highlight the spine
- * item matching the chapter currently in view. Nothing ever set that
- * attribute — it was dead. Removed rather than wired up: TimeSpine's <nav>
- * and DayChapters' <section>s are separate subtrees, so "which chapter is
- * in view" cannot reach the spine's opacity through plain CSS selectors —
- * no selector can match element A based on element B's scroll position.
- *
- * The one real no-JS path is CSS scroll-driven animations' named
- * view-timelines plus `timeline-scope` (give each chapter a
- * view-timeline-name, reference it from the matching spine item's
- * animation-timeline). Rejected for two reasons: (1) it only yields a
- * continuous, per-item opacity curve driven by that chapter's own scroll
- * progress, not the mutually-exclusive "exactly one item is active" state
- * `data-active` implied — several spine items can be mid-ramp at once,
- * or none at rest; (2) `timeline-scope` has materially narrower browser
- * support than the `animation-timeline: view()` already gated below, and
- * happy-dom (this project's test environment) implements neither, so the
- * behavior would ship with no way to verify it — in a browser or in a
- * test — which is the exact failure mode this task exists to remove from
- * the page's content. A correct, verifiable "reader is here" indicator
- * needs a scroll listener or IntersectionObserver; hover/focus on
- * .cine-spine-item already provides wayfinding feedback without one.
- */
+.cine-spine-item[data-active='true'] .timecode {
+  color: var(--color-grape);
+}
 
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {

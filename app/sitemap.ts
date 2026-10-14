@@ -5,7 +5,6 @@ import { AGE_GROUPS_CONTENT } from '@/content/ageGroups';
 const ROUTES: { path: string; priority: number; changeFrequency: 'weekly' | 'monthly' }[] = [
   { path: '/', priority: 1, changeFrequency: 'weekly' },
   { path: '/kayit', priority: 0.9, changeFrequency: 'weekly' },
-  { path: '/ucretler', priority: 0.9, changeFrequency: 'monthly' },
   { path: '/egitim-yaklasimimiz', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/yas-gruplari', priority: 0.8, changeFrequency: 'monthly' },
   ...AGE_GROUPS_CONTENT.map((group) => ({

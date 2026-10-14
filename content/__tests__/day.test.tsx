@@ -75,6 +75,13 @@ describe('saat doğrulama kapısı — SCHEDULE_READY', () => {
     }
   });
 
+  it('TimeSpine ilk sahneyi okur buradasınız diye işaretler', () => {
+    const { container } = render(<TimeSpine chapters={DAY_CHAPTERS} />);
+    const active = container.querySelectorAll('[data-active="true"]');
+    expect(active).toHaveLength(1);
+    expect(active[0].textContent).toContain(DAY_CHAPTERS[0].title);
+  });
+
   it('TimeSpine, saat doğrulanmadan hiçbir HH:MM saatini render etmez', () => {
     const { container } = render(<TimeSpine chapters={DAY_CHAPTERS} />);
     const text = container.textContent ?? '';

@@ -233,6 +233,14 @@ describe('ActivitiesSection — zekâ iddiası içermez (asset dosyası §5.1)',
 });
 
 describe('mobil kaydırma — gün önizlemesi tek satır yatay kaydırmaya düşer (Important 4)', () => {
+  it('Anasayfa Header taşımaz — kabuk layout\'ta durur', () => {
+    expect(ANASAYFA_SRC).not.toMatch(/<Header/);
+  });
+
+  it('gün kadrajları günlük akış sahneleriyle aynı view-transition adını paylaşır', () => {
+    expect(ANASAYFA_SRC).toContain('transitionName={`day-${chapter.id}`}');
+  });
+
   it('Anasayfa.tsx, üç dikey çerçeveyi mobilde alt alta değil yatay kaydırmada dizer', () => {
     expect(ANASAYFA_SRC).toMatch(/overflow-x-auto/);
     expect(ANASAYFA_SRC).toMatch(/snap-x/);

@@ -1,5 +1,6 @@
 import type { MediaKey } from './media';
 import { ROSTER_STATUS, ENGLISH_COVERAGE_READY, ENGLISH_HOURS_PER_DAY } from './day';
+import { MONTESSORI_DAYS_PER_WEEK } from './program';
 import { SITE } from '@/lib/site';
 
 export type LandingPage = {
@@ -94,8 +95,8 @@ export const LANDING_PAGES: LandingPage[] = [
         text: `Bir öğretmenin gün içinde kaç kez çocuğunuza sıra ayırabileceğini belirleyen şey, o sınıfta kaç çocuk olduğudur. ${rosterSentence()}`,
       },
       {
-        heading: 'Atölyeler programın parçası',
-        text: `${englishSentence()} Seramik, müzik, drama, dans, satranç ve robotik kodlama gibi atölyeler de günün doğal bir parçası; bir çocuk hamurla açılır, bir başkası satrançla.`,
+        heading: 'Branş dersleri programın parçası',
+        text: `${englishSentence()} Seramik, müzik, drama, bale, satranç ve robotik kodlama derslerinin her biri alanında uzman bir öğretmenle yürür; bir çocuk çamurla açılır, bir başkası satrançla.`,
       },
     ],
     faq: [
@@ -130,8 +131,8 @@ export const LANDING_PAGES: LandingPage[] = [
         text: "Güzergâh ve saatler kayıtlı ailelerin adreslerine göre şekillenir; bu yüzden siteye tek bir hat yazmak yerine, adresinizin uygunluğunu ön görüşmede birlikte değerlendiriyoruz.",
       },
       {
-        heading: 'Montessori ve High Scope',
-        text: "Günün bir bölümü bireysel Montessori çalışmasına, bir bölümü High Scope grup planlamasına ayrılır. Materyaller açık raflarda, çocuğun boyunda durur; öğretmen araya girmez, gözlemler. Bu yaklaşımın işlemesi, sınıf mevcudunun sınırlı tutulmasına bağlıdır.",
+        heading: `Haftanın ${MONTESSORI_DAYS_PER_WEEK} günü Montessori`,
+        text: `Montessori çalışması bizde ayrı bir etkinlik saati değil, haftanın ${MONTESSORI_DAYS_PER_WEEK} günü günün omurgasıdır. Materyaller açık raflarda, çocuğun boyunda durur; öğretmen araya girmez, gözlemler. Bu yaklaşımın işlemesi sınıf mevcudunun sınırlı tutulmasına bağlıdır.`,
       },
     ],
     faq: [
@@ -206,7 +207,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         heading: 'Bakım değil, program',
-        text: `İki yaş grubunda da Montessori materyalleri ve High Scope günlük planlaması kullanılır: duyusal oyun, öz bakım becerileri ve tuvalet eğitimi desteği günün parçasıdır. ${englishSentence()}`,
+        text: `İki yaş grubunda da Montessori materyalleriyle çalışılır: duyusal oyun, günlük yaşam becerileri ve tuvalet eğitimi desteği günün parçasıdır. ${englishSentence()}`,
       },
       {
         heading: 'Aileyle birlikte bir plan',
@@ -250,7 +251,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         heading: 'İki — program genişliği',
-        text: `Tam gün, yarım gün ve yaz dönemi farklı fiyatlanır. Seramik, müzik, drama, dans, satranç ve robotik kodlama gibi branş dersleri ile rehberlik desteği programa dahildir. ${englishSentence()}`,
+        text: `Tam gün, yarım gün ve yaz dönemi farklı fiyatlanır. Seramik, müzik, drama, bale, satranç ve robotik kodlama gibi branş dersleri ile okulumuzda görev yapan uzman psikoloğun desteği programa dahildir. ${englishSentence()}`,
       },
       {
         heading: 'Üç — servis ve ödeme planı',

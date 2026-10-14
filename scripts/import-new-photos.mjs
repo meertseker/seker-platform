@@ -2,7 +2,7 @@ import sharp from 'sharp';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-const SRC = path.resolve('public/new');
+const SRC = path.resolve('photos/originals');
 const OUT = path.resolve('public');
 
 /**
@@ -35,3 +35,5 @@ for (const [source, name, maxWidth] of FILES) {
 
   console.log(`${name}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
 }
+
+console.log('\nÇocuk yüzü olan kareler için: node scripts/blur-child-faces.mjs');

@@ -1,20 +1,20 @@
 import Link from 'next/link'
+import Timecode from './cine/Timecode'
+import { ENGLISH_HOURS_PER_DAY } from '@/content/day'
+import { MONTESSORI_DAYS_PER_WEEK } from '@/content/program'
 
 /**
- * Fix round 1/5, Critical 2 — bu bölüm doğrulama kuyruğu #8 ve #9'daki
- * (giriş kontrolü/kayıt cihazları, mutfak/diyetisyen onayı) doğrulanmamış
- * özellik ayrıntılarını kesin iddia olarak taşıyordu ve iki başlığı asset
- * dosyası §2.2'nin klişe kara listesindeki ifadelere neredeyse birebir
- * yakındı. Aşağıdaki dört kart yalnızca doğrulama gerektirmeyen, davranış
- * temelli iddialar taşır — güvenlik ve beslenme özel ayrıntıları,
- * doğrulanana kadar burada yer almaz (bkz. app/guvenlik/page.tsx'teki aynı
- * disiplin).
+ * Dört kart, okulun kendi tanıtım metninde öne çıkardığı dört uygulamayı
+ * taşır: sınıfların doğum ayına göre kurulması, haftanın beş günü Montessori,
+ * günlük İngilizce ve okulda görev yapan uzman psikolog. Güvenlik ve
+ * beslenme ayrıntıları burada yer almaz; onların kendi sayfaları var.
  */
 const FEATURES = [
   {
-    title: 'Öğretmeniniz Fark Eder',
+    href: '/yas-gruplari',
+    title: 'Her Çocuğu Tanıyoruz',
     description:
-      'Sabah çemberinde her çocuğun konuşma sırası gelir. Öğretmeniniz o gün kimin neye ihtiyacı olduğunu bilir.',
+      'Sınıflarımızı doğum yılını ve ayını dikkate alarak oluşturuyor, her çocuğun gelişimini yakından takip ediyoruz.',
     icon: (
       <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
@@ -22,9 +22,10 @@ const FEATURES = [
     ),
   },
   {
-    title: 'Gün Boyu Beceri',
+    href: '/egitim-yaklasimimiz',
+    title: `Haftanın ${MONTESSORI_DAYS_PER_WEEK} Günü Montessori`,
     description:
-      'Seramik, satranç, robotik kodlama, müzik ve drama atölyeleriyle elini, bedenini ve dikkatini kullanır.',
+      'Materyaller çocuğun boyundaki açık raflarda. Ne çalışacağını kendi seçiyor, kendi hızında bitiriyor; öğretmen araya girmeden gözlemliyor.',
     icon: (
       <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -32,9 +33,9 @@ const FEATURES = [
     ),
   },
   {
-    title: 'Günün Dili İngilizce',
-    description:
-      'İngilizce, ayrı bir ders saati değil; günün içinde kullanılan ikinci dildir.',
+    href: '/egitim-yaklasimimiz',
+    title: 'Her Gün İngilizce',
+    description: `Haftada birkaç ders değil, her gün ${ENGLISH_HOURS_PER_DAY} saat. Oyun, şarkı ve hikâyeyle başlıyor, günlük iletişimde konuşulmaya devam ediyor.`,
     icon: (
       <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -42,12 +43,13 @@ const FEATURES = [
     ),
   },
   {
-    title: 'Günü Birlikte Kapatıyoruz',
+    href: '/guvenlik',
+    title: 'Okulda Uzman Psikolog',
     description:
-      'Her çocuk alınırken öğretmeni velisine o günü anlatır: ne yaptı, neyi zor buldu, neye ilk kez cesaret etti.',
+      'Sosyal ve duygusal gelişimi de takip ediyoruz. İhtiyaç hâlinde randevu oluşturup bireysel görüşme desteği alabiliyorsunuz.',
     icon: (
       <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
       </svg>
     ),
   },
@@ -66,17 +68,19 @@ const FeaturesSection = () => {
     <div className="bg-paper py-16">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">
-          <h2 className="text-3xl text-ink md:text-4xl">Neden Şeker Anaokulu?</h2>
+          <Timecode>Neden burası</Timecode>
+          <h2 className="mt-2 text-3xl text-ink md:text-4xl">Neden Şeker Anaokulu?</h2>
           <p className="mx-auto mt-4 max-w-2xl text-ink-soft">
-            Konumlanmamız üç şeye dayanır: öğretmenin ilgisi, günün içinde
-            kullanılan beceri çeşitliliği ve dilin gün boyu varlığı.
+            Bizim için eğitim yalnızca öğretmek değil; çocuğu tanımak, ilgi ve
+            yeteneklerini keşfetmesine alan açmak ve gelişimine eşlik etmek.
           </p>
         </div>
 
         <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map((feature, index) => (
-            <div
+            <Link
               key={feature.title}
+              href={feature.href}
               className={`card-lift rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ${ACCENTS[index % ACCENTS.length].ring}`}
             >
               <div
@@ -86,7 +90,7 @@ const FeaturesSection = () => {
               </div>
               <h3 className="text-lg text-ink">{feature.title}</h3>
               <p className="mt-3 text-sm leading-relaxed text-ink-soft">{feature.description}</p>
-            </div>
+            </Link>
           ))}
         </div>
 

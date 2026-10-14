@@ -1,4 +1,3 @@
-import Header from '@/app/components/Header';
 import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
@@ -7,18 +6,18 @@ import DayChapters from '@/app/components/cine/DayChapters';
 import { DAY_CHAPTERS } from '@/content/day';
 import { buildMetadata } from '@/lib/metadata';
 import { buildBreadcrumbSchema } from '@/lib/schema';
+import { FULL_DAY_LABEL, HALF_DAY_LABEL } from '@/content/program';
 
 export const metadata = buildMetadata({
   title: 'Günlük Akış',
   description:
-    "Şeker Anaokulu'nda bir gün: karşılamadan çıkışa — sabah çemberi, Montessori çalışma saati, İngilizce, bahçe ve atölyeler. Beykent Büyükçekmece, 2-6 yaş.",
+    "Şeker Anaokulu'nda bir gün: karşılamadan çıkışa — sabah çemberi, Montessori çalışma saati, İngilizce, bahçe ve branş dersleri. Beykent Büyükçekmece, 2-6 yaş.",
   path: '/gunluk-akis',
 });
 
 export default function GunlukAkisPage() {
   return (
     <div className="min-h-screen bg-paper">
-      <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
           { name: 'Ana Sayfa', path: '/' },
@@ -29,9 +28,29 @@ export default function GunlukAkisPage() {
         <PageHero
           eyebrow="Karşılamadan çıkışa"
           title="Bir günümüz"
-          lead={'Velilerin bize en çok sorduğu soru: "Çocuğum orada bütün gün ne yapıyor?" Cevabı aşağıda.'}
+          lead={'Velilerin bize en çok sorduğu soru: "Çocuğum orada bütün gün ne yapıyor?" Cevabı aşağıda, sahne sahne.'}
           tone="sunny"
         />
+
+        {/* Program seçenekleri — akışı okumaya başlamadan önce çerçeve. */}
+        <section className="mx-auto max-w-6xl px-6 pt-12">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-3xl bg-paper-warm p-6">
+              <p className="timecode text-grape">Tam gün</p>
+              <p className="mt-2 font-display text-2xl text-ink">{FULL_DAY_LABEL}</p>
+              <p className="mt-2 text-sm text-ink-soft">
+                Aşağıdaki akışın tamamı bu programda yaşanıyor.
+              </p>
+            </div>
+            <div className="rounded-3xl bg-paper-warm p-6">
+              <p className="timecode text-bubble-deep">Yarım gün</p>
+              <p className="mt-2 font-display text-2xl text-ink">{HALF_DAY_LABEL}</p>
+              <p className="mt-2 text-sm text-ink-soft">
+                Sabah çemberi, Montessori çalışması, İngilizce ve bahçe zamanını kapsıyor.
+              </p>
+            </div>
+          </div>
+        </section>
 
         <div className="mx-auto grid max-w-6xl gap-10 px-6 pt-14 lg:grid-cols-[180px_1fr]">
           <TimeSpine chapters={DAY_CHAPTERS} />

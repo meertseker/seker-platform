@@ -34,7 +34,8 @@ const Footer = () => {
               </h3>
             </div>
             <p className="text-paper mb-6 leading-relaxed">
-              Çocukların mutlu ve güvenli bir ortamda büyüdüğü, öğrendiği ve geliştiği eğitim kurumumuz.
+              Beykent&apos;in en köklü anaokullarından biri. {SITE.foundingYear}&apos;den
+              beri 2-6 yaş çocuklara Montessori temelli okul öncesi eğitim veriyoruz.
             </p>
 
             {/* Social Media Links */}

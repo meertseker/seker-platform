@@ -1,4 +1,4 @@
-import Header from '@/app/components/Header';
+import Link from 'next/link';
 import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
@@ -6,11 +6,19 @@ import { buildMetadata } from '@/lib/metadata';
 import { buildBreadcrumbSchema, buildFaqSchema } from '@/lib/schema';
 import { SITE } from '@/lib/site';
 import { PUBLISHED_FAQ } from '@/content/faq';
+import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from '@/content/day';
+import {
+  ENGLISH_TRACKS,
+  FULL_DAY_LABEL,
+  HALF_DAY_LABEL,
+  MONTESSORI_DAYS_PER_WEEK,
+  SUPPORT,
+  YEAR_ROUND_BRANCHES,
+} from '@/content/program';
 
 export const metadata = buildMetadata({
   title: 'Eğitim Yaklaşımımız',
-  description:
-    'Montessori, High Scope ve Çoklu Zeka temelli okul öncesi eğitim programımız. Beykent Büyükçekmece\'de oyun temelli öğrenme yaklaşımı.',
+  description: `Haftanın ${MONTESSORI_DAYS_PER_WEEK} günü Montessori, alanında uzman öğretmenlerle branş dersleri ve her gün İngilizce. Beykent Büyükçekmece'de 2-6 yaş okul öncesi eğitim.`,
   path: '/egitim-yaklasimimiz',
 });
 
@@ -21,44 +29,57 @@ const FAQ_SUBSET = PUBLISHED_FAQ.filter((item) =>
 /** Bölüm kartlarının şerit renkleri — sitenin aksan sırası. */
 const SECTION_STRIPES = ['bg-grape', 'bg-bubble', 'bg-sunny', 'bg-mint', 'bg-sky'];
 
+const BRANCH_NAMES = YEAR_ROUND_BRANCHES.map((branch) => branch.name).join(', ');
+
 const SECTIONS = [
   {
-    question: 'Montessori yaklaşımı nedir ve biz nasıl uyguluyoruz?',
+    question: `Montessori yaklaşımını nasıl uyguluyoruz?`,
     answer: [
-      'Montessori yaklaşımı, çocuğun hazırlanmış bir ortamda kendi hızında ve kendi seçimiyle öğrenmesidir; bunu 2-3 yaş oyun grubundan 5-6 yaş sınıfına kadar tüm gruplarımızda uyguluyoruz.',
-      'Sınıflarımızda 10 çocuk ve 2 öğretmen bulunur — öğretmen başına 5 çocuk. Bu oran, her çocuğun Montessori materyalleriyle bireysel çalışmasını gerçek anlamda gözlemleyip yönlendirebilmemizi sağlar; kalabalık bir sınıfta bu yaklaşım sözde kalır.',
-      '2-3 yaş oyun grubunda duyusal materyallerle başlayan çalışmalar, 5-6 yaşta okuma yazmaya hazırlık materyallerine kadar kademeli olarak ilerler.',
+      `Montessori eğitimi okulumuzda haftanın ${MONTESSORI_DAYS_PER_WEEK} günü uygulanıyor. Ayrı bir etkinlik saati değil; günün omurgası bu.`,
+      'Materyaller çocuğun boyundaki açık raflarda duruyor. Çocuk günlük yaşam, duyusal çalışmalar, dil, matematik, dikkat ve konsantrasyon alanlarında özel olarak hazırlanmış materyallerle çalışıyor. Bir işi seçmek, bitirmek ve yerine kaldırmak onun sorumluluğunda.',
+      `Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk ve iki öğretmen bulunuyor. Bu yaklaşımın gerçekten işlemesi buna bağlı: öğretmenin her çocuğun neyle ne kadar çalıştığını gözlemleyebilmesi gerekiyor. Kalabalık bir sınıfta Montessori sözde kalır.`,
+      'Bu çalışmalarla özgüven, sorumluluk, el-göz koordinasyonu, problem çözme ve odaklanma becerilerinin gelişimini destekliyoruz.',
     ],
   },
   {
-    question: 'High Scope programı çocuğa ne kazandırır?',
+    question: 'Çocuk günü kendisi planlayabiliyor mu?',
     answer: [
-      'High Scope programı çocuğa "planla-yap-değerlendir" döngüsüyle karar verme, sorumluluk alma ve kendi öğrenmesini yönetme becerisini kazandırır.',
-      'Çocuk günün başında ne yapacağını seçer, seçtiği etkinliği gerçekleştirir ve gün sonunda öğretmenle birlikte bunu değerlendirir. Bu döngü 3-4, 4-5 ve 5-6 yaş sınıflarımızda her gün tekrarlanır ve yaş büyüdükçe planlama süresi ve karmaşıklığı artar.',
-      'Sonuç, yönergeyle değil kendi kararıyla harekete geçen bir çocuktur — bu da ilkokula geçişte önemli bir avantajdır.',
+      'Evet. Gün, sabah çemberinde birlikte planlanır: kim ne çalışacak, hangi branş dersi var, bahçeye ne zaman çıkılacak.',
+      'High Scope programının "planla-yap-değerlendir" döngüsünü bu noktada kullanıyoruz. Çocuk günün başında ne yapacağını seçiyor, seçtiği işi gerçekleştiriyor ve gün sonunda öğretmeniyle birlikte değerlendiriyor. Yaş büyüdükçe planlama süresi ve karmaşıklığı artıyor.',
+      'Sonuç, yönergeyle değil kendi kararıyla harekete geçen bir çocuk. İlkokula geçişte en çok işe yarayan alışkanlıklardan biri bu.',
     ],
   },
   {
-    question: 'Çoklu zeka kuramını günlük programda nasıl kullanıyoruz?',
+    question: 'Branş dersleri programın neresinde duruyor?',
     answer: [
-      'Çoklu zeka kuramını, her çocuğun güçlü olduğu alanı günlük etkinlik çeşitliliğiyle ortaya çıkarmak için kullanıyoruz; tek bir "doğru" öğrenme yolu olduğunu varsaymayız.',
-      'Müzik, drama, seramik, satranç ve robotik kodlama gibi branş derslerimiz sözel-dilsel, mantıksal-matematiksel, görsel-uzamsal, bedensel-kinestetik, müziksel, sosyal ve içsel zeka alanlarının her birine haftalık olarak temas eder.',
-      'Bir çocuk satrançta güçlüyken bir başkası dramada parlayabilir; programımız ikisine de eşit görünürlük verir.',
+      'Branş dersleri eğlence molası değil, programın parçası. Her biri alanında uzman bir öğretmen tarafından yürütülüyor.',
+      `Programımızda şu çalışmalar yer alıyor: ${BRANCH_NAMES}.`,
+      'Bu genişliği bilerek koruyoruz. Bir çocuk satrançta açılırken bir başkası seramikte ya da dramada parlıyor; hangi çocuğun neyle açılacağını önceden bilemiyorsunuz. Programımız her birine eşit görünürlük veriyor.',
+      'Bu çalışmalarla yaratıcılık, özgüven, iletişim, sosyal beceri, problem çözme, motor gelişim ve kendini ifade etme becerilerini destekliyoruz.',
     ],
   },
   {
-    question: 'Oyun temelli öğrenme neden akademik hazırlıktan önce gelir?',
+    question: 'Yabancı dil eğitimi nasıl işliyor?',
     answer: [
-      'Oyun temelli öğrenme akademik hazırlıktan önce gelir çünkü 2-6 yaş arasında dil, motor ve sosyal-duygusal gelişimin büyük kısmı oyun yoluyla gerçekleşir — masa başı çalışma bu gelişimin yerini tutamaz.',
-      '2-3 yaş oyun grubunda duyusal ve serbest oyun ağırlıktayken, 4-5 ve 5-6 yaşta oyun; bilim, matematik ve okuma yazmaya hazırlık çalışmalarıyla iç içe geçer. Akademik beceriler oyunun yerine değil, oyunun üzerine inşa edilir.',
-      'Bu sıralama bir tercih değil, çocuk gelişimi literatürünün gerekliliğidir.',
+      `Çocukların erken yaşta yabancı dil ile tanışmasını önemsiyoruz. Çocuğunuz her gün ${ENGLISH_HOURS_PER_DAY} saatini İngilizce öğretmeniyle geçiriyor — haftada birkaç ders değil, her gün aynı saatte.`,
+      'İngilizce çalışmaları oyun, şarkı, hikâye, etkinlik ve günlük iletişimin içinden yürüyor. Çocuk önce anlıyor, sonra tek kelimelerle karşılık veriyor, en sonunda cümle kuruyor. Aceleye getirmiyoruz.',
+      'İngilizcenin yanında Almanca çalışmalarına da yer veriyoruz.',
     ],
   },
   {
-    question: 'Çocuklar mezun olduğunda İngilizce konuşabiliyor mu?',
+    question: 'Teknoloji eğitim sürecine nasıl giriyor?',
     answer: [
-      'Evet — çocuklarımız mezun olduğunda İngilizce konuşuyor.',
-      'Bunu haftada birkaç saatlik ders ile değil, native İngilizce öğretmenimizin günün doğal ve sürekli bir parçası olmasıyla sağlıyoruz. Çocuk İngilizceyi bir ders olarak değil, günlük iletişimin bir parçası olarak edinir; bu da 2-3 yaştan 5-6 yaşa kadar süren dört yıllık bir süreçte kalıcı akıcılık kazandırır.',
+      SUPPORT.smartBoard,
+      'Teknolojiyi yaş grubuna uygun ölçüde ve öğretmenin yönlendirmesiyle kullanıyoruz. Robotik & Kodlama dersinde çocuklar manyetik lego setleri ve tabletlerle kendi robotlarını kuruyor, sonra hareketlerini kodluyor.',
+      'Amacımız ekran süresi eklemek değil; çocuğun neden-sonuç ilişkisi kurmasını, planlama yapmasını ve çözüm üretmesini desteklemek.',
+    ],
+  },
+  {
+    question: 'Sosyal ve duygusal gelişimi kim takip ediyor?',
+    answer: [
+      SUPPORT.psychologist,
+      'Uyum dönemi, kardeş kıskançlığı, tuvalet eğitimi ya da uyku düzeni gibi başlıklarda evde ve okulda tutarlı bir yaklaşım kurmak için sizinle birlikte çalışıyoruz.',
+      'Sevgi, güven ve aidiyet duygusunu merkeze alan bir okul ortamı kurmaya çalışıyoruz. Çocuğun kendini burada değerli hissetmesi, öğrenmenin ön koşulu.',
     ],
   },
 ];
@@ -66,7 +87,6 @@ const SECTIONS = [
 export default function EgitimYaklasimimizPage() {
   return (
     <div className="min-h-screen bg-paper">
-      <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
           { name: 'Ana Sayfa', path: '/' },
@@ -76,9 +96,9 @@ export default function EgitimYaklasimimizPage() {
       <JsonLd data={buildFaqSchema(FAQ_SUBSET)} />
 
       <PageHero
-        eyebrow="Montessori · High Scope · Çoklu Zeka"
+        eyebrow={`Montessori · Branş dersleri · ${ENGLISH_HOURS_PER_DAY} saat İngilizce`}
         title="Eğitim Yaklaşımımız"
-        lead="Beykent Büyükçekmece'de 2-6 yaş arası çocuklar için Montessori, High Scope ve Çoklu Zeka kuramlarını temel alan, oyun temelli bir program uyguluyoruz."
+        lead="Çocukların bireysel farklılıklarını ve ilgi alanlarını dikkate alan bir eğitim yaklaşımı benimsiyoruz. Programımız; zihinsel, sosyal, duygusal, fiziksel ve sanatsal gelişimi bir bütün olarak destekleyecek şekilde planlanıyor."
         tone="grape"
       />
 
@@ -107,38 +127,54 @@ export default function EgitimYaklasimimizPage() {
         </div>
       </section>
 
+      {/* İngilizce programının içindeki üç ayrı çalışma. */}
       <section className="bg-paper-warm py-16">
         <div className="mx-auto max-w-4xl px-6">
           <h2 className="text-center font-display text-3xl text-ink">
-            Yaş grubuna göre program
+            İngilizce günün içinde nasıl görünüyor?
           </h2>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: '2-3 yaş', name: 'Oyun Grubu', accent: 'text-bubble-deep' },
-              { label: '3-4 yaş', name: 'Anaokulu', accent: 'text-sunny-deep' },
-              { label: '4-5 yaş', name: 'Anaokulu', accent: 'text-mint-deep' },
-              { label: '5-6 yaş', name: 'İlkokula Hazırlık', accent: 'text-sky-deep' },
-            ].map((group) => (
-              <div key={group.label} className="card-lift rounded-3xl bg-white p-6 text-center shadow-sm">
-                <p className={`font-display text-2xl ${group.accent}`}>{group.label}</p>
-                <p className="mt-2 text-sm text-ink-soft">{group.name}</p>
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {ENGLISH_TRACKS.map((track) => (
+              <div key={track.name} className="card-lift rounded-3xl bg-white p-6 shadow-sm">
+                <h3 className="font-display text-xl text-ink">{track.name}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-ink-soft">{track.description}</p>
               </div>
             ))}
           </div>
-          <p className="mx-auto mt-8 max-w-2xl text-center text-ink-soft">
-            {SITE.foundingYear}&apos;den beri, {new Date().getFullYear() - SITE.foundingYear} yıldır
-            aynı yaklaşımla {SITE.areaServed.slice(0, 3).join(', ')} ve çevresindeki ailelere
-            hizmet veriyoruz.
-          </p>
         </div>
       </section>
 
-      <section className="mx-auto max-w-2xl px-6 py-16">
+      <section className="mx-auto max-w-4xl px-6 py-16">
+        <h2 className="text-center font-display text-3xl text-ink">
+          Yaş grubuna göre program
+        </h2>
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: '2-3 yaş', name: 'Oyun Grubu', accent: 'text-bubble-deep', href: '/yas-gruplari/2-3-yas' },
+            { label: '3-4 yaş', name: 'Anaokulu', accent: 'text-sunny-deep', href: '/yas-gruplari/3-4-yas' },
+            { label: '4-5 yaş', name: 'Anaokulu', accent: 'text-mint-deep', href: '/yas-gruplari/4-5-yas' },
+            { label: '5-6 yaş', name: 'İlkokula Hazırlık', accent: 'text-sky-deep', href: '/yas-gruplari/5-6-yas' },
+          ].map((group) => (
+            <Link key={group.label} href={group.href} className="card-lift rounded-3xl bg-white p-6 text-center shadow-sm">
+              <p className={`font-display text-2xl ${group.accent}`}>{group.label}</p>
+              <p className="mt-2 text-sm text-ink-soft">{group.name}</p>
+            </Link>
+          ))}
+        </div>
+        <p className="mx-auto mt-8 max-w-2xl text-center text-ink-soft">
+          Tam gün {FULL_DAY_LABEL}, yarım gün {HALF_DAY_LABEL}. {SITE.foundingYear}
+          &apos;den beri, {new Date().getFullYear() - SITE.foundingYear} yıldır aynı
+          yaklaşımla {SITE.areaServed.slice(0, 3).join(', ')} ve çevresindeki ailelere
+          hizmet veriyoruz.
+        </p>
+      </section>
+
+      <section className="mx-auto max-w-2xl px-6 pb-16">
         <h2 className="text-center font-display text-3xl text-ink">
           Programı yerinde görmek ister misiniz?
         </h2>
         <p className="mt-4 text-center text-ink-soft">
-          Sınıflarımızı ziyaret edip öğretmenlerimizle tanışmak için ön görüşme randevusu alın.
+          Ders saatinde gelin; sınıfları gezip öğretmenlerimizle tanışın.
         </p>
         <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 ring-1 ring-rule md:p-8">
           <LeadForm />

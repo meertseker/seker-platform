@@ -43,3 +43,11 @@ next-env.d.ts
 
 dev-out.log
 dev-err.log
+
+# Ham okul çekimleri — net çocuk yüzü içerir, public/ altına konmaz.
+/photos/
+
+# Yerel derleme çıktısı
+/.next-form/
+# Çalışma kopyaları (bulanıklaştırılmamış olabilir)
+/public/_work-*

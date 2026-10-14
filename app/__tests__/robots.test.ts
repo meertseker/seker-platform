@@ -10,8 +10,9 @@ describe('robots.txt', () => {
     expect(list).toContain('/lp/');
   });
 
-  it('api ve teşekkür sayfasını kapalı tutar', () => {
+  it('api, admin ve teşekkür sayfasını kapalı tutar', () => {
     expect(list).toContain('/api/');
+    expect(list).toContain('/admin');
     expect(list).toContain('/tesekkurler');
   });
 });

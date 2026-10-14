@@ -1,6 +1,5 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import Header from '@/app/components/Header';
 import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
@@ -11,7 +10,7 @@ import { buildBreadcrumbSchema } from '@/lib/schema';
 export const metadata = buildMetadata({
   title: 'Yaş Grupları',
   description:
-    'Özel Şeker Anaokulu\'nda 2 yaşından ilkokula hazırlığa kadar dört yaş grubu: 2-3 yaş oyun grubu, 3-4 yaş, 4-5 yaş ve 5-6 yaş sınıfları. Her grup için ayrı program ve 10 kişilik sınıf mevcudu.',
+    'Özel Şeker Anaokulu\'nda 2 yaşından ilkokula hazırlığa kadar dört yaş grubu: 2-3 yaş oyun grubu, 3-4 yaş, 4-5 yaş ve 5-6 yaş sınıfları. Her grubun kendi programı ve kendi öğretmenleri var.',
   path: '/yas-gruplari',
 });
 
@@ -21,7 +20,6 @@ const AGE_STRIPES = ['bg-bubble', 'bg-sunny', 'bg-mint', 'bg-sky'];
 export default function AgeGroupsIndexPage() {
   return (
     <div className="min-h-screen bg-paper">
-      <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
           { name: 'Ana Sayfa', path: '/' },
@@ -32,7 +30,7 @@ export default function AgeGroupsIndexPage() {
       <PageHero
         eyebrow="2 yaştan ilkokula hazırlığa"
         title="Her yaşın kendi programı, kendi sınıfı var."
-        lead="Dört yaş grubu, dört ayrı gelişim dönemi. Çocuğunuzun bulunduğu gruba tıklayarak o yaşa özel programı, günlük akışı ve sınıf mevcudunu inceleyin."
+        lead="Sınıflarımızı çocukların doğum yıllarını ve aylarını dikkate alarak oluşturuyor, gelişim dönemlerine uygun bir eğitim süreci planlıyoruz. Çocuğunuzun grubuna tıklayarak o yaşa özel programı ve günün akışını inceleyin."
         tone="grape"
       />
 
@@ -45,7 +43,10 @@ export default function AgeGroupsIndexPage() {
               className="card-lift group overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-rule hover:shadow-xl hover:shadow-ink/10"
             >
               <div className={`h-2 ${AGE_STRIPES[index % AGE_STRIPES.length]}`} />
-              <div className="relative h-56 w-full">
+              <div
+                className="relative h-56 w-full"
+                style={{ viewTransitionName: `age-${group.slug}` }}
+              >
                 <Image
                   src={group.image}
                   alt={`${group.title} etkinlikleri`}

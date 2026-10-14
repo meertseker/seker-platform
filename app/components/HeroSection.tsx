@@ -5,11 +5,16 @@ import { SITE, WHATSAPP_URL } from '@/lib/site';
 import { MEDIA } from '@/content/media';
 import { TESTIMONIALS } from '@/content/testimonials';
 import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from '@/content/day';
+import { MONTESSORI_DAYS_PER_WEEK } from '@/content/program';
 
 /**
  * Hero — okulun kendi bahçe fotoğrafı zemin, üzerinde bento düzeninde
  * kutular. Bahçe okulun en somut farkı olduğu için ilk ekranda o görünür;
- * kutular sırayla teklifi, mekânı, rakamları ve bir veli sözünü taşır.
+ * kutular sırayla teklifi, mekânı, sınıf künyesini, programın iki sabit
+ * rakamını ve bir veli sözünü taşır.
+ *
+ * Başlık ve giriş metni okulun kendi tanıtım metninden gelir; buradaki
+ * cümleler pazarlama için yeniden yazılmadı.
  */
 
 const HERO_QUOTE_ID = 'muge-ilkokul-olsa';
@@ -47,17 +52,19 @@ export default function HeroSection() {
             <div className="rounded-[1.75rem] bg-white/95 p-6 shadow-2xl shadow-ink/25 backdrop-blur-md md:col-span-2 md:p-9">
               <span className="inline-flex w-fit rounded-full bg-paper-warm px-4 py-1.5">
                 <Timecode>
-                  Beykent · Büyükçekmece · {SITE.foundingYear}&apos;den beri
+                  Beykent&apos;in en köklü anaokullarından biri · {SITE.foundingYear}&apos;den beri
                 </Timecode>
               </span>
 
               <h1 className="mt-4 text-3xl text-ink md:mt-5 md:text-5xl lg:text-6xl">
-                Çocuğunuzu adıyla, huyuyla tanıyan bir okul.
+                Çocuğu tanıyan, potansiyelini keşfeden bir okul.
               </h1>
 
               <p className="mt-4 max-w-xl text-base text-ink-soft md:text-lg">
-                Sınıfta {ROSTER_STATUS.childCount} çocuk var, başlarında iki
-                öğretmen. Günün büyük bölümü de arkadaki bahçede geçiyor.
+                Her çocuğun kendine özgü olduğuna inanıyoruz. İki binamız ve
+                geniş metrekareye sahip iki büyük bahçemizle çocukların
+                özgürce hareket edebildiği, keşfedebildiği bir eğitim ortamı
+                sunuyoruz.
               </p>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -125,21 +132,31 @@ export default function HeroSection() {
               </div>
               <p className="mt-4 text-sm leading-relaxed text-white/85">
                 Yönetmelik öğretmen başına {ROSTER_STATUS.limit} çocuğa kadar
-                izin veriyor. Bizde{' '}
-                {Math.round(ROSTER_STATUS.childCount / ROSTER_STATUS.teacherCount)} çocuk
-                düşüyor.
+                izin veriyor. Sınıflarımızı doğum yılına ve ayına göre
+                oluşturuyoruz.
               </p>
             </div>
 
-            {/* 4 — Dil ve süreklilik. */}
+            {/* 4 — Programın iki sabiti: Montessori ve günlük İngilizce. */}
             <div className="rounded-[1.75rem] bg-mint-deep p-6 shadow-xl shadow-mint-deep/30">
-              <p className="font-display text-4xl text-white md:text-5xl">
-                {ENGLISH_HOURS_PER_DAY} saat
-              </p>
-              <p className="mt-1 text-sm text-white/85">her gün İngilizce</p>
+              <div className="flex items-end gap-5">
+                <div>
+                  <p className="font-display text-4xl text-white md:text-5xl">
+                    {MONTESSORI_DAYS_PER_WEEK} gün
+                  </p>
+                  <p className="mt-1 text-sm text-white/85">Montessori</p>
+                </div>
+                <div className="h-12 w-px bg-white/30" />
+                <div>
+                  <p className="font-display text-4xl text-white md:text-5xl">
+                    {ENGLISH_HOURS_PER_DAY} saat
+                  </p>
+                  <p className="mt-1 text-sm text-white/85">her gün İngilizce</p>
+                </div>
+              </div>
               <p className="mt-4 text-sm leading-relaxed text-white/85">
-                Haftada birkaç ders değil, her gün aynı saatte. {yearsActive} yıldır
-                aynı bahçede çalışıyoruz.
+                Montessori ayrı bir etkinlik saati değil, haftanın her günü
+                günün omurgası. {yearsActive} yıldır aynı bahçede çalışıyoruz.
               </p>
             </div>
 

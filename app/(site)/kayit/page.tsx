@@ -1,4 +1,3 @@
-import Header from '@/app/components/Header';
 import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
@@ -6,11 +5,13 @@ import TrackedLink from '@/app/components/TrackedLink';
 import { buildMetadata } from '@/lib/metadata';
 import { buildBreadcrumbSchema } from '@/lib/schema';
 import { SITE, WHATSAPP_URL } from '@/lib/site';
+import { ROSTER_STATUS } from '@/content/day';
+import { FULL_DAY_LABEL, HALF_DAY_LABEL } from '@/content/program';
 
 export const metadata = buildMetadata({
   title: '2026-2027 Kayıtları',
   description:
-    'Özel Şeker Anaokulu 2026-2027 ön kayıt. Beykent Büyükçekmece\'de sınırlı kontenjanlı, 2-6 yaş okul öncesi eğitim. Ön görüşme randevusu alın.',
+    'Özel Şeker Anaokulu 2026-2027 ön kayıt. Beykent Büyükçekmece\'de 2-6 yaş okul öncesi eğitim; tam gün ve yarım gün seçenekleri. Ön görüşme randevusu alın.',
   path: '/kayit',
 });
 
@@ -20,25 +21,23 @@ const STEP_ACCENTS = ['bg-grape', 'bg-bubble-deep', 'bg-mint-deep'];
 const STEPS = [
   {
     title: 'Ön görüşme talebi',
-    description:
-      'Formu doldurun veya arayın; çocuğunuzun yaş grubunu ve programını birlikte netleştirelim.',
+    description: `Formu doldurun veya arayın. Çocuğunuzun yaş grubunu ve tam gün (${FULL_DAY_LABEL}) ya da yarım gün (${HALF_DAY_LABEL}) tercihinizi birlikte netleştirelim.`,
   },
   {
     title: 'Okul ziyareti ve tanışma',
     description:
-      'Sınıfları, öğretmenleri ve günün akışını yerinde görün; sorularınızı yüz yüze yanıtlayalım.',
+      'Ders saatinde gelin: sınıfları, bahçeleri ve öğretmenleri yerinde görün, sorularınızı yüz yüze konuşalım.',
   },
   {
     title: 'Kayıt',
     description:
-      'Kontenjan uygunsa evrak ve kayıt işlemlerini tamamlayıp başlangıç tarihini birlikte planlayalım.',
+      'Grubunda yer varsa evrak ve kayıt işlemlerini tamamlayıp başlangıç tarihini birlikte planlayalım. Uyum sürecini çocuğunuzun temposuna göre planlıyoruz.',
   },
 ];
 
 export default function KayitPage() {
   return (
     <div className="min-h-screen bg-paper">
-      <Header />
       <JsonLd
         data={buildBreadcrumbSchema([
           { name: 'Ana Sayfa', path: '/' },
@@ -49,9 +48,21 @@ export default function KayitPage() {
       <PageHero
         eyebrow="2-6 yaş · Beykent Büyükçekmece"
         title="2026-2027 kayıtlarımız açık"
-        lead="Sınıflarımız 10 kişilik ve her sınıfta iki öğretmen görev yapıyor. Bu düzeni korumak için kontenjanımız sınırlı — 2-3 yaş oyun grubundan 5-6 yaş ilkokula hazırlık sınıfına kadar tüm gruplarda yer ayırmak için erken başvurmanızı öneririz."
+        lead={`Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk bulunuyor ve her sınıfta iki öğretmen görev yapıyor. Sınıfları doğum yılına ve ayına göre oluşturduğumuz için her grupta yer sayısı sınırlı; 2-3 yaş oyun grubundan 5-6 yaş ilkokula hazırlık sınıfına kadar tüm gruplarda erken başvurmanızı öneririz.`}
         tone="bubble"
       />
+
+      <section className="bg-paper-warm py-16">
+        <div className="mx-auto max-w-2xl px-6">
+          <h2 className="text-center font-display text-3xl text-ink">
+            Ön görüşme randevunuzu alın
+          </h2>
+          {/* Geri arama süresi formun kendi alt satırında yazıyor — burada tekrarlanmaz. */}
+          <div className="mt-8 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 md:p-8">
+            <LeadForm />
+          </div>
+        </div>
+      </section>
 
       <section className="mx-auto max-w-5xl px-6 py-16">
         <h2 className="text-center font-display text-3xl text-ink">Kayıt süreci üç adımdan oluşur</h2>
@@ -69,18 +80,6 @@ export default function KayitPage() {
             </li>
           ))}
         </ol>
-      </section>
-
-      <section className="bg-paper-warm py-16">
-        <div className="mx-auto max-w-2xl px-6">
-          <h2 className="text-center font-display text-3xl text-ink">
-            Ön görüşme randevunuzu alın
-          </h2>
-          {/* Geri arama süresi formun kendi alt satırında yazıyor — burada tekrarlanmaz. */}
-          <div className="mt-8 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 md:p-8">
-            <LeadForm />
-          </div>
-        </div>
       </section>
 
       <section className="mx-auto max-w-3xl px-6 py-16 text-center">

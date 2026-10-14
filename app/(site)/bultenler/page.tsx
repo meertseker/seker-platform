@@ -1,5 +1,4 @@
 import Image from 'next/image';
-import Header from '@/app/components/Header';
 import PageHero from '@/app/components/PageHero';
 import TrackedLink from '@/app/components/TrackedLink';
 import { MEDIA } from '@/content/media';
@@ -34,7 +33,7 @@ const CHANNELS = [
   },
   {
     title: "WhatsApp'tan yazılı",
-    body: 'Aylık yemek listesi, günlük program akışı ve etkinlik duyurularını veli grubundan paylaşıyoruz. Ayrıca isteyen veliye tek tek gönderiyoruz.',
+    body: 'Aylık yemek listesi, haftalık program ve etkinlik duyurularını veli grubundan paylaşıyoruz. Haftanın özel günlerini de buradan hatırlatıyoruz: çarşamba kitap, perşembe eşofman, cuma parti kıyafeti.',
     band: 'band-sky',
   },
 ];
@@ -42,8 +41,6 @@ const CHANNELS = [
 export default function BultenlerPage() {
   return (
     <div className="min-h-screen bg-paper">
-      <Header />
-
       <PageHero
         eyebrow="Veli İletişimi"
         title="Çocuğunuzun günü hakkında sizi karanlıkta bırakmıyoruz."

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { leadSchema } from '@/lib/leadSchema';
+import { insertWebsiteLead } from '@/lib/websiteLeads';
 import { SITE } from '@/lib/site';
 
 export const runtime = 'nodejs';
@@ -22,12 +23,21 @@ export async function POST(request: Request) {
   }
 
   const lead = parsed.data;
+  const saved = await insertWebsiteLead(lead);
+  if (saved === 'failed') {
+    return NextResponse.json(
+      { ok: false, message: 'Talebiniz alınamadı, lütfen telefonla ulaşın.' },
+      { status: 500 },
+    );
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.LEAD_NOTIFICATION_EMAIL ?? SITE.email;
 
-  // Anahtar yoksa lead'i kaybetme — logla ve başarı dön.
   if (!apiKey) {
-    console.warn('[lead] RESEND_API_KEY tanımsız, lead yalnızca loglandı:', lead);
+    if (saved === 'skipped') {
+      console.warn('[lead] RESEND_API_KEY tanımsız, lead yalnızca loglandı:', lead);
+    }
     return NextResponse.json({ ok: true });
   }
 
@@ -52,6 +62,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('[lead] e-posta gönderilemedi:', error, lead);
+    if (saved === 'saved') {
+      return NextResponse.json({ ok: true });
+    }
     return NextResponse.json(
       { ok: false, message: 'Talebiniz alınamadı, lütfen telefonla ulaşın.' },
       { status: 500 },

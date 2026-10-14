@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { MEDIA, pendingShootAssets } from '../media';
+import { MEDIA, pendingShootAssets, assetsWithChildFaces } from '../media';
+import { BRANCHES } from '../program';
 
 const PUBLIC_DIR = path.join(process.cwd(), 'public');
 const entries = Object.entries(MEDIA);
@@ -22,6 +23,15 @@ describe('MEDIA kataloğu', () => {
 
   it('bahçe geniş açı görseli tanımlı — hero, OG ve LP zorunlu varlığı', () => {
     expect(MEDIA.gardenWide).toBeDefined();
+  });
+
+  it('çocuk yüzü olan kareler işaretli ve dosyası duruyor', () => {
+    expect(assetsWithChildFaces()).toEqual([
+      'outdoorClass',
+      'candyCorner',
+      'giraffes',
+      'giraffesGarden',
+    ]);
   });
 
   it('pendingShootAssets yalnızca stok işaretlileri döndürür', () => {
@@ -55,6 +65,14 @@ describe('lisanssız stok görsel yasağı', () => {
 
   it.each(STOCK_FILES)('public/%s.webp silinmiş durumda', (name) => {
     expect(existsSync(path.join(PUBLIC_DIR, `${name}.webp`))).toBe(false);
+  });
+
+  it('her branşın mediaKey değeri katalogda ve okul çekimi', () => {
+    for (const branch of BRANCHES) {
+      const asset = MEDIA[branch.mediaKey];
+      expect(asset, branch.slug).toBeDefined();
+      expect(asset.status, branch.slug).toBe('okul');
+    }
   });
 
   it('kaynak kodda hiçbir stok dosyaya referans kalmadı', () => {

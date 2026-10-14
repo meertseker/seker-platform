@@ -18,7 +18,7 @@ export default function DayChapters({ chapters }: { chapters: DayChapter[] }) {
         <section
           key={chapter.id}
           id={chapter.id}
-          className="cine-chapter scroll-mt-24 overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-rule md:p-10"
+          className="cine-chapter scroll-mt-32 overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-rule md:p-10"
         >
           <span
             aria-hidden="true"
@@ -29,7 +29,12 @@ export default function DayChapters({ chapters }: { chapters: DayChapter[] }) {
           <p className="mt-3 text-lg text-ink-soft">{chapter.lead}</p>
 
           <div className="mt-8">
-            <Frame mediaKey={chapter.mediaKey} grade={chapter.grade} priority={index === 0} />
+            <Frame
+              mediaKey={chapter.mediaKey}
+              grade={chapter.grade}
+              priority={index === 0}
+              transitionName={`day-${chapter.id}`}
+            />
           </div>
 
           <div className="mt-8 max-w-2xl">

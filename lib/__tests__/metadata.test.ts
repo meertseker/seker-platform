@@ -3,13 +3,13 @@ import { buildMetadata } from '../metadata';
 
 describe('buildMetadata', () => {
   const meta = buildMetadata({
-    title: 'Ücretler',
-    description: 'Şeffaf ücret bilgisi.',
-    path: '/ucretler',
+    title: 'Ön Görüşme',
+    description: 'Randevu alın.',
+    path: '/kayit',
   });
 
   it('başlığa marka son ekini ekler', () => {
-    expect(meta.title).toBe('Ücretler | Özel Şeker Anaokulu');
+    expect(meta.title).toBe('Ön Görüşme | Özel Şeker Anaokulu');
   });
 
   it('çağıran taraf soneki kendi yazmışsa ikinci kez eklemez', () => {
@@ -22,11 +22,11 @@ describe('buildMetadata', () => {
   });
 
   it('canonical URL üretir', () => {
-    expect(meta.alternates?.canonical).toBe('https://sekeranaokulu.com/ucretler');
+    expect(meta.alternates?.canonical).toBe('https://sekeranaokulu.com/kayit');
   });
 
   it('OpenGraph verisi üretir', () => {
-    expect(meta.openGraph?.url).toBe('https://sekeranaokulu.com/ucretler');
+    expect(meta.openGraph?.url).toBe('https://sekeranaokulu.com/kayit');
     expect(meta.openGraph?.locale).toBe('tr_TR');
   });
 
