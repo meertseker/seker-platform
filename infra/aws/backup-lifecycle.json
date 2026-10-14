@@ -5,7 +5,14 @@
       "Status": "Enabled",
       "Filter": { "Prefix": "db/" },
       "Expiration": { "Days": 30 },
-      "NoncurrentVersionExpiration": { "NoncurrentDays": 30 }
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 1 },
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 1 }
+    },
+    {
+      "ID": "remove-expired-delete-markers",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "db/" },
+      "Expiration": { "ExpiredObjectDeleteMarker": true }
     }
   ]
 }
