@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { parseAttribution, persistAttribution, type Attribution } from '@/lib/attribution';
+import { UTM_KEYS, parseAttribution, persistAttribution, type Attribution } from '@/lib/attribution';
 
 export default function AttributionFields() {
-  const [attribution, setAttribution] = useState<Attribution>({ gclid: '', landingPath: '' });
+  const [attribution, setAttribution] = useState<Attribution>({ gclid: '', landingPath: '', utm: {} });
 
   useEffect(() => {
     try {
@@ -19,6 +19,9 @@ export default function AttributionFields() {
     <>
       <input type="hidden" name="gclid" value={attribution.gclid} readOnly />
       <input type="hidden" name="landingPath" value={attribution.landingPath} readOnly />
+      {UTM_KEYS.map((key) => (
+        <input key={key} type="hidden" name={key} value={attribution.utm[key] ?? ''} readOnly />
+      ))}
     </>
   );
 }

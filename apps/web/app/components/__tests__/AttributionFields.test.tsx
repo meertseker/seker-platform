@@ -39,7 +39,7 @@ describe('AttributionFields — ilk dokunuş navigasyonu', () => {
     });
     expect(hiddenValue(first.container, 'landingPath')).toBe('/lp/az-mevcutlu-anaokulu');
     expect(window.sessionStorage.getItem(ATTRIBUTION_KEY)).toBe(
-      JSON.stringify({ gclid: 'Cj0ABC123', landingPath: '/lp/az-mevcutlu-anaokulu' }),
+      JSON.stringify({ gclid: 'Cj0ABC123', landingPath: '/lp/az-mevcutlu-anaokulu', utm: {} }),
     );
     first.unmount();
 
@@ -87,5 +87,22 @@ describe('AttributionFields — ilk dokunuş navigasyonu', () => {
         Object.defineProperty(window, 'sessionStorage', originalDescriptor);
       }
     }
+  });
+
+  it('utm parametreleri gizli alanlara yazılır ve sonraki sayfada korunur', async () => {
+    window.happyDOM.setURL('https://example.com/lp/kres-2-yas?utm_source=google&utm_campaign=kres');
+    const first = render(<AttributionFields />);
+    await waitFor(() => {
+      expect(hiddenValue(first.container, 'utm_campaign')).toBe('kres');
+    });
+    expect(hiddenValue(first.container, 'utm_source')).toBe('google');
+    expect(hiddenValue(first.container, 'utm_medium')).toBe('');
+    first.unmount();
+
+    window.happyDOM.setURL('https://example.com/kayit');
+    const second = render(<AttributionFields />);
+    await waitFor(() => {
+      expect(hiddenValue(second.container, 'utm_campaign')).toBe('kres');
+    });
   });
 });
