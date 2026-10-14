@@ -7,3 +7,9 @@
 
 Yerel çalıştırma: `pnpm install`, `pnpm db:start`, `pnpm dev`.
 Plan ve spec: `docs/superpowers/`.
+
+## Başvuru akışı
+
+- Veli formu → `create_web_lead` (RPC) → panel: lead oluşturulur, bildirim ve e-posta gönderilir.
+- Tekrar başvuru kuralı: aynı telefon için açık lead varsa yeni kart açılmaz, mevcut lead aktivitesine "tekrar başvurdu" olayı yazılır; bildirim 10 dk susturulur.
+- Varsayılan danışman: `app_settings.web_lead_assignee` (atanmamışsa yalnız yöneticiler bildirim alır).
