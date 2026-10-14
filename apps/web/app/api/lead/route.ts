@@ -1,0 +1,73 @@
+import { NextResponse } from 'next/server';
+import { Resend } from 'resend';
+import { leadSchema } from '@/lib/leadSchema';
+import { insertWebsiteLead } from '@/lib/websiteLeads';
+import { SITE } from '@/lib/site';
+
+export const runtime = 'nodejs';
+
+export async function POST(request: Request) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ ok: false, errors: {}, message: 'Geçersiz istek' }, { status: 400 });
+  }
+
+  const parsed = leadSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { ok: false, errors: parsed.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+
+  const lead = parsed.data;
+  const saved = await insertWebsiteLead(lead);
+  if (saved === 'failed') {
+    return NextResponse.json(
+      { ok: false, message: 'Talebiniz alınamadı, lütfen telefonla ulaşın.' },
+      { status: 500 },
+    );
+  }
+
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = process.env.LEAD_NOTIFICATION_EMAIL ?? SITE.email;
+
+  if (!apiKey) {
+    if (saved === 'skipped') {
+      console.warn('[lead] RESEND_API_KEY tanımsız, lead yalnızca loglandı:', lead);
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  try {
+    const resend = new Resend(apiKey);
+    await resend.emails.send({
+      from: 'Şeker Anaokulu Web <onboarding@resend.dev>', // TODO: doğrulanmış alan adıyla değiştir
+      to,
+      subject: `Yeni geri arama talebi — ${lead.parentName}`,
+      text: [
+        `Veli: ${lead.parentName}`,
+        `Telefon: ${lead.phone}`,
+        '',
+        // Yaş grubu, program ve başlangıç dönemi artık formda sorulmuyor;
+        // bu bilgiler geri aramada alınır (bkz. lib/leadSchema.ts).
+        `Kaynak sayfa: ${lead.landingPath || '—'}`,
+        `GCLID: ${lead.gclid || '—'}`,
+        '',
+        `⏱ Hedef yanıt süresi: 15 dakika`,
+      ].join('\n'),
+    });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('[lead] e-posta gönderilemedi:', error, lead);
+    if (saved === 'saved') {
+      return NextResponse.json({ ok: true });
+    }
+    return NextResponse.json(
+      { ok: false, message: 'Talebiniz alınamadı, lütfen telefonla ulaşın.' },
+      { status: 500 },
+    );
+  }
+}

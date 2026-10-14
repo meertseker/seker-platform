@@ -1,0 +1,37 @@
+/* Sinematik katman — yalnızca site kabuğunda yüklenir. */
+
+.cine-chapter {
+  opacity: 1;
+}
+
+/*
+ * Omurga öğeleri eskiden opacity: 0.4 ile sönükleştiriliyordu; leylak zemin
+ * üzerinde bu, metni okunamaz hâle getiriyordu (kontrast AA'nın altına
+ * düşüyordu). Dinlenme durumu artık şeffaflıkla değil renkle anlatılır:
+ * yumuşak mürekkep, hover/odakta ve aktif sahnede tam mürekkep.
+ *
+ * Aktif sahne TimeSpine'daki IntersectionObserver ile `data-active` olarak
+ * yazılır — CSS view-timeline "tam olarak biri" durumunu veremez.
+ */
+.cine-spine-item {
+  opacity: 1;
+}
+
+.cine-spine-item[data-active='true'] .timecode {
+  color: var(--color-grape);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .cine-chapter {
+      animation: cine-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 8% cover 26%;
+    }
+
+    @keyframes cine-reveal {
+      from { opacity: 0.35; transform: translateY(18px); }
+      to   { opacity: 1;    transform: translateY(0); }
+    }
+  }
+}
