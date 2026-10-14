@@ -123,6 +123,7 @@ describe("create_web_lead davranışı (service role)", () => {
 
     // Önceden gclid'i olmayan karta sonradan gelen gclid eklenir (offline dönüşüm için).
     const { data: lead } = await admin.from("leads").select("gclid").eq("id", first.data.lead_id).single();
+    if (!lead) throw new Error("lead bulunamadı");
     expect(lead.gclid).toBe("Cj0LATER");
   });
 
@@ -146,6 +147,7 @@ describe("create_web_lead davranışı (service role)", () => {
     );
     expect(error).toBeNull();
     const { data: lead } = await admin.from("leads").select("gclid, utm_campaign, web_payload").eq("id", data.lead_id).single();
+    if (!lead) throw new Error("lead bulunamadı");
     expect(lead.gclid).toHaveLength(200);
     expect(lead.utm_campaign).toHaveLength(200);
     expect(lead.web_payload.utm).not.toHaveProperty("utm_bogus");
@@ -162,6 +164,7 @@ describe("create_web_lead davranışı (service role)", () => {
     await admin.from("app_settings").update({ value: DAN_ID }).eq("key", "web_lead_assignee");
     const { data } = await admin.rpc("create_web_lead", args());
     const { data: lead } = await admin.from("leads").select("assigned_to").eq("id", data.lead_id).single();
+    if (!lead) throw new Error("lead bulunamadı");
     expect(lead.assigned_to).toBe(DAN_ID);
     const users = (await notificationsFor(data.lead_id)).map((n) => n.user_id);
     expect(users).toEqual(expect.arrayContaining([YON_ID, DAN_ID]));
@@ -172,6 +175,7 @@ describe("create_web_lead davranışı (service role)", () => {
     const { data } = await admin.rpc("create_web_lead", args({ p_meta: { silent: true, old_web_lead_id: "old-1" } }));
     expect(await notificationsFor(data.lead_id)).toHaveLength(0);
     const { data: lead } = await admin.from("leads").select("web_payload").eq("id", data.lead_id).single();
+    if (!lead) throw new Error("lead bulunamadı");
     expect(lead.web_payload.old_web_lead_id).toBe("old-1");
     expect(lead.web_payload).not.toHaveProperty("silent");
   });
@@ -179,6 +183,7 @@ describe("create_web_lead davranışı (service role)", () => {
   it("p_meta.consent_scope web_payload'a taşınır", async () => {
     const { data } = await admin.rpc("create_web_lead", args({ p_meta: { silent: true, consent_scope: "arama" } }));
     const { data: lead } = await admin.from("leads").select("web_payload").eq("id", data.lead_id).single();
+    if (!lead) throw new Error("lead bulunamadı");
     expect(lead.web_payload.consent_scope).toBe("arama");
   });
 });
