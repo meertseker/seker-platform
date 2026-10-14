@@ -120,8 +120,8 @@ canlı bir oturumda yapılmalıdır:
 - [ ] 3 gerçek kullanıcıyı Supabase Auth'ta oluşturma + `profiles` satırlarının
       SQL editöründe eklenmesi
 - [ ] Vercel projesi bağlama ve üretim env değişkenlerinin girilmesi
-      (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-      `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` — üretim değerleri, dev değerleri
+      (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+      `SUPABASE_SECRET_KEY`, `CRON_SECRET` — üretim değerleri, dev değerleri
       değil)
 - [ ] Vercel'e deploy + üretimde smoke test (login, lead oluştur/sil)
 - [ ] Task 16 seed CSV'lerinin (leads.csv, students.csv) kullanıcı onayından

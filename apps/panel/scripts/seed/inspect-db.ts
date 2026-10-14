@@ -23,8 +23,8 @@ function loadEnv(file: string): Record<string, string> {
 
 const env = loadEnv(envFile);
 const url = env.NEXT_PUBLIC_SUPABASE_URL;
-const key = env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key) throw new Error(`${envFile}: NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY eksik`);
+const key = env.SUPABASE_SECRET_KEY;
+if (!url || !key) throw new Error(`${envFile}: NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SECRET_KEY eksik`);
 
 const db = createClient(url, key, { auth: { persistSession: false } });
 

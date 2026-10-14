@@ -79,9 +79,9 @@ async function main() {
 
   const env = loadEnv(envFile);
   const url = env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = env.SUPABASE_SECRET_KEY;
   if (!url || !serviceKey) {
-    throw new Error(`${path.basename(envFile)}: NEXT_PUBLIC_SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY gerekli`);
+    throw new Error(`${path.basename(envFile)}: NEXT_PUBLIC_SUPABASE_URL ve SUPABASE_SECRET_KEY gerekli`);
   }
   const db: SupabaseClient = createClient(url, serviceKey, { auth: { persistSession: false } });
 

@@ -98,7 +98,7 @@ Argümanlar:
 - `--skip-leads` / `--skip-students`: yalnızca birini yüklemek için.
 
 Ortam değişkenleri (kodda asla hardcode edilmez): `NEXT_PUBLIC_SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`. `.env.local` varsa otomatik yüklenir (repo'daki diğer
+`SUPABASE_SECRET_KEY`. `.env.local` varsa otomatik yüklenir (repo'daki diğer
 script'lerle — `tests/rls/helpers.ts` — aynı desen).
 
 Telefonlar CSV'de zaten E.164 olmalı; yine de `upload.ts` her satırı

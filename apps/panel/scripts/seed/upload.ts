@@ -10,7 +10,7 @@
  *   npx tsx scripts/seed/upload.ts --skip-students --assigned-to <uuid>
  *
  * Ortam değişkenleri (asla kod içine yazılmaz):
- *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY
  *   (.env.local varsa otomatik yüklenir — tests/rls/helpers.ts ile aynı desen)
  */
 import fs from "node:fs";
@@ -343,9 +343,9 @@ async function main() {
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = process.env.SUPABASE_SECRET_KEY;
   if (!url || !serviceKey) {
-    console.error("NEXT_PUBLIC_SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY ortam değişkenleri gerekli.");
+    console.error("NEXT_PUBLIC_SUPABASE_URL ve SUPABASE_SECRET_KEY ortam değişkenleri gerekli.");
     process.exit(1);
   }
   const db = createClient(url, serviceKey, { auth: { persistSession: false } });

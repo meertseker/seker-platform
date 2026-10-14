@@ -1,0 +1,31 @@
+{
+  "name": "@seker/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./cookie": "./src/cookie.ts",
+    "./server": "./src/server.ts",
+    "./admin": "./src/admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@seker/db": "workspace:*",
+    "@seker/shared": "workspace:*",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.3",
+    "server-only": "0.0.1"
+  },
+  "peerDependencies": {
+    "next": "16.2.12"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "next": "16.2.12",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}

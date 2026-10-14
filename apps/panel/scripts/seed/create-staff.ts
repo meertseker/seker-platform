@@ -10,7 +10,7 @@
  *   #    Zehra Gürsel,zehra@okul.com,danisman,
  *   # 2) Prod ortam değişkenleriyle çalıştır:
  *   NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co \
- *   SUPABASE_SERVICE_ROLE_KEY=<service_role_key> \
+ *   SUPABASE_SECRET_KEY=<secret_key> \
  *   npx tsx scripts/seed/create-staff.ts [--staff <path>] [--dry-run]
  *
  * Şifre boşsa güvenli geçici şifre üretilir ve KONSOLA basılır (bir kez dağıtılır,
@@ -117,9 +117,9 @@ async function main() {
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = process.env.SUPABASE_SECRET_KEY;
   if (!url || !serviceKey) {
-    console.error("NEXT_PUBLIC_SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY gerekli.");
+    console.error("NEXT_PUBLIC_SUPABASE_URL ve SUPABASE_SECRET_KEY gerekli.");
     process.exit(1);
   }
   const db = createClient(url, serviceKey, { auth: { persistSession: false } });

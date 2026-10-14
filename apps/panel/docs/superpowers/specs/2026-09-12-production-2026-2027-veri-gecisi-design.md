@@ -127,7 +127,7 @@ Uygulanan sıra: `source_offer_id = null` → `tasks` → `notifications` → `e
 
 ## Hata yönetimi
 
-- Ortam dosyasında `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` yoksa çık.
+- Ortam dosyasında `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SECRET_KEY` yoksa çık.
 - `profiles` içinde `yonetici` yoksa çık (ödenmiş taksit `marked_by` zorunlu).
 - Herhangi bir insert hatasında satır numarasıyla fırlat ve dur — kısmi yüklemeyi kullanıcı
   `inspect-db` ile görüp scripti yeniden çalıştırabilir (temizlik adımı idempotent).

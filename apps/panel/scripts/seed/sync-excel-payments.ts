@@ -134,8 +134,8 @@ async function main() {
 
   const env = loadEnv(envFile);
   const url = env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY eksik");
+  const key = env.SUPABASE_SECRET_KEY;
+  if (!url || !key) throw new Error("NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SECRET_KEY eksik");
   if (!fs.existsSync(factsPath)) throw new Error(`Facts yok: ${factsPath}`);
 
   const rows = JSON.parse(fs.readFileSync(factsPath, "utf8")) as RawStudent[];
