@@ -1,0 +1,10 @@
+**/node_modules
+**/.next
+**/.turbo
+**/.env
+**/.env.*
+.git
+apps/web/photos
+apps/web/public-originals-backup
+apps/panel/scripts/seed/out
+docs

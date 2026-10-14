@@ -1,0 +1,35 @@
+# syntax=docker/dockerfile:1.7
+FROM node:22-alpine AS base
+RUN apk add --no-cache libc6-compat && corepack enable
+
+FROM base AS pruner
+WORKDIR /repo
+COPY . .
+RUN corepack pnpm dlx turbo@2.11.8 prune @seker/panel --docker
+
+FROM base AS builder
+WORKDIR /repo
+COPY --from=pruner /repo/out/json/ .
+RUN pnpm install --frozen-lockfile
+COPY --from=pruner /repo/out/full/ .
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+RUN test -n "$NEXT_PUBLIC_SUPABASE_URL" && test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" \
+  || (echo "NEXT_PUBLIC_SUPABASE_* build-arg eksik" >&2; exit 1)
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY \
+    NEXT_TELEMETRY_DISABLED=1
+RUN pnpm turbo run build --filter=@seker/panel
+
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+RUN addgroup -S -g 1001 nodejs && adduser -S -u 1001 -G nodejs nextjs
+COPY --from=builder --chown=nextjs:nodejs /repo/apps/panel/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /repo/apps/panel/.next/static ./apps/panel/.next/static
+COPY --from=builder --chown=nextjs:nodejs /repo/apps/panel/public ./apps/panel/public
+RUN mkdir -p apps/panel/.next/cache && chown -R nextjs:nodejs apps/panel/.next/cache
+USER nextjs
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
+CMD ["node", "apps/panel/server.js"]

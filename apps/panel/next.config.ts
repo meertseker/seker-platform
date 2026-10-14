@@ -1,7 +1,13 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
+const monorepoRoot = path.resolve(process.cwd(), "../..");
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "standalone",
+  outputFileTracingRoot: monorepoRoot,
+  turbopack: { root: monorepoRoot },
+  transpilePackages: ["@seker/auth", "@seker/shared", "@seker/db"],
 };
 
 export default nextConfig;
