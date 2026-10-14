@@ -187,7 +187,7 @@ export function LeadEditForm({ lead, role }: LeadEditFormProps) {
                 disabled={isPending}
                 className="ml-auto min-h-11 cursor-pointer rounded-xl border border-red-200 bg-destructive-soft px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:border-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Lead'i Sil
+                Lead&apos;i Sil
               </button>
             ) : null}
           </div>

@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Yerel Supabase (RLS testleri için)
+        working-directory: packages/db
+        run: pnpm exec supabase start
+      - name: Test ortam değişkenleri
+        working-directory: packages/db
+        run: |
+          pnpm exec supabase status -o json > /tmp/sb.json
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$(jq -r '.API_URL' /tmp/sb.json)"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(jq -r '.PUBLISHABLE_KEY // .ANON_KEY' /tmp/sb.json)"
+            echo "SUPABASE_SECRET_KEY=$(jq -r '.SECRET_KEY // .SERVICE_ROLE_KEY' /tmp/sb.json)"
+          } >> "$GITHUB_ENV"
+      - run: pnpm turbo run lint typecheck test
