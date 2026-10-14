@@ -71,7 +71,8 @@ begin
     'utm_content',  nullif(left(btrim(coalesce(v_in->>'utm_content', '')), 200), '')
   ));
   v_campaign := v_utm->>'utm_campaign';
-  v_payload := jsonb_build_object('gclid', v_gclid, 'landing_path', v_path, 'utm', v_utm)
+  v_payload := jsonb_build_object('gclid', v_gclid, 'landing_path', v_path, 'utm', v_utm,
+                                  'consent_at', p_consent_at)
                || (v_meta - 'silent');
 
   -- Aynı telefondan eşzamanlı iki istek iki kart açmasın.
@@ -95,7 +96,10 @@ begin
 
     update public.leads
        set last_activity_at = now(),
-           gclid = coalesce(gclid, v_gclid)
+           gclid = coalesce(gclid, v_gclid),
+           -- İçe aktarma (consent_scope var) onayı yükseltmez; yalnızca canlı form onayı yazılır.
+           consent_at = case when v_meta ? 'consent_scope' then consent_at
+                             else coalesce(consent_at, p_consent_at) end
      where id = v_lead_id;
 
     insert into public.events (entity_type, entity_id, event_type, actor_id, payload)

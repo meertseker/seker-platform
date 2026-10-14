@@ -186,4 +186,46 @@ describe("create_web_lead davranışı (service role)", () => {
     if (!lead) throw new Error("lead bulunamadı");
     expect(lead.web_payload.consent_scope).toBe("arama");
   });
+  it("elle açılmış (onaysız) leade aynı telefondan web başvurusu gelince consent_at yazılır ve olayda saklanır", async () => {
+    const phone = nextPhone();
+    const { data: manual } = await admin
+      .from("leads")
+      .insert({ parent_name: "Elle Girilen", phone, source: "telefon", status: "yeni" })
+      .select("id, consent_at")
+      .single();
+    if (!manual) throw new Error("lead açılamadı");
+    expect(manual.consent_at).toBeNull();
+
+    const consentAt = new Date().toISOString();
+    const { data, error } = await admin.rpc("create_web_lead", args({ p_phone: phone, p_consent_at: consentAt }));
+    expect(error).toBeNull();
+    expect(data.duplicate).toBe(true);
+    expect(data.lead_id).toBe(manual.id);
+
+    const { data: lead } = await admin.from("leads").select("consent_at").eq("id", manual.id).single();
+    expect(lead?.consent_at).not.toBeNull();
+    expect(new Date(lead!.consent_at!).getTime()).toBe(new Date(consentAt).getTime());
+    const ev = await eventsFor(manual.id, "web_tekrar_basvuru");
+    expect(ev).toHaveLength(1);
+    expect(new Date(ev[0].payload.consent_at).getTime()).toBe(new Date(consentAt).getTime());
+  });
+
+  it("içe aktarma çağrısı (consent_scope) mevcut leadin consent_at alanını doldurmaz", async () => {
+    const phone = nextPhone();
+    const { data: manual } = await admin
+      .from("leads")
+      .insert({ parent_name: "Elle Girilen", phone, source: "telefon", status: "yeni" })
+      .select("id")
+      .single();
+    if (!manual) throw new Error("lead açılamadı");
+
+    const { data, error } = await admin.rpc(
+      "create_web_lead",
+      args({ p_phone: phone, p_meta: { silent: true, consent_scope: "arama", old_web_lead_id: "old-x" } }),
+    );
+    expect(error).toBeNull();
+    expect(data.duplicate).toBe(true);
+    const { data: lead } = await admin.from("leads").select("consent_at").eq("id", manual.id).single();
+    expect(lead?.consent_at).toBeNull();
+  });
 });
