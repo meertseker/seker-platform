@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { trackLead } from '@/lib/analytics';
 import { UTM_KEYS } from '@/lib/attribution';
 import AttributionFields from './AttributionFields';
+import { KVKK_CONSENT_LABEL } from '@/content/kvkk';
 
 type FieldErrors = Partial<Record<string, string[]>>;
 
@@ -100,8 +101,8 @@ export default function LeadForm() {
       <label className="flex items-start gap-3 text-sm text-ink-soft">
         <input type="checkbox" name="kvkkConsent" required className="mt-1 h-4 w-4" />
         <span>
-          <a href="/gizlilik" className="underline">KVKK Aydınlatma Metni</a>&apos;ni okudum,
-          aranmama onay veriyorum.
+          <a href="/gizlilik" className="underline">KVKK Aydınlatma Metni</a>&apos;ni okudum.{' '}
+          {KVKK_CONSENT_LABEL.slice("Aydınlatma Metni'ni okudum. ".length)}
         </span>
       </label>
       {err('kvkkConsent')}
