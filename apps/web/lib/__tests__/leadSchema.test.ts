@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { leadSchema } from '../leadSchema';
+import { leadSchema, PHONE_ERROR } from '../leadSchema';
 
 const valid = {
   parentName: 'Ayşe Yılmaz',
@@ -9,34 +9,43 @@ const valid = {
 
 describe('leadSchema', () => {
   it('yalnızca ad, telefon ve KVKK onayıyla geçerli bir lead kabul eder', () => {
-    expect(leadSchema.safeParse(valid).success).toBe(true);
+    const r = leadSchema.safeParse(valid);
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.phone).toBe('+905301018875');
+      expect(r.data.utm).toEqual({});
+      expect(r.data.website).toBe('');
+    }
   });
 
   it('KVKK onayı olmadan reddeder', () => {
-    const r = leadSchema.safeParse({ ...valid, kvkkConsent: false });
-    expect(r.success).toBe(false);
+    expect(leadSchema.safeParse({ ...valid, kvkkConsent: false }).success).toBe(false);
   });
 
-  it('kısa telefon numarasını reddeder', () => {
-    const r = leadSchema.safeParse({ ...valid, phone: '123' });
-    expect(r.success).toBe(false);
-  });
-
-  it('telefondaki boşluk ve parantezleri temizler', () => {
-    const r = leadSchema.safeParse({ ...valid, phone: '(0530) 101 88 75' });
+  it.each([
+    ['(0530) 101 88 75'],
+    ['+90 530 101 88 75'],
+    ['0090 530 101 88 75'],
+    ['530-101-88-75'],
+  ])('%s biçimini E.164 cep numarasına çevirir', (phone) => {
+    const r = leadSchema.safeParse({ ...valid, phone });
     expect(r.success).toBe(true);
-    if (r.success) expect(r.data.phone).toBe('05301018875');
+    if (r.success) expect(r.data.phone).toBe('+905301018875');
+  });
+
+  it.each([['123'], ['0212 222 33 44'], ['']])('%s numarasını Türkçe mesajla reddeder', (phone) => {
+    const r = leadSchema.safeParse({ ...valid, phone });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.flatten().fieldErrors.phone?.[0]).toBe(PHONE_ERROR);
   });
 
   it('tek harflik adı reddeder', () => {
-    const r = leadSchema.safeParse({ ...valid, parentName: 'A' });
-    expect(r.success).toBe(false);
+    expect(leadSchema.safeParse({ ...valid, parentName: 'A' }).success).toBe(false);
   });
 
   it('kaldırılan alanlar artık sorulmuyor — şema çıktısında yer almaz', () => {
     const r = leadSchema.safeParse({
       ...valid,
-      // Eski istemcilerden gelebilecek fazladan alanlar sessizce düşer.
       email: 'ayse@example.com',
       childAge: '3-4',
       program: 'tam-gun',
@@ -51,12 +60,35 @@ describe('leadSchema', () => {
     }
   });
 
-  it('gclid ve landingPath gizli alanları taşınmaya devam eder', () => {
-    const r = leadSchema.safeParse({ ...valid, gclid: 'Cj0ABC', landingPath: '/lp/x' });
+  it('gclid, landingPath ve utm gizli alanları taşınır; bilinmeyen utm anahtarı düşer', () => {
+    const r = leadSchema.safeParse({
+      ...valid, gclid: 'Cj0ABC', landingPath: '/lp/x',
+      utm: { utm_source: 'google', utm_campaign: 'kres', utm_evil: 'x' },
+    });
     expect(r.success).toBe(true);
     if (r.success) {
       expect(r.data.gclid).toBe('Cj0ABC');
       expect(r.data.landingPath).toBe('/lp/x');
+      expect(r.data.utm).toEqual({ utm_source: 'google', utm_campaign: 'kres' });
     }
+  });
+
+  it('çok uzun gizli alanlar başvuruyu reddettirmez, kırpılır', () => {
+    const r = leadSchema.safeParse({
+      ...valid, gclid: 'g'.repeat(300), landingPath: '/'.repeat(500),
+      utm: { utm_campaign: 'c'.repeat(1000) },
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.gclid).toHaveLength(200);
+      expect(r.data.landingPath).toHaveLength(200);
+      expect(r.data.utm.utm_campaign).toHaveLength(200);
+    }
+  });
+
+  it('honeypot alanını taşır (route bot olarak ele alır)', () => {
+    const r = leadSchema.safeParse({ ...valid, website: 'http://spam.example' });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.website).toBe('http://spam.example');
   });
 });

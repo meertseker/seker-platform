@@ -93,6 +93,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@seker/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@seker/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       next:
         specifier: 16.2.12
         version: 16.2.12(@babel/core@7.29.7)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)

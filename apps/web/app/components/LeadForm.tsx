@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trackLead } from '@/lib/analytics';
+import { UTM_KEYS } from '@/lib/attribution';
 import AttributionFields from './AttributionFields';
 
 type FieldErrors = Partial<Record<string, string[]>>;
@@ -24,11 +25,16 @@ export default function LeadForm() {
     setFormError('');
 
     const data = new FormData(event.currentTarget);
+    const utm = Object.fromEntries(
+      UTM_KEYS.map((key) => [key, String(data.get(key) ?? '')]).filter(([, value]) => value),
+    );
     const payload = {
       parentName: String(data.get('parentName') ?? ''),
       phone: String(data.get('phone') ?? ''),
       gclid: String(data.get('gclid') ?? ''),
       landingPath: String(data.get('landingPath') ?? ''),
+      utm,
+      website: String(data.get('website') ?? ''),
       kvkkConsent: data.get('kvkkConsent') === 'on',
     };
 
@@ -64,6 +70,10 @@ export default function LeadForm() {
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
       <AttributionFields />
+      <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+        <label htmlFor="website">Web siteniz</label>
+        <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+      </div>
 
       <div className="grid gap-5 md:grid-cols-2">
         <div>
