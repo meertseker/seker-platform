@@ -10,9 +10,9 @@ export async function sendLeadEmail(lead: Lead, result: CreateWebLeadResult): Pr
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return false;
 
-  const to = process.env.LEAD_NOTIFICATION_EMAIL ?? SITE.email;
+  const to = process.env.LEAD_NOTIFICATION_EMAIL || SITE.email;
   const from = process.env.LEAD_FROM_EMAIL || FALLBACK_FROM;
-  const panelUrl = process.env.PANEL_URL ?? 'https://panel.sekeranaokulu.com';
+  const panelUrl = process.env.PANEL_URL || 'https://panel.sekeranaokulu.com';
   const saved = result.status === 'saved';
   const subject = saved && result.duplicate
     ? `Tekrar başvuru — ${lead.parentName}`
