@@ -133,14 +133,14 @@ isOneToOne: false
                   ]
                 },"leads": {
                   Row: {
-                    "assigned_to": string | null,"beklemede_sezon": string | null,"child_birth_month": number | null,"child_birth_year": number | null,"child_name": string | null,"converted_student_id": string | null,"created_at": string,"family_id": string | null,"id": string,"ingilizce_gerekli": boolean,"last_activity_at": string,"lost_reason": string | null,"ozel_durum": boolean,"ozel_durum_note": string | null,"parent_name": string,"phone": string,"source": string,"source_detail": string | null,"status": string,"updated_at": string,"wants_summer": boolean
+                    "assigned_to": string | null,"beklemede_sezon": string | null,"child_birth_month": number | null,"child_birth_year": number | null,"child_name": string | null,"consent_at": string | null,"converted_student_id": string | null,"created_at": string,"family_id": string | null,"gclid": string | null,"id": string,"ingilizce_gerekli": boolean,"landing_path": string | null,"last_activity_at": string,"lost_reason": string | null,"ozel_durum": boolean,"ozel_durum_note": string | null,"parent_name": string,"phone": string,"source": string,"source_detail": string | null,"status": string,"updated_at": string,"utm_campaign": string | null,"utm_content": string | null,"utm_medium": string | null,"utm_source": string | null,"utm_term": string | null,"wants_summer": boolean,"web_payload": Json | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "assigned_to"?: string | null,"beklemede_sezon"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"family_id"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name": string,"phone": string,"source": string,"source_detail"?: string | null,"status"?: string,"updated_at"?: string,"wants_summer"?: boolean
+                    "assigned_to"?: string | null,"beklemede_sezon"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"consent_at"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"family_id"?: string | null,"gclid"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"landing_path"?: string | null,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name": string,"phone": string,"source": string,"source_detail"?: string | null,"status"?: string,"updated_at"?: string,"utm_campaign"?: string | null,"utm_content"?: string | null,"utm_medium"?: string | null,"utm_source"?: string | null,"utm_term"?: string | null,"wants_summer"?: boolean,"web_payload"?: Json | null
                   }
                   Update: {
-                    "assigned_to"?: string | null,"beklemede_sezon"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"family_id"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name"?: string,"phone"?: string,"source"?: string,"source_detail"?: string | null,"status"?: string,"updated_at"?: string,"wants_summer"?: boolean
+                    "assigned_to"?: string | null,"beklemede_sezon"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"consent_at"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"family_id"?: string | null,"gclid"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"landing_path"?: string | null,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name"?: string,"phone"?: string,"source"?: string,"source_detail"?: string | null,"status"?: string,"updated_at"?: string,"utm_campaign"?: string | null,"utm_content"?: string | null,"utm_medium"?: string | null,"utm_source"?: string | null,"utm_term"?: string | null,"wants_summer"?: boolean,"web_payload"?: Json | null
                   }
                   Relationships: [
                     {
@@ -375,6 +375,9 @@ isOneToOne: false
           Functions: {
             "accept_counter_offer":
 { Args: { "source_offer_id": string }; Returns: string
+                           },
+"create_web_lead":
+{ Args: { "p_consent_at": string,"p_gclid": string,"p_landing_path": string,"p_meta"?: Json,"p_parent_name": string,"p_phone": string,"p_utm": Json }; Returns: Json
                            },
 "is_staff":
 { Args: Record<PropertyKey, never>; Returns: boolean
