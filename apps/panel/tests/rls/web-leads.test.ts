@@ -228,4 +228,17 @@ describe("create_web_lead davranışı (service role)", () => {
     const { data: lead } = await admin.from("leads").select("consent_at").eq("id", manual.id).single();
     expect(lead?.consent_at).toBeNull();
   });
+  it("içe aktarma yeni oluşan kartın created_at/last_activity_at alanlarını eski tarihe çekebilir (guard engellemez)", async () => {
+    const { data } = await admin.rpc(
+      "create_web_lead",
+      args({ p_meta: { silent: true, consent_scope: "arama", old_created_at: "2025-01-02T10:00:00Z" } }),
+    );
+    expect(data.duplicate).toBe(false);
+    const old = "2025-01-02T10:00:00.000Z";
+    const { error } = await admin.from("leads").update({ created_at: old, last_activity_at: old }).eq("id", data.lead_id);
+    expect(error).toBeNull();
+    const { data: lead } = await admin.from("leads").select("created_at, last_activity_at").eq("id", data.lead_id).single();
+    expect(new Date(lead!.created_at).toISOString()).toBe(old);
+    expect(new Date(lead!.last_activity_at).toISOString()).toBe(old);
+  });
 });

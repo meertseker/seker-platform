@@ -30,7 +30,15 @@ if (!argv.includes("--csv") || !csvPath) {
   process.exit(1);
 }
 
-const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const secretKey = process.env.SUPABASE_SECRET_KEY;
+if (!supabaseUrl || !secretKey) {
+  console.error("NEXT_PUBLIC_SUPABASE_URL ve SUPABASE_SECRET_KEY ortam değişkenleri tanımlı olmalı.");
+  process.exit(1);
+}
+console.log(`Hedef: ${new URL(supabaseUrl).host}`);
+
+const db = createClient(supabaseUrl, secretKey, {
   auth: { persistSession: false },
 });
 
@@ -81,7 +89,21 @@ async function main() {
       console.error(`  ${row.id}: ${error?.code ?? "veri yok"}`);
       continue;
     }
-    if ((data as { duplicate: boolean }).duplicate) merged++; else created++;
+    const res = data as { duplicate: boolean; lead_id: string };
+    if (res.duplicate) {
+      merged++;
+      continue;
+    }
+    created++;
+    // Yeni kart bugünün tarihiyle açılır; eski başvurunun tarihine çek (dönüşmemiş lead, guard engellemez).
+    const { error: dateErr } = await db
+      .from("leads")
+      .update({ created_at: row.createdAt, last_activity_at: row.createdAt })
+      .eq("id", res.lead_id);
+    if (dateErr) {
+      failed++;
+      console.error(`  ${row.id}: tarih güncellenemedi (${dateErr.code ?? "bilinmiyor"})`);
+    }
   }
   console.log(`Bitti: ${created} yeni lead, ${merged} mevcut karta eklendi, ${failed} hata.`);
   if (failed) process.exit(1);
