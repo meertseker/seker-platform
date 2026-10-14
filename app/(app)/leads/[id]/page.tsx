@@ -253,7 +253,7 @@ function LeadOffersSection({
   hasError: boolean;
 }) {
   return (
-    <section className="space-y-4">
+    <section id="teklifler" className="space-y-4 scroll-mt-24">
       <div>
         <h2 className="text-xl font-semibold text-foreground">Teklifler</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -539,19 +539,39 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
             </div>
           </section>
 
-          {canConvert ? (
+          {converted ? null : (
             <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-foreground">
                 Kayıt işlemi
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Onaylı teklif ile öğrenci kaydı ve ödeme planı hazırlayın.
+                {canConvert
+                  ? "Onaylı teklif ile öğrenci kaydı ve ödeme planı hazırlayın."
+                  : "Öğrenciye dönüştürmek için önce teklif oluşturup onaylayın."}
               </p>
-              <div className="mt-4">
-                <LeadConversionForm leadId={lead.id} canConvert={canConvert} />
+              <div className="mt-4 space-y-3">
+                {canConvert ? (
+                  <LeadConversionForm leadId={lead.id} canConvert />
+                ) : (
+                  <>
+                    <a
+                      href="#teklifler"
+                      className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+                    >
+                      Teklifler bölümüne git
+                    </a>
+                    <button
+                      type="button"
+                      disabled
+                      className="min-h-11 w-full cursor-not-allowed rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white opacity-50"
+                    >
+                      Öğrenciye Dönüştür
+                    </button>
+                  </>
+                )}
               </div>
             </section>
-          ) : null}
+          )}
 
           <NoteForm leadId={lead.id} />
         </aside>

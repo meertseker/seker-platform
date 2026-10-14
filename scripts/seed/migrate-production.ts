@@ -10,6 +10,7 @@
  * Kullanım:
  *   npx tsx scripts/seed/migrate-production.ts --env .env.production.pull            # dry-run
  *   npx tsx scripts/seed/migrate-production.ts --env .env.production.pull --apply --confirm-wipe
+ *   npx tsx scripts/seed/sync-excel-payments.ts --env .env.production.pull --apply   # renk/yorum tahsilatı
  */
 import fs from "node:fs";
 import path from "node:path";

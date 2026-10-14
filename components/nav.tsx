@@ -8,7 +8,6 @@ import {
   Banknote,
   BarChart3,
   GraduationCap,
-  Home,
   LogOut,
   Plus,
   Settings,
@@ -31,8 +30,9 @@ interface NavProps {
   unreadCount: number;
 }
 
+const HOME_HREF = "/pipeline";
+
 const mainItems = [
-  { href: "/", label: "Bugün", icon: Home },
   { href: "/pipeline", label: "Veliler", icon: Users },
   { href: "/ogrenciler", label: "Öğrenciler", icon: GraduationCap },
   { href: "/odemeler", label: "Ödemeler", icon: Banknote },
@@ -176,7 +176,7 @@ export function Nav({ fullName, role, notifications, unreadCount }: NavProps) {
     <>
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-border bg-surface px-4 py-5 md:flex md:flex-col">
         <Link
-          href="/"
+          href={HOME_HREF}
           className="flex items-center gap-2.5 rounded-xl px-3 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -216,7 +216,7 @@ export function Nav({ fullName, role, notifications, unreadCount }: NavProps) {
       <header className="sticky top-0 z-20 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:ml-64">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
           <Link
-            href="/"
+            href={HOME_HREF}
             className="flex items-center gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -263,7 +263,7 @@ export function Nav({ fullName, role, notifications, unreadCount }: NavProps) {
         aria-label="Alt navigasyon"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface px-2 pb-[calc(env(safe-area-inset-bottom)+0.375rem)] pt-1.5 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] md:hidden"
       >
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-4 gap-1">
           {mainItems.map((item) => (
             <NavLink
               key={item.href}

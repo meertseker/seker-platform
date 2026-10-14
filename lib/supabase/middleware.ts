@@ -34,7 +34,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isLogin) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/pipeline";
     return NextResponse.redirect(url);
   }
 

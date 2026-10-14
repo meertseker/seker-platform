@@ -21,7 +21,7 @@ export async function signIn(
     return { error: "E-posta veya şifre hatalı" };
   }
 
-  redirect("/");
+  redirect("/pipeline");
 }
 
 export async function signOut() {

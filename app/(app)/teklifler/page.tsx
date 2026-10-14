@@ -66,7 +66,7 @@ function normalizePendingOffers(rows: PendingOfferRow[]): PendingOfferItem[] {
 
 export default async function OffersApprovalPage() {
   const profile = await getSessionProfile();
-  if (profile.role !== "yonetici") redirect("/");
+  if (profile.role !== "yonetici") redirect("/pipeline");
 
   const supabase = await createServerSupabase();
   const { data, error } = await supabase
