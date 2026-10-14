@@ -51,3 +51,6 @@ dev-err.log
 /.next-form/
 # Çalışma kopyaları (bulanıklaştırılmamış olabilir)
 /public/_work-*
+
+# Orijinal kopyalar yerelde kalır; depoya girmez.
+/public-originals-backup/
