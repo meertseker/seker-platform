@@ -57,10 +57,11 @@ export const KVKK_TEXT: { updatedOn: string; sections: KvkkSection[] } = {
         'Verilerinizi satmıyoruz. Yalnızca hizmeti yürütmek için aşağıdaki hizmet sağlayıcılarla, bu amaçla sınırlı olarak paylaşıyoruz. Bu sağlayıcıların sunucuları yurt dışındadır; aktarım KVKK md. 9 kapsamında açık rızanıza ve/veya Kurul\'un öngördüğü standart sözleşmelere dayanır.',
       ],
       items: [
-        'Google (Google Ads, Google Tag Manager): reklam ölçümü; başvurunuzun randevu veya kayda dönüştüğü bilgisi reklam tıklama kimliğiyle birlikte bildirilir. Ad ve telefon numaranız Google\'a gönderilmez.',
+        'Google (Google Ads, Google Tag Manager): reklam ölçümü; başvurunuzun randevu veya kayda dönüştüğü bilgisi reklam tıklama kimliğiyle birlikte bildirilir. Ad ve telefon numaranız Google Ads\'e gönderilmez; reklam ölçümü için yalnızca tıklama kimliği ve kampanya bilgisi paylaşılır.',
         'Supabase: başvuru ve kayıt bilgilerinin saklandığı veritabanı (Avrupa Birliği, Frankfurt [OKULDAN TEYİT ALINACAK: Supabase proje bölgesi]).',
         'Amazon Web Services: web sitesi ve okul yönetim panelinin çalıştığı sunucu ve yedekler (Avrupa Birliği, Frankfurt).',
         'Resend: yeni başvuru bildiriminin okul yönetimine e-posta ile iletilmesi (ABD).',
+        'Google (Gmail / Google Workspace): başvuru bildirim e-postalarının okul yönetiminin gelen kutusunda alınması; e-postada adınız ve telefon numaranız yer alır (e-posta hizmeti, yurt dışı).',
         'Yetkili kamu kurum ve kuruluşları: yalnızca hukuken zorunlu olduğunda.',
       ],
     },

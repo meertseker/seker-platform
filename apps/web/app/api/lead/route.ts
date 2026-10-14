@@ -35,7 +35,8 @@ export async function POST(request: Request) {
 
   const lead = parsed.data;
   if (lead.website) {
-    // Honeypot: bot'a başarı gibi görün, hiçbir şey kaydetme.
+    // Honeypot: bot'a başarı gibi görün, hiçbir şey kaydetme (kişisel veri yazmadan logla).
+    console.warn('[lead] honeypot');
     return NextResponse.json({ ok: true });
   }
 
