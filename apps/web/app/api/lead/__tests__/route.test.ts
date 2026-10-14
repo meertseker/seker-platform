@@ -74,6 +74,15 @@ describe('POST /api/lead', () => {
     expect(res.status).toBe(200);
   });
 
+  it('kayıt başarısız ve Resend { error } dönerse 500 döner', async () => {
+    vi.stubEnv('RESEND_API_KEY', 'test-key');
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(createWebLead).mockResolvedValue({ status: 'failed' });
+    send.mockResolvedValueOnce({ data: null, error: { name: 'validation_error', message: 'bad' } });
+    const res = await POST(makeRequest(JSON.stringify(valid)));
+    expect(res.status).toBe(500);
+  });
+
   it('honeypot doluysa kaydetmeden 200 döner', async () => {
     const res = await POST(makeRequest(JSON.stringify({ ...valid, website: 'http://spam.example' })));
     expect(res.status).toBe(200);

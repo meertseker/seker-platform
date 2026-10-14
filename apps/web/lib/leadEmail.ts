@@ -32,7 +32,11 @@ export async function sendLeadEmail(lead: Lead, result: CreateWebLeadResult): Pr
   ].join('\n');
 
   try {
-    await new Resend(apiKey).emails.send({ from, to, subject, text });
+    const { error } = await new Resend(apiKey).emails.send({ from, to, subject, text });
+    if (error) {
+      console.error('[lead] e-posta gönderilemedi:', error.message ?? 'unknown');
+      return false;
+    }
     return true;
   } catch (error) {
     console.error('[lead] e-posta gönderilemedi:', error instanceof Error ? error.message : 'unknown');
