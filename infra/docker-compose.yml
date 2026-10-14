@@ -1,0 +1,73 @@
+name: seker
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_HOST: ${SITE_HOST}
+      PANEL_HOST: ${PANEL_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - panel
+
+  web:
+    image: ghcr.io/${GHCR_OWNER}/seker-web:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      LEAD_NOTIFICATION_EMAIL: ${LEAD_NOTIFICATION_EMAIL}
+      LEAD_FROM_EMAIL: ${LEAD_FROM_EMAIL}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN}
+      PANEL_URL: ${PANEL_URL}
+    volumes:
+      - web_cache:/app/apps/web/.next/cache
+    mem_limit: 600m
+
+  panel:
+    image: ghcr.io/${GHCR_OWNER}/seker-panel:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN}
+      SITE_URL: ${SITE_URL}
+      CRON_SECRET: ${CRON_SECRET}
+    mem_limit: 700m
+
+  cron:
+    build: ./cron
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Istanbul
+      CRON_SECRET: ${CRON_SECRET}
+      SUPABASE_DB_URL: ${SUPABASE_DB_URL}
+      S3_BACKUP_BUCKET: ${S3_BACKUP_BUCKET}
+      AWS_DEFAULT_REGION: ${S3_REGION}
+      AWS_ACCESS_KEY_ID: ${BACKUP_AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_AWS_SECRET_ACCESS_KEY}
+      HC_BACKUP_URL: ${HC_BACKUP_URL}
+      HC_CRON_DAILY_URL: ${HC_CRON_DAILY_URL}
+    depends_on:
+      - panel
+    mem_limit: 256m
+
+volumes:
+  caddy_data:
+  caddy_config:
+  web_cache:
