@@ -4270,7 +4270,7 @@ git commit -m "feat(web): duyurular (ekle, yayınla, bitiş tarihi, sırala)"
 
 **Files:**
 - Create: `apps/web/app/__tests__/editing-seo.test.ts`, `docs/ogretmen-kilavuzu.md`, `docs/superpowers/plans/faz2-canli-kontrol.md`
-- Modify: `apps/web/app/__tests__/sitemap.test.ts`, `apps/web/app/__tests__/routes.test.ts`
+- Modify: `apps/web/app/__tests__/sitemap.test.ts`, `apps/web/app/__tests__/routes.test.ts`, `infra/docker-compose.yml`, `infra/env.example`, `infra/Dockerfile.web`, `.github/workflows/deploy.yml`
 
 - [ ] **Step 1: SEO/rota regresyon testleri**
 
@@ -4394,7 +4394,7 @@ Metinlerde `{yilSayisi}` görürseniz silmeyin: sitede otomatik olarak "15" gibi
 - [ ] Yerel tam test: `pnpm -r test` PASS, `pnpm --filter @seker/web build` PASS
 - [ ] Canlı Supabase'e migration (elle onaylı): `pnpm --filter @seker/db exec supabase db push` → `0007_site_content` uygulandı
 - [ ] S3 bucket policy (`site-images/*` herkese okuma) ve `seker-web-media` IAM izni uygulandı
-- [ ] Sunucu `/opt/seker/.env`: `NEXT_PUBLIC_MEDIA_BASE_URL`, `NEXT_PUBLIC_PANEL_URL`, `S3_BUCKET`, `S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (web), GitHub Actions build argümanlarına `NEXT_PUBLIC_*` eklendi
+- [ ] Sunucu `/opt/seker/.env`: `S3_BUCKET`, `S3_REGION`, `MEDIA_AWS_ACCESS_KEY_ID`, `MEDIA_AWS_SECRET_ACCESS_KEY` (compose bunları web'e `AWS_*` olarak geçirir; cron'un `AWS_*` yedek anahtarlarıyla karışmaz). `NEXT_PUBLIC_MEDIA_BASE_URL` ve `NEXT_PUBLIC_PANEL_URL` derleme zamanı değerleridir: GitHub → Settings → Variables'a eklendi (sunucu `.env`'inde etkisiz)
 - [ ] Deploy sonrası ziyaretçi: `/`, `/bultenler`, `/lp/beykent-anaokulu` 200, HTML'de `data-edit-` yok: `curl -s https://sekeranaokulu.com/ | grep -c data-edit-` → 0
 - [ ] Yönetici panelde editöre yetki verdi; editör "Siteyi düzenle" ile çubuğu gördü
 - [ ] Ana sayfa başlığı değiştirildi → Kaydet → gizli pencerede (ziyaretçi) 5 sn içinde yeni başlık
@@ -4407,10 +4407,36 @@ Metinlerde `{yilSayisi}` görürseniz silmeyin: sitede otomatik olarak "15" gibi
 - [ ] İlk iki hafta: haftada bir `content_revisions` gözden geçirildi, sorunlar kılavuza eklendi
 ```
 
+- [ ] **Step 4b: Altyapı: web ortamı ve derleme argümanları**
+
+`infra/docker-compose.yml` → `web` servisinin `environment:` bölümüne ekle:
+```yaml
+      AWS_ACCESS_KEY_ID: ${MEDIA_AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${MEDIA_AWS_SECRET_ACCESS_KEY}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_REGION: ${S3_REGION}
+      AWS_REGION: ${S3_REGION}
+```
+`infra/env.example`'a `S3_BUCKET`, `S3_REGION`, `MEDIA_AWS_ACCESS_KEY_ID`, `MEDIA_AWS_SECRET_ACCESS_KEY` satırlarını ekle.
+
+`infra/Dockerfile.web` builder aşamasında `NEXT_PUBLIC_GTM_ID` bloğunun yanına:
+```dockerfile
+ARG NEXT_PUBLIC_PANEL_URL
+ARG NEXT_PUBLIC_MEDIA_BASE_URL
+ENV NEXT_PUBLIC_PANEL_URL=$NEXT_PUBLIC_PANEL_URL \
+    NEXT_PUBLIC_MEDIA_BASE_URL=$NEXT_PUBLIC_MEDIA_BASE_URL
+```
+`.github/workflows/deploy.yml` → `build-args:` listesine ekle:
+```yaml
+            NEXT_PUBLIC_PANEL_URL=${{ vars.NEXT_PUBLIC_PANEL_URL }}
+            NEXT_PUBLIC_MEDIA_BASE_URL=${{ vars.NEXT_PUBLIC_MEDIA_BASE_URL }}
+```
+Panel imajı bu argümanları kullanmaz; aynı `build-args` iki uygulama için ortak olduğundan Dockerfile.panel'de tanımsız ARG uyarısı çıkabilir, zararsızdır.
+
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web docs
+git add apps/web docs infra .github/workflows/deploy.yml
 git commit -m "docs: öğretmen kılavuzu, Faz 2 canlı kontrol listesi ve regresyon testleri"
 ```
 

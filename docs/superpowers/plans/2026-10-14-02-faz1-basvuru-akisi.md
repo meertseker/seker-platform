@@ -2029,6 +2029,15 @@ grep -rn "ADMIN_PASSWORD\|adminAuth\|supabaseRest\|insert_seker_website_lead\|li
 ```
 Expected: çıktı yok. `infra/` veya `.github/` içinde `ADMIN_PASSWORD` geçiyorsa o satırı sil.
 
+- [ ] **Step 3b: Compose ve env şablonunu yeni anahtarlara geçir**
+
+`infra/docker-compose.yml` → `web` servisinin `environment:` bölümünde `SUPABASE_URL`, `SUPABASE_ANON_KEY` ve `ADMIN_PASSWORD` satırlarını sil, yerine ekle:
+```yaml
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
+```
+`infra/env.example`'da aynı üç anahtarı kaldır; `SUPABASE_SECRET_KEY` yorumunu "web ve panel kullanır, yalnızca sunucu" olarak güncelle. Sunucudaki `.env`'e değer Task 9 Step 1'de girilir.
+Doğrula: `grep -n "ADMIN_PASSWORD\|SUPABASE_ANON_KEY\|SUPABASE_URL:" infra/docker-compose.yml infra/env.example` → çıktı yok.
+
 - [ ] **Step 4: Tüm site testleri, tip ve build**
 
 Run:
@@ -2042,7 +2051,7 @@ Expected: tüm testler PASS, `tsc` hatasız, build başarılı ve route listesin
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A apps/web
+git add -A apps/web infra/docker-compose.yml infra/env.example
 git commit -m "chore(web): eski /admin, ADMIN_PASSWORD ve ayrı Supabase istemcisini kaldır"
 ```
 

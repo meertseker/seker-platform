@@ -127,7 +127,7 @@ Panelin `lib/supabase/server.ts`, `lib/supabase/admin.ts`, `lib/supabase/middlew
 ### `@seker/db`
 
 - `packages/db/supabase/` = panelin bugünkü `supabase/` klasörü (taşınır).
-- `packages/db/src/database.types.ts`: `pnpm --filter @seker/db gen:types` ile üretilir (`supabase gen types typescript --linked`). `export type { Database } from './database.types'`.
+- `packages/db/src/database.types.ts`: `pnpm --filter @seker/db gen:types` ile üretilir (`supabase gen types typescript --local` (yerel şema = migration'lar; prod'a link yok)). `export type { Database } from './database.types'`.
 - RLS testleri `apps/panel/tests/rls/` altında kalır.
 
 ### Veritabanı nesneleri (faz bazında)

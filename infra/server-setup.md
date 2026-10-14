@@ -53,3 +53,4 @@ GitHub → Settings → Developer settings → Personal access tokens (classic) 
 `SUPABASE_DB_URL`: Supabase → Connect → **Session pooler** bağlantı dizesi (IPv4; doğrudan bağlantı yalnızca IPv6'dır).
 `CRON_SECRET`: `openssl rand -hex 32`.
 `IMAGE_TAG`: ilk dağıtımda boş bırak; deploy.sh doldurur.
+`.env` değerlerinde `$` varsa değeri tek tırnak içine al (`KEY='değer'`); değer `'` içeremez.
