@@ -1,12 +1,23 @@
 import { NextResponse } from 'next/server';
-import { Resend } from 'resend';
 import { leadSchema } from '@/lib/leadSchema';
-import { insertWebsiteLead } from '@/lib/websiteLeads';
-import { SITE } from '@/lib/site';
+import { createWebLead } from '@/lib/websiteLeads';
+import { sendLeadEmail } from '@/lib/leadEmail';
+import { clientIp, createRateLimiter } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 
+const limiter = createRateLimiter({ limit: 5, windowMs: 10 * 60_000 });
+const FAILED = 'Talebiniz alınamadı, lütfen telefonla ulaşın.';
+
 export async function POST(request: Request) {
+  // clientIp yalnızca Caddy tek uç (edge) olduğu sürece güvenilirdir (CDN yok).
+  if (!limiter.allow(clientIp(request.headers))) {
+    return NextResponse.json(
+      { ok: false, message: 'Çok fazla deneme yapıldı. Lütfen birkaç dakika sonra tekrar deneyin veya bizi arayın.' },
+      { status: 429 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -23,51 +34,17 @@ export async function POST(request: Request) {
   }
 
   const lead = parsed.data;
-  const saved = await insertWebsiteLead(lead);
-  if (saved === 'failed') {
-    return NextResponse.json(
-      { ok: false, message: 'Talebiniz alınamadı, lütfen telefonla ulaşın.' },
-      { status: 500 },
-    );
-  }
-
-  const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.LEAD_NOTIFICATION_EMAIL ?? SITE.email;
-
-  if (!apiKey) {
-    if (saved === 'skipped') {
-      console.warn('[lead] RESEND_API_KEY tanımsız, lead yalnızca loglandı:', lead);
-    }
+  if (lead.website) {
+    // Honeypot: bot'a başarı gibi görün, hiçbir şey kaydetme.
     return NextResponse.json({ ok: true });
   }
 
-  try {
-    const resend = new Resend(apiKey);
-    await resend.emails.send({
-      from: 'Şeker Anaokulu Web <onboarding@resend.dev>', // TODO: doğrulanmış alan adıyla değiştir
-      to,
-      subject: `Yeni geri arama talebi — ${lead.parentName}`,
-      text: [
-        `Veli: ${lead.parentName}`,
-        `Telefon: ${lead.phone}`,
-        '',
-        // Yaş grubu, program ve başlangıç dönemi artık formda sorulmuyor;
-        // bu bilgiler geri aramada alınır (bkz. lib/leadSchema.ts).
-        `Kaynak sayfa: ${lead.landingPath || '—'}`,
-        `GCLID: ${lead.gclid || '—'}`,
-        '',
-        `⏱ Hedef yanıt süresi: 15 dakika`,
-      ].join('\n'),
-    });
+  // Kayıt önce, e-posta sonra.
+  const saved = await createWebLead(lead);
+  const emailed = await sendLeadEmail(lead, saved);
+
+  if (saved.status === 'saved' || emailed) {
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error('[lead] e-posta gönderilemedi:', error, lead);
-    if (saved === 'saved') {
-      return NextResponse.json({ ok: true });
-    }
-    return NextResponse.json(
-      { ok: false, message: 'Talebiniz alınamadı, lütfen telefonla ulaşın.' },
-      { status: 500 },
-    );
   }
+  return NextResponse.json({ ok: false, message: FAILED }, { status: 500 });
 }

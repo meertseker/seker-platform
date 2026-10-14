@@ -8,7 +8,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
  * e-posta gönderdiğini doğrular.
  */
 vi.mock('@/lib/websiteLeads', () => ({
-  insertWebsiteLead: vi.fn().mockResolvedValue('skipped'),
+  createWebLead: vi.fn().mockResolvedValue({ status: 'saved', leadId: 'L1', duplicate: false }),
 }));
 
 const send = vi.fn().mockResolvedValue({ data: { id: 'test' }, error: null });
@@ -25,10 +25,11 @@ const valid = {
   kvkkConsent: true,
 };
 
+let ipSeq = 0;
 function makeRequest(body: unknown) {
   return new Request('http://localhost/api/lead', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-forwarded-for': `203.0.113.${++ipSeq}` },
     body: JSON.stringify(body),
   });
 }
@@ -44,7 +45,7 @@ describe('POST /api/lead — attribution', () => {
     const { POST } = await import('../route');
 
     const res = await POST(
-      makeRequest({ ...valid, gclid: 'Cj0ABC123', landingPath: '/lp/az-mevcutlu-anaokulu' }),
+      makeRequest({ ...valid, gclid: 'Cj0ABC123', landingPath: '/lp/az-mevcutlu-anaokulu', utm: { utm_campaign: 'az-mevcut' } }),
     );
 
     expect(res.status).toBe(200);
@@ -52,6 +53,7 @@ describe('POST /api/lead — attribution', () => {
     const text = send.mock.calls[0][0].text as string;
     expect(text).toContain('GCLID: Cj0ABC123');
     expect(text).toContain('Kaynak sayfa: /lp/az-mevcutlu-anaokulu');
+    expect(text).toContain('Kampanya: az-mevcut');
   });
 
   it('attribution olmadan gönderilen organik başvuru da kabul edilir ve e-posta gider', async () => {

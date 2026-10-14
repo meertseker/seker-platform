@@ -1,43 +1,32 @@
+import { createAdminSupabase } from '@seker/auth/admin';
 import type { Lead } from './leadSchema';
-import { supabaseRest } from './supabase';
 
-export type WebsiteLeadRow = {
-  id: string;
-  parent_name: string;
-  phone: string;
-  landing_path: string;
-  gclid: string;
-  created_at: string;
-};
+export type CreateWebLeadResult =
+  | { status: 'saved'; leadId: string; duplicate: boolean }
+  | { status: 'failed' };
 
-export async function insertWebsiteLead(
+export async function createWebLead(
   lead: Lead,
-): Promise<'saved' | 'skipped' | 'failed'> {
-  const response = await supabaseRest('/rest/v1/rpc/insert_seker_website_lead', {
-    method: 'POST',
-    body: JSON.stringify({
+  consentAt: Date = new Date(),
+): Promise<CreateWebLeadResult> {
+  try {
+    const db = createAdminSupabase();
+    const { data, error } = await db.rpc('create_web_lead', {
       p_parent_name: lead.parentName,
       p_phone: lead.phone,
-      p_landing_path: lead.landingPath ?? '',
-      p_gclid: lead.gclid ?? '',
-    }),
-  });
-  if (!response) return 'skipped';
-  if (!response.ok) {
-    console.error('[lead] supabase insert failed:', response.status, await response.text());
-    return 'failed';
+      p_gclid: lead.gclid,
+      p_utm: lead.utm,
+      p_landing_path: lead.landingPath,
+      p_consent_at: consentAt.toISOString(),
+    });
+    if (error || !data) {
+      console.error('[lead] create_web_lead failed:', error?.code ?? 'no-data');
+      return { status: 'failed' };
+    }
+    const result = data as { lead_id: string; duplicate: boolean };
+    return { status: 'saved', leadId: result.lead_id, duplicate: result.duplicate };
+  } catch (error) {
+    console.error('[lead] create_web_lead threw:', error instanceof Error ? error.message : 'unknown');
+    return { status: 'failed' };
   }
-  return 'saved';
-}
-
-export async function listWebsiteLeads(adminToken: string): Promise<WebsiteLeadRow[]> {
-  const response = await supabaseRest('/rest/v1/rpc/list_seker_website_leads', {
-    method: 'POST',
-    body: JSON.stringify({ p_admin_token: adminToken }),
-  });
-  if (!response) throw new Error('Supabase yapılandırılmamış');
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-  return (await response.json()) as WebsiteLeadRow[];
 }
