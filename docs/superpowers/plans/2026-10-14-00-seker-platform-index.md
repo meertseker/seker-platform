@@ -151,6 +151,7 @@ Panelin `lib/supabase/server.ts`, `lib/supabase/admin.ts`, `lib/supabase/middlew
 | 3 | `conversion_uploads` | `id uuid pk`, `lead_id uuid → leads`, `gclid text`, `conversion_action text check in ('randevu','kayit')`, `conversion_at timestamptz`, `value numeric(12,2) null`, `status text check in ('bekliyor','gonderildi','hata','atlandi')`, `error text`, `uploaded_at`; unique `(lead_id, conversion_action)` |
 | 3 | Dönüşüm yükleme yolu | Google Ads API `uploadClickConversions` değil, **Data Manager API** (`POST datamanager.googleapis.com/v1/events:ingest`). Sebep: 2026-06-15'ten beri daha önce dönüşüm yüklememiş developer token'lar için `UploadClickConversions` reddediliyor. Harcama okuma Google Ads API v25 `searchStream` ile. OAuth kapsamlarına `datamanager` eklenir |
 | 3 | Kampanya eşleme | Google Ads hesap düzeyi son ek: `utm_campaign={campaignid}`; `leads.utm_campaign` = kampanya kimliği |
+| 3 | `leads` yeni kolon | `ad_consent_revoked_at timestamptz null` (reklam verisi paylaşım onayının geri alınması; doluysa `adUserDataFor` → `denied`) |
 | 3 | `notifications.type` | `ads_senkron_hata` (yöneticilere) |
 | 4 | view `public.v_overdue_installments` | `installment_id, student_id, student_name, family_phone, due_date, amount, days_overdue, item_type, season` (security_invoker) |
 
