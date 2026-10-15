@@ -66,10 +66,12 @@ export default function RootLayout({
       <body
         className={`${fredoka.variable} ${nunito.variable} ${martian.variable} antialiased pb-14 md:pb-0`}
       >
+        <ConsentDefaults />
+        <Analytics />
+        {/* fallback={null} yalnızca altındaki tüm sayfalar önbellekli/önceden üretilmiş olduğu sürece güvenlidir;
+            dinamik (istek anında) bir sayfa eklenirse boş kabuk akıtılır ve notFound()/durum kodları bozulur. */}
         <Suspense fallback={null}>
           <SiteSchema />
-          <ConsentDefaults />
-          <Analytics />
           {children}
           <CookieBanner />
         </Suspense>
