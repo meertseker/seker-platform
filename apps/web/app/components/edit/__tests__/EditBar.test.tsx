@@ -42,6 +42,23 @@ describe('EditBar', () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it('Vazgeç yenilemeden önce depoyu temizler (bekleyenler geri gelmez)', () => {
+    seed();
+    let atReload: string | null | undefined;
+    const original = Object.getOwnPropertyDescriptor(window, 'location');
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, pathname: '/', reload: () => { atReload = sessionStorage.getItem(PENDING_STORAGE_KEY); } },
+    });
+    try {
+      bar();
+      fireEvent.click(screen.getByRole('button', { name: 'Vazgeç' }));
+      expect(atReload).toBeNull();
+    } finally {
+      if (original) Object.defineProperty(window, 'location', original);
+    }
+  });
+
   it('oturum hatasında bekleyenler saklanır ve yeniden açılışta geri gelir', async () => {
     seed();
     saveContent.mockResolvedValue({ ok: false, error: 'Oturumunuz sona erdi. Panelden tekrar giriş yapın.' });

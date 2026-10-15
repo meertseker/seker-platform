@@ -162,6 +162,12 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
     return () => window.removeEventListener('beforeunload', onLeave);
   }, [count]);
 
+  /** Depoyu eşzamanlı temizler: effect render sonrasına kalır, hemen yenilenirse bekleyenler geri gelirdi. */
+  function clearPending() {
+    savePending(storage(), {});
+    dispatch({ type: 'clear' });
+  }
+
   async function save() {
     setSaving(true);
     let res: Awaited<ReturnType<typeof saveContent>>;
@@ -176,9 +182,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       setSaving(false);
     }
     if (res.ok) {
-      // Depoyu hemen temizle: useEffect ile temizlik render sonrasına kalır, hemen yenilenirse bekleyenler geri gelirdi.
-      savePending(storage(), {});
-      dispatch({ type: 'clear' });
+      clearPending();
       toast({ text: 'Yayında. Ziyaretçiler yeni hâlini görüyor.', tone: 'ok' });
       router.refresh();
       return;
@@ -192,9 +196,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
   }
 
   function discard() {
-    // reload() effect'ten önce çalışır; depoyu eşzamanlı temizle yoksa vazgeçilen değişiklikler geri gelir.
-    savePending(storage(), {});
-    dispatch({ type: 'clear' });
+    clearPending();
     window.location.reload();
   }
 
