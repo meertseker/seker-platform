@@ -20,6 +20,16 @@ describe('bultenler ziyaretçi HTML', () => {
     expect(container.innerHTML).toMatchSnapshot();
   });
 
+  it('duyuru yokken HTML değişmez; varsa bölüm basılır', () => {
+    const base = render(<BultenlerView data={defaultData(PREFIXES)} />).container.innerHTML;
+    const same = render(<BultenlerView data={defaultData(PREFIXES)} announcements={[]} />).container.innerHTML;
+    expect(same).toBe(base);
+    const item = { id: 'a1', title: 'Kermes', body: '<p>Cumartesi</p>', imageSrc: null, imageAlt: null, startsOn: '2026-10-20', endsOn: null };
+    const withAnn = render(<BultenlerView data={defaultData(PREFIXES)} announcements={[item]} />).container;
+    expect(withAnn.querySelector('h3')!.textContent).toBe('Kermes');
+    expect(withAnn.innerHTML).not.toContain('data-edit-');
+  });
+
   it('ziyaretçiye düzenleme öznitelikleri gitmez', () => {
     expect(render(<BultenlerView data={defaultData(PREFIXES)} />).container.innerHTML).not.toContain('data-edit-');
   });

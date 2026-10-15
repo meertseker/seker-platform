@@ -1,5 +1,6 @@
 import BultenlerView from './BultenlerView';
 import { getReaderData } from '@/lib/content/server';
+import { getAnnouncements } from '@/lib/content/getContent';
 import { makeReader } from '@/lib/content/reader';
 import { buildMetadata } from '@/lib/metadata';
 
@@ -13,5 +14,6 @@ export async function generateMetadata() {
 }
 
 export default async function BultenlerPage() {
-  return <BultenlerView data={await getReaderData()} />;
+  const [data, announcements] = await Promise.all([getReaderData(), getAnnouncements()]);
+  return <BultenlerView data={data} announcements={announcements} />;
 }

@@ -1,10 +1,12 @@
 import Image from 'next/image';
 import PageHero from '@/app/components/PageHero';
+import AnnouncementsSection from '@/app/components/AnnouncementsSection';
 import TrackedLink from '@/app/components/TrackedLink';
 import { Editable } from '@/app/components/edit/Editable';
 import { phoneE164, whatsappUrl } from '@/lib/site';
 import { makeReader } from '@/lib/content/reader';
 import type { ReaderData } from '@/lib/content/types';
+import type { PublicAnnouncement } from '@/lib/content/getContent';
 
 /**
  * Bu sayfa daha önce tamamen uydurma veriyle doluydu: olmamış geziler,
@@ -16,7 +18,7 @@ import type { ReaderData } from '@/lib/content/types';
 
 type Channel = { id: string; title: string; body: string; band: string };
 
-export default function BultenlerView({ data }: { data: ReaderData }) {
+export default function BultenlerView({ data, announcements = [] }: { data: ReaderData; announcements?: PublicAnnouncement[] }) {
   const c = makeReader(data);
   const channels = c.list<Channel>('bultenler.channels');
   const photo = c.image('media.gardenWorkshops');
@@ -27,6 +29,8 @@ export default function BultenlerView({ data }: { data: ReaderData }) {
         keys={{ eyebrow: 'bultenler.hero.eyebrow', title: 'bultenler.hero.title', lead: 'bultenler.hero.lead' }}
         tone="grape"
       />
+
+      <AnnouncementsSection c={c} items={announcements} />
 
       <section className="py-16">
         <div className="mx-auto max-w-6xl px-6">

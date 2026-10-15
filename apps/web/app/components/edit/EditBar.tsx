@@ -5,6 +5,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Editor } from '@seker/auth/editor';
 import { UploadDialog } from './UploadDialog';
+import { AnnouncementDialog } from './AnnouncementDialog';
 import type { AnnouncementRow, ImageValue, ListItem, ReaderData } from '@/lib/content/types';
 import { saveContent } from '@/app/actions/content';
 import { applyListField, loadPending, pendingReducer, savePending } from './pending';
@@ -35,6 +36,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
   const [saving, setSaving] = useState(false);
   const [panel, setPanel] = useState<null | 'rich' | 'list' | 'settings' | 'history' | 'upload' | 'announcement' | 'preview'>(null);
   const [target, setTarget] = useState<{ key: string; path?: string } | null>(null);
+  const [annId, setAnnId] = useState<string | 'new'>('new');
   const stopRef = useRef<null | (() => void)>(null);
   const metaRef = useRef(data.meta);
   metaRef.current = data.meta;
@@ -108,6 +110,12 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
     if (!editor || inIframe) return;
     document.body.classList.add('seker-editing');
     const onDbl = (e: MouseEvent) => {
+      const card = (e.target as HTMLElement).closest<HTMLElement>('[data-edit-announcement]');
+      if (card) {
+        e.preventDefault();
+        setAnnId(card.dataset.editAnnouncement!);
+        return setPanel('announcement');
+      }
       const el = (e.target as HTMLElement).closest<HTMLElement>('[data-edit-key]');
       if (!el) return;
       e.preventDefault();
@@ -140,7 +148,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
     };
     const onClick = (e: MouseEvent) => {
       // Düzenleme modunda bağlantılar çift tıklamayı bozmasın.
-      if ((e.target as HTMLElement).closest('[data-edit-key]') && (e.target as HTMLElement).closest('a')) e.preventDefault();
+      if ((e.target as HTMLElement).closest('[data-edit-key], [data-edit-announcement]') && (e.target as HTMLElement).closest('a')) e.preventDefault();
     };
     document.addEventListener('dblclick', onDbl);
     document.addEventListener('click', onClick, true);
@@ -222,6 +230,8 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
           data={data}
           pending={pending}
           announcements={announcements}
+          annId={annId}
+          setAnnId={setAnnId}
           panel={panel}
           setPanel={setPanel}
           target={target}
@@ -260,7 +270,9 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
 type ExtrasProps = {
   data: ReaderData;
   pending: Record<string, unknown>;
-  announcements: unknown[];
+  announcements: AnnouncementRow[];
+  annId: string | 'new';
+  setAnnId(id: string | 'new'): void;
   panel: string | null;
   setPanel(p: null | 'rich' | 'list' | 'settings' | 'history' | 'upload' | 'announcement' | 'preview'): void;
   target: { key: string; path?: string } | null;
@@ -293,6 +305,9 @@ function EditBarExtras(p: ExtrasProps) {
           <option value="">Listeler…</option>
           {lists.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
         </select>
+      ) : null}
+      {window.location.pathname.startsWith('/bultenler') ? (
+        <button type="button" onClick={() => { p.setAnnId('new'); p.setPanel('announcement'); }}>Yeni duyuru</button>
       ) : null}
       <button type="button" onClick={() => p.setPanel('settings')}>Sayfa ayarları</button>
       <button type="button" onClick={() => p.setPanel('preview')}>Telefon görünümü</button>
@@ -329,6 +344,9 @@ function EditBarExtras(p: ExtrasProps) {
           onDone={(v) => { p.setValue(p.target!.key, v, p.target!.path); p.setPanel(null); p.toast({ text: 'Fotoğraf hazır. Yayınlamak için Kaydet’e basın.', tone: 'ok' }); }}
           onClose={() => p.setPanel(null)}
         />
+      ) : null}
+      {p.panel === 'announcement' ? (
+        <AnnouncementDialog announcements={p.announcements} initialId={p.annId} onClose={() => p.setPanel(null)} />
       ) : null}
       {p.panel === 'preview' ? <PhonePreview onClose={() => p.setPanel(null)} /> : null}
     </>

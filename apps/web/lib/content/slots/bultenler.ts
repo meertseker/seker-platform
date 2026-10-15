@@ -52,6 +52,11 @@ export const BULTENLER_SLOTS: Record<string, SlotDef> = {
       body: { kind: 'text', max: 300, label: 'Açıklama' },
     },
   },
+  'bultenler.announcements.title': text('Duyurular başlığı', 'Duyurular', true),
+  'bultenler.announcements.empty': text(
+    'Duyuru yokken düzenleme modunda görünen yönlendirme',
+    'Henüz duyuru yok. Çubuktaki ‘Yeni duyuru’ ile ekleyin.',
+  ),
   'bultenler.request.title': text('Belge isteme başlığı', 'Belgeyi doğrudan isteyebilirsiniz.', true),
   'bultenler.request.body': text(
     'Belge isteme açıklaması',

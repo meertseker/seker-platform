@@ -143,4 +143,21 @@ rollback;`;
     expect(data!.map((r) => r.title)).toEqual(["test yayında"]);
     await admin.from("announcements").delete().like("title", "test %");
   });
+  it("anon active_announcements üzerinden media_assets gömebilir mi (T18 F10 kararı)", async () => {
+    const { data: asset, error: aerr } = await admin
+      .from("media_assets")
+      .insert({ s3_key: "test/embed-" + Date.now() + ".webp", width: 10, height: 10, alt: "test alt", faces: "yok" })
+      .select("id")
+      .single();
+    expect(aerr).toBeNull();
+    await admin.from("announcements").insert({
+      title: "test gömülü", body: "<p>a</p>", starts_on: "2020-01-01", published: true, sort: 0, image_id: asset!.id,
+    });
+    const embed = await anon.from("active_announcements").select("id, media_assets(s3_key, alt)").like("title", "test %");
+    await admin.from("announcements").delete().like("title", "test %");
+    await admin.from("media_assets").delete().eq("id", asset!.id);
+    // Karar (F10): embed çalışıyor; getAnnouncements tek sorgu kullanır. PGRST200 dönerse ikinci sorguya geçilmeli.
+    expect(embed.error).toBeNull();
+    expect(embed.data![0]).toMatchObject({ media_assets: { alt: "test alt" } });
+  });
 });
