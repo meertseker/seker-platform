@@ -26,11 +26,25 @@ import { buildReaderData } from '../server';
 
 describe('buildReaderData', () => {
   it('vars kuruluş yılından türetilir; DB satırı varsayılanı ezer', () => {
-    const d = buildReaderData({ 'site.foundingYear': { value: '2010', updatedAt: 't1' } }, false, 2026);
+    const d = buildReaderData({ 'site.foundingYear': { value: '2010', updatedAt: 't1' } }, true, 2026);
     expect(d.vars).toEqual({ yilSayisi: '16', kurulusYili: '2010' });
     expect(d.updatedAt['site.foundingYear']).toBe('t1');
     expect(d.values['site.phone']).toBe('0530 101 88 75');
     expect(d.meta['site.phone'].pattern).toBeTypeOf('string');
+  });
+  it('ziyaretçiye meta ve updatedAt gönderilmez; düzenleyene gönderilir', () => {
+    const map = { 'site.foundingYear': { value: '2010', updatedAt: 't1' } };
+    const v = buildReaderData(map, false, 2026);
+    expect(v.meta).toEqual({});
+    expect(v.updatedAt).toEqual({});
+    expect(v.values['site.phone']).toBe('0530 101 88 75');
+    const e = buildReaderData(map, true, 2026);
+    expect(Object.keys(e.meta).length).toBeGreaterThan(0);
+    expect(e.updatedAt['site.foundingYear']).toBe('t1');
+  });
+  it('vars kuruluş yılından türetilir (ziyaretçi)', () => {
+    const d = buildReaderData({ 'site.foundingYear': { value: '2010', updatedAt: 't1' } }, false, 2026);
+    expect(d.vars).toEqual({ yilSayisi: '16', kurulusYili: '2010' });
   });
   it('meta serileştirilebilir alanları taşır (fixedItems/newItem/allowHeadings anahtarları dahil)', () => {
     const d = buildReaderData({}, true, 2026);

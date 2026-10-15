@@ -35,8 +35,9 @@ export function buildReaderData(map: ContentMap, editing: boolean, year: number)
   const founding = Number(values['site.foundingYear']) || 2011;
   return {
     values,
-    updatedAt,
-    meta,
+    // Yönetim üst verisi yalnızca düzenleyene gider; ziyaretçi yüküne sızmaz.
+    updatedAt: editing ? updatedAt : {},
+    meta: editing ? meta : {},
     editing,
     vars: { yilSayisi: String(year - founding), kurulusYili: String(founding) },
   };
