@@ -26,3 +26,7 @@ Aşağıdaki adımlar site sahibine aittir; geliştirme ortamında üretime hiç
 - [ ] KVKK dört TEYİT değeri hâlâ bekliyor (Faz 1 kapısı): onaylanmadan canlıya alma tamamlanmış sayılmaz
 - [ ] Editörle 45 dk eğitim: `docs/ogretmen-kilavuzu.md` içindeki her başlık gerçek ekranda yapıldı; ekran görüntüleri `docs/kilavuz-gorseller/`'e eklendi
 - [ ] İlk iki hafta: haftada bir `content_revisions` gözden geçirildi, sorunlar kılavuza eklendi
+- [ ] Belirteçli cümle (ör. `{yilSayisi}` içeren): çift tıkla, hiçbir şey değiştirmeden dışarı tıkla → "Değişiklik yok", bekleyen değişiklik sayacı artmıyor; düzenlerken `{yilSayisi}` görünüyor, kaydedince sayfada sayı
+- [ ] GTM Preview (Tag Assistant): düzenleme modunda bir CTA/WhatsApp/telefon bağlantısı düzenlenirken olay tetiklenmiyor; düzenleme modunda GTM hiç yüklenmiyor; ziyaretçide olaylar normal
+- [ ] Geri alma veya konteyner yeniden oluşturma (yeniden derleme olmadan) sonrası bir kez Kaydet yap ya da yeniden deploy et: içerik önbelleği 1 güne kadar eski kalabilir
+- [ ] Kaydet → değişiklik gizli pencerede birkaç saniye içinde görünüyor
