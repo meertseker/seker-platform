@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
     }
     try {
       upload = await uploadPending(deps);
+      if (upload.failed > 0) errors.push(`Dönüşüm: ${upload.failed} kayıt gönderilemedi`);
     } catch (e) {
       // saveOutcomes patlarsa gönderilenler bir sonraki koşuda transactionId ile güvenle yeniden denenir.
       errors.push(`Dönüşüm: ${(e as Error).message.slice(0, 240)}`);

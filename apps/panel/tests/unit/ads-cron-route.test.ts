@@ -188,4 +188,18 @@ describe("GET /api/cron/ads", () => {
     expect((await response.json()).error).toContain("Dönüşüm:");
     expect(inserts).toHaveLength(2);
   });
+
+  it("kayıt başına yükleme hatası 500 ve bildirim üretir", async () => {
+    stubAdsEnv();
+    getAccessToken.mockResolvedValue("tok");
+    fetchCampaignSpend.mockResolvedValue([]);
+    store.listPending.mockResolvedValue([pending]);
+    ingestConversion.mockResolvedValue({ ok: false, error: "INVALID_ARGUMENT" });
+    const response = await GET(request("Bearer s3cret"));
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body).toMatchObject({ ok: false, failed: 1 });
+    expect(body.error).toContain("Dönüşüm: 1 kayıt gönderilemedi");
+    expect(inserts).toHaveLength(2);
+  });
 });
