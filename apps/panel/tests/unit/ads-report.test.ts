@@ -79,7 +79,21 @@ describe("buildMarketingReport", () => {
       ],
     );
     expect(report.rows.map((r) => r.key)).toEqual(["kampanya:2", "kampanya:1", "kaynak:referans", "kaynak:telefon"]);
-    expect(report.total).toEqual(expect.objectContaining({ label: "Toplam", spendKurus: 10_000, leads: 4, costPerLeadKurus: 2_500 }));
+    expect(report.total).toEqual(expect.objectContaining({ label: "Toplam", spendKurus: 10_000, leads: 4, costPerLeadKurus: 10_000, costPerKayitKurus: null }));
+  });
+
+  it("toplam satırında aday/kayıt başı maliyet yalnızca reklam (kampanya) satırlarına bölünür", () => {
+    const report = buildMarketingReport(
+      [
+        lead({ gclid: "g", utm_campaign: "1", status: "kazanildi" }),
+        lead({ gclid: "g", utm_campaign: "1" }),
+        lead({ source: "referans", status: "kazanildi" }),
+        lead({ source: "telefon" }),
+      ],
+      new Set(),
+      [{ campaign_id: "1", campaign_name: "K", cost_micros: 100_000_000 }],
+    );
+    expect(report.total).toEqual(expect.objectContaining({ leads: 4, kayit: 2, spendKurus: 10_000, costPerLeadKurus: 5_000, costPerKayitKurus: 10_000 }));
   });
 });
 

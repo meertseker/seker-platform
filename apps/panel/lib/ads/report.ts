@@ -93,18 +93,20 @@ export function buildMarketingReport(
   const campaigns = all.filter((r) => r.kind === "kampanya").sort((a, b) => b.spendKurus - a.spendKurus || b.leads - a.leads);
   const sources = all.filter((r) => r.kind === "kaynak").sort((a, b) => b.leads - a.leads || a.label.localeCompare(b.label, "tr"));
 
-  const total = withCosts(
-    all.reduce(
-      (acc, r) => ({
-        ...acc,
-        spendKurus: acc.spendKurus + r.spendKurus,
-        leads: acc.leads + r.leads,
-        randevu: acc.randevu + r.randevu,
-        kayit: acc.kayit + r.kayit,
-      }),
-      emptyRow("toplam", "kaynak", "Toplam"),
-    ),
-  );
+  const sum = (list: ReportRow[], f: (r: ReportRow) => number) => list.reduce((n, r) => n + f(r), 0);
+  const spendKurus = sum(all, (r) => r.spendKurus);
+  // Harcama yalnızca reklamdan gelir: aday/kayıt başı maliyet reklam (kampanya) satırlarına bölünür.
+  const adLeads = sum(campaigns, (r) => r.leads);
+  const adKayit = sum(campaigns, (r) => r.kayit);
+  const total: ReportRow = {
+    ...emptyRow("toplam", "kaynak", "Toplam"),
+    spendKurus,
+    leads: sum(all, (r) => r.leads),
+    randevu: sum(all, (r) => r.randevu),
+    kayit: sum(all, (r) => r.kayit),
+    costPerLeadKurus: spendKurus > 0 && adLeads > 0 ? Math.round(spendKurus / adLeads) : null,
+    costPerKayitKurus: spendKurus > 0 && adKayit > 0 ? Math.round(spendKurus / adKayit) : null,
+  };
 
   return { rows: [...campaigns, ...sources], total };
 }
