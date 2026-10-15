@@ -8,8 +8,12 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
     include: ['**/__tests__/**/*.test.{ts,tsx}'],
+    setupFiles: ['./test/setup.ts'],
   },
   resolve: {
-    alias: { '@': path.resolve(__dirname, '.') },
+    alias: {
+      '@': path.resolve(__dirname, '.'),
+      'server-only': path.resolve(__dirname, 'test/empty.ts'),
+    },
   },
 });
