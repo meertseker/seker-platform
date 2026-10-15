@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
-import Page from '@/app/(site)/veli-yorumlari/page';
+import YorumlarView from '@/app/(site)/veli-yorumlari/YorumlarView';
+import { defaultData } from '@/lib/content/testing';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 // Yayında yorum yokken görünen boş durum.
@@ -14,7 +15,7 @@ describe('yorumlar (boş durum) ziyaretçi HTML', () => {
   afterEach(() => vi.useRealTimers());
 
   it('düzenleme katmanından önceki hâliyle aynı', () => {
-    const { container } = render(<Page />);
+    const { container } = render(<YorumlarView data={defaultData(['yorumlar.', 'meta.yorumlar.', 'testimonials.'])} />);
     expect(container.innerHTML).toMatchSnapshot();
   });
 });
