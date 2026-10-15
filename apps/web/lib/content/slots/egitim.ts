@@ -102,7 +102,7 @@ export const EGITIM_SLOTS: Record<string, SlotDef> = {
     fields: {
       question: { kind: 'text', max: Math.min(120, limitForField(EGITIM_SECTIONS, 'question')), label: 'Soru başlığı' },
       p1: { kind: 'text', max: paragraphMax, label: '1. paragraf (öne çıkan)' },
-      p2: { kind: 'text', max: paragraphMax, label: '2. paragraf' },
+      p2: { kind: 'text', max: paragraphMax, label: '2. paragraf (giriş cümlesi; branş adları otomatik eklenir)' },
       p3: { kind: 'text', max: paragraphMax, label: '3. paragraf' },
       p4: { kind: 'text', max: paragraphMax, label: '4. paragraf (boşsa gösterilmez)' },
     },

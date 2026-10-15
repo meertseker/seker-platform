@@ -52,8 +52,7 @@ export const HAKKIMIZDA_SLOTS: Record<string, SlotDef> = {
   'meta.hakkimizda.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'Hakkımızda', max: 70 },
   'meta.hakkimizda.description': {
     kind: 'text', label: 'Sayfa açıklaması (Google)', max: 160,
-    // Belirteçli hâli 160 sınırını aştığı için "çocuklara" düşürüldü (doldurulmuş metin 146 karakter).
-    default: "Beykent bölgesinin en köklü anaokullarından biri. {kurulusYili}'den beri iki binamız ve iki büyük bahçemizle 2-6 yaş Montessori temelli okul öncesi eğitim.",
+    default: "Beykent bölgesinin en köklü anaokullarından biri. {kurulusYili}'den beri iki binamız ve iki büyük bahçemizle 2-6 yaş çocuklara Montessori temelli okul öncesi eğitim.",
   },
 
   'hakkimizda.hero.eyebrow': text('Üst etiket', "{kurulusYili}'den beri Beykent'te"),

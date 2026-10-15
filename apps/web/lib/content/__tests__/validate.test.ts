@@ -23,6 +23,18 @@ import { validateEdits } from '../validate';
 const e = (key: string, value: unknown) => [{ key, value, baseUpdatedAt: null }];
 
 describe('validateEdits', () => {
+  it('sınır doldurulmuş değere göre ölçülür; kayıtta belirteç korunur', () => {
+    const vars = { yilSayisi: '15', kurulusYili: '2011' };
+    // ham 13 karakter > 10, doldurulmuş 4 karakter
+    expect(validateEdits(e('t.title', '{kurulusYili}'), vars)).toMatchObject({
+      ok: true,
+      edits: [{ value: '{kurulusYili}' }],
+    });
+    // doldurulmuş: "15" + 9 = 11 > 10
+    expect(validateEdits(e('t.title', '{yilSayisi}abcdefghi'), vars).ok).toBe(false);
+    expect(validateEdits(e('t.title', '{yilSayisi}abcdefgh'), vars).ok).toBe(true);
+  });
+
   it('bilinmeyen anahtarı reddeder', () => {
     expect(validateEdits(e('yok', 'a'))).toMatchObject({ ok: false, key: 'yok' });
   });

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { SLOTS } from '../registry';
-import { countChars } from '../chars';
+import { countChars, fillVars } from '../chars';
+
+const VARS = { yilSayisi: '99', kurulusYili: '2011' };
 
 describe('registry', () => {
   it.each(Object.entries(SLOTS))('%s geçerli bir tanım', (key, def) => {
@@ -9,7 +11,7 @@ describe('registry', () => {
     if (def.kind === 'text') {
       expect(typeof def.default).toBe('string');
       expect(def.max).toBeGreaterThan(0);
-      expect(countChars(def.default as string)).toBeLessThanOrEqual(def.max!);
+      expect(countChars(fillVars(def.default as string, VARS))).toBeLessThanOrEqual(def.max!);
       if (def.pattern) expect(def.default as string).toMatch(new RegExp(def.pattern));
     }
     if (def.kind === 'rich') expect(typeof def.default).toBe('string');
