@@ -153,13 +153,11 @@ export default function HeroSection({ c }: { c: Reader }) {
                   className="mt-1 text-base leading-relaxed text-ink"
                   {...c.attrs('testimonials.items', `${quote.id}.quote`)}
                 >
-                  {quote.quote}
+                  {c.fill(quote.quote)}
                 </blockquote>
-                <figcaption
-                  className="mt-3 text-sm text-ink-soft"
-                  {...c.attrs('testimonials.items', `${quote.id}.author`)}
-                >
-                  {quote.author} · {quote.context}
+                {/* Yazar ve açıklama tek satırda; ayrı elemanlara bölmek ziyaretçi HTML'ini değiştirirdi, bu yüzden satır içi düzenleme işareti yok (liste panelinden düzenlenir). */}
+                <figcaption className="mt-3 text-sm text-ink-soft">
+                  {c.fill(quote.author)} · {c.fill(quote.context)}
                 </figcaption>
               </figure>
             ) : null}

@@ -89,7 +89,7 @@ const ActivitiesSection = ({ c }: { c: Reader }) => {
                 href={`/aktiviteler?ders=${branch.id}`}
                 className="inline-block rounded-full bg-white px-4 py-2 text-sm text-ink shadow-sm ring-1 ring-rule hover:text-grape"
               >
-                {branch.name}
+                {c.fill(branch.name)}
               </Link>
             </li>
           ))}

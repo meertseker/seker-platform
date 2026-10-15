@@ -1,4 +1,4 @@
-import { vi, describe, it, expect } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
 import HomeView from '@/app/(site)/HomeView';
 import { defaultData, sentinelData, uncoveredText } from '@/lib/content/testing';
@@ -8,6 +8,13 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 const PREFIXES = ['home.', 'faq.', 'testimonials.', 'day.', 'program.', 'media.', 'meta.home.'];
 
 describe('ana sayfa ziyaretçi HTML', () => {
+  // Hesaplanan yıllar (kuruluştan beri) 1 Ocak'ta anlık görüntüyü bozmasın.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-15T09:00:00+03:00'));
+  });
+  afterEach(() => vi.useRealTimers());
+
   it('düzenleme katmanından önceki hâliyle aynı', () => {
     const { container } = render(<HomeView data={defaultData(PREFIXES)} />);
     expect(container.innerHTML).toMatchSnapshot();
@@ -24,10 +31,13 @@ describe('ana sayfa ziyaretçi HTML', () => {
     for (const key of ['home.hero.title', 'home.day.link', 'home.faq.cta', 'media.gardenWide', 'media.candyCorner']) {
       expect(container.querySelector(`[data-edit-key="${key}"]`), key).not.toBeNull();
     }
-    for (const list of ['day.chapters', 'home.garden.shots', 'home.features.cards', 'program.branches', 'home.week.days', 'faq.items']) {
+    for (const list of ['day.chapters', 'home.garden.shots', 'home.features.cards', 'program.branches', 'program.weekDays', 'faq.items']) {
       expect(container.querySelector(`[data-edit-list="${list}"]`), list).not.toBeNull();
     }
-    expect(container.querySelector('[data-edit-key="testimonials.items"][data-edit-path$=".quote"]')).not.toBeNull();
+    expect(container.querySelector('blockquote[data-edit-key="testimonials.items"][data-edit-path="muge-ilkokul-olsa.quote"]')).not.toBeNull();
+    // Yazar · açıklama tek satır: yanlış alana yazılmasın diye figcaption işaretsiz.
+    expect(container.querySelector('figcaption[data-edit-key]')).toBeNull();
+    expect(container.querySelector('[data-edit-list="program.weekDays"]')).not.toBeNull();
   });
 
   it('görünür her metin bir içerik alanından geliyor', () => {

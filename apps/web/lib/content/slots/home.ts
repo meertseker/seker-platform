@@ -153,7 +153,7 @@ export const HOME_SLOTS: Record<string, SlotDef> = {
     'Bölüm açıklaması',
     'Okul yaşamını daha keyifli hâle getirmek için haftanın belirli günlerinde özel etkinlikler düzenliyoruz. Sabah çantaya ne koyacağınızı bu takvimden bakabilirsiniz.',
   ),
-  'home.week.days': {
+  'program.weekDays': {
     kind: 'list', label: 'Haftanın günleri', fixedItems: true, maxItems: 7, default: weekDefault,
     fields: {
       day: { kind: 'text', max: limitForField(weekDefault, 'day'), label: 'Gün' },

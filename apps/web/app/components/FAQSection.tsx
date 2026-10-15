@@ -92,7 +92,7 @@ const FAQSection = ({ data }: { data: ReaderData }) => {
         </div>
       </div>
     </section>
-    <JsonLd data={buildFaqSchema(featuredFAQs)} />
+    <JsonLd data={buildFaqSchema(featuredFAQs.map((f) => ({ ...f, question: c.fill(f.question), answer: c.fill(f.answer) })))} />
     </>
   )
 }
