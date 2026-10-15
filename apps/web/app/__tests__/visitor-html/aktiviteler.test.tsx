@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { cloneElement, type ReactElement } from 'react';
 import { render, fireEvent } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import Page from '@/app/(site)/aktiviteler/page';
 import AktivitelerView from '@/app/(site)/aktiviteler/AktivitelerView';
 import BranchExplorer from '@/app/(site)/aktiviteler/BranchExplorer';
@@ -24,11 +25,17 @@ describe('aktiviteler ziyaretçi HTML', () => {
 
   // Anlık görüntü sayfanın gerçek bileşimiyle (searchParams Suspense sarmalı dahil) alındı; ilk yıl boyu dersi seçili.
   it('düzenleme katmanından önceki hâliyle aynı', async () => {
-    // Async sunucu bileşeni (BranchFromParams) istemci render'ında çalışmaz; önce sunucuda olduğu gibi çözülür.
+    // Async sunucu bileşeni (BranchFromParams) önce sunucuda olduğu gibi çözülür; sonra renderToString ile
+    // efekt çalıştırmadan sunucu HTML'i alınır (istemci efektleri landingPath gibi alanları değiştirirdi).
     const page = (await Page({ searchParams: Promise.resolve({}) })) as ReactElement<{ explorer: ReactElement<{ children: ReactElement<Record<string, unknown>> }> }>;
-    const child = page.props.explorer.props.children;
+    const child = page.props.explorer?.props?.children;
+    if (typeof child?.type !== 'function') throw new Error('aktiviteler sayfa yapısı değişti: BranchFromParams bulunamadı');
     const resolved = await (child.type as (p: unknown) => Promise<ReactElement>)(child.props);
-    const { container } = render(cloneElement(page as ReactElement<{ explorer?: unknown }>, { explorer: resolved }));
+    const html = renderToString(cloneElement(page as ReactElement<{ explorer?: unknown }>, { explorer: resolved }));
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    // style özniteliği jsdom'un biçimine normalleştirilir (anlık görüntü biçimi korunur).
+    container.querySelectorAll<HTMLElement>('[style]').forEach((el) => el.setAttribute('style', el.style.cssText));
     expect(container.innerHTML).toMatchSnapshot();
   });
 
