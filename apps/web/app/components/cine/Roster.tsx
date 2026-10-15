@@ -24,11 +24,16 @@ export default function Roster({
   childCount,
   teacherCount,
   limit,
+  countLabel,
+  limitLabel,
 }: {
   childCount: number;
   teacherCount: number;
   /** MEB üst sınırı. Verilmezse karşılaştırma satırı çizilmez. */
   limit?: number;
+  /** Düzenlenebilir sayfalarda altyazı metinleri içerik alanından gelir; verilmezse varsayılan yazım kullanılır. */
+  countLabel?: string;
+  limitLabel?: string;
 }) {
   // En az 1 satır: childCount=0 durumunda `rows=0` olsaydı childHeight=0'a
   // düşer ve öğretmen işaretleri viewBox'ın üstüne (negatif y) taşardı.
@@ -99,9 +104,9 @@ export default function Roster({
 
       <figcaption className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
         <span className="timecode text-ink">
-          {childCount} çocuk, {teacherCount} öğretmen
+          {countLabel ?? `${childCount} çocuk, ${teacherCount} öğretmen`}
         </span>
-        {limit ? <span className="timecode text-ink-soft">MEB üst sınırı {limit}</span> : null}
+        {limit ? <span className="timecode text-ink-soft">{limitLabel ?? `MEB üst sınırı ${limit}`}</span> : null}
       </figcaption>
     </figure>
   );

@@ -7,6 +7,9 @@ import { CHROME_SLOTS } from './slots/chrome';
 import { HAKKIMIZDA_SLOTS } from './slots/hakkimizda';
 import { EGITIM_SLOTS } from './slots/egitim';
 import { GUVENLIK_SLOTS } from './slots/guvenlik';
+import { YASGRUPLARI_SLOTS } from './slots/yasgruplari';
+import { GUNLUKAKIS_SLOTS } from './slots/gunlukakis';
+import { AKTIVITELER_SLOTS } from './slots/aktiviteler';
 
 // Her sayfa görevi kendi slots dosyasını buraya ekler.
 export const SLOTS: Record<string, SlotDef> = {
@@ -18,6 +21,9 @@ export const SLOTS: Record<string, SlotDef> = {
   ...HAKKIMIZDA_SLOTS,
   ...EGITIM_SLOTS,
   ...GUVENLIK_SLOTS,
+  ...YASGRUPLARI_SLOTS,
+  ...GUNLUKAKIS_SLOTS,
+  ...AKTIVITELER_SLOTS,
 };
 
 export { PAGE_IDS } from './pageIds';

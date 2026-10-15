@@ -186,8 +186,8 @@ export function getChapter(id: string): DayChapter | undefined {
  * SCHEDULE_READY false iken gerçek saat asla dönmez; bunun yerine
  * kronolojik sahne sırası döner. TimeSpine ve sayfa yalnızca bunu okur.
  */
-export function chapterLabel(chapter: Pick<DayChapter, 'id' | 'time'>): string {
+export function chapterLabel(chapter: Pick<DayChapter, 'id' | 'time'>, scenePrefix = 'Sahne'): string {
   if (SCHEDULE_READY) return chapter.time;
   const index = DAY_CHAPTERS.findIndex((c) => c.id === chapter.id);
-  return `Sahne ${String(index + 1).padStart(2, '0')}`;
+  return `${scenePrefix} ${String(index + 1).padStart(2, '0')}`;
 }

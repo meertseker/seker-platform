@@ -49,6 +49,9 @@ const CHROME_SLOTS_SRC = readProse('lib', 'content', 'slots', 'chrome.ts');
 const HAKKIMIZDA_SLOTS_SRC = readProse('lib', 'content', 'slots', 'hakkimizda.ts');
 const EGITIM_SLOTS_SRC = readProse('lib', 'content', 'slots', 'egitim.ts');
 const GUVENLIK_SLOTS_SRC = readProse('lib', 'content', 'slots', 'guvenlik.ts');
+const YASGRUPLARI_SLOTS_SRC = readProse('lib', 'content', 'slots', 'yasgruplari.ts');
+const GUNLUKAKIS_SLOTS_SRC = readProse('lib', 'content', 'slots', 'gunlukakis.ts');
+const AKTIVITELER_SLOTS_SRC = readProse('lib', 'content', 'slots', 'aktiviteler.ts');
 
 const reader = () => makeReader(defaultData());
 const CONTACT_SRC = readSource('app', 'components', 'ContactSection.tsx');
@@ -67,6 +70,9 @@ const HOMEPAGE_FILES = {
   'lib/content/slots/hakkimizda.ts': HAKKIMIZDA_SLOTS_SRC,
   'lib/content/slots/egitim.ts': EGITIM_SLOTS_SRC,
   'lib/content/slots/guvenlik.ts': GUVENLIK_SLOTS_SRC,
+  'lib/content/slots/yasgruplari.ts': YASGRUPLARI_SLOTS_SRC,
+  'lib/content/slots/gunlukakis.ts': GUNLUKAKIS_SLOTS_SRC,
+  'lib/content/slots/aktiviteler.ts': AKTIVITELER_SLOTS_SRC,
   'app/components/ContactSection.tsx': CONTACT_SRC,
   'app/components/FeaturesSection.tsx': FEATURES_SRC,
   'app/components/ActivitiesSection.tsx': ACTIVITIES_SRC,

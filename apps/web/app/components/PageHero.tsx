@@ -29,6 +29,7 @@ export default function PageHero({
   children,
   c,
   keys,
+  editAttrs,
 }: {
   eyebrow?: React.ReactNode;
   title?: React.ReactNode;
@@ -40,6 +41,8 @@ export default function PageHero({
   /** Düzenlenebilir sayfalar: okuyucu ve metin anahtarları; verilirse eyebrow/title/lead buradan basılır. */
   c?: Reader;
   keys?: { eyebrow?: string; title?: string; lead?: string };
+  /** Liste öğesi alanlarından basılan eyebrow/title/lead için hazır `c.attrs(key, path)` çıktıları (ziyaretçiye boş gelir). */
+  editAttrs?: { eyebrow?: Record<string, string>; title?: Record<string, string>; lead?: Record<string, string> };
 }) {
   const eyebrowNode = c && keys?.eyebrow ? c.text(keys.eyebrow) : eyebrow;
   const titleNode = c && keys?.title ? c.text(keys.title) : title;
@@ -55,11 +58,11 @@ export default function PageHero({
 
       <div className="relative z-10 mx-auto max-w-3xl px-6 text-center">
         {eyebrowNode ? (
-          <p className="timecode text-white/70" {...(c && keys?.eyebrow ? c.attrs(keys.eyebrow) : {})}>{eyebrowNode}</p>
+          <p className="timecode text-white/70" {...(c && keys?.eyebrow ? c.attrs(keys.eyebrow) : editAttrs?.eyebrow)}>{eyebrowNode}</p>
         ) : null}
-        <h1 className="mt-4 font-display text-3xl text-white md:text-5xl" {...(c && keys?.title ? c.attrs(keys.title) : {})}>{titleNode}</h1>
+        <h1 className="mt-4 font-display text-3xl text-white md:text-5xl" {...(c && keys?.title ? c.attrs(keys.title) : editAttrs?.title)}>{titleNode}</h1>
         {leadNode ? (
-          <p className="mx-auto mt-5 max-w-2xl text-base text-white/85 md:text-lg" {...(c && keys?.lead ? c.attrs(keys.lead) : {})}>{leadNode}</p>
+          <p className="mx-auto mt-5 max-w-2xl text-base text-white/85 md:text-lg" {...(c && keys?.lead ? c.attrs(keys.lead) : editAttrs?.lead)}>{leadNode}</p>
         ) : null}
         {media ? (
           <div
