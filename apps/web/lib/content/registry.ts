@@ -4,6 +4,7 @@ import { MEDIA_SLOTS } from './slots/media';
 import { LIST_SLOTS } from './slots/lists';
 import { HOME_SLOTS } from './slots/home';
 import { CHROME_SLOTS } from './slots/chrome';
+import { GUVENLIK_SLOTS } from './slots/guvenlik';
 
 // Her sayfa görevi kendi slots dosyasını buraya ekler.
 export const SLOTS: Record<string, SlotDef> = {
@@ -12,6 +13,7 @@ export const SLOTS: Record<string, SlotDef> = {
   ...LIST_SLOTS,
   ...HOME_SLOTS,
   ...CHROME_SLOTS,
+  ...GUVENLIK_SLOTS,
 };
 
 export { PAGE_IDS } from './pageIds';

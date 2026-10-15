@@ -46,6 +46,7 @@ const HOME_SLOTS_SRC = readProse('lib', 'content', 'slots', 'home.ts');
 const LISTS_SLOTS_SRC = readProse('lib', 'content', 'slots', 'lists.ts');
 const MEDIA_SLOTS_SRC = readProse('lib', 'content', 'slots', 'media.ts');
 const CHROME_SLOTS_SRC = readProse('lib', 'content', 'slots', 'chrome.ts');
+const GUVENLIK_SLOTS_SRC = readProse('lib', 'content', 'slots', 'guvenlik.ts');
 
 const reader = () => makeReader(defaultData());
 const CONTACT_SRC = readSource('app', 'components', 'ContactSection.tsx');
@@ -61,6 +62,7 @@ const HOMEPAGE_FILES = {
   'lib/content/slots/lists.ts': LISTS_SLOTS_SRC,
   'lib/content/slots/media.ts': MEDIA_SLOTS_SRC,
   'lib/content/slots/chrome.ts': CHROME_SLOTS_SRC,
+  'lib/content/slots/guvenlik.ts': GUVENLIK_SLOTS_SRC,
   'app/components/ContactSection.tsx': CONTACT_SRC,
   'app/components/FeaturesSection.tsx': FEATURES_SRC,
   'app/components/ActivitiesSection.tsx': ACTIVITIES_SRC,
