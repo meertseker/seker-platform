@@ -43,7 +43,7 @@ export function EditableRich({
   value?: string;
 }) {
   const Comp = as;
-  // Değer kaydederken ve buildReaderData'da sanitizeRich'ten geçmiştir.
+  // value yalnızca ReaderData'dan (buildReaderData'da temizlenmiş öğe alanı) verilmelidir; ham kullanıcı HTML'i buraya geçirilmez.
   const html = value !== undefined ? c.fill(value) : c.rich(k);
   return <Comp className={className} {...c.attrs(k, path)} dangerouslySetInnerHTML={{ __html: html }} />;
 }
