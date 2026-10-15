@@ -58,30 +58,31 @@ export function buildMarketingReport(
   spend: ReportSpend[],
 ): MarketingReport {
   const rows = new Map<string, ReportRow>();
-  const campaignNames = new Map<string, string>();
+  const microsByCampaign = new Map<string, number>();
 
   for (const s of spend) {
     const key = `kampanya:${s.campaign_id}`;
-    campaignNames.set(s.campaign_id, s.campaign_name);
-    const row = rows.get(key) ?? emptyRow(key, "kampanya", s.campaign_name);
-    row.spendKurus += Math.round(Number(s.cost_micros) / MICROS_PER_KURUS);
-    rows.set(key, row);
+    microsByCampaign.set(s.campaign_id, (microsByCampaign.get(s.campaign_id) ?? 0) + Math.round(Number(s.cost_micros)));
+    if (!rows.has(key)) rows.set(key, emptyRow(key, "kampanya", s.campaign_name));
+  }
+  // Mikro toplam tam sayı olarak biriktirilir, kuruşa tek seferde çevrilir.
+  for (const [campaignId, micros] of microsByCampaign) {
+    rows.get(`kampanya:${campaignId}`)!.spendKurus = Math.round(micros / MICROS_PER_KURUS);
   }
 
   for (const lead of leads) {
     const isAd = Boolean(lead.gclid) || lead.source === "reklam";
+    const campaign = isAd ? (lead.utm_campaign?.trim() ?? "") : "";
     let key: string;
-    if (isAd) {
-      const campaign = lead.utm_campaign?.trim() ?? "";
-      key = campaign && campaignNames.has(campaign) ? `kampanya:${campaign}` : UNKNOWN_CAMPAIGN;
-    } else {
-      key = `kaynak:${lead.source}`;
-    }
+    if (isAd) key = campaign ? `kampanya:${campaign}` : UNKNOWN_CAMPAIGN;
+    else key = `kaynak:${lead.source}`;
     const row =
       rows.get(key) ??
       (key === UNKNOWN_CAMPAIGN
         ? emptyRow(key, "kampanya", "Google Ads · kampanya bilinmiyor")
-        : emptyRow(key, "kaynak", label(LEAD_SOURCES, lead.source)));
+        : isAd
+          ? emptyRow(key, "kampanya", campaign)
+          : emptyRow(key, "kaynak", label(LEAD_SOURCES, lead.source)));
     row.leads += 1;
     if (appointmentLeadIds.has(lead.id) || REACHED_RANDEVU.includes(lead.status)) row.randevu += 1;
     if (lead.status === "kazanildi" || lead.converted_student_id) row.kayit += 1;
@@ -113,7 +114,9 @@ function addDays(ymd: string, days: number): string {
 }
 
 function isYmd(value: string | undefined): value is string {
-  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)));
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
 /** URL'deki ?bas=&bit= değerlerini güvenli bir tarih aralığına çevirir. */

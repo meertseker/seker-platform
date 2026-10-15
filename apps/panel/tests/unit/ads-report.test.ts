@@ -24,11 +24,22 @@ describe("buildMarketingReport", () => {
     });
   });
 
-  it("kampanyası bilinmeyen reklam adayını ayrı satırda sayar", () => {
+  it("kampanya ID'si yoksa bilinmiyor satırına; harcaması olmayan ID'li adayı kendi kampanya satırına koyar", () => {
     const report = buildMarketingReport([lead({ gclid: "g", utm_campaign: null }), lead({ gclid: "g", utm_campaign: "999" })], new Set(), []);
-    expect(report.rows).toEqual([
-      expect.objectContaining({ key: "kampanya:bilinmiyor", label: "Google Ads · kampanya bilinmiyor", leads: 2, spendKurus: 0, costPerLeadKurus: null }),
+    expect(report.rows).toHaveLength(2);
+    expect(report.rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: "kampanya:bilinmiyor", label: "Google Ads · kampanya bilinmiyor", leads: 1, spendKurus: 0, costPerLeadKurus: null }),
+      expect.objectContaining({ key: "kampanya:999", kind: "kampanya", label: "999", leads: 1, spendKurus: 0 }),
+    ]));
+  });
+
+  it("mikro maliyeti tam sayı olarak toplar, kuruşa bir kez çevirir", () => {
+    const report = buildMarketingReport([], new Set(), [
+      { campaign_id: "1", campaign_name: "A", cost_micros: 3_333_333 },
+      { campaign_id: "1", campaign_name: "A", cost_micros: 3_333_333 },
+      { campaign_id: "1", campaign_name: "A", cost_micros: 3_333_333 },
     ]);
+    expect(report.rows[0].spendKurus).toBe(1000);
   });
 
   it("web_sitesi kaynaklı, gclid'li ve utm_campaign'siz aday kampanya:bilinmiyor satırına düşer", () => {
@@ -81,6 +92,9 @@ describe("normalizeRange", () => {
   });
   it("bozuk tarihte varsayılana döner", () => {
     expect(normalizeRange("dün", "2026-10-10", "2026-10-14")).toEqual({ from: "2026-09-15", to: "2026-10-14" });
+  });
+  it("imkansız takvim tarihinde varsayılana döner", () => {
+    expect(normalizeRange("2026-02-31", "2026-10-10", "2026-10-14")).toEqual({ from: "2026-09-15", to: "2026-10-14" });
   });
   it("366 günden uzun aralığı başlangıçtan kırpar", () => {
     expect(normalizeRange("2024-01-01", "2026-10-14", "2026-10-14")).toEqual({ from: "2025-10-14", to: "2026-10-14" });

@@ -21,31 +21,59 @@ function nextDay(ymd: string): string {
   return new Date(new Date(`${ymd}T00:00:00Z`).getTime() + 86400000).toISOString().slice(0, 10);
 }
 
+const PAGE_SIZE = 1000; // PostgREST max_rows
+
+type PageResult = { data: unknown[] | null; error: { message: string } | null };
+
+/** PostgREST max_rows sınırını aşmamak için kısa sayfa gelene kadar .range() ile okur. */
+async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<PageResult>): Promise<T[]> {
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const chunk = (data ?? []) as T[];
+    all.push(...chunk);
+    if (chunk.length < PAGE_SIZE) return all;
+  }
+}
+
 export async function getMarketingData(
   from: string,
   to: string,
 ): Promise<{ report: MarketingReport; uploads: UploadListItem[] }> {
   const supabase = await createServerSupabase();
 
-  const [leadsResult, spendResult, uploadsResult] = await Promise.all([
-    supabase
-      .from("leads")
-      .select("id, source, gclid, utm_campaign, status, converted_student_id, appointments(id)")
-      .gte("created_at", istanbulDayStartIso(from))
-      .lt("created_at", istanbulDayStartIso(nextDay(to))),
-    supabase.from("ad_spend_daily").select("campaign_id, campaign_name, cost_micros").gte("date", from).lte("date", to),
+  type LeadRow = ReportLead & { appointments: { id: string }[] | null };
+  const [rows, spend, uploadsResult] = await Promise.all([
+    fetchAll<LeadRow>((f, t) =>
+      supabase
+        .from("leads")
+        .select("id, source, gclid, utm_campaign, status, converted_student_id, appointments(id)")
+        .gte("created_at", istanbulDayStartIso(from))
+        .lt("created_at", istanbulDayStartIso(nextDay(to)))
+        .order("created_at")
+        .order("id")
+        .range(f, t),
+    ),
+    fetchAll<ReportSpend>((f, t) =>
+      supabase
+        .from("ad_spend_daily")
+        .select("campaign_id, campaign_name, cost_micros")
+        .gte("date", from)
+        .lte("date", to)
+        .order("date")
+        .order("campaign_id")
+        .range(f, t),
+    ),
+    // Son 50 yükleme: tek sayfa (limit < max_rows), sayfalama gerekmez.
     supabase
       .from("conversion_uploads")
       .select("id, lead_id, conversion_action, status, error, conversion_at, lead:leads(parent_name)")
       .order("conversion_at", { ascending: false })
       .limit(50),
   ]);
+  if (uploadsResult.error) throw new Error(uploadsResult.error.message);
 
-  if (leadsResult.error) throw new Error(leadsResult.error.message);
-  if (spendResult.error) throw new Error(spendResult.error.message);
-
-  type LeadRow = ReportLead & { appointments: { id: string }[] | null };
-  const rows = (leadsResult.data ?? []) as unknown as LeadRow[];
   const appointmentLeadIds = new Set(rows.filter((l) => l.appointments?.length).map((l) => l.id));
   const leads: ReportLead[] = rows.map((row) => ({
     id: row.id,
@@ -59,7 +87,7 @@ export async function getMarketingData(
   const report = buildMarketingReport(
     leads,
     appointmentLeadIds,
-    (spendResult.data ?? []) as ReportSpend[],
+    spend,
   );
 
   type UploadRow = {
