@@ -31,6 +31,12 @@ describe("notificationText", () => {
     expect(notificationText({ type: "teklif_onay_bekliyor", payload: { offered: 18000 } })).toContain("Onay bekleyen yeni teklif");
   });
 
+  it("reklam senkron hatası için sabit metin döner", () => {
+    expect(notificationText({ type: "ads_senkron_hata", payload: { message: "x", tarih: "2026-10-15" } })).toBe(
+      "Google Ads senkronu bu sabah başarısız oldu. Pazarlama ekranına bakın.",
+    );
+  });
+
   it("bilinmeyen türde genel metin döner", () => {
     expect(notificationText({ type: "baska", payload: {} })).toBe("Yeni bildirim var.");
   });

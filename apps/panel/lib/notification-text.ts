@@ -23,6 +23,8 @@ export function notificationText(notification: {
       return counterPrice
         ? `Teklif için karşı rakam girildi: ${counterPrice}`
         : "Teklif için karşı rakam girildi.";
+    case "ads_senkron_hata":
+      return "Google Ads senkronu bu sabah başarısız oldu. Pazarlama ekranına bakın.";
     case "teklif_reddedildi":
       return "Teklifiniz reddedildi.";
     case "web_basvuru": {
