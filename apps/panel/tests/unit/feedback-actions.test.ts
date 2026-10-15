@@ -26,7 +26,7 @@ describe("createFeedback", () => {
   it("geçerli girdiyi kullanıcı kimliğiyle ekler ve sayfayı tazeler", async () => {
     expect(await createFeedback(valid)).toEqual({ ok: true });
     expect(from).toHaveBeenCalledWith("feedback");
-    expect(insert).toHaveBeenCalledWith({ kind: "hata", title: "Takvim açılmıyor", body: valid.body, page: "Takvim", created_by: "u1" });
+    expect(insert).toHaveBeenCalledWith({ kind: "hata", title: "Takvim açılmıyor", body: valid.body, page: "Takvim" });
     expect(revalidatePath).toHaveBeenCalledWith("/geri-bildirim");
   });
 
@@ -44,6 +44,14 @@ describe("createFeedback", () => {
     expect((await createFeedback({ ...valid, body: "a".repeat(4001) })).ok).toBe(false);
     expect((await createFeedback(null)).ok).toBe(false);
     expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("saatlik sınır hatasını açık Türkçe mesajla döner", async () => {
+    insert.mockResolvedValue({ error: { code: "P0001", message: "x" } });
+    expect(await createFeedback(valid)).toEqual({
+      ok: false,
+      error: "Çok fazla geri bildirim gönderildi, lütfen biraz sonra tekrar deneyin.",
+    });
   });
 
   it("veritabanı hatasında ve istisnada fırlatmaz", async () => {

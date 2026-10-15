@@ -29,7 +29,8 @@ create policy upd_feedback on public.feedback for update
 
 -- Yetkiler: anon yok; güncelleme yalnızca status/admin_note kolonlarında.
 revoke all on public.feedback from anon, public, authenticated;
-grant select, insert on public.feedback to authenticated;
+grant select on public.feedback to authenticated;
+grant insert (kind, title, body, page) on public.feedback to authenticated;
 grant update (status, admin_note) on public.feedback to authenticated;
 grant all on public.feedback to service_role;
 
@@ -64,3 +65,18 @@ revoke all on function public.feedback_touch() from public, anon, authenticated;
 
 create trigger trg_feedback_notify after insert on public.feedback
   for each row execute function public.notify_feedback();
+
+-- Saatlik sınır: kullanıcı başına son 1 saatte en fazla 20 kayıt
+create or replace function public.feedback_rate_limit() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if (select count(*) from public.feedback f
+      where f.created_by = new.created_by and f.created_at > now() - interval '1 hour') >= 20 then
+    raise exception 'Çok fazla geri bildirim gönderildi, lütfen biraz sonra tekrar deneyin.' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.feedback_rate_limit() from public, anon, authenticated;
+create trigger trg_feedback_rate_limit before insert on public.feedback
+  for each row execute function public.feedback_rate_limit();

@@ -5,6 +5,8 @@ import { z } from "zod";
 import { getSessionProfile } from "@/lib/auth";
 import { createServerSupabase } from "@/lib/supabase/server";
 
+const RATE_LIMIT_MESSAGE = "Çok fazla geri bildirim gönderildi, lütfen biraz sonra tekrar deneyin.";
+
 type Result = { ok: true } | { ok: false; error: string };
 
 function isRedirectError(error: unknown): boolean {
@@ -50,14 +52,15 @@ const updateSchema = z.object({
 
 export async function createFeedback(input: unknown): Promise<Result> {
   try {
-    const profile = await getSessionProfile();
+    await getSessionProfile();
     const parsed = createSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Geçersiz bilgi" };
 
     const supabase = await createServerSupabase();
-    const { error } = await supabase.from("feedback").insert({ ...parsed.data, created_by: profile.id });
+    const { error } = await supabase.from("feedback").insert(parsed.data);
     if (error) {
       console.error("[feedback] createFeedback başarısız:", error.code ?? "bilinmeyen");
+      if (error.code === "P0001") return { ok: false, error: RATE_LIMIT_MESSAGE };
       return { ok: false, error: "Geri bildiriminiz gönderilemedi, lütfen tekrar deneyin" };
     }
     revalidatePath("/geri-bildirim");
@@ -82,7 +85,10 @@ export async function updateFeedbackStatus(input: unknown): Promise<Result> {
       .update({ status: parsed.data.status, admin_note: parsed.data.adminNote })
       .eq("id", parsed.data.id)
       .select("id");
-    if (error) return { ok: false, error: "Kayıt güncellenemedi" };
+    if (error) {
+      console.error("[feedback] updateFeedbackStatus başarısız:", error.code ?? "bilinmeyen");
+      return { ok: false, error: "Kayıt güncellenemedi" };
+    }
     if (!data || data.length === 0) return { ok: false, error: "Kayıt bulunamadı" };
     revalidatePath("/geri-bildirim");
     return { ok: true };

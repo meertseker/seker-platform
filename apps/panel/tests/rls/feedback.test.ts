@@ -37,6 +37,14 @@ describe("feedback RLS", () => {
     expect(error).not.toBeNull();
   });
 
+  it("created_by/id/created_at kolonları istemciden yazılamaz", async () => {
+    const dan = await clientFor("danisman@test.local");
+    const base = { kind: "hata", body: "x" };
+    expect((await dan.from("feedback").insert({ ...base, title: `${TAG}id`, id: "123e4567-e89b-12d3-a456-426614174000" })).error).not.toBeNull();
+    expect((await dan.from("feedback").insert({ ...base, title: `${TAG}ts`, created_at: "2000-01-01T00:00:00Z" })).error).not.toBeNull();
+    expect((await dan.from("feedback").insert({ ...base, title: `${TAG}cb`, created_by: DAN_ID })).error).not.toBeNull();
+  });
+
   it("geçersiz tür ve kısa başlık reddedilir", async () => {
     const dan = await clientFor("danisman@test.local");
     expect((await dan.from("feedback").insert({ kind: "sikayet", title: `${TAG}tur`, body: "x" })).error).not.toBeNull();
@@ -104,5 +112,17 @@ describe("feedback RLS", () => {
     expect(notes!.map((n) => n.user_id)).toEqual([YON_ID]);
     expect(notes![0].payload).toMatchObject({ feedbackId: data!.id, kind: "hata", title: `${TAG}bildirim` });
     expect((notes![0].payload as { by: string }).by).toBeTruthy();
+  });
+
+  it("saatte 20 kayıttan fazlası reddedilir", async () => {
+    await cleanup();
+    const dan = await clientFor("danisman@test.local");
+    const rows = Array.from({ length: 20 }, (_, i) => ({ kind: "oneri", title: `${TAG}sinir-${i}`, body: "x" }));
+    // Tek tek eklenir: toplu ekleme tetikleyicide aynı anlık görüntüyü görür.
+    for (const row of rows) expect((await dan.from("feedback").insert(row)).error).toBeNull();
+    const last = await dan.from("feedback").insert({ kind: "oneri", title: `${TAG}sinir-21`, body: "x" });
+    expect(last.error?.code).toBe("P0001");
+    expect(last.error?.message).toContain("Çok fazla geri bildirim");
+    await cleanup();
   });
 });
