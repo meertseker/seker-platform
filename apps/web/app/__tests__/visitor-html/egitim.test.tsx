@@ -2,10 +2,11 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
 import EgitimView from '@/app/(site)/egitim-yaklasimimiz/EgitimView';
 import { defaultData, sentinelData, uncoveredText } from '@/lib/content/testing';
+import { SLOTS } from '@/lib/content/registry';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
-const PREFIXES = ['egitim.', 'meta.egitim.', 'program.', 'faq.', 'media.'];
+const PREFIXES = ['egitim.', 'meta.egitim.', 'program.', 'faq.', 'ageGroups.', 'media.'];
 
 describe('egitim ziyaretçi HTML', () => {
   beforeEach(() => {
@@ -30,7 +31,7 @@ describe('egitim ziyaretçi HTML', () => {
     for (const key of ['egitim.hero.title', 'egitim.english.title', 'egitim.ages.note', 'egitim.cta.lead']) {
       expect(container.querySelector(`[data-edit-key="${key}"]`), key).not.toBeNull();
     }
-    for (const list of ['egitim.sections', 'egitim.english.tracks', 'egitim.ages.items']) {
+    for (const list of ['egitim.sections', 'egitim.english.tracks', 'ageGroups.items']) {
       expect(container.querySelector(`[data-edit-list="${list}"]`), list).not.toBeNull();
     }
     expect(container.querySelector('h2[data-edit-key="egitim.sections"][data-edit-path="montessori.question"]')).not.toBeNull();
@@ -38,6 +39,18 @@ describe('egitim ziyaretçi HTML', () => {
     expect(container.querySelector('p[data-edit-key="egitim.sections"][data-edit-path="brans.p2"]')).toBeNull();
     // Boş p4 basılmaz.
     expect(container.querySelector('[data-edit-path="planlama.p4"]')).toBeNull();
+  });
+
+  it('yaş kartlarının metinleri ageGroups.items listesinin izdüşümüdür', () => {
+    const data = defaultData(PREFIXES);
+    const { container } = render(<EgitimView data={data} />);
+    const groups = data.values['ageGroups.items'] as { id: string; ageLabel: string; groupName: string }[];
+    const cards = [...container.querySelectorAll('a[href^="/yas-gruplari/"]')];
+    expect(cards.map((a) => a.getAttribute('href'))).toEqual(groups.map((g) => `/yas-gruplari/${g.id}`));
+    expect(cards.map((a) => [...a.querySelectorAll('p')].map((p) => p.textContent))).toEqual(
+      groups.map((g) => [g.ageLabel, g.groupName]),
+    );
+    expect(SLOTS['egitim.ages.items']).toBeUndefined();
   });
 
   it('görünür her metin bir içerik alanından geliyor', () => {

@@ -76,14 +76,6 @@ const paragraphMax = Math.max(
 const TRACK_IDS = ['play-time', 'kids-club', 'speaking'];
 const tracksDefault = ENGLISH_TRACKS.map(({ name, description }, i) => ({ id: TRACK_IDS[i], name, description }));
 
-/** Yaş kartları: adres ve vurgu rengi kodda (id ile eşlenir), yalnızca etiketler düzenlenir. */
-const agesDefault = [
-  { id: '2-3-yas', label: '2-3 yaş', name: 'Oyun Grubu' },
-  { id: '3-4-yas', label: '3-4 yaş', name: 'Anaokulu' },
-  { id: '4-5-yas', label: '4-5 yaş', name: 'Anaokulu' },
-  { id: '5-6-yas', label: '5-6 yaş', name: 'İlkokula Hazırlık' },
-];
-
 export const EGITIM_SLOTS: Record<string, SlotDef> = {
   'meta.egitim.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'Eğitim Yaklaşımımız', max: 70 },
   'meta.egitim.description': {
@@ -116,13 +108,6 @@ export const EGITIM_SLOTS: Record<string, SlotDef> = {
     },
   },
   'egitim.ages.title': text('Yaş grubu bölümü başlığı', 'Yaş grubuna göre program', true),
-  'egitim.ages.items': {
-    kind: 'list', label: 'Yaş grubu kartları', fixedItems: true, maxItems: 4, default: agesDefault,
-    fields: {
-      label: { kind: 'text', max: 20, label: 'Yaş aralığı' },
-      name: { kind: 'text', max: limitForField(agesDefault, 'name'), label: 'Grup adı' },
-    },
-  },
   'egitim.ages.note': text(
     'Yaş grubu altı not',
     `Tam gün ${FULL_DAY_LABEL}, yarım gün ${HALF_DAY_LABEL}. {kurulusYili}'den beri, {yilSayisi} yıldır aynı yaklaşımla ${SITE.areaServed.slice(0, 3).join(', ')} ve çevresindeki ailelere hizmet veriyoruz.`,

@@ -10,7 +10,7 @@ import type { FaqItem } from '@/content/faq';
 
 type Section = { id: string; question: string; p1: string; p2: string; p3: string; p4: string };
 type Track = { id: string; name: string; description: string };
-type Age = { id: string; label: string; name: string };
+type Age = { id: string; ageLabel: string; groupName: string };
 type Branch = { id: string; name: string; season: string };
 
 const FAQ_IDS = ['egitim-programi', 'ingilizce', 'yas-araligi', 'sinif-mevcudu'];
@@ -18,7 +18,7 @@ const FAQ_IDS = ['egitim-programi', 'ingilizce', 'yas-araligi', 'sinif-mevcudu']
 /** Bölüm kartlarının şerit renkleri — sitenin aksan sırası. */
 const SECTION_STRIPES = ['bg-grape', 'bg-bubble', 'bg-sunny', 'bg-mint', 'bg-sky'];
 
-/** Yaş kartlarının adresi ve vurgu rengi (id ile eşlenir). */
+/** Yaş kartlarının adresi ve vurgu rengi (id ile eşlenir); etiketler `ageGroups.items` listesinden gelir. */
 const AGE_LOOK: Record<string, { accent: string; href: string }> = {
   '2-3-yas': { accent: 'text-bubble-deep', href: '/yas-gruplari/2-3-yas' },
   '3-4-yas': { accent: 'text-sunny-deep', href: '/yas-gruplari/3-4-yas' },
@@ -32,7 +32,7 @@ export default function EgitimView({ data }: { data: ReaderData }) {
   const c = makeReader(data);
   const sections = c.list<Section>('egitim.sections');
   const tracks = c.list<Track>('egitim.english.tracks');
-  const ages = c.list<Age>('egitim.ages.items');
+  const ages = c.list<Age>('ageGroups.items');
   const branchNames = c
     .list<Branch>('program.branches')
     .filter((branch) => branch.season === 'yil-boyu')
@@ -117,11 +117,11 @@ export default function EgitimView({ data }: { data: ReaderData }) {
 
       <section className="mx-auto max-w-4xl px-6 py-16">
         <Editable c={c} k="egitim.ages.title" as="h2" className="text-center font-display text-3xl text-ink" />
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4" {...c.listAttrs('egitim.ages.items')}>
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4" {...c.listAttrs('ageGroups.items')}>
           {ages.map((group) => (
             <Link key={group.id} href={AGE_LOOK[group.id].href} className="card-lift rounded-3xl bg-white p-6 text-center shadow-sm">
-              <Editable c={c} k="egitim.ages.items" path={`${group.id}.label`} value={group.label} as="p" className={`font-display text-2xl ${AGE_LOOK[group.id].accent}`} />
-              <Editable c={c} k="egitim.ages.items" path={`${group.id}.name`} value={group.name} as="p" className="mt-2 text-sm text-ink-soft" />
+              <Editable c={c} k="ageGroups.items" path={`${group.id}.ageLabel`} value={group.ageLabel} as="p" className={`font-display text-2xl ${AGE_LOOK[group.id].accent}`} />
+              <Editable c={c} k="ageGroups.items" path={`${group.id}.groupName`} value={group.groupName} as="p" className="mt-2 text-sm text-ink-soft" />
             </Link>
           ))}
         </div>
