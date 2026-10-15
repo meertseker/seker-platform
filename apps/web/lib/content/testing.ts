@@ -4,7 +4,8 @@ import { pickData } from './reader';
 import type { ReaderData } from './types';
 
 export function defaultData(prefixes?: string[]): ReaderData {
-  const data = buildReaderData({}, false, new Date().getFullYear());
+  // Meta, ziyaretçi için üretimde boş gelir; testler düzenleme moduna `editing: true` ile geçtiği için burada dolu tutulur.
+  const data = { ...buildReaderData({}, true, new Date().getFullYear()), editing: false };
   return prefixes ? pickData(data, [...prefixes, 'site.']) : data;
 }
 
