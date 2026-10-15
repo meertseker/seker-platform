@@ -85,6 +85,7 @@ describe("getAccessToken", () => {
     const [url, init] = fetchFn.mock.calls[0];
     expect(url).toBe("https://oauth2.googleapis.com/token");
     expect(init.method).toBe("POST");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
     const body = new URLSearchParams(init.body as string);
     expect(Object.fromEntries(body)).toEqual({
       client_id: "cid", client_secret: "csecret", refresh_token: "rtok", grant_type: "refresh_token",
@@ -122,6 +123,7 @@ describe("fetchCampaignSpend", () => {
     ]);
     const [url, init] = fetchFn.mock.calls[0];
     expect(url).toBe("https://googleads.googleapis.com/v25/customers/1234567890/googleAds:searchStream");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(init.headers).toMatchObject({
       authorization: "Bearer acc",
       "developer-token": "dev-token",
@@ -166,6 +168,7 @@ describe("ingestConversion", () => {
     const [url, init] = fetchFn.mock.calls[0];
     expect(url).toBe("https://datamanager.googleapis.com/v1/events:ingest");
     expect(init.headers).toMatchObject({ authorization: "Bearer acc" });
+    expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(JSON.parse(init.body)).toEqual({
       destinations: [
         {
@@ -228,5 +231,44 @@ describe("ingestConversion", () => {
     const result = await ingestConversion(CFG, "acc", conv, "2026-10-13T12:00:00+03:00", fetchFn);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toHaveLength(500);
+  });
+});
+
+describe("zaman aşımı ve hata dayanıklılığı", () => {
+  const conv = {
+    id: "u2", leadId: "lead-2", gclid: "GCLID-Y", action: "randevu" as const,
+    conversionAt: "2026-10-13T09:00:00Z", value: null, adUserData: null,
+  };
+  const TS = "2026-10-13T12:00:00+03:00";
+
+  it("searchStream yanıtı dizi değilse GoogleApiError fırlatır", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(jsonResponse({ error: "beklenmeyen" }));
+    const err = await searchStream(CFG, "acc", "SELECT campaign.id FROM campaign", fetchFn).catch((e) => e);
+    expect(err).toBeInstanceOf(GoogleApiError);
+    expect(String(err.message).length).toBeLessThanOrEqual(500);
+  });
+
+  it("ingest ağ zaman aşımında (AbortError) throw etmez, ok:false döner", async () => {
+    const fetchFn = vi.fn().mockRejectedValue(Object.assign(new Error("The operation was aborted"), { name: "AbortError" }));
+    const result = await ingestConversion(CFG, "acc", conv, TS, fetchFn);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain("AbortError");
+      expect(result.error.length).toBeLessThanOrEqual(500);
+    }
+  });
+
+  it("ingest ağ hatasında (TypeError) throw etmez, ok:false döner", async () => {
+    const fetchFn = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+    const result = await ingestConversion(CFG, "acc", conv, TS, fetchFn);
+    expect(result.ok).toBe(false);
+  });
+
+  it("JSON olmayan HTTP hatasında durum kodu mesaja eklenir", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(new Response("Bad gateway html", { status: 502 }));
+    const err = await getAccessToken(CFG, fetchFn).catch((e) => e);
+    expect(err).toBeInstanceOf(GoogleApiError);
+    expect(err.status).toBe(502);
+    expect(String(err.message)).toContain("502");
   });
 });

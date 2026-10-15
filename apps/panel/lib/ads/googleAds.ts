@@ -4,6 +4,10 @@ import type { FetchFn, PendingConversion, SpendRow } from "./types";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DATA_MANAGER_INGEST_URL = "https://datamanager.googleapis.com/v1/events:ingest";
 const MAX_ERROR_LENGTH = 500;
+/** Her HTTP çağrısının üst sınırı; yanıt gelmezse cron süresiz beklemez. */
+const OAUTH_TIMEOUT_MS = 15_000;
+const ADS_TIMEOUT_MS = 30_000;
+const INGEST_TIMEOUT_MS = 15_000;
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
 
 export class GoogleApiError extends Error {
@@ -26,7 +30,7 @@ async function errorText(response: Response): Promise<string> {
   } catch {
     // JSON değilse ham metin
   }
-  return truncate(raw || `HTTP ${response.status}`);
+  return truncate(raw ? `HTTP ${response.status}: ${raw}` : `HTTP ${response.status}`);
 }
 
 /** Refresh token'ı kısa ömürlü access token'a çevirir. */
@@ -40,6 +44,7 @@ export async function getAccessToken(cfg: AdsConfig, fetchFn: FetchFn = fetch): 
       refresh_token: cfg.refreshToken,
       grant_type: "refresh_token",
     }).toString(),
+    signal: AbortSignal.timeout(OAUTH_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new GoogleApiError(`OAuth token alınamadı: ${await errorText(response)}`, response.status);
@@ -78,12 +83,16 @@ export async function searchStream(
     method: "POST",
     headers: adsHeaders(cfg, token, developerToken),
     body: JSON.stringify({ query }),
+    signal: AbortSignal.timeout(ADS_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new GoogleApiError(`Google Ads sorgusu başarısız: ${await errorText(response)}`, response.status);
   }
-  const batches = (await response.json()) as { results?: unknown[] }[];
-  return batches.flatMap((batch) => batch.results ?? []);
+  const batches: unknown = await response.json();
+  if (!Array.isArray(batches)) {
+    throw new GoogleApiError("Google Ads yanıtı beklenmeyen biçimde", 502);
+  }
+  return (batches as { results?: unknown[] }[]).flatMap((batch) => batch?.results ?? []);
 }
 
 interface CampaignMetricsResult {
@@ -156,12 +165,19 @@ export async function ingestConversion(
   // Yalnızca açık onay "CONSENT_GRANTED" olarak gider. "denied" ve null alanı hiç göndermez (muhafazakâr).
   if (conv.adUserData === "granted") body.consent = { adUserData: "CONSENT_GRANTED" };
 
-  const response = await fetchFn(DATA_MANAGER_INGEST_URL, {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) return { ok: false, error: await errorText(response) };
-  const data = (await response.json().catch(() => ({}))) as { requestId?: string };
-  return { ok: true, requestId: data.requestId ?? null };
+  // Ağ hatası, zaman aşımı veya iptal bu olayı başarısız sayar; toplu işlemi düşürmez.
+  try {
+    const response = await fetchFn(DATA_MANAGER_INGEST_URL, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(INGEST_TIMEOUT_MS),
+    });
+    if (!response.ok) return { ok: false, error: await errorText(response) };
+    const data = (await response.json().catch(() => ({}))) as { requestId?: string };
+    return { ok: true, requestId: data.requestId ?? null };
+  } catch (err) {
+    const name = err instanceof Error ? err.name : "bilinmeyen";
+    return { ok: false, error: truncate(`Data Manager isteği başarısız (${name})`) };
+  }
 }
