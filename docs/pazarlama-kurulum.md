@@ -56,7 +56,38 @@
 
 ## 8. Canlı doğrulama
 - OAuth kontrolü, test veri gönderimi (ingest) ve cron tetikleme, yukarıdaki kimlik bilgileri ayarlandıktan sonra
-  Task 9'a göre sahip tarafından yapılır. Bu adımlardan önce hiçbir şey çalıştırılmaz.
+  sahip tarafından yapılır. Bu adımlardan önce hiçbir şey çalıştırılmaz.
+- Kontrol betiği: `apps/panel/scripts/ads/check.ts` (`ads:check`). Production değerleri yerelde
+  `apps/panel/.env` dosyasına kopyalanmaz; betik panel konteynerinin içinde, konteynerin kendi ortam
+  değişkenleriyle çalışır.
+
+### 8a. Sunucuda konteyner ve betik kontrolü
+- [ ] `docker compose -f /opt/seker/docker-compose.yml exec panel node --version` ile konteynerin ayakta olduğunu gör.
+- [ ] Betiğin imajda bulunduğunu doğrula (`exec panel ls scripts/ads/check.ts`). Yoksa bu adımı durdur ve
+      imajın betik ile `tsx` bağımlılığını içerip içermediğini kontrol et.
+
+### 8b. Bağlantı kontrolü (OAuth, harcama, validateOnly)
+- [ ] `docker compose -f /opt/seker/docker-compose.yml exec panel npx tsx scripts/ads/check.ts` çalıştır.
+      Beklenen çıktı:
+      ```
+      1/3 OAuth: tamam
+      2/3 Harcama: son 7 günde N kampanya-gün satırı
+      3/3 Data Manager (validateOnly): HTTP 200 …
+      ```
+- [ ] 3. adımda HTTP 400 ve mesaj "gclid" ile ilgiliyse (sahte gclid) bağlantı ve yetki doğrudur; sorun yok.
+- [ ] 401 veya 403 ise: §1'deki kapsamları (scope), "In production" durumunu ve Data Manager API'nin etkin
+      olduğunu kontrol et.
+- [ ] Betik hiçbir gizli değer yazdırmaz; çıktıyı yine de paylaşmadan önce gözden geçir.
+
+### 8c. Cron'u bir kez elle tetikleme
+- [ ] `docker compose -f /opt/seker/docker-compose.yml exec cron sh -c 'curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://panel:3000/api/cron/ads'`
+      Beklenen: `{"ok":true,"spendRows":N,"sent":0,"failed":0,"skipped":0}` (N ≥ 0).
+- [ ] Panel → Pazarlama tablosunda dünün harcamasının göründüğünü doğrula.
+
+### 8d. Uçtan uca dönüşüm
+- [ ] Gerçek bir reklam tıklamasıyla siteden form doldur (test adayı); panelde adayı "Randevu"ya al.
+- [ ] Ertesi sabah (veya cron'u elle tetikleyerek) `/pazarlama` listesinde satırın "Gönderildi" olduğunu gör.
+- [ ] Google Ads'te "Panel · Randevu" dönüşümü 24–48 saat içinde görünür (Google'ın işleme süresi).
 
 ## Token beklerken
 - Google Ads → Raporlar → Kampanyalar raporu; segment "Gün"; kolonlar: Gün, Kampanya kimliği, Kampanya, Maliyet,
