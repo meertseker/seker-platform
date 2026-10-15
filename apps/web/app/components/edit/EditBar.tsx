@@ -4,7 +4,8 @@ import './edit.css';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Editor } from '@seker/auth/editor';
-import type { AnnouncementRow, ListItem, ReaderData } from '@/lib/content/types';
+import { UploadDialog } from './UploadDialog';
+import type { AnnouncementRow, ImageValue, ListItem, ReaderData } from '@/lib/content/types';
 import { saveContent } from '@/app/actions/content';
 import { applyListField, loadPending, pendingReducer, savePending } from './pending';
 import { beginTextEdit } from './TextEditing';
@@ -80,6 +81,17 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       const path = el.dataset.editPath;
       const isPending = key in pending;
       el.dataset.editPending = isPending ? '1' : '0';
+      if (isPending && el.dataset.editKind === 'image') {
+        const v = pending[key].value;
+        const item = path ? (v as Record<string, unknown>[]).find((i) => i.id === path.split('.')[0]) : null;
+        const img = (path ? item?.[path.split('.')[1]] : v) as { src?: string } | undefined;
+        const tag = el instanceof HTMLImageElement ? el : el.querySelector('img');
+        if (tag && img?.src) {
+          tag.src = img.src;
+          tag.removeAttribute('srcset');
+        }
+        return;
+      }
       if (!isPending || el.dataset.editKind !== 'text' || el.isContentEditable) return;
       const v = pending[key].value;
       if (path) {
@@ -297,6 +309,16 @@ function EditBarExtras(p: ExtrasProps) {
         <HistoryDrawer onClose={() => p.setPanel(null)}
           onReverted={() => { p.toast({ text: 'Geri alındı ve yayında.', tone: 'ok' }); window.location.reload(); }}
           onError={(text) => p.toast({ text, tone: 'error' })} />
+      ) : null}
+      {p.panel === 'upload' && p.target ? (
+        <UploadDialog
+          title={p.data.meta[p.target.key].label}
+          current={(p.target.path
+            ? (p.currentValue(p.target.key) as ListItem[]).find((i) => i.id === p.target!.path!.split('.')[0])?.[p.target.path.split('.')[1]]
+            : p.currentValue(p.target.key)) as ImageValue}
+          onDone={(v) => { p.setValue(p.target!.key, v, p.target!.path); p.setPanel(null); p.toast({ text: 'Fotoğraf hazır. Yayınlamak için Kaydet’e basın.', tone: 'ok' }); }}
+          onClose={() => p.setPanel(null)}
+        />
       ) : null}
       {p.panel === 'preview' ? <PhonePreview onClose={() => p.setPanel(null)} /> : null}
     </>
