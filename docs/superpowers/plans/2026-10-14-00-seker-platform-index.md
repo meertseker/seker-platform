@@ -161,17 +161,19 @@ Panelin `lib/supabase/server.ts`, `lib/supabase/admin.ts`, `lib/supabase/middlew
 export type ContentKind = 'text' | 'rich' | 'image' | 'list';
 export type SlotDef = {
   kind: ContentKind; default: unknown; label: string;
-  max?: number; pattern?: RegExp; warn?: string; allowHeadings?: boolean; // allowHeadings yalnızca legal.*
+  max?: number; pattern?: string; // düzenli ifade kaynağı (RegExp istemciye serileştirilemez) warn?: string; allowHeadings?: boolean; // allowHeadings yalnızca legal.*
   // list için:
   fields?: Record<string, { kind: 'text' | 'rich' | 'image' | 'flag'; max?: number; label: string }>;
-  maxItems?: number; fixedItems?: boolean; newItem?: () => Record<string, unknown>;
+  maxItems?: number; fixedItems?: boolean; newItem?: Record<string, unknown>; // nesne (fonksiyon serileştirilemez)
 };
 export const SLOTS: Record<string, SlotDef>; // anahtar örn. 'home.hero.title'
 // apps/web/lib/content/getContent.ts
 export async function getContent(): Promise<ContentMap>; // "use cache" + cacheTag('site-content'); hata olursa {}
 export function read<T>(map: ContentMap, key: string): T; // map[key] ?? SLOTS[key].default
 export async function isEditing(): Promise<boolean>;        // draftMode().isEnabled
-export async function getReaderData(): Promise<ReaderData>;  // içerik + düzenleme modunda slot meta'sı
+// apps/web/lib/content/server.ts (getContent.ts'ten re-export edilmez: döngüsel import)
+export const getReaderData: () => Promise<ReaderData>;  // içerik + düzenleme modunda slot meta'sı
+// SlotMeta = Pick<SlotDef, 'kind'|'max'|'fields'|'label'|'warn'|'pattern'|'maxItems'|'fixedItems'|'newItem'|'allowHeadings'>
 export async function getAnnouncements(): Promise<Announcement[]>;
 // apps/web/app/actions/content.ts
 export type ContentEdit = { key: string; value: unknown; baseUpdatedAt: string | null };
