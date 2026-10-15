@@ -104,7 +104,8 @@ begin
     insert into public.conversion_uploads (lead_id, gclid, conversion_action, conversion_at, value, status, error)
     values (new.id, nullif(new.gclid, ''), v_action, now(), v_value, v_status, v_error)
     on conflict (lead_id, conversion_action) do update
-      set gclid = excluded.gclid, status = excluded.status, error = excluded.error
+      set gclid = excluded.gclid, status = excluded.status, error = excluded.error,
+          conversion_at = excluded.conversion_at, value = excluded.value
       where public.conversion_uploads.status = 'atlandi'
         and public.conversion_uploads.error = 'gclid yok'
         and excluded.status = 'bekliyor';
