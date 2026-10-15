@@ -59,3 +59,30 @@ export async function importSpendCsv(
     return { ok: false, error: "CSV içe aktarılamadı, lütfen tekrar deneyin" };
   }
 }
+
+export async function retryConversionUpload(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const profile = await getSessionProfile();
+    if (profile.role !== "yonetici") return { ok: false, error: "Bu işlem için yönetici yetkisi gerekir" };
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, error: "Geçersiz kayıt" };
+
+    // Yalnızca 'hata' satırları canlandırılır; 'atlandi' (rıza yok / kapsam dışı) asla.
+    const { data, error } = await createAdminSupabase()
+      .from("conversion_uploads")
+      .update({ status: "bekliyor", error: null })
+      .eq("id", id)
+      .eq("status", "hata")
+      .select("id");
+    if (error) return { ok: false, error: "Kayıt güncellenemedi" };
+    if (!data?.length) return { ok: false, error: "Yalnızca hatalı kayıtlar tekrar denenebilir" };
+
+    revalidatePath("/pazarlama");
+    return { ok: true };
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    console.error("[marketing] retryConversionUpload başarısız:", error instanceof Error ? error.name : "bilinmeyen");
+    return { ok: false, error: "Kayıt güncellenemedi" };
+  }
+}

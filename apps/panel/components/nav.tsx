@@ -9,6 +9,7 @@ import {
   BarChart3,
   GraduationCap,
   LogOut,
+  Megaphone,
   PencilLine,
   Plus,
   Settings,
@@ -45,6 +46,7 @@ const NEW_LEAD_HREF = "/leads/new";
 const profileLinks = [
   { href: "/ayarlar", label: "Ayarlar", icon: Settings, roles: ["yonetici"] },
   { href: "/teklifler", label: "Teklifler", icon: BadgePercent, roles: ["yonetici"] },
+  { href: "/pazarlama", label: "Pazarlama", icon: Megaphone, roles: ["yonetici"] },
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
 ] as const;
 
