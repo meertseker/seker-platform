@@ -15,4 +15,5 @@
 .seker-toasts { position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); right: max(16px, env(safe-area-inset-right, 0px)); z-index: 2147483002; display: grid; gap: 8px; }
 .seker-toast { max-width: 360px; padding: 12px 16px; border-radius: 12px; background: #2a1840; color: #fff; font: 14px/1.4 system-ui; }
 .seker-toast.error { background: #b4234e; }
+.seker-toast.warn { background: #8a5a00; }
 body.seker-editing { padding-top: 56px; }

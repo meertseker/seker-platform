@@ -112,6 +112,8 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       const key = el.dataset.editKey!;
       const path = el.dataset.editPath;
       const kind = el.dataset.editKind;
+      const warn = data.meta[key]?.warn;
+      if (warn) toast({ text: warn, tone: 'warn' });
       if (kind === 'image') return void (setTarget({ key, path }), setPanel('upload'));
       if (kind === 'rich') return void (setTarget({ key, path }), setPanel('rich'));
       if (kind !== 'text') return;
@@ -146,7 +148,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       document.removeEventListener('click', onClick, true);
       stopRef.current?.();
     };
-  }, [editor, inIframe, setValue, toast]);
+  }, [editor, inIframe, setValue, toast, data.meta]);
 
   const count = Object.keys(pending).length;
   useEffect(() => {

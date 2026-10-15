@@ -1,32 +1,14 @@
-"use client"
-import React from 'react'
+import type { Metadata } from 'next';
+import LegalView from '../LegalView';
+import { getReaderData } from '@/lib/content/server';
+import { makeReader } from '@/lib/content/reader';
+import { buildMetadata } from '@/lib/metadata';
 
-const CerezPage = () => {
-  return (
-    <div className="min-h-screen bg-paper">
-      
-      <div className="py-16">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="mb-8 font-display text-3xl text-ink md:text-4xl">
-              Çerez Politikası
-            </h1>
-            <div className="prose prose-lg">
-              <p className="mb-6 text-ink-soft">
-                Bu sayfa şu anda hazırlanmaktadır. Çerez politikamız hakkında bilgi almak için bizimle iletişime geçebilirsiniz.
-              </p>
-              <a 
-                href="/iletisim"
-                className="inline-block rounded-full bg-grape px-6 py-3 font-semibold text-white shadow-lg shadow-grape/30 transition-colors duration-200 hover:bg-ink"
-              >
-                İletişim
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+export async function generateMetadata(): Promise<Metadata> {
+  const c = makeReader(await getReaderData());
+  return buildMetadata({ title: c.text('meta.cerez.title'), description: c.text('meta.cerez.description'), path: '/cerez' });
 }
 
-export default CerezPage 
+export default async function CerezPage() {
+  return <LegalView data={await getReaderData()} page="cerez" />;
+}

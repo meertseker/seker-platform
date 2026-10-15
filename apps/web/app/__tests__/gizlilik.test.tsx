@@ -1,8 +1,12 @@
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import GizlilikPage from '../(site)/gizlilik/page';
+import LegalView from '../(site)/LegalView';
+import { defaultData } from '@/lib/content/testing';
+import { SLOTS } from '@/lib/content/registry';
 import { KVKK_TEXT, KVKK_CONSENT_LABEL, TEYIT_MARKER } from '@/content/kvkk';
+
+const GizlilikPage = () => <LegalView data={defaultData(['legal.', 'meta.gizlilik.'])} page="gizlilik" />;
 
 const allText = () => JSON.stringify(KVKK_TEXT);
 
@@ -37,5 +41,19 @@ describe('KVKK aydınlatma metni', () => {
 
   it('okuldan teyit bekleyen tam dört işaret var', () => {
     expect(JSON.stringify(KVKK_TEXT).split(TEYIT_MARKER).length - 1).toBe(4);
+  });
+
+  it('düzenlenebilir varsayılanlarda da tam dört işaret var (gövdede 3 + güncelleme tarihinde 1)', () => {
+    const count = (t: string) => t.split(TEYIT_MARKER).length - 1;
+    const body = SLOTS['legal.gizlilik.body'].default as string;
+    const updatedOn = SLOTS['legal.gizlilik.updatedOn'].default as string;
+    expect(count(body)).toBe(3);
+    expect(count(updatedOn)).toBe(1);
+    expect(count(body) + count(updatedOn)).toBe(4);
+  });
+
+  it('onay cümlesi düzenlenebilir bir alan değildir', () => {
+    expect(Object.keys(SLOTS).some((k) => k.startsWith('form.kvkk'))).toBe(false);
+    expect(Object.values(SLOTS).some((d) => d.default === KVKK_CONSENT_LABEL)).toBe(false);
   });
 });

@@ -210,3 +210,17 @@ p {
     to   { opacity: 1; transform: scale(1); }
   }
 }
+
+/* Yasal sayfa gövdesi (zengin metin): KVKK bölümlerinin eski sınıfları, typography eklentisi olmadan. */
+.legal-body h2 {
+  @apply mb-3 mt-10 font-display text-xl text-ink md:text-2xl;
+}
+.legal-body h2:first-child {
+  @apply mt-0;
+}
+.legal-body p {
+  @apply mb-3 leading-relaxed text-ink-soft;
+}
+.legal-body ul {
+  @apply mb-3 list-disc space-y-2 pl-6 text-ink-soft;
+}

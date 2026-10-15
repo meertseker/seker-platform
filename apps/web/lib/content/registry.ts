@@ -17,6 +17,7 @@ import { TESEKKURLER_SLOTS } from './slots/tesekkurler';
 import { YORUMLAR_SLOTS } from './slots/yorumlar';
 import { SSS_SLOTS } from './slots/sss';
 import { BULTENLER_SLOTS } from './slots/bultenler';
+import { LEGAL_SLOTS } from './slots/legal';
 
 // Her sayfa görevi kendi slots dosyasını buraya ekler.
 export const SLOTS: Record<string, SlotDef> = {
@@ -38,6 +39,7 @@ export const SLOTS: Record<string, SlotDef> = {
   ...YORUMLAR_SLOTS,
   ...SSS_SLOTS,
   ...BULTENLER_SLOTS,
+  ...LEGAL_SLOTS,
 };
 
 export { PAGE_IDS } from './pageIds';
