@@ -1,4 +1,5 @@
 import { getSessionProfile } from "@/lib/auth";
+import { siteEditUrl } from "@/lib/site-edit-url";
 import { Nav } from "@/components/nav";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { NotificationItem } from "@/components/notification-bell";
@@ -44,6 +45,7 @@ export default async function AppLayout({
         role={profile.role}
         notifications={notifications}
         unreadCount={unreadCount}
+        siteEditUrl={profile.can_edit_site ? siteEditUrl(process.env.SITE_URL) : null}
       />
       <div className="md:pl-64">
         <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-28 pt-4 sm:px-6 md:pb-8 md:pt-6 lg:px-8">

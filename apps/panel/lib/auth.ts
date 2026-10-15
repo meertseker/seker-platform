@@ -5,6 +5,7 @@ export interface SessionProfile {
   id: string;
   full_name: string;
   role: "yonetici" | "danisman";
+  can_edit_site: boolean;
 }
 
 export async function getSessionProfile(): Promise<SessionProfile> {
@@ -19,7 +20,7 @@ export async function getSessionProfile(): Promise<SessionProfile> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, full_name, role, is_active")
+    .select("id, full_name, role, is_active, can_edit_site")
     .eq("id", user.id)
     .single();
 

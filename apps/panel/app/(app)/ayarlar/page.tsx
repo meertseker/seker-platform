@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { PriceItemsEditor, type PriceItemRow } from "@/components/price-items-editor";
+import { SiteEditorToggle } from "@/components/site-editor-toggle";
 import { SeasonManager, type SeasonItem } from "@/components/season-manager";
 import { getSessionProfile } from "@/lib/auth";
 import type { Program } from "@/lib/constants";
@@ -28,6 +29,13 @@ export default async function AyarlarPage() {
     .from("price_lists")
     .select("id, season, is_active")
     .order("season", { ascending: false });
+
+  const { data: staffRows } = await supabase
+    .from("profiles")
+    .select("id, full_name, can_edit_site")
+    .eq("is_active", true)
+    .order("full_name");
+  const staff = (staffRows ?? []).map((s) => ({ id: s.id, fullName: s.full_name, canEditSite: s.can_edit_site }));
 
   const rows = (priceLists ?? []) as PriceListRow[];
   const seasons: SeasonItem[] = rows.map((row) => ({
@@ -70,6 +78,8 @@ export default async function AyarlarPage() {
           Fiyat düzenlemek için önce bir sezonu aktif yapın.
         </p>
       )}
+
+      <SiteEditorToggle staff={staff} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   BarChart3,
   GraduationCap,
   LogOut,
+  PencilLine,
   Plus,
   Settings,
   User,
@@ -28,6 +29,7 @@ interface NavProps {
   role: Role;
   notifications: NotificationItem[];
   unreadCount: number;
+  siteEditUrl: string | null;
 }
 
 const HOME_HREF = "/pipeline";
@@ -121,12 +123,14 @@ function ProfileMenuContents({
   links,
   pathname,
   onNavigate,
+  siteEditUrl,
 }: {
   fullName: string;
   roleLabel: string;
   links: readonly ProfileLink[];
   pathname: string;
   onNavigate?: () => void;
+  siteEditUrl?: string | null;
 }) {
   return (
     <>
@@ -145,6 +149,15 @@ function ProfileMenuContents({
             onClick={onNavigate}
           />
         ))}
+        {siteEditUrl ? (
+          <a
+            href={siteEditUrl}
+            className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            <PencilLine className="size-5 shrink-0" aria-hidden="true" />
+            Siteyi düzenle
+          </a>
+        ) : null}
       </div>
       <form action={signOut} className="border-t border-border pt-2">
         <button
@@ -159,7 +172,7 @@ function ProfileMenuContents({
   );
 }
 
-export function Nav({ fullName, role, notifications, unreadCount }: NavProps) {
+export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }: NavProps) {
   const currentPathname = usePathname();
   const mounted = useSyncExternalStore(
     subscribeClientReady,
@@ -195,6 +208,15 @@ export function Nav({ fullName, role, notifications, unreadCount }: NavProps) {
               pathname={pathname}
             />
           ))}
+          {siteEditUrl ? (
+            <a
+              href={siteEditUrl}
+              className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              <PencilLine className="size-5 shrink-0" aria-hidden="true" />
+              Siteyi düzenle
+            </a>
+          ) : null}
           <Link
             href={NEW_LEAD_HREF}
             className="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -251,6 +273,7 @@ export function Nav({ fullName, role, notifications, unreadCount }: NavProps) {
                     links={visibleProfileLinks}
                     pathname={pathname}
                     onNavigate={() => setOpenMenuPathname(null)}
+                    siteEditUrl={siteEditUrl}
                   />
                 </div>
               ) : null}
