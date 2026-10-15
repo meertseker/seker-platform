@@ -1,5 +1,9 @@
 # Pazarlama entegrasyonu: sahibin kurulum listesi
 
+> **Sahip notu (migrasyon sırası):** `0007` ve `0008` migrasyonları, sunucuda zaten uygulanmış `0009`'dan önce sıralanır.
+> Canlıya almadan önce `npx supabase migration list` ile durumu kontrol et, ardından
+> `npx supabase db push --include-all` çalıştır.
+
 ## 1. Google Cloud projesi
 - [ ] console.cloud.google.com → yeni proje "seker-platform".
 - [ ] APIs & Services → Library: "Google Ads API" ve "Data Manager API" etkinleştir.
@@ -124,6 +128,8 @@ unset GOOGLE_ADS_DEVELOPER_TOKEN GOOGLE_ADS_CLIENT_ID GOOGLE_ADS_CLIENT_SECRET G
 - [ ] Gerçek bir reklam tıklamasıyla siteden form doldur (test adayı); panelde adayı "Randevu"ya al.
 - [ ] Ertesi sabah (veya cron'u elle tetikleyerek) `/pazarlama` listesinde satırın "Gönderildi" olduğunu gör.
 - [ ] Google Ads'te "Panel · Randevu" dönüşümü 24–48 saat içinde görünür (Google'ın işleme süresi).
+- [ ] Not: "Gönderildi" yalnızca Google'ın isteği kabul ettiği anlamına gelir (satırdaki `requestId: …` Data Manager yanıt
+      kimliğidir); dönüşümün gerçekten hesaba yazıldığı Google Ads'te doğrulanır.
 
 ## Token beklerken
 - Google Ads → Raporlar → Kampanyalar raporu; segment "Gün"; kolonlar: Gün, Kampanya kimliği, Kampanya, Maliyet,
