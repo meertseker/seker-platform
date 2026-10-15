@@ -201,7 +201,7 @@ function PaymentSummarySection({ summary }: { summary: PaymentSummary }) {
       <MetricCard
         label="Bu ay tahsil edilen"
         value={formatTRY(summary.paidThisMonthKurus)}
-        helper={`Seçili ay içinde ödendi işaretlenen taksitler · vadesi gelenin ${rate == null ? "—" : `%${rate}`}'i`}
+        helper={`Seçili ay içinde ödendi işaretlenen taksitler · tahsil oranı ${rate == null ? "—" : `%${rate}`}`}
       />
       <div className="space-y-2">
         <MetricCard
