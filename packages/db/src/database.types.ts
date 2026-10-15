@@ -5,7 +5,33 @@ export type Database = {
   
   "public": {
           Tables: {
-            "app_settings": {
+            "announcements": {
+                  Row: {
+                    "body": string,"ends_on": string | null,"id": string,"image_id": string | null,"published": boolean,"sort": number,"starts_on": string,"title": string,"updated_at": string,"updated_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "body": string,"ends_on"?: string | null,"id"?: string,"image_id"?: string | null,"published"?: boolean,"sort"?: number,"starts_on"?: string,"title": string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "body"?: string,"ends_on"?: string | null,"id"?: string,"image_id"?: string | null,"published"?: boolean,"sort"?: number,"starts_on"?: string,"title"?: string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "announcements_image_id_fkey"
+      columns: ["image_id"]
+isOneToOne: false
+      referencedRelation: "media_assets"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "announcements_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"app_settings": {
                   Row: {
                     "key": string,"value": NonNullable<Json>
                   }
@@ -42,6 +68,26 @@ isOneToOne: false
       columns: ["lead_id"]
 isOneToOne: false
       referencedRelation: "leads"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"content_revisions": {
+                  Row: {
+                    "created_at": string,"editor_id": string | null,"id": string,"key": string,"new_value": Json | null,"old_value": Json | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"editor_id"?: string | null,"id"?: string,"key": string,"new_value"?: Json | null,"old_value"?: Json | null
+                  }
+                  Update: {
+                    "created_at"?: string,"editor_id"?: string | null,"id"?: string,"key"?: string,"new_value"?: Json | null,"old_value"?: Json | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "content_revisions_editor_id_fkey"
+      columns: ["editor_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -166,6 +212,26 @@ isOneToOne: false
       columns: ["family_id"]
 isOneToOne: false
       referencedRelation: "families"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"media_assets": {
+                  Row: {
+                    "alt": string,"created_at": string,"faces": string,"height": number,"id": string,"s3_key": string,"uploaded_by": string | null,"width": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "alt": string,"created_at"?: string,"faces": string,"height": number,"id"?: string,"s3_key": string,"uploaded_by"?: string | null,"width": number
+                  }
+                  Update: {
+                    "alt"?: string,"created_at"?: string,"faces"?: string,"height"?: number,"id"?: string,"s3_key"?: string,"uploaded_by"?: string | null,"width"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "media_assets_uploaded_by_fkey"
+      columns: ["uploaded_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -295,14 +361,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"full_name": string,"id": string,"is_active": boolean,"role": string,"updated_at": string
+                    "can_edit_site": boolean,"created_at": string,"full_name": string,"id": string,"is_active": boolean,"role": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"full_name": string,"id": string,"is_active"?: boolean,"role": string,"updated_at"?: string
+                    "can_edit_site"?: boolean,"created_at"?: string,"full_name": string,"id": string,"is_active"?: boolean,"role": string,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"full_name"?: string,"id"?: string,"is_active"?: boolean,"role"?: string,"updated_at"?: string
+                    "can_edit_site"?: boolean,"created_at"?: string,"full_name"?: string,"id"?: string,"is_active"?: boolean,"role"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -337,6 +403,26 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_overdue_installments"
       referencedColumns: ["student_id"]
+    }
+                  ]
+                },"site_content": {
+                  Row: {
+                    "key": string,"kind": string,"updated_at": string,"updated_by": string | null,"value": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "key": string,"kind": string,"updated_at"?: string,"updated_by"?: string | null,"value": NonNullable<Json>
+                  }
+                  Update: {
+                    "key"?: string,"kind"?: string,"updated_at"?: string,"updated_by"?: string | null,"value"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "site_content_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
     }
                   ]
                 },"students": {
@@ -388,7 +474,27 @@ isOneToOne: false
                 }
           }
           Views: {
-            "v_overdue_installments": {
+            "active_announcements": {
+                  Row: {
+                    "body": string | null,"ends_on": string | null,"id": string | null,"image_id": string | null,"sort": number | null,"starts_on": string | null,"title": string | null,"updated_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                           "body"?: string | null,"ends_on"?: string | null,"id"?: string | null,"image_id"?: string | null,"sort"?: number | null,"starts_on"?: string | null,"title"?: string | null,"updated_at"?: string | null
+                         }
+                        Update: {
+                           "body"?: string | null,"ends_on"?: string | null,"id"?: string | null,"image_id"?: string | null,"sort"?: number | null,"starts_on"?: string | null,"title"?: string | null,"updated_at"?: string | null
+                         }
+                        Relationships: [
+                    {
+      foreignKeyName: "announcements_image_id_fkey"
+      columns: ["image_id"]
+isOneToOne: false
+      referencedRelation: "media_assets"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"v_overdue_installments": {
                   Row: {
                     "amount": number | null,"days_overdue": number | null,"due_date": string | null,"family_phone": string | null,"installment_id": string | null,"item_type": string | null,"season": string | null,"student_id": string | null,"student_name": string | null
                   }
@@ -402,6 +508,9 @@ isOneToOne: false
             "accept_counter_offer":
 { Args: { "source_offer_id": string }; Returns: string
                            },
+"can_edit_site":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "create_web_lead":
 { Args: { "p_consent_at": string,"p_gclid": string,"p_landing_path": string,"p_meta"?: Json,"p_parent_name": string,"p_phone": string,"p_utm": Json }; Returns: Json
                            },
@@ -410,6 +519,12 @@ isOneToOne: false
                            },
 "is_yonetici":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"save_site_content":
+{ Args: { "p_edits": Json }; Returns: Json
+                           },
+"set_can_edit_site":
+{ Args: { "p_user": string,"p_value": boolean }; Returns: undefined
                            }
           }
           Enums: {

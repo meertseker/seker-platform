@@ -6,7 +6,8 @@
   "exports": {
     "./cookie": "./src/cookie.ts",
     "./server": "./src/server.ts",
-    "./admin": "./src/admin.ts"
+    "./admin": "./src/admin.ts",
+    "./editor": "./src/editor.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

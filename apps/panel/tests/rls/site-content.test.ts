@@ -1,0 +1,107 @@
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { clientFor, admin } from "./helpers";
+
+const DAN_ID = "00000000-0000-0000-0000-000000000002";
+const KEY = "test.rls.title";
+let yon: SupabaseClient, dan: SupabaseClient, anon: SupabaseClient;
+
+beforeAll(async () => {
+  yon = await clientFor("yonetici@test.local");
+  dan = await clientFor("danisman@test.local");
+  anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { persistSession: false },
+  });
+  await admin.from("site_content").delete().like("key", "test.%");
+  await admin.from("content_revisions").delete().like("key", "test.%");
+  await admin.from("profiles").update({ can_edit_site: false }).eq("id", DAN_ID);
+});
+
+afterAll(async () => {
+  await admin.from("site_content").delete().like("key", "test.%");
+  await admin.from("content_revisions").delete().like("key", "test.%");
+  await admin.from("profiles").update({ can_edit_site: false }).eq("id", DAN_ID);
+});
+
+const edit = (value: unknown, baseUpdatedAt: string | null) => [{ key: KEY, kind: "text", value, baseUpdatedAt }];
+
+describe("site_content RLS", () => {
+  it("anon okuyabilir, yazamaz", async () => {
+    await admin.from("site_content").insert({ key: "test.rls.read", value: "x", kind: "text" });
+    const { data } = await anon.from("site_content").select("key").eq("key", "test.rls.read");
+    expect(data).toHaveLength(1);
+    const { error } = await anon.from("site_content").insert({ key: "test.rls.anon", value: "x", kind: "text" });
+    expect(error).not.toBeNull();
+  });
+
+  it("editör olmayan danışman save_site_content çağıramaz", async () => {
+    const { error } = await dan.rpc("save_site_content", { p_edits: edit("a", null) });
+    expect(error?.code).toBe("42501");
+  });
+
+  it("danışman kendi can_edit_site bayrağını açamaz", async () => {
+    await dan.from("profiles").update({ can_edit_site: true }).eq("id", DAN_ID);
+    const { data } = await admin.from("profiles").select("can_edit_site").eq("id", DAN_ID).single();
+    expect(data!.can_edit_site).toBe(false);
+  });
+
+  it("yönetici set_can_edit_site ile bayrağı açar", async () => {
+    const { error } = await yon.rpc("set_can_edit_site", { p_user: DAN_ID, p_value: true });
+    expect(error).toBeNull();
+    const { data } = await admin.from("profiles").select("can_edit_site").eq("id", DAN_ID).single();
+    expect(data!.can_edit_site).toBe(true);
+  });
+
+  it("editör kaydeder, revizyon yazılır", async () => {
+    const { data, error } = await dan.rpc("save_site_content", { p_edits: edit("İlk", null) });
+    expect(error).toBeNull();
+    expect(data.conflicts).toEqual([]);
+    const { data: row } = await admin.from("site_content").select("value, updated_by").eq("key", KEY).single();
+    expect(row!.value).toBe("İlk");
+    expect(row!.updated_by).toBe(DAN_ID);
+    const { data: revs } = await admin.from("content_revisions").select("old_value,new_value").eq("key", KEY);
+    expect(revs).toEqual([{ old_value: null, new_value: "İlk" }]);
+  });
+
+  it("eski baseUpdatedAt ile kayıt çakışma döner ve hiçbir şey yazmaz", async () => {
+    const { data: cur } = await dan.from("site_content").select("updated_at").eq("key", KEY).single();
+    const first = await dan.rpc("save_site_content", { p_edits: edit("İkinci", cur!.updated_at) });
+    expect(first.data.conflicts).toEqual([]);
+    const stale = await dan.rpc("save_site_content", {
+      p_edits: [
+        { key: "test.rls.other", kind: "text", value: "yan", baseUpdatedAt: null },
+        { key: KEY, kind: "text", value: "Üçüncü", baseUpdatedAt: cur!.updated_at },
+      ],
+    });
+    expect(stale.data.conflicts).toEqual([KEY]);
+    const { data: other } = await admin.from("site_content").select("key").eq("key", "test.rls.other");
+    expect(other).toHaveLength(0);
+  });
+
+  it("value null satırı siler (koddaki varsayılana döner)", async () => {
+    const { data: cur } = await dan.from("site_content").select("updated_at").eq("key", KEY).single();
+    const res = await dan.rpc("save_site_content", { p_edits: edit(null, cur!.updated_at) });
+    expect(res.data.conflicts).toEqual([]);
+    const { data } = await admin.from("site_content").select("key").eq("key", KEY);
+    expect(data).toHaveLength(0);
+  });
+
+  it("revizyonlar değiştirilemez ve silinemez", async () => {
+    const { data: rev } = await admin.from("content_revisions").select("id").eq("key", KEY).limit(1).single();
+    await dan.from("content_revisions").update({ new_value: "hack" }).eq("id", rev!.id);
+    await dan.from("content_revisions").delete().eq("id", rev!.id);
+    const { data } = await admin.from("content_revisions").select("new_value").eq("id", rev!.id).single();
+    expect(data!.new_value).not.toBe("hack");
+  });
+
+  it("anon yalnızca yayındaki duyuruları görür", async () => {
+    await admin.from("announcements").insert([
+      { title: "test yayında", body: "<p>a</p>", starts_on: "2020-01-01", published: true, sort: 0 },
+      { title: "test taslak", body: "<p>b</p>", starts_on: "2020-01-01", published: false, sort: 0 },
+      { title: "test bitti", body: "<p>c</p>", starts_on: "2020-01-01", ends_on: "2020-02-01", published: true, sort: 0 },
+    ]);
+    const { data } = await anon.from("active_announcements").select("title").like("title", "test %");
+    expect(data!.map((r) => r.title)).toEqual(["test yayında"]);
+    await admin.from("announcements").delete().like("title", "test %");
+  });
+});
