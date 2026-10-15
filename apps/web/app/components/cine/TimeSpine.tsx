@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import Timecode from './Timecode'
-import { chapterLabel, type DayChapter } from '@/content/day'
+import { chapterLabel } from '@/content/day'
+import { makeReader } from '@/lib/content/reader'
+import type { ReaderData } from '@/lib/content/types'
+
+type SpineChapter = { id: string; time: string; title: string }
 
 /**
  * Zaman omurgası — indexing. Kaydırmayla ilerleyen kamera konumu,
@@ -10,8 +14,13 @@ import { chapterLabel, type DayChapter } from '@/content/day'
  *
  * Gösterge her zaman `chapterLabel()` üzerinden okunur — saat doğrulanana
  * kadar bu, gerçek bir saat değil sahne sırasıdır (bkz. content/day.ts).
+ *
+ * Başlıklar sayfadaki bölüm başlıklarının aynasıdır: işaretlenmez, düzenleme bölümün kendi başlığından yapılır.
  */
-export default function TimeSpine({ chapters }: { chapters: DayChapter[] }) {
+export default function TimeSpine({ data }: { data: ReaderData }) {
+  const c = makeReader(data)
+  const chapters = c.list<SpineChapter>('day.chapters')
+  const scenePrefix = c.text('gunlukakis.scene.prefix')
   const [activeId, setActiveId] = useState(chapters[0]?.id ?? '')
 
   useEffect(() => {
@@ -33,7 +42,8 @@ export default function TimeSpine({ chapters }: { chapters: DayChapter[] }) {
 
     for (const node of nodes) observer.observe(node)
     return () => observer.disconnect()
-  }, [chapters])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
 
   return (
     <nav
@@ -52,9 +62,9 @@ export default function TimeSpine({ chapters }: { chapters: DayChapter[] }) {
                   active ? 'bg-white' : ''
                 }`}
               >
-                <Timecode className="block">{chapterLabel(chapter)}</Timecode>
+                <Timecode className="block">{chapterLabel(chapter, scenePrefix)}</Timecode>
                 <span className="text-sm font-semibold text-ink group-hover:text-grape">
-                  {chapter.title}
+                  {c.fill(chapter.title)}
                 </span>
               </a>
             </li>

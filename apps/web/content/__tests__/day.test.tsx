@@ -4,6 +4,11 @@ import { DAY_CHAPTERS, SCHEDULE_READY, ROSTER_STATUS, ENGLISH_COVERAGE_READY, ch
 import { MEDIA } from '../media';
 import TimeSpine from '@/app/components/cine/TimeSpine';
 import DayChapters from '@/app/components/cine/DayChapters';
+import { defaultData } from '@/lib/content/testing';
+import { makeReader } from '@/lib/content/reader';
+
+const DAY_DATA = defaultData(['day.', 'gunlukakis.', 'media.']);
+const reader = () => makeReader(DAY_DATA);
 
 describe('DAY_CHAPTERS', () => {
   it('en az sekiz bölüm içerir', () => {
@@ -76,14 +81,14 @@ describe('saat doğrulama kapısı — SCHEDULE_READY', () => {
   });
 
   it('TimeSpine ilk sahneyi okur buradasınız diye işaretler', () => {
-    const { container } = render(<TimeSpine chapters={DAY_CHAPTERS} />);
+    const { container } = render(<TimeSpine data={DAY_DATA} />);
     const active = container.querySelectorAll('[data-active="true"]');
     expect(active).toHaveLength(1);
     expect(active[0].textContent).toContain(DAY_CHAPTERS[0].title);
   });
 
   it('TimeSpine, saat doğrulanmadan hiçbir HH:MM saatini render etmez', () => {
-    const { container } = render(<TimeSpine chapters={DAY_CHAPTERS} />);
+    const { container } = render(<TimeSpine data={DAY_DATA} />);
     const text = container.textContent ?? '';
     for (const chapter of DAY_CHAPTERS) {
       expect(text).not.toContain(chapter.time);
@@ -92,7 +97,7 @@ describe('saat doğrulama kapısı — SCHEDULE_READY', () => {
   });
 
   it('DayChapters bölüm listesi de doğrulanmamış saatleri render etmez', () => {
-    const { container } = render(<DayChapters chapters={DAY_CHAPTERS} />);
+    const { container } = render(<DayChapters c={reader()} />);
     const text = container.textContent ?? '';
     for (const chapter of DAY_CHAPTERS) {
       expect(text).not.toContain(chapter.time);
@@ -107,7 +112,7 @@ describe('İngilizce kapsam doğrulama kapısı — ENGLISH_COVERAGE_READY', () 
   });
 
   it('ENGLISH_COVERAGE_READY false iken DayChapters öğretmenin günlük kapsamını iddia etmez', () => {
-    const { container } = render(<DayChapters chapters={DAY_CHAPTERS} />);
+    const { container } = render(<DayChapters c={reader()} />);
     const text = (container.textContent ?? '').toLowerCase();
     expect(text).not.toMatch(/gün boyunca kullan/);
     expect(text).not.toContain('sadece ders saatinde değil');
@@ -120,7 +125,7 @@ describe('künye doğrulama kapısı — ROSTER_STATUS', () => {
   });
 
   it('ROSTER_STATUS.ready true iken künye (Roster) çocuk ve öğretmen işaretlerini gösterir', () => {
-    const { container } = render(<DayChapters chapters={DAY_CHAPTERS} />);
+    const { container } = render(<DayChapters c={reader()} />);
     expect(container.querySelectorAll('[data-mark="child"]')).toHaveLength(ROSTER_STATUS.childCount);
     expect(container.querySelectorAll('[data-mark="teacher"]')).toHaveLength(
       ROSTER_STATUS.teacherCount,

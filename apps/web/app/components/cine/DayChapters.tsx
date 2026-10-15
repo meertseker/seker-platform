@@ -1,7 +1,22 @@
-import Frame from './Frame';
+import Frame, { type Grade } from './Frame';
 import Timecode from './Timecode';
 import Roster from './Roster';
-import { chapterLabel, ROSTER_STATUS, type DayChapter } from '@/content/day';
+import { Editable } from '@/app/components/edit/Editable';
+import { chapterLabel, ROSTER_STATUS } from '@/content/day';
+import type { MediaKey } from '@/content/media';
+import type { Reader } from '@/lib/content/types';
+
+export type DayChapterItem = {
+  id: string;
+  time: string;
+  title: string;
+  lead: string;
+  body1: string;
+  body2: string;
+  mediaKey: MediaKey;
+  grade: Grade;
+  feature?: 'roster';
+};
 
 /**
  * Günün bölüm bölüm anlatısı. `/gunluk-akis` sayfasından ayrık tutulur ki
@@ -11,9 +26,19 @@ import { chapterLabel, ROSTER_STATUS, type DayChapter } from '@/content/day';
 /** Bölüm şeritleri — günün sırası boyunca dönen aksan renkleri. */
 const CHAPTER_STRIPES = ['bg-sunny', 'bg-mint', 'bg-sky', 'bg-bubble', 'bg-grape', 'bg-tangerine'];
 
-export default function DayChapters({ chapters }: { chapters: DayChapter[] }) {
+const BODY_FIELDS = ['body1', 'body2'] as const;
+
+export default function DayChapters({ c }: { c: Reader }) {
+  const chapters = c.list<DayChapterItem>('day.chapters');
+  const scenePrefix = c.text('gunlukakis.scene.prefix');
+  const rosterCount = c
+    .text('gunlukakis.roster.count')
+    .replace('{cocuk}', String(ROSTER_STATUS.childCount))
+    .replace('{ogretmen}', String(ROSTER_STATUS.teacherCount));
+  const rosterLimit = c.text('gunlukakis.roster.limit').replace('{limit}', String(ROSTER_STATUS.limit));
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" {...c.listAttrs('day.chapters')}>
       {chapters.map((chapter, index) => (
         <section
           key={chapter.id}
@@ -24,13 +49,14 @@ export default function DayChapters({ chapters }: { chapters: DayChapter[] }) {
             aria-hidden="true"
             className={`mb-4 block h-1.5 w-14 rounded-full ${CHAPTER_STRIPES[index % CHAPTER_STRIPES.length]}`}
           />
-          <Timecode>{chapterLabel(chapter)}</Timecode>
-          <h2 className="mt-3 text-3xl text-ink md:text-4xl">{chapter.title}</h2>
-          <p className="mt-3 text-lg text-ink-soft">{chapter.lead}</p>
+          <Timecode>{chapterLabel(chapter, scenePrefix)}</Timecode>
+          <Editable c={c} k="day.chapters" path={`${chapter.id}.title`} value={chapter.title} as="h2" className="mt-3 text-3xl text-ink md:text-4xl" />
+          <Editable c={c} k="day.chapters" path={`${chapter.id}.lead`} value={chapter.lead} as="p" className="mt-3 text-lg text-ink-soft" />
 
           <div className="mt-8">
             <Frame
-              mediaKey={chapter.mediaKey}
+              image={c.image(`media.${chapter.mediaKey}`)}
+              editAttrs={c.attrs(`media.${chapter.mediaKey}`)}
               grade={chapter.grade}
               priority={index === 0}
               transitionName={`day-${chapter.id}`}
@@ -38,10 +64,16 @@ export default function DayChapters({ chapters }: { chapters: DayChapter[] }) {
           </div>
 
           <div className="mt-8 max-w-2xl">
-            {chapter.body.map((paragraph) => (
-              <p key={paragraph.slice(0, 40)} className="mt-4 text-ink-soft">
-                {paragraph}
-              </p>
+            {BODY_FIELDS.filter((field) => chapter[field]).map((field) => (
+              <Editable
+                key={field}
+                c={c}
+                k="day.chapters"
+                path={`${chapter.id}.${field}`}
+                value={chapter[field]}
+                as="p"
+                className="mt-4 text-ink-soft"
+              />
             ))}
           </div>
 
@@ -51,6 +83,8 @@ export default function DayChapters({ chapters }: { chapters: DayChapter[] }) {
                 childCount={ROSTER_STATUS.childCount}
                 teacherCount={ROSTER_STATUS.teacherCount}
                 limit={ROSTER_STATUS.limit}
+                countLabel={rosterCount}
+                limitLabel={rosterLimit}
               />
             </div>
           ) : null}
