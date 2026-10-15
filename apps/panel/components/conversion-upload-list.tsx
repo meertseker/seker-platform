@@ -33,7 +33,7 @@ export function ConversionUploadList({ uploads }: { uploads: UploadListItem[] })
               <Link href={`/leads/${u.leadId}`} className="font-semibold text-foreground hover:underline">{u.parentName}</Link>
               <p className="text-sm text-muted-foreground">
                 {label(CONVERSION_ACTIONS, u.action)} · {dateFormatter.format(new Date(u.conversionAt))}
-                {u.error ? <span className="block break-words text-red-700">{u.error}</span> : null}
+                {u.error ? <span className={`block break-words ${u.status === "gonderildi" ? "text-muted-foreground" : "text-red-700"}`}>{u.error}</span> : null}
               </p>
             </div>
             <div className="flex items-center gap-2">
