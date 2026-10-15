@@ -73,11 +73,24 @@ export function validateEdits(
     if (def.kind === 'text') r = checkText(edit.value, def.max ?? 200, def.label, def.pattern);
     else if (def.kind === 'rich') r = checkRich(edit.value, def.max ?? 20000, def.label, def.allowHeadings);
     else if (def.kind === 'image') r = checkImage(edit.value, def.label);
-    else r = checkList(edit.value, def.fields ?? {}, def.maxItems ?? 50, def.label, def.allowHeadings);
+    else
+      r = checkList(
+        edit.value,
+        def.fields ?? {},
+        def.maxItems ?? 50,
+        def.label,
+        def.allowHeadings,
+        def.fixedItems ? listIds(def.default) : undefined,
+      );
     if (!r.ok) return { ok: false, error: r.error, key: edit.key };
     out.push({ key: edit.key, kind: def.kind, value: r.value, baseUpdatedAt: edit.baseUpdatedAt });
   }
   return { ok: true, edits: out };
+}
+
+/** Varsayılan listenin kimlikleri, sırasıyla (sabit listelerde sunucu bu sırayı korur). */
+function listIds(v: unknown): string[] {
+  return Array.isArray(v) ? v.map((i) => String((i as { id?: unknown } | null)?.id)) : [];
 }
 
 function checkList(
@@ -86,10 +99,12 @@ function checkList(
   maxItems: number,
   label: string,
   allowHeadings?: boolean,
+  fixedIds?: string[],
 ): Result<unknown> {
   if (!Array.isArray(raw)) return { ok: false, error: `${label}: liste olmalı.` };
   if (raw.length > maxItems) return { ok: false, error: `${label} en fazla ${maxItems} madde olabilir.` };
   const ids = new Set<string>();
+  const order: string[] = [];
   const items: Record<string, unknown>[] = [];
   for (const item of raw) {
     if (!item || typeof item !== 'object') return { ok: false, error: `${label}: madde geçersiz.` };
@@ -97,6 +112,7 @@ function checkList(
     if (typeof rec.id !== 'string' || !/^[a-z0-9-]{1,40}$/.test(rec.id) || ids.has(rec.id))
       return { ok: false, error: `${label}: madde kimliği geçersiz.` };
     ids.add(rec.id);
+    order.push(rec.id);
     const next: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(rec)) {
       const f = fields[k];
@@ -109,5 +125,7 @@ function checkList(
     }
     items.push(next);
   }
+  if (fixedIds && (order.length !== fixedIds.length || fixedIds.some((id, i) => order[i] !== id)))
+    return { ok: false, error: `${label} sabit bir listedir; madde eklenemez, silinemez veya taşınamaz.` };
   return { ok: true, value: items };
 }

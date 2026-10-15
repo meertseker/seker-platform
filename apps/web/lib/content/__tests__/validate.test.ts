@@ -3,7 +3,12 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../registry', () => ({
   SLOTS: {
     't.title': { kind: 'text', max: 10, default: 'x', label: 'Başlık' },
-    't.year': { kind: 'text', max: 4, default: '2011', label: 'Yıl', pattern: '^(19|20)\d{2}$' },
+    't.year': { kind: 'text', max: 4, default: '2011', label: 'Yıl', pattern: '^(19|20)\\d{2}$' },
+    't.fixed': {
+      kind: 'list', label: 'Sabit', fixedItems: true, maxItems: 5,
+      default: [{ id: 'a', q: 'x', on: true }, { id: 'b', q: 'y', on: false }],
+      fields: { q: { kind: 'text', max: 5, label: 'S' }, on: { kind: 'flag', label: 'Yayında' } },
+    },
     't.body': { kind: 'rich', max: 50, default: '<p>x</p>', label: 'Gövde' },
     't.img': { kind: 'image', default: { src: '/bahce-genis.webp', alt: 'a', width: 1, height: 1, assetId: null }, label: 'F' },
     't.list': {
@@ -38,6 +43,24 @@ describe('validateEdits', () => {
   });
   it('pattern uymazsa red', () => {
     expect(validateEdits(e('t.year', '11')).ok).toBe(false);
+  });
+  it('pattern uyarsa kabul (düzenli ifade gerçekten çalışır)', () => {
+    expect(validateEdits(e('t.year', '2011'))).toMatchObject({ ok: true, edits: [{ value: '2011' }] });
+  });
+  it('sabit liste: sıra değişikliği reddedilir', () => {
+    const r = validateEdits(e('t.fixed', [{ id: 'b', q: 'y', on: false }, { id: 'a', q: 'x', on: true }]));
+    expect(r).toMatchObject({ ok: false, key: 't.fixed' });
+  });
+  it('sabit liste: madde eklenmesi reddedilir', () => {
+    const r = validateEdits(e('t.fixed', [{ id: 'a', q: 'x', on: true }, { id: 'b', q: 'y', on: false }, { id: 'c', q: 'z', on: true }]));
+    expect(r.ok).toBe(false);
+  });
+  it('sabit liste: madde silinmesi reddedilir', () => {
+    expect(validateEdits(e('t.fixed', [{ id: 'a', q: 'x', on: true }])).ok).toBe(false);
+  });
+  it('sabit liste: aynı kimlikler, alanları düzenlenmiş hâli kabul edilir', () => {
+    const r = validateEdits(e('t.fixed', [{ id: 'a', q: 'yeni', on: false }, { id: 'b', q: 'y', on: true }]));
+    expect(r.ok).toBe(true);
   });
   it("Word'den yapıştırılan zengin metin izinli etiketlere iner", () => {
     const word =
