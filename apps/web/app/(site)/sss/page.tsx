@@ -1,17 +1,8 @@
 import SSS from './SSS'
 import { getReaderData } from '@/lib/content/server'
-import { makeReader, pickData } from '@/lib/content/reader'
-import { buildMetadata } from '@/lib/metadata'
+import { pickData } from '@/lib/content/reader'
 
-export async function generateMetadata() {
-  const c = makeReader(await getReaderData())
-  return buildMetadata({
-    title: c.text('meta.sss.title'),
-    description: c.text('meta.sss.description'),
-    path: '/sss',
-  })
-}
-
+// Bu sayfa daha önce <head> meta'sı taşımıyordu; bu aşamada eklenmez (F2-T15a).
 export default async function SSSPage() {
   return <SSS data={pickData(await getReaderData(), ['sss.', 'faq.', 'site.'])} />
 }

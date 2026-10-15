@@ -18,4 +18,14 @@ describe('yorumlar (boş durum) ziyaretçi HTML', () => {
     const { container } = render(<YorumlarView data={defaultData(['yorumlar.', 'meta.yorumlar.', 'testimonials.'])} />);
     expect(container.innerHTML).toMatchSnapshot();
   });
+
+  it('düzenleme modunda liste bağlantısı boş durumda da bulunur', () => {
+    const data = { ...defaultData(['yorumlar.', 'meta.yorumlar.', 'testimonials.']), editing: true };
+    const { container } = render(<YorumlarView data={data} />);
+    expect(container.querySelector('[data-edit-list="testimonials.items"]')).not.toBeNull();
+  });
+  it('ziyaretçi HTML içinde bağlantı yok', () => {
+    const { container } = render(<YorumlarView data={defaultData(['yorumlar.', 'meta.yorumlar.', 'testimonials.'])} />);
+    expect(container.innerHTML).not.toContain('data-edit-');
+  });
 });

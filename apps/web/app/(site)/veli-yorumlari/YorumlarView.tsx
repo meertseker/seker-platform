@@ -67,7 +67,7 @@ export default function YorumlarView({ data }: { data: ReaderData }) {
           </div>
         </section>
       ) : (
-        <section className="mx-auto max-w-2xl px-6 py-16 text-center">
+        <section className="mx-auto max-w-2xl px-6 py-16 text-center" {...c.listAttrs('testimonials.items')}>
           <div className="overflow-hidden rounded-3xl bg-white shadow-lg shadow-ink/5">
             <div aria-hidden="true" className="grid h-2 grid-cols-4">
               <span className="bg-grape" />
