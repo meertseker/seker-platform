@@ -61,3 +61,17 @@ describe('trackLead', () => {
     });
   });
 });
+
+describe('trackEvent düzenleme modunda', () => {
+  it('seker-editing sınıfı varken hiçbir olay göndermez', () => {
+    window.dataLayer = [];
+    document.body.classList.add('seker-editing');
+    try {
+      trackEvent('cta_click');
+      trackLead('2-3');
+      expect(window.dataLayer).toEqual([]);
+    } finally {
+      document.body.classList.remove('seker-editing');
+    }
+  });
+});

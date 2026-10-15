@@ -11,6 +11,8 @@ export type TrackedEvent = (typeof TRACKED_EVENTS)[number];
 
 export function trackEvent(name: TrackedEvent, payload: Record<string, unknown> = {}): void {
   if (typeof window === 'undefined' || !window.dataLayer) return;
+  // Öğretmen siteyi düzenlerken bağlantılara tıklaması reklam/analitik olayı üretmemeli.
+  if (document.body.classList.contains('seker-editing')) return;
   window.dataLayer.push({ event: name, ...payload });
 }
 

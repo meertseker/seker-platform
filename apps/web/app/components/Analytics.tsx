@@ -1,8 +1,11 @@
 import Script from 'next/script';
+import { isEditing } from '@/lib/content/getContent';
 
-export default function Analytics() {
+export default async function Analytics() {
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
   if (!gtmId) return null;
+  // Düzenleme (draft) modunda GTM yüklenmez: öğretmenin gezintisi ölçüme karışmasın.
+  if (await isEditing()) return null;
 
   return (
     <Script id="gtm" strategy="afterInteractive">
