@@ -6,9 +6,19 @@ export function plainTextFromPaste(e: Pick<ClipboardEvent, 'clipboardData'>): st
 
 export function beginTextEdit(
   el: HTMLElement,
-  opts: { max?: number; onCommit(text: string): void; onCancel(): void; onCount(n: number, max?: number): void; onReject?(max: number): void },
+  opts: {
+    max?: number;
+    /** Kayıtlı ham değer ({yilSayisi} gibi belirteçli); verilirse düzenleme sırasında bu gösterilir. */
+    raw?: string;
+    /** Ham metni sayfada görünen (belirteçleri doldurulmuş) metne çevirir. */
+    fill?: (s: string) => string;
+    onUnchanged?(): void;
+    onCommit(text: string): void; onCancel(): void; onCount(n: number, max?: number): void; onReject?(max: number): void },
 ): () => void {
   const original = el.textContent ?? '';
+  const rawOriginal = opts.raw ?? original;
+  const show = (t: string) => (opts.fill ? opts.fill(t) : t);
+  if (opts.raw !== undefined && opts.raw !== original) el.textContent = opts.raw;
   try {
     el.contentEditable = 'plaintext-only';
   } catch {
@@ -36,8 +46,16 @@ export function beginTextEdit(
         return; // düzenleme modunda kal; sınırı aşan değer asla işlenmez
       }
       done = true;
-      if (!text) el.textContent = original;
-      opts.onCommit(text);
+      if (!text) {
+        el.textContent = original;
+        opts.onCommit(text);
+      } else if (text === rawOriginal.trim()) {
+        el.textContent = original;
+        (opts.onUnchanged ?? opts.onCancel)();
+      } else {
+        el.textContent = show(text);
+        opts.onCommit(text);
+      }
     } else {
       done = true;
       el.textContent = original;

@@ -32,7 +32,7 @@ Bültenler sayfasında çubuktaki **Yeni duyuru**'ya basın. Başlık, metin, is
 
 Bazı alanlar çift tıklayarak değil, yalnızca **Sayfa ayarları** panelinden değiştirilir (telefon, adres, çalışma saatleri, kuruluş yılı, Google başlığı ve açıklaması gibi). Bir yazıya çift tıklayıp düzenleyemiyorsanız önce Sayfa ayarları'na bakın.
 
-Metinlerde `{yilSayisi}` görürseniz silmeyin: sitede otomatik olarak "15" gibi okulun yaşına dönüşür.
+Metinlerde `{yilSayisi}` görürseniz silmeyin: sitede otomatik olarak "15" gibi okulun yaşına dönüşür. Bir metne çift tıklayıp düzenlerken `{yilSayisi}` olarak görünür; kaydedince sayfada yine sayı gösterilir. Hiçbir şey değiştirmeden dışarı tıklarsanız "Değişiklik yok" der ve kayıt oluşmaz.
 
 ### Çalışma saatlerini değiştirirseniz
 Çalışma saatleri yazısı sitede birkaç yerde elle yazılmıştır ve Sayfa ayarları'ndaki değişiklik bunların hepsine yansımayabilir. Saatler değişirse şunları da ayrıca düzenleyin:

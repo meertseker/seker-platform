@@ -96,3 +96,53 @@ describe('beginTextEdit sınır ve temizlik', () => {
     expect(el.textContent).toBe('Eski metin');
   });
 });
+
+describe('beginTextEdit belirteçli metin', () => {
+  const fill = (s: string) => s.replaceAll('{yilSayisi}', '10');
+  const mk = () => {
+    const el = document.createElement('p');
+    el.textContent = '10 yıllık deneyim';
+    document.body.append(el);
+    return el;
+  };
+  const enter = (el: HTMLElement) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+  it('düzenlerken ham metni (belirteçle) gösterir; değişmediyse işlem yapmaz ve dolu metni geri koyar', () => {
+    const el = mk();
+    const onCommit = vi.fn();
+    const onUnchanged = vi.fn();
+    beginTextEdit(el, { raw: '{yilSayisi} yıllık deneyim', fill, onCommit, onUnchanged, onCancel: () => {}, onCount: () => {} });
+    expect(el.textContent).toBe('{yilSayisi} yıllık deneyim');
+    enter(el);
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(onUnchanged).toHaveBeenCalled();
+    expect(el.textContent).toBe('10 yıllık deneyim');
+  });
+
+  it('değişiklikte belirteç korunur ve DOM dolu metni gösterir', () => {
+    const el = mk();
+    const onCommit = vi.fn();
+    beginTextEdit(el, { raw: '{yilSayisi} yıllık deneyim', fill, onCommit, onCancel: () => {}, onCount: () => {} });
+    el.textContent = '{yilSayisi} yıllık güzel deneyim';
+    enter(el);
+    expect(onCommit).toHaveBeenCalledWith('{yilSayisi} yıllık güzel deneyim');
+    expect(el.textContent).toBe('10 yıllık güzel deneyim');
+  });
+
+  it('Esc dolu metni geri koyar', () => {
+    const el = mk();
+    beginTextEdit(el, { raw: '{yilSayisi} yıllık deneyim', fill, onCommit: () => {}, onCancel: () => {}, onCount: () => {} });
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(el.textContent).toBe('10 yıllık deneyim');
+  });
+
+  it('belirteçsiz metinde de değişmeyen onay işlem sayılmaz', () => {
+    const el = document.createElement('p');
+    el.textContent = 'Merhaba';
+    document.body.append(el);
+    const onCommit = vi.fn();
+    beginTextEdit(el, { onCommit, onCancel: () => {}, onCount: () => {} });
+    enter(el);
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+});

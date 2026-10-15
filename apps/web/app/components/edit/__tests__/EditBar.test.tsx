@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import type { ReaderData } from '@/lib/content/types';
 import { PENDING_STORAGE_KEY } from '../pending';
@@ -155,5 +155,43 @@ describe('EditBar (yasal uyarı)', () => {
     dbl('hero.title');
     expect(screen.queryByText(/Yasal metin/)).toBeNull();
     document.body.innerHTML = '';
+  });
+});
+
+describe('EditBar belirteçli metin düzenleme', () => {
+  const tokenData = (): ReaderData => ({
+    values: { 'about.lead': '{yilSayisi} yıllık deneyim' },
+    updatedAt: { 'about.lead': 't1' },
+    meta: { 'about.lead': { label: 'Giriş', kind: 'text' } } as never,
+    editing: true,
+    vars: { yilSayisi: '10', kurulusYili: '2016' },
+  });
+  const setup = () => {
+    const p = document.createElement('p');
+    p.setAttribute('data-edit-key', 'about.lead');
+    p.setAttribute('data-edit-kind', 'text');
+    p.textContent = '10 yıllık deneyim';
+    document.body.append(p);
+    bar(tokenData());
+    return p;
+  };
+  afterEach(() => document.querySelectorAll('p[data-edit-key]').forEach((n) => n.remove()));
+
+  it('çift tıkla ve odak kaybı bekleyen değişiklik oluşturmaz', () => {
+    const p = setup();
+    fireEvent.dblClick(p);
+    expect(p.textContent).toBe('{yilSayisi} yıllık deneyim');
+    fireEvent.blur(p);
+    expect(sessionStorage.getItem(PENDING_STORAGE_KEY) ?? '{}').toBe('{}');
+    expect(p.textContent).toBe('10 yıllık deneyim');
+  });
+
+  it('belirteçli cümle düzenlenince kayıtlı değer belirteci korur, DOM dolu metni gösterir', async () => {
+    const p = setup();
+    fireEvent.dblClick(p);
+    p.textContent = '{yilSayisi} yıllık güzel deneyim';
+    fireEvent.blur(p);
+    await waitFor(() => expect(sessionStorage.getItem(PENDING_STORAGE_KEY)).toContain('{yilSayisi} yıllık güzel deneyim'));
+    expect(p.textContent).toBe('10 yıllık güzel deneyim');
   });
 });

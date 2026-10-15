@@ -16,6 +16,7 @@ import { ListPanel } from './ListPanel';
 import { SettingsPanel, settingsKeysFor } from './SettingsPanel';
 import { HistoryDrawer } from './HistoryDrawer';
 import { PhonePreview } from './PhonePreview';
+import { fillVars } from '@/lib/content/chars';
 import { PAGE_IDS } from '@/lib/content/pageIds';
 
 const storage = () => (typeof window === 'undefined' ? null : window.sessionStorage);
@@ -40,6 +41,8 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
   const stopRef = useRef<null | (() => void)>(null);
   const metaRef = useRef(data.meta);
   metaRef.current = data.meta;
+  const varsRef = useRef(data.vars);
+  varsRef.current = data.vars;
   const inIframe = typeof window !== 'undefined' && window.self !== window.top;
 
   const toast = useCallback((t: Omit<Toast, 'id'>) => {
@@ -49,6 +52,9 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
   }, []);
 
   const currentValue = useCallback((key: string) => (key in pending ? pending[key].value : data.values[key]), [pending, data]);
+
+  const currentValueRef = useRef(currentValue);
+  currentValueRef.current = currentValue;
 
   const setValue = useCallback(
     (key: string, value: unknown, path?: string) => {
@@ -101,8 +107,8 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       if (path) {
         const [id, field] = path.split('.');
         const item = (v as Record<string, unknown>[]).find((i) => i.id === id);
-        if (item && typeof item[field] === 'string') el.textContent = item[field] as string;
-      } else if (typeof v === 'string') el.textContent = v;
+        if (item && typeof item[field] === 'string') el.textContent = fillVars(item[field] as string, varsRef.current);
+      } else if (typeof v === 'string') el.textContent = fillVars(v, varsRef.current);
     });
   }, [pending]);
 
@@ -130,8 +136,22 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       stopRef.current?.();
       const max = el.dataset.editMax ? Number(el.dataset.editMax) : undefined;
       const rect = el.getBoundingClientRect();
+      const cur = currentValueRef.current(key);
+      const rawVal = path
+        ? (() => {
+            const [id, field] = path.split('.');
+            return (cur as Record<string, unknown>[] | undefined)?.find((i) => i.id === id)?.[field];
+          })()
+        : cur;
       stopRef.current = beginTextEdit(el, {
         max,
+        raw: typeof rawVal === 'string' ? rawVal : undefined,
+        fill: (t) => fillVars(t, varsRef.current),
+        onUnchanged: () => {
+          setCounter(null);
+          stopRef.current = null;
+          toast({ text: 'Değişiklik yok.', tone: 'warn' });
+        },
         onCount: (n, m) => setCounter({ n, max: m, top: rect.bottom + window.scrollY + 6, left: rect.left + window.scrollX }),
         onCommit: (text) => {
           setCounter(null);
