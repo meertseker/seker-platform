@@ -6,7 +6,7 @@ export function plainTextFromPaste(e: Pick<ClipboardEvent, 'clipboardData'>): st
 
 export function beginTextEdit(
   el: HTMLElement,
-  opts: { max?: number; onCommit(text: string): void; onCancel(): void; onCount(n: number, max?: number): void },
+  opts: { max?: number; onCommit(text: string): void; onCancel(): void; onCount(n: number, max?: number): void; onReject?(max: number): void },
 ): () => void {
   const original = el.textContent ?? '';
   try {
@@ -29,9 +29,17 @@ export function beginTextEdit(
 
   const finish = (commit: boolean) => {
     if (done) return;
-    done = true;
-    if (commit) opts.onCommit((el.textContent ?? '').trim());
-    else {
+    if (commit) {
+      const text = (el.textContent ?? '').trim();
+      if (opts.max !== undefined && countChars(text) > opts.max) {
+        opts.onReject?.(opts.max);
+        return; // düzenleme modunda kal; sınırı aşan değer asla işlenmez
+      }
+      done = true;
+      if (!text) el.textContent = original;
+      opts.onCommit(text);
+    } else {
+      done = true;
       el.textContent = original;
       opts.onCancel();
     }
@@ -48,7 +56,22 @@ export function beginTextEdit(
   };
   const onPaste = (e: ClipboardEvent) => {
     e.preventDefault();
-    document.execCommand('insertText', false, plainTextFromPaste(e));
+    const text = plainTextFromPaste(e);
+    const ok = typeof document.execCommand === 'function' && document.execCommand('insertText', false, text);
+    if (!ok) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        const r = sel.getRangeAt(0);
+        r.deleteContents();
+        const node = document.createTextNode(text);
+        r.insertNode(node);
+        r.setStartAfter(node);
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
+      } else el.append(text);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   };
   const onBlur = () => finish(true);
   const cleanup = () => {

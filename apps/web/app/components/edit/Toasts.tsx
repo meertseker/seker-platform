@@ -1,6 +1,6 @@
 'use client';
 
-export type Toast = { id: number; text: string; tone: 'ok' | 'error'; href?: string; hrefLabel?: string };
+export type Toast = { id: number; text: string; tone: 'ok' | 'error'; href?: string; hrefLabel?: string; persistent?: boolean };
 
 export function Toasts({ items }: { items: Toast[] }) {
   return (

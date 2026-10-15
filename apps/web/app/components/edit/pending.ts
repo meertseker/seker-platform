@@ -2,7 +2,8 @@ export type Pending = Record<string, { value: unknown; baseUpdatedAt: string | n
 export type PendingAction =
   | { type: 'set'; key: string; value: unknown; baseUpdatedAt: string | null }
   | { type: 'clear' }
-  | { type: 'drop'; keys: string[] };
+  | { type: 'drop'; keys: string[] }
+  | { type: 'rebase'; bases: Record<string, string | null> };
 
 export const PENDING_STORAGE_KEY = 'seker-edit-pending';
 
@@ -15,6 +16,10 @@ export function pendingReducer(state: Pending, action: PendingAction): Pending {
       };
     case 'drop':
       return Object.fromEntries(Object.entries(state).filter(([k]) => !action.keys.includes(k)));
+    case 'rebase':
+      return Object.fromEntries(
+        Object.entries(state).map(([k, p]) => [k, k in action.bases ? { ...p, baseUpdatedAt: action.bases[k] } : p]),
+      );
     case 'clear':
       return {};
   }

@@ -28,7 +28,7 @@ export default function EditBar({ editor, data, announcements }: EditBarProps) {
   const toast = useCallback((t: Omit<Toast, 'id'>) => {
     const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { ...t, id }]);
-    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 6000);
+    if (!t.persistent) setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 6000);
   }, []);
 
   const currentValue = useCallback((key: string) => (key in pending ? pending[key].value : data.values[key]), [pending, data]);
@@ -42,6 +42,24 @@ export default function EditBar({ editor, data, announcements }: EditBarProps) {
   );
 
   useEffect(() => savePending(storage(), pending), [pending]);
+
+  // Başkası araya girdiyse (taze veri farklı), kullanıcının değerini koruyup tabanı tazele.
+  useEffect(() => {
+    const bases: Record<string, string | null> = {};
+    for (const [k, p] of Object.entries(pending)) {
+      const fresh = data.updatedAt[k] ?? null;
+      if (p.baseUpdatedAt !== fresh) bases[k] = fresh;
+    }
+    const keys = Object.keys(bases);
+    if (!keys.length) return;
+    dispatch({ type: 'rebase', bases });
+    toast({
+      text: `Bu metinleri siz düzenlerken başkası değiştirdi: ${keys.map((k) => data.meta[k]?.label ?? k).join(', ')}. Kaydederseniz sizin metniniz geçerli olur; istemiyorsanız Vazgeç'e basın.`,
+      tone: 'error',
+      persistent: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Bekleyen değerleri sayfaya yansıt (yenilemeden sonra da görünsünler).
   useEffect(() => {
@@ -85,6 +103,7 @@ export default function EditBar({ editor, data, announcements }: EditBarProps) {
           if (!text) return toast({ text: 'Boş bırakılamaz; eski metin geri getirildi.', tone: 'error' });
           setValue(key, text, path);
         },
+        onReject: (m) => toast({ text: `Bu alan en fazla ${m} karakter olabilir.`, tone: 'error' }),
         onCancel: () => {
           setCounter(null);
           stopRef.current = null;
@@ -117,10 +136,17 @@ export default function EditBar({ editor, data, announcements }: EditBarProps) {
 
   async function save() {
     setSaving(true);
-    const res = await saveContent(
-      Object.entries(pending).map(([key, p]) => ({ key, value: p.value, baseUpdatedAt: p.baseUpdatedAt })),
-    );
-    setSaving(false);
+    let res: Awaited<ReturnType<typeof saveContent>>;
+    try {
+      res = await saveContent(
+        Object.entries(pending).map(([key, p]) => ({ key, value: p.value, baseUpdatedAt: p.baseUpdatedAt })),
+      );
+    } catch {
+      toast({ text: 'Kaydedilemedi, tekrar deneyin.', tone: 'error' });
+      return;
+    } finally {
+      setSaving(false);
+    }
     if (res.ok) {
       dispatch({ type: 'clear' });
       toast({ text: 'Yayında. Ziyaretçiler yeni hâlini görüyor.', tone: 'ok' });
