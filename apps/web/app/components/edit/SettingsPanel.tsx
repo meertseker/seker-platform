@@ -7,12 +7,22 @@ import { Drawer } from './Drawer';
 /** Sayfada tıklanacak görünür yeri olmayan site geneli alanlar (telif satırı, WhatsApp düğmesi etiketi). */
 const EXTRA_SETTING_KEYS = ['chrome.footer.rights', 'chrome.whatsapp.label'];
 
+/**
+ * Sayfadaki birleşik (başka metinle yan yana basılan) öğelerde satır içi düzenleme işareti olmaz;
+ * bu alanlar yalnızca burada, ilgili sayfanın ayarlarında düzenlenir. Anahtar: yol deseni.
+ */
+export const PAGE_EXTRA_KEYS: { match: RegExp; keys: string[] }[] = [
+  { match: /^\/yas-gruplari\/[a-z0-9-]+$/, keys: ['yasgrubu.focus.suffix', 'yasgrubu.cta.suffix'] },
+  { match: /^\/gunluk-akis$/, keys: ['gunlukakis.scene.prefix', 'gunlukakis.roster.count', 'gunlukakis.roster.limit'] },
+];
+
 export function settingsKeysFor(pathname: string, meta: ReaderData['meta'], pageIds: Record<string, string>): string[] {
   const lp = pathname.match(/^\/lp\/([a-z0-9-]+)$/);
   const pageKeys = lp
     ? [`lp.${lp[1]}.metaTitle`, `lp.${lp[1]}.metaDescription`]
     : pageIds[pathname] ? [`meta.${pageIds[pathname]}.title`, `meta.${pageIds[pathname]}.description`] : [];
-  return [...pageKeys.filter((k) => k in meta), ...Object.keys(meta).filter((k) => k.startsWith('site.')),
+  const pageExtras = PAGE_EXTRA_KEYS.filter((e) => e.match.test(pathname)).flatMap((e) => e.keys);
+  return [...pageKeys.filter((k) => k in meta), ...pageExtras.filter((k) => k in meta), ...Object.keys(meta).filter((k) => k.startsWith('site.')),
     ...EXTRA_SETTING_KEYS.filter((k) => k in meta)];
 }
 

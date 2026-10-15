@@ -11,9 +11,10 @@ const BOOKING_NOTE = 'Sınıf mevcudumuz sınırlı olduğu için kayıtları d�
 export const YASGRUPLARI_SLOTS: Record<string, SlotDef> = {
   'meta.yasgruplari.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'Yaş Grupları', max: 70 },
   'meta.yasgruplari.description': {
-    kind: 'text', label: 'Sayfa açıklaması (Google)', max: 160,
+    // Özgün metin Google'ın 160 karakterini aşıyor; sahibi ayarlar panelinden kısaltabilir.
+    kind: 'text', label: 'Sayfa açıklaması (Google)', max: 190,
     default:
-      'Özel Şeker Anaokulu\'nda 2 yaşından ilkokula hazırlığa kadar dört yaş grubu: 2-3 yaş oyun grubu, 3-4 yaş, 4-5 yaş ve 5-6 yaş sınıfları.',
+      'Özel Şeker Anaokulu\'nda 2 yaşından ilkokula hazırlığa kadar dört yaş grubu: 2-3 yaş oyun grubu, 3-4 yaş, 4-5 yaş ve 5-6 yaş sınıfları. Her grubun kendi programı ve kendi öğretmenleri var.',
   },
 
   'yasgruplari.hero.eyebrow': text('Üst etiket', '2 yaştan ilkokula hazırlığa'),

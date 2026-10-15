@@ -6,6 +6,11 @@ const meta = {
   'meta.bultenler.description': { kind: 'text' as const, label: 'Açıklama' },
   'lp.kres-2-yas.metaTitle': { kind: 'text' as const, label: 'LP başlık' },
   'lp.kres-2-yas.metaDescription': { kind: 'text' as const, label: 'LP açıklama' },
+  'yasgrubu.focus.suffix': { kind: 'text' as const, label: 'Odak başlığı sonu' },
+  'yasgrubu.cta.suffix': { kind: 'text' as const, label: 'Form başlığı sonu' },
+  'gunlukakis.scene.prefix': { kind: 'text' as const, label: 'Sahne etiketi' },
+  'gunlukakis.roster.count': { kind: 'text' as const, label: 'Künye altyazısı' },
+  'gunlukakis.roster.limit': { kind: 'text' as const, label: 'Künye üst sınır' },
   'site.phone': { kind: 'text' as const, label: 'Telefon' },
   'chrome.footer.rights': { kind: 'text' as const, label: 'Telif satırı' },
   'chrome.whatsapp.label': { kind: 'text' as const, label: 'WhatsApp etiketi' },
@@ -29,5 +34,18 @@ describe('settingsKeysFor', () => {
       'chrome.footer.rights',
       'chrome.whatsapp.label',
     ]);
+  });
+  it('yaş grubu alt sayfası: ek alanlar sayfa alanlarından sonra', () => {
+    const keys = settingsKeysFor('/yas-gruplari/2-3-yas', meta, {});
+    expect(keys.slice(0, 2)).toEqual(['yasgrubu.focus.suffix', 'yasgrubu.cta.suffix']);
+    expect(keys).not.toContain('gunlukakis.scene.prefix');
+  });
+  it('günlük akış: sahne ve künye alanları', () => {
+    const keys = settingsKeysFor('/gunluk-akis', meta, { '/gunluk-akis': 'gunlukakis' });
+    expect(keys).toEqual(expect.arrayContaining(['gunlukakis.scene.prefix', 'gunlukakis.roster.count', 'gunlukakis.roster.limit']));
+    expect(keys).not.toContain('yasgrubu.focus.suffix');
+  });
+  it('ek alan yalnızca meta içindeyse listelenir', () => {
+    expect(settingsKeysFor('/gunluk-akis', {}, {})).toEqual([]);
   });
 });

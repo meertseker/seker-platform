@@ -10,9 +10,10 @@ const text = (label: string, def: string, heading = false): SlotDef => ({
 export const AKTIVITELER_SLOTS: Record<string, SlotDef> = {
   'meta.aktiviteler.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'Branş Dersleri ve Aktiviteler', max: 70 },
   'meta.aktiviteler.description': {
-    kind: 'text', label: 'Sayfa açıklaması (Google)', max: 160,
+    // Özgün metin Google'ın 160 karakterini aşıyor; sahibi ayarlar panelinden kısaltabilir.
+    kind: 'text', label: 'Sayfa açıklaması (Google)', max: 170,
     default:
-      'Montessori, seramik, robotik & kodlama, satranç, müzik & ritim, bale & dans, drama, görsel sanatlar ve İngilizce. Beykent Özel Şeker Anaokulu branş dersleri.',
+      'Montessori, seramik, robotik & kodlama, satranç, müzik & ritim, bale & dans, drama, görsel sanatlar ve İngilizce. Beykent Büyükçekmece Özel Şeker Anaokulu branş dersleri.',
   },
 
   'aktiviteler.hero.eyebrow': text('Üst etiket', `${YEAR_ROUND_BRANCHES.length} ayrı çalışma alanı`),
