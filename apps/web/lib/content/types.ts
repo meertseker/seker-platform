@@ -39,3 +39,16 @@ export type Reader = {
   attrs(key: string, path?: string): Record<string, string>;
   listAttrs(key: string): Record<string, string>;
 };
+
+/** Düzenleme katmanındaki duyuru satırı (DB snake_case -> camelCase; EditLayerGate dönüştürür). */
+export type AnnouncementRow = {
+  id: string;
+  title: string;
+  body: string;
+  imageId: string | null;
+  startsOn: string;
+  endsOn: string | null;
+  published: boolean;
+  sort: number;
+  updatedAt: string;
+};

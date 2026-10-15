@@ -2,6 +2,7 @@ import LpHeader from '../components/lp/LpHeader';
 import LpFooter from '../components/lp/LpFooter';
 import WhatsAppButton from '../components/WhatsAppButton';
 import MobileActionBar from '../components/MobileActionBar';
+import EditLayerGate from '../components/edit/EditLayerGate';
 
 export default function LandingLayout({
   children,
@@ -13,6 +14,7 @@ export default function LandingLayout({
       <LpFooter />
       <WhatsAppButton />
       <MobileActionBar />
+      <EditLayerGate />
     </>
   );
 }

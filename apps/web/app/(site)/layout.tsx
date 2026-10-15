@@ -4,6 +4,7 @@ import Footer from '../components/Footer';
 import WhatsAppButton from '../components/WhatsAppButton';
 import MobileActionBar from '../components/MobileActionBar';
 import { currentYear } from '@/lib/time';
+import EditLayerGate from '../components/edit/EditLayerGate';
 
 export default async function SiteLayout({
   children,
@@ -16,6 +17,7 @@ export default async function SiteLayout({
       <Footer year={year} />
       <WhatsAppButton />
       <MobileActionBar />
+      <EditLayerGate />
     </>
   );
 }
