@@ -51,6 +51,10 @@ describe('sitemap rotaları', () => {
     expect(pageExists(routePath)).toBe(true);
   });
 
+  it('düzenleme uçlarını (/api/) listelemez', () => {
+    expect(paths.some((p) => p.startsWith('/api/'))).toBe(false);
+  });
+
   it('landing page rotalarını listelemez', () => {
     expect(paths.some((p) => p.startsWith('/lp/'))).toBe(false);
   });

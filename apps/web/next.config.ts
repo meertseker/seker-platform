@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   outputFileTracingRoot: monorepoRoot,
   turbopack: { root: monorepoRoot },
+  // sharp'ın libvips paylaşımlı kitaplığı (.so) require edilmez, bu yüzden dosya izleme onu
+  // standalone çıktısına taşımaz; Docker imajında sharp "libvips-cpp.so ... not found" ile açılmaz.
+  outputFileTracingIncludes: {
+    '/*': ['../../node_modules/.pnpm/@img+sharp-libvips-*/node_modules/@img/*/lib/**/*'],
+  },
   transpilePackages: ['@seker/auth', '@seker/shared', '@seker/db'],
   cacheComponents: true,
   experimental: {

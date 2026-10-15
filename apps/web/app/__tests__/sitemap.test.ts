@@ -10,6 +10,10 @@ describe('sitemap', () => {
     entries = await sitemap();
   });
 
+  it('19 URL üretir (Faz 2 sayıyı değiştirmez)', () => {
+    expect(entries).toHaveLength(19);
+  });
+
   it('ana sayfayı içerir', () => {
     expect(entries.some((e) => e.url === 'https://sekeranaokulu.com')).toBe(true);
   });
