@@ -52,6 +52,13 @@ const GUVENLIK_SLOTS_SRC = readProse('lib', 'content', 'slots', 'guvenlik.ts');
 const YASGRUPLARI_SLOTS_SRC = readProse('lib', 'content', 'slots', 'yasgruplari.ts');
 const GUNLUKAKIS_SLOTS_SRC = readProse('lib', 'content', 'slots', 'gunlukakis.ts');
 const AKTIVITELER_SLOTS_SRC = readProse('lib', 'content', 'slots', 'aktiviteler.ts');
+const KAYIT_SLOTS_SRC = readProse('lib', 'content', 'slots', 'kayit.ts');
+const ILETISIM_SLOTS_SRC = readProse('lib', 'content', 'slots', 'iletisim.ts');
+const TESEKKURLER_SLOTS_SRC = readProse('lib', 'content', 'slots', 'tesekkurler.ts');
+const YORUMLAR_SLOTS_SRC = readProse('lib', 'content', 'slots', 'yorumlar.ts');
+const SSS_SLOTS_SRC = readProse('lib', 'content', 'slots', 'sss.ts');
+const BULTENLER_SLOTS_SRC = readProse('lib', 'content', 'slots', 'bultenler.ts');
+const FORM_SLOTS_SRC = readProse('lib', 'content', 'slots', 'form.ts');
 
 const reader = () => makeReader(defaultData());
 const CONTACT_SRC = readSource('app', 'components', 'ContactSection.tsx');
@@ -73,6 +80,13 @@ const HOMEPAGE_FILES = {
   'lib/content/slots/yasgruplari.ts': YASGRUPLARI_SLOTS_SRC,
   'lib/content/slots/gunlukakis.ts': GUNLUKAKIS_SLOTS_SRC,
   'lib/content/slots/aktiviteler.ts': AKTIVITELER_SLOTS_SRC,
+  'lib/content/slots/kayit.ts': KAYIT_SLOTS_SRC,
+  'lib/content/slots/iletisim.ts': ILETISIM_SLOTS_SRC,
+  'lib/content/slots/tesekkurler.ts': TESEKKURLER_SLOTS_SRC,
+  'lib/content/slots/yorumlar.ts': YORUMLAR_SLOTS_SRC,
+  'lib/content/slots/sss.ts': SSS_SLOTS_SRC,
+  'lib/content/slots/bultenler.ts': BULTENLER_SLOTS_SRC,
+  'lib/content/slots/form.ts': FORM_SLOTS_SRC,
   'app/components/ContactSection.tsx': CONTACT_SRC,
   'app/components/FeaturesSection.tsx': FEATURES_SRC,
   'app/components/ActivitiesSection.tsx': ACTIVITIES_SRC,

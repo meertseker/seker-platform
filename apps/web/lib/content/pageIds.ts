@@ -12,4 +12,5 @@ export const PAGE_IDS: Record<string, string> = {
   '/tesekkurler': 'tesekkurler',
   '/veli-yorumlari': 'yorumlar',
   '/sss': 'sss',
+  '/bultenler': 'bultenler',
 };
