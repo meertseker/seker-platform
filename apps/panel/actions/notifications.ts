@@ -11,7 +11,8 @@ export type NotificationType =
   | "teklif_revize_edildi"
   | "teklif_reddedildi"
   | "web_basvuru"
-  | "ads_senkron_hata";
+  | "ads_senkron_hata"
+  | "geri_bildirim";
 
 export async function notify(
   supabase: SupabaseClient,

@@ -103,3 +103,17 @@ export type ConversionUploadStatus = keyof typeof CONVERSION_UPLOAD_STATUSES;
 export function label(group: Record<string, string>, value: string): string {
   return group[value] ?? value;
 }
+
+export const FEEDBACK_KINDS = {
+  hata: "Hata bildirimi",
+  oneri: "Öneri / özellik isteği",
+} as const;
+export type FeedbackKind = keyof typeof FEEDBACK_KINDS;
+
+export const FEEDBACK_STATUSES = {
+  yeni: "Yeni",
+  inceleniyor: "İnceleniyor",
+  tamamlandi: "Tamamlandı",
+  yapilmayacak: "Yapılmayacak",
+} as const;
+export type FeedbackStatus = keyof typeof FEEDBACK_STATUSES;

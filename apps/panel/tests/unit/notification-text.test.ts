@@ -41,3 +41,17 @@ describe("notificationText", () => {
     expect(notificationText({ type: "baska", payload: {} })).toBe("Yeni bildirim var.");
   });
 });
+
+describe("notificationText geri_bildirim", () => {
+  it("hata bildirimini yazan ve başlıkla gösterir", () => {
+    expect(
+      notificationText({ type: "geri_bildirim", payload: { kind: "hata", title: "Takvim açılmıyor", by: "Ayşe" } }),
+    ).toBe("Ayşe hata bildirdi: Takvim açılmıyor");
+  });
+  it("öneriyi ayırt eder ve eksik veride çökmez", () => {
+    expect(notificationText({ type: "geri_bildirim", payload: { kind: "oneri", title: "Excel aktarımı", by: "Can" } })).toBe(
+      "Can öneri gönderdi: Excel aktarımı",
+    );
+    expect(notificationText({ type: "geri_bildirim", payload: {} })).toBe("Bir kullanıcı öneri gönderdi");
+  });
+});

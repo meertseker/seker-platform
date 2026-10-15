@@ -33,6 +33,13 @@ export function notificationText(notification: {
       const page = typeof payload.landingPath === "string" && payload.landingPath ? ` (${payload.landingPath})` : "";
       return `Yeni web başvurusu: ${name}${page}`;
     }
+    case "geri_bildirim": {
+      const by = typeof payload.by === "string" && payload.by ? payload.by : "Bir kullanıcı";
+      const title = typeof payload.title === "string" && payload.title ? `: ${payload.title}` : "";
+      return payload.kind === "hata"
+        ? `${by} hata bildirdi${title}`
+        : `${by} öneri gönderdi${title}`;
+    }
     default:
       return "Yeni bildirim var.";
   }

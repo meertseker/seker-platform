@@ -10,6 +10,7 @@ import {
   GraduationCap,
   LogOut,
   Megaphone,
+  MessageSquarePlus,
   PencilLine,
   Plus,
   Settings,
@@ -48,6 +49,7 @@ const profileLinks = [
   { href: "/teklifler", label: "Teklifler", icon: BadgePercent, roles: ["yonetici"] },
   { href: "/pazarlama", label: "Pazarlama", icon: Megaphone, roles: ["yonetici"] },
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
+  { href: "/geri-bildirim", label: "Geri bildirim", icon: MessageSquarePlus },
 ] as const;
 
 function canSee(item: (typeof profileLinks)[number], role: Role) {

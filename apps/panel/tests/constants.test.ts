@@ -23,3 +23,11 @@ describe("0003 domain uyum sabitleri", () => {
     expect(label(LEAD_STATUSES, "yok_boyle")).toBe("yok_boyle");
   });
 });
+
+describe("geri bildirim sabitleri", () => {
+  it("tür ve durum etiketleri", async () => {
+    const { FEEDBACK_KINDS, FEEDBACK_STATUSES } = await import("@/lib/constants");
+    expect(FEEDBACK_KINDS).toEqual({ hata: "Hata bildirimi", oneri: "Öneri / özellik isteği" });
+    expect(FEEDBACK_STATUSES).toEqual({ yeni: "Yeni", inceleniyor: "İnceleniyor", tamamlandi: "Tamamlandı", yapilmayacak: "Yapılmayacak" });
+  });
+});

@@ -159,6 +159,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"feedback": {
+                  Row: {
+                    "admin_note": string | null,"body": string,"created_at": string,"created_by": string,"id": string,"kind": string,"page": string | null,"status": string,"title": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "admin_note"?: string | null,"body": string,"created_at"?: string,"created_by"?: string,"id"?: string,"kind": string,"page"?: string | null,"status"?: string,"title": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "admin_note"?: string | null,"body"?: string,"created_at"?: string,"created_by"?: string,"id"?: string,"kind"?: string,"page"?: string | null,"status"?: string,"title"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "feedback_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"installments": {
                   Row: {
                     "amount": number,"created_at": string,"due_date": string,"id": string,"marked_by": string | null,"paid_amount": number | null,"paid_at": string | null,"payment_method": string | null,"plan_id": string,"status": string,"updated_at": string
