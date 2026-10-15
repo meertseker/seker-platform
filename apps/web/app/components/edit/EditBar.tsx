@@ -4,11 +4,17 @@ import './edit.css';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Editor } from '@seker/auth/editor';
-import type { AnnouncementRow, ReaderData } from '@/lib/content/types';
+import type { AnnouncementRow, ListItem, ReaderData } from '@/lib/content/types';
 import { saveContent } from '@/app/actions/content';
 import { applyListField, loadPending, pendingReducer, savePending } from './pending';
 import { beginTextEdit } from './TextEditing';
 import { Toasts, type Toast } from './Toasts';
+import { RichEditor } from './RichEditor';
+import { ListPanel } from './ListPanel';
+import { SettingsPanel, settingsKeysFor } from './SettingsPanel';
+import { HistoryDrawer } from './HistoryDrawer';
+import { PhonePreview } from './PhonePreview';
+import { PAGE_IDS } from '@/lib/content/pageIds';
 
 const storage = () => (typeof window === 'undefined' ? null : window.sessionStorage);
 
@@ -223,7 +229,70 @@ export default function EditBar({ editor, data, announcements }: EditBarProps) {
   );
 }
 
-/** Task 9–10 ve 18 bu bileşeni doldurur; bu görevde boş. */
-function EditBarExtras(_: Record<string, unknown>) {
-  return null;
+type ExtrasProps = {
+  data: ReaderData;
+  pending: Record<string, unknown>;
+  announcements: unknown[];
+  panel: string | null;
+  setPanel(p: null | 'rich' | 'list' | 'settings' | 'history' | 'upload' | 'announcement' | 'preview'): void;
+  target: { key: string; path?: string } | null;
+  setTarget(t: { key: string; path?: string } | null): void;
+  setValue(key: string, value: unknown, path?: string): void;
+  currentValue(key: string): unknown;
+  toast(t: Omit<Toast, 'id'>): void;
+};
+
+/** Task 10 ve 18 yükleme ve duyuru panellerini buraya ekler. */
+function EditBarExtras(p: ExtrasProps) {
+  const [lists, setLists] = useState<{ key: string; label: string }[]>([]);
+  useEffect(() => {
+    const seen = new Map<string, string>();
+    document.querySelectorAll<HTMLElement>('[data-edit-list]').forEach((el) => seen.set(el.dataset.editList!, el.dataset.editLabel ?? el.dataset.editList!));
+    setLists([...seen].map(([key, label]) => ({ key, label })));
+  }, []);
+  const richInitial = () => {
+    if (!p.target) return '';
+    const v = p.currentValue(p.target.key);
+    if (!p.target.path) return String(v);
+    const [id, field] = p.target.path.split('.');
+    return String((v as ListItem[]).find((i) => i.id === id)?.[field] ?? '');
+  };
+  const richMeta = p.target ? p.data.meta[p.target.key] : undefined;
+  return (
+    <>
+      {lists.length ? (
+        <select id="seker-list-select" aria-label="Bu sayfadaki listeler" value="" onChange={(e) => { if (!e.target.value) return; p.setTarget({ key: e.target.value }); p.setPanel('list'); }}>
+          <option value="">Listeler…</option>
+          {lists.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
+        </select>
+      ) : null}
+      <button type="button" onClick={() => p.setPanel('settings')}>Sayfa ayarları</button>
+      <button type="button" onClick={() => p.setPanel('preview')}>Telefon görünümü</button>
+      <button type="button" onClick={() => p.setPanel('history')}>Geçmiş</button>
+      {p.panel === 'rich' && p.target && richMeta ? (
+        <RichEditor
+          title={richMeta.label}
+          initial={richInitial()}
+          max={p.target.path ? richMeta.fields?.[p.target.path.split('.')[1]]?.max : richMeta.max}
+          allowHeadings={richMeta.allowHeadings}
+          onDone={(html) => { p.setValue(p.target!.key, html, p.target!.path); p.setPanel(null); }}
+          onClose={() => p.setPanel(null)}
+        />
+      ) : null}
+      {p.panel === 'list' && p.target ? (
+        <ListPanel listKey={p.target.key} meta={p.data.meta[p.target.key]} value={p.currentValue(p.target.key) as ListItem[]}
+          onChange={(next) => p.setValue(p.target!.key, next)} onClose={() => p.setPanel(null)} />
+      ) : null}
+      {p.panel === 'settings' ? (
+        <SettingsPanel keys={settingsKeysFor(window.location.pathname, p.data.meta, PAGE_IDS)} data={p.data}
+          currentValue={p.currentValue} onChange={(k, v) => p.setValue(k, v)} onClose={() => p.setPanel(null)} />
+      ) : null}
+      {p.panel === 'history' ? (
+        <HistoryDrawer onClose={() => p.setPanel(null)}
+          onReverted={() => { p.toast({ text: 'Geri alındı ve yayında.', tone: 'ok' }); window.location.reload(); }}
+          onError={(text) => p.toast({ text, tone: 'error' })} />
+      ) : null}
+      {p.panel === 'preview' ? <PhonePreview onClose={() => p.setPanel(null)} /> : null}
+    </>
+  );
 }
