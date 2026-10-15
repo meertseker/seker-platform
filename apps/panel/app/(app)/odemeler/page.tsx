@@ -241,6 +241,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           Tüm öğrencilerin aylık ödeme durumu tek tabloda. Bir hücreye tıklayarak o ayın
           kalemlerini görebilir ve ödendi işaretleyebilirsiniz.
         </p>
+        <Link
+          href="/odemeler/gecikenler"
+          className="mt-3 inline-flex min-h-11 items-center rounded-xl border border-red-200 bg-destructive-soft px-3 text-sm font-semibold text-red-700 hover:border-red-300"
+        >
+          Gecikenler ve hatırlatma →
+        </Link>
       </div>
 
       {studentsResult.error || paidResult.error ? (
