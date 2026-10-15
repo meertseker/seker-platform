@@ -178,7 +178,12 @@ export async function getPaymentSummary(monthIso: string): Promise<PaymentSummar
   const today = istanbulToday();
 
   const [dueResult, paidResult, overdueResult] = await Promise.all([
-    supabase.from("installments").select("amount").gte("due_date", startYmd).lt("due_date", nextStartYmd),
+    supabase
+      .from("installments")
+      .select("amount")
+      .neq("status", "iptal")
+      .gte("due_date", startYmd)
+      .lt("due_date", nextStartYmd),
     supabase
       .from("installments")
       .select("paid_amount")
