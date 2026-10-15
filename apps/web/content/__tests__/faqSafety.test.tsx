@@ -4,6 +4,7 @@ import { FAQ_ITEMS, PUBLISHED_FAQ, FEATURED_FAQ } from '../faq';
 import { ROSTER_STATUS, ENGLISH_COVERAGE_READY, ENGLISH_HOURS_PER_DAY } from '../day';
 import { buildFaqSchema } from '@/lib/schema';
 import FAQSection from '@/app/components/FAQSection';
+import { defaultData } from '@/lib/content/testing';
 
 /**
  * Künye (sınıf mevcudu / öğretmen sayısı) ve İngilizce kapsamı 1 Ağustos 2026'da
@@ -76,7 +77,7 @@ describe('FAQ — doğrulanmış olsa da aşırı iddia yok', () => {
   });
 
   it('FAQSection render çıktısı doğru mevcudu gösterir ve eski rakamı içermez', () => {
-    const { container } = render(<FAQSection />);
+    const { container } = render(<FAQSection data={defaultData(['home.faq.', 'faq.'])} />);
     const html = container.innerHTML.toLocaleLowerCase('tr');
     expect(html).toContain(`${ROSTER_STATUS.childCount} çocuk`);
     expect(html).not.toMatch(/\b10\s+çocuk\b/);

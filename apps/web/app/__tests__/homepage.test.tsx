@@ -1,4 +1,3 @@
-import { SITE } from '@/lib/site';
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
@@ -10,6 +9,8 @@ import ActivitiesSection from '../components/ActivitiesSection';
 import { ROSTER_STATUS } from '@/content/day';
 import { PUBLISHED_TESTIMONIALS } from '@/content/testimonials';
 import { MEDIA } from '@/content/media';
+import { makeReader } from '@/lib/content/reader';
+import { defaultData } from '@/lib/content/testing';
 
 /**
  * Ana sayfanın kaynak metnini ve render çıktısını tarayan testler.
@@ -39,7 +40,13 @@ const readProse = (...segments: string[]) => stripSvgCoordinates(readSource(...s
 
 const HERO_SRC = readSource('app', 'components', 'HeroSection.tsx');
 const GARDEN_SRC = readSource('app', 'components', 'GardenSection.tsx');
-const ANASAYFA_SRC = readSource('app', '(site)', 'Anasayfa.tsx');
+const ANASAYFA_SRC = readSource('app', '(site)', 'HomeView.tsx');
+// Metinler slot dosyalarına taşındı; taramalar onları da kapsar.
+const HOME_SLOTS_SRC = readProse('lib', 'content', 'slots', 'home.ts');
+const LISTS_SLOTS_SRC = readProse('lib', 'content', 'slots', 'lists.ts');
+const MEDIA_SLOTS_SRC = readProse('lib', 'content', 'slots', 'media.ts');
+
+const reader = () => makeReader(defaultData());
 const CONTACT_SRC = readSource('app', 'components', 'ContactSection.tsx');
 const FEATURES_SRC = readProse('app', 'components', 'FeaturesSection.tsx');
 const ACTIVITIES_SRC = readProse('app', 'components', 'ActivitiesSection.tsx');
@@ -48,7 +55,10 @@ const FAQ_SECTION_SRC = readProse('app', 'components', 'FAQSection.tsx');
 const HOMEPAGE_FILES = {
   'app/components/HeroSection.tsx': HERO_SRC,
   'app/components/GardenSection.tsx': GARDEN_SRC,
-  'app/(site)/Anasayfa.tsx': ANASAYFA_SRC,
+  'app/(site)/HomeView.tsx': ANASAYFA_SRC,
+  'lib/content/slots/home.ts': HOME_SLOTS_SRC,
+  'lib/content/slots/lists.ts': LISTS_SLOTS_SRC,
+  'lib/content/slots/media.ts': MEDIA_SLOTS_SRC,
   'app/components/ContactSection.tsx': CONTACT_SRC,
   'app/components/FeaturesSection.tsx': FEATURES_SRC,
   'app/components/ActivitiesSection.tsx': ACTIVITIES_SRC,
@@ -153,7 +163,7 @@ describe('GardenSection — okulun kendi kareleri, stok görsel taşımaz', () =
   });
 
   it('her karenin kendi başlığı var', () => {
-    const { getAllByRole } = render(<GardenSection />);
+    const { getAllByRole } = render(<GardenSection c={reader()} />);
     expect(getAllByRole('heading', { level: 3 }).length).toBe(SHOT_KEYS.length);
   });
 
@@ -173,29 +183,29 @@ describe('künye — okul sayıyı doğruladı (1 Ağustos 2026), hero rakamı g
   });
 
   it('HeroSection doğrulanmış sınıf mevcudunu ve öğretmen sayısını gösterir', () => {
-    const { container } = render(<HeroSection yearsActive={new Date().getFullYear() - SITE.foundingYear} />);
+    const { container } = render(<HeroSection c={reader()} />);
     const text = container.textContent ?? '';
     expect(text).toContain(String(ROSTER_STATUS.childCount));
     expect(text).toContain(String(ROSTER_STATUS.teacherCount));
   });
 
   it('HeroSection rakamı yönetmeliğin üst sınırıyla birlikte bağlama oturtur', () => {
-    const { container } = render(<HeroSection yearsActive={new Date().getFullYear() - SITE.foundingYear} />);
+    const { container } = render(<HeroSection c={reader()} />);
     expect(container.textContent ?? '').toContain(String(ROSTER_STATUS.limit));
   });
 
   it('HeroSection görsel taşır — bahçe karesi ve mekân kutusu', () => {
-    const { container } = render(<HeroSection yearsActive={new Date().getFullYear() - SITE.foundingYear} />);
+    const { container } = render(<HeroSection c={reader()} />);
     expect(container.querySelectorAll('img').length).toBeGreaterThanOrEqual(2);
   });
 
   it('HeroSection birincil CTA metni asset dosyası §4.4 ile eşleşir', () => {
-    const { getByText } = render(<HeroSection yearsActive={new Date().getFullYear() - SITE.foundingYear} />);
+    const { getByText } = render(<HeroSection c={reader()} />);
     expect(getByText('Ön Görüşme Randevusu Alın')).toBeDefined();
   });
 
   it('HeroSection veli sözünü kaynağıyla birlikte verir — uydurma alıntı taşımaz', () => {
-    const { container } = render(<HeroSection yearsActive={new Date().getFullYear() - SITE.foundingYear} />);
+    const { container } = render(<HeroSection c={reader()} />);
     const text = container.textContent ?? '';
     const quoted = PUBLISHED_TESTIMONIALS.some((item) => text.includes(item.quote));
     expect(quoted).toBe(true);
@@ -204,14 +214,14 @@ describe('künye — okul sayıyı doğruladı (1 Ağustos 2026), hero rakamı g
 
 describe('FeaturesSection — doğrulanmamış güvenlik/beslenme özellikleri iddia edilmez (doğrulama kuyruğu #8, #9)', () => {
   it('kaynakta "kamera" veya "beslenme uzmanı" gibi doğrulanmamış özellik iddiaları yok', () => {
-    const lower = FEATURES_SRC.toLowerCase();
+    const lower = (FEATURES_SRC + HOME_SLOTS_SRC).toLowerCase();
     expect(lower).not.toContain('kamera');
     expect(lower).not.toContain('beslenme uzmanı');
     expect(lower).not.toMatch(/7\s*\/\s*24|24\s*\/\s*7/);
   });
 
   it('render çıktısında da aynı iddialar yok, kart sayısı sabit kalmış', () => {
-    const { container, getAllByRole } = render(<FeaturesSection />);
+    const { container, getAllByRole } = render(<FeaturesSection c={reader()} />);
     const text = (container.textContent ?? '').toLowerCase();
     expect(text).not.toContain('kamera');
     expect(text).not.toContain('beslenme uzmanı');
@@ -221,20 +231,20 @@ describe('FeaturesSection — doğrulanmamış güvenlik/beslenme özellikleri i
 
 describe('ActivitiesSection — zekâ iddiası içermez (asset dosyası §5.1)', () => {
   it('kaynakta "zekâ/zeka" ile "geliştir/artır/yükselt" birlikte geçmiyor', () => {
-    const lower = ACTIVITIES_SRC.toLowerCase();
+    const lower = (ACTIVITIES_SRC + HOME_SLOTS_SRC).toLowerCase();
     expect(lower).not.toMatch(/zek[aâ][^.]{0,40}(geliştir|artır|yükselt)/);
     expect(lower).not.toContain('müzikal zeka');
   });
 
   it('render çıktısında da zekâ iddiası yok', () => {
-    const { container } = render(<ActivitiesSection />);
+    const { container } = render(<ActivitiesSection c={reader()} />);
     const text = (container.textContent ?? '').toLowerCase();
     expect(text).not.toMatch(/zek[aâ][^.]{0,40}(geliştir|artır|yükselt)/);
   });
 });
 
 describe('mobil kaydırma — gün önizlemesi tek satır yatay kaydırmaya düşer (Important 4)', () => {
-  it('Anasayfa Header taşımaz — kabuk layout\'ta durur', () => {
+  it('HomeView Header taşımaz — kabuk layout\'ta durur', () => {
     expect(ANASAYFA_SRC).not.toMatch(/<Header/);
   });
 
@@ -242,7 +252,7 @@ describe('mobil kaydırma — gün önizlemesi tek satır yatay kaydırmaya dü�
     expect(ANASAYFA_SRC).toContain('transitionName={`day-${chapter.id}`}');
   });
 
-  it('Anasayfa.tsx, üç dikey çerçeveyi mobilde alt alta değil yatay kaydırmada dizer', () => {
+  it('HomeView.tsx, üç dikey çerçeveyi mobilde alt alta değil yatay kaydırmada dizer', () => {
     expect(ANASAYFA_SRC).toMatch(/overflow-x-auto/);
     expect(ANASAYFA_SRC).toMatch(/snap-x/);
     // md: öneki olmadan grid-cols-3 hâlâ mobilde etkiliyse yığılma geri döner.

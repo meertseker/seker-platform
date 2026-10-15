@@ -1,12 +1,40 @@
-import { vi } from 'vitest';
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
-import { describe, it, expect } from 'vitest';
+import { vi, describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import Anasayfa from '@/app/(site)/Anasayfa';
+import HomeView from '@/app/(site)/HomeView';
+import { defaultData, sentinelData, uncoveredText } from '@/lib/content/testing';
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
+const PREFIXES = ['home.', 'faq.', 'testimonials.', 'day.', 'program.', 'media.', 'meta.home.'];
 
 describe('ana sayfa ziyaretçi HTML', () => {
-  it('düzenleme katmanından önceki hâliyle aynı', async () => {
-    const { container } = render(await Anasayfa());
+  it('düzenleme katmanından önceki hâliyle aynı', () => {
+    const { container } = render(<HomeView data={defaultData(PREFIXES)} />);
     expect(container.innerHTML).toMatchSnapshot();
+  });
+
+  it('ziyaretçiye düzenleme öznitelikleri gitmez', () => {
+    const { container } = render(<HomeView data={defaultData(PREFIXES)} />);
+    expect(container.innerHTML).not.toContain('data-edit-');
+  });
+
+  it('düzenleme modunda metinler, listeler ve fotoğraflar işaretlenir', () => {
+    const data = { ...defaultData(PREFIXES), editing: true };
+    const { container } = render(<HomeView data={data} />);
+    for (const key of ['home.hero.title', 'home.day.link', 'home.faq.cta', 'media.gardenWide', 'media.candyCorner']) {
+      expect(container.querySelector(`[data-edit-key="${key}"]`), key).not.toBeNull();
+    }
+    for (const list of ['day.chapters', 'home.garden.shots', 'home.features.cards', 'program.branches', 'home.week.days', 'faq.items']) {
+      expect(container.querySelector(`[data-edit-list="${list}"]`), list).not.toBeNull();
+    }
+    expect(container.querySelector('[data-edit-key="testimonials.items"][data-edit-path$=".quote"]')).not.toBeNull();
+  });
+
+  it('görünür her metin bir içerik alanından geliyor', () => {
+    const { container } = render(<HomeView data={sentinelData(PREFIXES)} />);
+    // Başvuru formu (LeadForm) ve iletişim bilgisi (ContactInfo) bu görevin kapsamı değil: kendi bileşenleri/SITE sabitleri.
+    container.querySelectorAll('form, .max-w-3xl > .mt-12').forEach((el) => el.remove());
+    // "Sahne 0N": SCHEDULE_READY false iken chapterLabel()'in sırasından türettiği etiket; gerçek saat `time` alanından gelir.
+    expect(uncoveredText(container).filter((t) => !/^Sahne \d{2}$/.test(t))).toEqual([]);
   });
 });

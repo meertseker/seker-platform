@@ -8,11 +8,12 @@ type Props = {
   payload?: Record<string, unknown>;
   external?: boolean;
   className?: string;
+  editAttrs?: Record<string, string>;
   children: React.ReactNode;
 };
 
 export default function TrackedLink({
-  href, event, payload = {}, external = false, className, children,
+  href, event, payload = {}, external = false, className, editAttrs, children,
 }: Props) {
   const handleClick = () => trackEvent(event, payload);
 
@@ -24,6 +25,7 @@ export default function TrackedLink({
         rel="noopener noreferrer"
         onClick={handleClick}
         className={className}
+        {...editAttrs}
       >
         {children}
       </a>
@@ -31,7 +33,7 @@ export default function TrackedLink({
   }
 
   return (
-    <Link href={href} onClick={handleClick} className={className}>
+    <Link href={href} onClick={handleClick} className={className} {...editAttrs}>
       {children}
     </Link>
   );

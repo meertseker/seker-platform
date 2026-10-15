@@ -2,6 +2,8 @@ import PageHero from '@/app/components/PageHero'
 import ContactSection from '@/app/components/ContactSection'
 import JsonLd from '@/app/components/JsonLd'
 import { buildMetadata } from '@/lib/metadata'
+import { getReaderData } from '@/lib/content/server'
+import { pickData } from '@/lib/content/reader'
 import { buildBreadcrumbSchema } from '@/lib/schema'
 import { SITE } from '@/lib/site'
 import { FULL_DAY_LABEL, HALF_DAY_LABEL } from '@/content/program'
@@ -12,7 +14,9 @@ export const metadata = buildMetadata({
   path: '/iletisim',
 })
 
-export default function IletisimPage() {
+// Geçici: iletişim sayfası kendi görevinde (Task 12+) sarılana kadar bölüm başlığı ana sayfa anahtarlarını okur.
+export default async function IletisimPage() {
+  const data = await getReaderData()
   return (
     <div className="min-h-screen bg-paper">
       <JsonLd
@@ -30,7 +34,7 @@ export default function IletisimPage() {
         scallopTone="paper-warm"
       />
 
-      <ContactSection />
+      <ContactSection data={pickData(data, ['home.contact.', 'site.'])} />
     </div>
   )
 }

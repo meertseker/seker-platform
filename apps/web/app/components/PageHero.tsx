@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import type { Reader } from '@/lib/content/types';
 
 export type BandTone = 'grape' | 'bubble' | 'mint' | 'sunny' | 'sky';
 
@@ -26,15 +27,23 @@ export default function PageHero({
   scallopTone = 'paper',
   media,
   children,
+  c,
+  keys,
 }: {
   eyebrow?: React.ReactNode;
-  title: React.ReactNode;
+  title?: React.ReactNode;
   lead?: React.ReactNode;
   tone?: BandTone;
   scallopTone?: 'paper' | 'paper-warm' | 'white';
   media?: PageHeroMedia;
   children?: React.ReactNode;
+  /** Düzenlenebilir sayfalar: okuyucu ve metin anahtarları; verilirse eyebrow/title/lead buradan basılır. */
+  c?: Reader;
+  keys?: { eyebrow?: string; title?: string; lead?: string };
 }) {
+  const eyebrowNode = c && keys?.eyebrow ? c.text(keys.eyebrow) : eyebrow;
+  const titleNode = c && keys?.title ? c.text(keys.title) : title;
+  const leadNode = c && keys?.lead ? c.text(keys.lead) : lead;
   const scallopClass =
     scallopTone === 'paper-warm' ? 'scallop scallop-warm'
     : scallopTone === 'white' ? 'scallop scallop-white'
@@ -45,12 +54,12 @@ export default function PageHero({
       <Confetti />
 
       <div className="relative z-10 mx-auto max-w-3xl px-6 text-center">
-        {eyebrow ? (
-          <p className="timecode text-white/70">{eyebrow}</p>
+        {eyebrowNode ? (
+          <p className="timecode text-white/70" {...(c && keys?.eyebrow ? c.attrs(keys.eyebrow) : {})}>{eyebrowNode}</p>
         ) : null}
-        <h1 className="mt-4 font-display text-3xl text-white md:text-5xl">{title}</h1>
-        {lead ? (
-          <p className="mx-auto mt-5 max-w-2xl text-base text-white/85 md:text-lg">{lead}</p>
+        <h1 className="mt-4 font-display text-3xl text-white md:text-5xl" {...(c && keys?.title ? c.attrs(keys.title) : {})}>{titleNode}</h1>
+        {leadNode ? (
+          <p className="mx-auto mt-5 max-w-2xl text-base text-white/85 md:text-lg" {...(c && keys?.lead ? c.attrs(keys.lead) : {})}>{leadNode}</p>
         ) : null}
         {media ? (
           <div

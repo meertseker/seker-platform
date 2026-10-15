@@ -2,11 +2,16 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import Timecode from './cine/Timecode'
-import { FEATURED_FAQ } from '@/content/faq'
+import type { FaqItem } from '@/content/faq'
 import { buildFaqSchema } from '@/lib/schema'
+import { makeReader } from '@/lib/content/reader'
+import type { ReaderData } from '@/lib/content/types'
+import { Editable } from './edit/Editable'
 import JsonLd from './JsonLd'
 
-const FAQSection = () => {
+// İstemci bileşen: sunucu ebeveyn pickData(data, ['home.faq.', 'faq.']) geçirir.
+const FAQSection = ({ data }: { data: ReaderData }) => {
+  const c = makeReader(data)
   const [openItems, setOpenItems] = useState<string[]>([])
 
   const toggleItem = (id: string) => {
@@ -18,7 +23,7 @@ const FAQSection = () => {
   }
 
   // Anasayfada gösterilecek önemli sorular
-  const featuredFAQs = FEATURED_FAQ;
+  const featuredFAQs = c.list<FaqItem>('faq.items').filter((item) => item.ready && item.featured);
 
   return (
     <>
@@ -26,18 +31,14 @@ const FAQSection = () => {
       <div className="mx-auto max-w-6xl px-6">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <Timecode>Velilerin sorduğu</Timecode>
-          <h2 className="mt-2 text-3xl text-ink md:text-4xl">
-            Sık Sorulan Sorular
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-ink-soft">
-            Anaokulumuza dair merak ettiğiniz önemli soruların cevaplarını burada bulabilirsiniz.
-          </p>
+          <Timecode editAttrs={c.attrs('home.faq.eyebrow')}>{c.text('home.faq.eyebrow')}</Timecode>
+          <Editable c={c} k="home.faq.title" as="h2" className="mt-2 text-3xl text-ink md:text-4xl" />
+          <Editable c={c} k="home.faq.lead" as="p" className="mx-auto mt-4 max-w-2xl text-ink-soft" />
         </div>
 
         {/* FAQ Items */}
         <div className="max-w-3xl mx-auto mb-12">
-          <div className="space-y-4">
+          <div className="space-y-4" {...c.listAttrs('faq.items')}>
             {featuredFAQs.map((faq) => (
               <div
                 key={faq.id}
@@ -47,9 +48,7 @@ const FAQSection = () => {
                   onClick={() => toggleItem(faq.id)}
                   className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left hover:bg-paper-warm"
                 >
-                  <h3 className="text-ink">
-                    {faq.question}
-                  </h3>
+                  <Editable c={c} k="faq.items" path={`${faq.id}.question`} value={faq.question} as="h3" className="text-ink" />
                   <svg
                     className={`h-5 w-5 shrink-0 text-grape transition-transform duration-200 ${
                       openItems.includes(faq.id) ? 'rotate-180' : ''
@@ -65,9 +64,14 @@ const FAQSection = () => {
                 {openItems.includes(faq.id) && (
                   <div className="px-6 pb-4">
                     <div className="border-t border-rule pt-4">
-                      <p className="text-ink-soft leading-relaxed">
-                        {faq.answer}
-                      </p>
+                      <Editable
+                        c={c}
+                        k="faq.items"
+                        path={`${faq.id}.answer`}
+                        value={faq.answer}
+                        as="p"
+                        className="text-ink-soft leading-relaxed"
+                      />
                     </div>
                   </div>
                 )}
@@ -81,13 +85,14 @@ const FAQSection = () => {
           <Link
             href="/sss"
             className="inline-block rounded-full border-2 border-grape px-8 py-3 font-semibold text-grape hover:bg-grape hover:text-white"
+            {...c.attrs('home.faq.cta')}
           >
-            Tüm soruları görüntüle
+            {c.text('home.faq.cta')}
           </Link>
         </div>
       </div>
     </section>
-    <JsonLd data={buildFaqSchema(FEATURED_FAQ)} />
+    <JsonLd data={buildFaqSchema(featuredFAQs)} />
     </>
   )
 }

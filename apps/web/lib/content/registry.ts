@@ -1,9 +1,15 @@
 import type { SlotDef } from './types';
 import { SITE_SLOTS } from './slots/site';
+import { MEDIA_SLOTS } from './slots/media';
+import { LIST_SLOTS } from './slots/lists';
+import { HOME_SLOTS } from './slots/home';
 
 // Her sayfa görevi kendi slots dosyasını buraya ekler.
 export const SLOTS: Record<string, SlotDef> = {
   ...SITE_SLOTS,
+  ...MEDIA_SLOTS,
+  ...LIST_SLOTS,
+  ...HOME_SLOTS,
 };
 
 export { PAGE_IDS } from './pageIds';

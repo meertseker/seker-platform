@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { MEDIA, type MediaKey } from '@/content/media';
+import type { ImageValue } from '@/lib/content/types';
 
 export type Grade = 'dawn' | 'morning' | 'midday' | 'golden' | 'dusk' | 'none';
 
@@ -38,13 +39,18 @@ const RATIO_CLASS: Record<'cinema' | 'portrait' | 'wide', string> = {
  */
 export default function Frame({
   mediaKey,
+  image,
+  editAttrs,
   grade = 'none',
   ratio = 'cinema',
   priority = false,
   sizes = '(max-width: 768px) 100vw, 1100px',
   transitionName,
 }: {
-  mediaKey: MediaKey;
+  mediaKey?: MediaKey;
+  /** Verilirse `mediaKey` yerine kullanılır (düzenlenebilir sayfalarda okuyucudan gelir). */
+  image?: ImageValue;
+  editAttrs?: Record<string, string>;
   grade?: Grade;
   ratio?: 'cinema' | 'portrait' | 'wide';
   priority?: boolean;
@@ -52,13 +58,14 @@ export default function Frame({
   /** Anasayfa kadrajı ile günlük akış sahnesini aynı nesne gibi bağlar. */
   transitionName?: string;
 }) {
-  const asset = MEDIA[mediaKey];
+  const asset = image ?? MEDIA[mediaKey as MediaKey];
   const ratioClass = RATIO_CLASS[ratio];
 
   return (
     <div
       className={`relative w-full overflow-hidden rounded-3xl bg-paper-warm ring-1 ring-rule ${ratioClass}`}
       style={transitionName ? { viewTransitionName: transitionName } : undefined}
+      {...editAttrs}
     >
       <Image
         src={asset.src}

@@ -1,11 +1,9 @@
 import Image from 'next/image';
 import Timecode from './cine/Timecode';
 import TrackedLink from './TrackedLink';
-import { SITE, WHATSAPP_URL } from '@/lib/site';
-import { MEDIA } from '@/content/media';
-import { TESTIMONIALS } from '@/content/testimonials';
-import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from '@/content/day';
-import { MONTESSORI_DAYS_PER_WEEK } from '@/content/program';
+import { Editable } from './edit/Editable';
+import { WHATSAPP_URL } from '@/lib/site';
+import type { Reader } from '@/lib/content/types';
 
 /**
  * Hero — okulun kendi bahçe fotoğrafı zemin, üzerinde bento düzeninde
@@ -14,21 +12,25 @@ import { MONTESSORI_DAYS_PER_WEEK } from '@/content/program';
  * rakamını ve bir veli sözünü taşır.
  *
  * Başlık ve giriş metni okulun kendi tanıtım metninden gelir; buradaki
- * cümleler pazarlama için yeniden yazılmadı.
+ * cümleler pazarlama için yeniden yazılmadı. Metinlerin varsayılanları
+ * lib/content/slots/home.ts'de durur.
  */
 
 const HERO_QUOTE_ID = 'muge-ilkokul-olsa';
 
-export default function HeroSection({ yearsActive }: { yearsActive: number }) {
-  const quote = TESTIMONIALS.find((item) => item.id === HERO_QUOTE_ID && item.ready);
-  const photo = MEDIA.candyCorner;
+type Quote = { id: string; quote: string; author: string; context: string; ready: boolean };
+
+export default function HeroSection({ c }: { c: Reader }) {
+  const quote = c.list<Quote>('testimonials.items').find((item) => item.id === HERO_QUOTE_ID && item.ready);
+  const wide = c.image('media.gardenWide');
+  const photo = c.image('media.candyCorner');
 
   return (
     <section className="relative">
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden" {...c.attrs('media.gardenWide')}>
         <Image
-          src={MEDIA.gardenWide.src}
-          alt={MEDIA.gardenWide.alt}
+          src={wide.src}
+          alt={wide.alt}
           fill
           priority
           sizes="100vw"
@@ -50,21 +52,17 @@ export default function HeroSection({ yearsActive }: { yearsActive: number }) {
             {/* 1 — Teklif. Bento'nun en büyük kutusu. */}
             <div className="rounded-[1.75rem] bg-white/95 p-6 shadow-2xl shadow-ink/25 backdrop-blur-md md:col-span-2 md:p-9">
               <span className="inline-flex w-fit rounded-full bg-paper-warm px-4 py-1.5">
-                <Timecode>
-                  Beykent&apos;in en köklü anaokullarından biri · {SITE.foundingYear}&apos;den beri
-                </Timecode>
+                <Timecode editAttrs={c.attrs('home.hero.badge')}>{c.text('home.hero.badge')}</Timecode>
               </span>
 
-              <h1 className="mt-4 text-3xl text-ink md:mt-5 md:text-5xl lg:text-6xl">
-                Çocuğu tanıyan, potansiyelini keşfeden bir okul.
-              </h1>
+              <Editable
+                c={c}
+                k="home.hero.title"
+                as="h1"
+                className="mt-4 text-3xl text-ink md:mt-5 md:text-5xl lg:text-6xl"
+              />
 
-              <p className="mt-4 max-w-xl text-base text-ink-soft md:text-lg">
-                Her çocuğun kendine özgü olduğuna inanıyoruz. İki binamız ve
-                geniş metrekareye sahip iki büyük bahçemizle çocukların
-                özgürce hareket edebildiği, keşfedebildiği bir eğitim ortamı
-                sunuyoruz.
-              </p>
+              <Editable c={c} k="home.hero.lead" as="p" className="mt-4 max-w-xl text-base text-ink-soft md:text-lg" />
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <TrackedLink
@@ -72,8 +70,9 @@ export default function HeroSection({ yearsActive }: { yearsActive: number }) {
                   event="cta_click"
                   payload={{ location: 'hero', target: 'kayit' }}
                   className="rounded-full bg-bubble-deep px-7 py-3.5 text-center font-semibold text-white shadow-lg shadow-bubble-deep/30 hover:bg-ink md:py-4"
+                  editAttrs={c.attrs('home.hero.ctaPrimary')}
                 >
-                  Ön Görüşme Randevusu Alın
+                  {c.text('home.hero.ctaPrimary')}
                 </TrackedLink>
                 <TrackedLink
                   href={WHATSAPP_URL}
@@ -81,18 +80,20 @@ export default function HeroSection({ yearsActive }: { yearsActive: number }) {
                   payload={{ location: 'hero' }}
                   external
                   className="rounded-full border-2 border-mint-deep px-7 py-3.5 text-center font-semibold text-mint-deep hover:bg-mint-deep hover:text-white md:py-4"
+                  editAttrs={c.attrs('home.hero.ctaWhatsapp')}
                 >
-                  WhatsApp&apos;tan Yazın
+                  {c.text('home.hero.ctaWhatsapp')}
                 </TrackedLink>
               </div>
 
-              <p className="mt-3 text-sm text-ink-soft">
-                Size uygun bir saat seçin. Kayıt zorunluluğu yok.
-              </p>
+              <Editable c={c} k="home.hero.note" as="p" className="mt-3 text-sm text-ink-soft" />
             </div>
 
             {/* 2 — Mekân. Dikey fotoğraf kutusu, sağ rayda. */}
-            <div className="relative min-h-56 overflow-hidden rounded-[1.75rem] shadow-2xl shadow-ink/25 md:min-h-0">
+            <div
+              className="relative min-h-56 overflow-hidden rounded-[1.75rem] shadow-2xl shadow-ink/25 md:min-h-0"
+              {...c.attrs('media.candyCorner')}
+            >
               <Image
                 src={photo.src}
                 alt={photo.alt}
@@ -105,10 +106,8 @@ export default function HeroSection({ yearsActive }: { yearsActive: number }) {
                 className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"
               />
               <div className="absolute inset-x-0 bottom-0 p-5">
-                <p className="font-display text-xl text-white">Şeker Köşesi</p>
-                <p className="mt-1 text-sm text-white/85">
-                  İlk gün ve mezuniyet kareleri burada çekiliyor.
-                </p>
+                <Editable c={c} k="home.hero.cornerTitle" as="p" className="font-display text-xl text-white" />
+                <Editable c={c} k="home.hero.cornerText" as="p" className="mt-1 text-sm text-white/85" />
               </div>
             </div>
 
@@ -116,47 +115,32 @@ export default function HeroSection({ yearsActive }: { yearsActive: number }) {
             <div className="rounded-[1.75rem] bg-grape p-6 shadow-xl shadow-grape/30">
               <div className="flex items-end gap-5">
                 <div>
-                  <p className="font-display text-4xl text-white md:text-5xl">
-                    {ROSTER_STATUS.childCount}
-                  </p>
-                  <p className="mt-1 text-sm text-white/85">sınıfta çocuk</p>
+                  <Editable c={c} k="home.hero.rosterChildren" as="p" className="font-display text-4xl text-white md:text-5xl" />
+                  <Editable c={c} k="home.hero.rosterChildrenLabel" as="p" className="mt-1 text-sm text-white/85" />
                 </div>
                 <div className="h-12 w-px bg-white/30" />
                 <div>
-                  <p className="font-display text-4xl text-white md:text-5xl">
-                    {ROSTER_STATUS.teacherCount}
-                  </p>
-                  <p className="mt-1 text-sm text-white/85">öğretmen</p>
+                  <Editable c={c} k="home.hero.rosterTeachers" as="p" className="font-display text-4xl text-white md:text-5xl" />
+                  <Editable c={c} k="home.hero.rosterTeachersLabel" as="p" className="mt-1 text-sm text-white/85" />
                 </div>
               </div>
-              <p className="mt-4 text-sm leading-relaxed text-white/85">
-                Yönetmelik öğretmen başına {ROSTER_STATUS.limit} çocuğa kadar
-                izin veriyor. Sınıflarımızı doğum yılına ve ayına göre
-                oluşturuyoruz.
-              </p>
+              <Editable c={c} k="home.hero.rosterNote" as="p" className="mt-4 text-sm leading-relaxed text-white/85" />
             </div>
 
             {/* 4 — Programın iki sabiti: Montessori ve günlük İngilizce. */}
             <div className="rounded-[1.75rem] bg-mint-deep p-6 shadow-xl shadow-mint-deep/30">
               <div className="flex items-end gap-5">
                 <div>
-                  <p className="font-display text-4xl text-white md:text-5xl">
-                    {MONTESSORI_DAYS_PER_WEEK} gün
-                  </p>
-                  <p className="mt-1 text-sm text-white/85">Montessori</p>
+                  <Editable c={c} k="home.hero.programMontessori" as="p" className="font-display text-4xl text-white md:text-5xl" />
+                  <Editable c={c} k="home.hero.programMontessoriLabel" as="p" className="mt-1 text-sm text-white/85" />
                 </div>
                 <div className="h-12 w-px bg-white/30" />
                 <div>
-                  <p className="font-display text-4xl text-white md:text-5xl">
-                    {ENGLISH_HOURS_PER_DAY} saat
-                  </p>
-                  <p className="mt-1 text-sm text-white/85">her gün İngilizce</p>
+                  <Editable c={c} k="home.hero.programEnglish" as="p" className="font-display text-4xl text-white md:text-5xl" />
+                  <Editable c={c} k="home.hero.programEnglishLabel" as="p" className="mt-1 text-sm text-white/85" />
                 </div>
               </div>
-              <p className="mt-4 text-sm leading-relaxed text-white/85">
-                Montessori ayrı bir etkinlik saati değil, haftanın her günü
-                günün omurgası. {yearsActive} yıldır aynı bahçede çalışıyoruz.
-              </p>
+              <Editable c={c} k="home.hero.programNote" as="p" className="mt-4 text-sm leading-relaxed text-white/85" />
             </div>
 
             {/* 5 — Veli sözü. Google yorumundan, kısaltılmadan. */}
@@ -165,10 +149,16 @@ export default function HeroSection({ yearsActive }: { yearsActive: number }) {
                 <span aria-hidden="true" className="font-display text-4xl leading-none text-bubble-deep">
                   &ldquo;
                 </span>
-                <blockquote className="mt-1 text-base leading-relaxed text-ink">
+                <blockquote
+                  className="mt-1 text-base leading-relaxed text-ink"
+                  {...c.attrs('testimonials.items', `${quote.id}.quote`)}
+                >
                   {quote.quote}
                 </blockquote>
-                <figcaption className="mt-3 text-sm text-ink-soft">
+                <figcaption
+                  className="mt-3 text-sm text-ink-soft"
+                  {...c.attrs('testimonials.items', `${quote.id}.author`)}
+                >
                   {quote.author} · {quote.context}
                 </figcaption>
               </figure>
