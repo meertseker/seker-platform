@@ -10,3 +10,8 @@ export function limitFor(text: string, heading = false): number {
 export function limitForField(items: Record<string, unknown>[], field: string): number {
   return limitFor(items.reduce((longest, i) => (countChars(String(i[field])) > countChars(longest) ? String(i[field]) : longest), ''));
 }
+
+/** Meta açıklaması sınırı: 160; özgün metin daha uzunsa doldurulmuş uzunluğu 10'a yukarı yuvarlar (F2-T14a: metin aynen korunur). */
+export function metaDescriptionMax(text: string): number {
+  return Math.max(160, Math.ceil(countChars(text) / 10) * 10);
+}

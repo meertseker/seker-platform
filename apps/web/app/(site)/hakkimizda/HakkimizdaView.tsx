@@ -161,7 +161,7 @@ export default function HakkimizdaView({ data }: { data: ReaderData }) {
           <Editable c={c} k="hakkimizda.visit.title" as="h2" className="text-center font-display text-3xl text-ink" />
           <Editable c={c} k="hakkimizda.visit.lead" as="p" className="mt-4 text-center text-ink-soft" />
           <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 md:p-8">
-            <LeadForm />
+            <LeadForm data={pickData(data, ['form.'])} />
           </div>
         </div>
       </section>

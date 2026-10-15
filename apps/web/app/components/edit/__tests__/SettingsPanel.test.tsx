@@ -11,6 +11,9 @@ const meta = {
   'gunlukakis.scene.prefix': { kind: 'text' as const, label: 'Sahne etiketi' },
   'gunlukakis.roster.count': { kind: 'text' as const, label: 'Künye altyazısı' },
   'gunlukakis.roster.limit': { kind: 'text' as const, label: 'Künye üst sınır' },
+  'form.help.before': { kind: 'text' as const, label: 'Form altı baş' },
+  'form.error': { kind: 'text' as const, label: 'Form hatası' },
+  'sss.cta.email': { kind: 'text' as const, label: 'E-posta düğmesi' },
   'site.phone': { kind: 'text' as const, label: 'Telefon' },
   'chrome.footer.rights': { kind: 'text' as const, label: 'Telif satırı' },
   'chrome.whatsapp.label': { kind: 'text' as const, label: 'WhatsApp etiketi' },
@@ -44,6 +47,17 @@ describe('settingsKeysFor', () => {
     const keys = settingsKeysFor('/gunluk-akis', meta, { '/gunluk-akis': 'gunlukakis' });
     expect(keys).toEqual(expect.arrayContaining(['gunlukakis.scene.prefix', 'gunlukakis.roster.count', 'gunlukakis.roster.limit']));
     expect(keys).not.toContain('yasgrubu.focus.suffix');
+  });
+  it('form olan sayfalarda form ek alanları; diğerlerinde yok', () => {
+    for (const path of ['/', '/kayit', '/iletisim', '/guvenlik', '/yas-gruplari/2-3-yas']) {
+      expect(settingsKeysFor(path, meta, {}), path).toEqual(expect.arrayContaining(['form.help.before', 'form.error']));
+    }
+    for (const path of ['/bultenler', '/sss', '/veli-yorumlari']) {
+      expect(settingsKeysFor(path, meta, {}), path).not.toContain('form.error');
+    }
+  });
+  it('SSS: e-posta düğmesi yazısı sayfa ayarlarında', () => {
+    expect(settingsKeysFor('/sss', meta, {})).toContain('sss.cta.email');
   });
   it('ek alan yalnızca meta içindeyse listelenir', () => {
     expect(settingsKeysFor('/gunluk-akis', {}, {})).toEqual([]);

@@ -4,7 +4,7 @@ import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
 import { Editable } from '@/app/components/edit/Editable';
 import { buildBreadcrumbSchema } from '@/lib/schema';
-import { makeReader } from '@/lib/content/reader';
+import { makeReader, pickData } from '@/lib/content/reader';
 import type { ReaderData } from '@/lib/content/types';
 
 export type AgeGroupItem = {
@@ -112,7 +112,7 @@ export default function AgeGroupView({ data, slug }: { data: ReaderData; slug: s
           </h2>
           <Editable c={c} k="yasgrubu.cta.lead" as="p" className="mt-4 text-center text-ink-soft" />
           <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 md:p-8">
-            <LeadForm />
+            <LeadForm data={pickData(data, ['form.'])} />
           </div>
         </div>
       </section>

@@ -5,6 +5,9 @@ import { trackLead } from '@/lib/analytics';
 import { UTM_KEYS } from '@/lib/attribution';
 import AttributionFields from './AttributionFields';
 import { KVKK_CONSENT_LABEL } from '@/content/kvkk';
+import { makeReader } from '@/lib/content/reader';
+import type { ReaderData } from '@/lib/content/types';
+import { FORM_DEFAULTS } from '@/lib/content/slots/form';
 
 type FieldErrors = Partial<Record<string, string[]>>;
 
@@ -13,8 +16,12 @@ type FieldErrors = Partial<Record<string, string[]>>;
  * dönemi, e-posta ve mesaj alanları kaldırıldı; bunlar aramada konuşuluyor.
  * Alan sayısı düştükçe form doldurma oranı yükselir.
  */
-export default function LeadForm() {
+export default function LeadForm({ data }: { data?: ReaderData } = {}) {
   const router = useRouter();
+  // Etiketler `form.*` slot'larından gelir; data verilmeyen sayfalarda (veya anahtar yoksa) koddaki varsayılan kullanılır.
+  const reader = data ? makeReader(data) : null;
+  const t = (key: string): string => (reader && data && key in data.values ? reader.text(key) : FORM_DEFAULTS[key]);
+  const attrs = (key: string): Record<string, string> => (reader && data && key in data.meta ? reader.attrs(key) : {});
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState('');
@@ -49,14 +56,14 @@ export default function LeadForm() {
 
       if (!response.ok) {
         setErrors(result.errors ?? {});
-        setFormError(result.message ?? 'Lütfen işaretli alanları kontrol edin.');
+        setFormError(result.message ?? t('form.invalid'));
         return;
       }
 
       trackLead(undefined, { landing_path: payload.landingPath });
       router.push('/tesekkurler');
     } catch {
-      setFormError('Bağlantı hatası. Lütfen telefonla ulaşın.');
+      setFormError(t('form.error'));
     } finally {
       setSubmitting(false);
     }
@@ -78,12 +85,12 @@ export default function LeadForm() {
 
       <div className="grid gap-5 md:grid-cols-2">
         <div>
-          <label htmlFor="parentName" className={label}>Adınız</label>
+          <label htmlFor="parentName" className={label} {...attrs('form.parentName.label')}>{t('form.parentName.label')}</label>
           <input id="parentName" name="parentName" autoComplete="name" className={field} required />
           {err('parentName')}
         </div>
         <div>
-          <label htmlFor="phone" className={label}>Telefon numaranız</label>
+          <label htmlFor="phone" className={label} {...attrs('form.phone.label')}>{t('form.phone.label')}</label>
           <input
             id="phone"
             name="phone"
@@ -98,7 +105,8 @@ export default function LeadForm() {
         </div>
       </div>
 
-      <label className="flex items-start gap-3 text-sm text-ink-soft">
+      {/* KVKK onay cümlesi hukuki metindir: düzenlenemez, kodda kalır. data-edit-ignore yalnızca düzenleme modunda basılır (ziyaretçi HTML'i değişmesin). */}
+      <label {...(reader?.editing ? { 'data-edit-ignore': '' } : {})} className="flex items-start gap-3 text-sm text-ink-soft">
         <input type="checkbox" name="kvkkConsent" required className="mt-1 h-4 w-4" />
         <span>
           <a href="/gizlilik" className="underline">KVKK Aydınlatma Metni</a>&apos;ni okudum.{' '}
@@ -113,12 +121,13 @@ export default function LeadForm() {
         type="submit"
         disabled={submitting}
         className="w-full rounded-full bg-grape px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-grape/30 transition hover:bg-ink disabled:opacity-60"
+        {...attrs('form.submit')}
       >
-        {submitting ? 'Gönderiliyor…' : 'Beni Arayın'}
+        {submitting ? t('form.submitting') : t('form.submit')}
       </button>
 
       <p className="text-center text-sm text-ink-soft">
-        Numaranızı bırakın, <strong>15 dakika</strong> içinde sizi arayalım.
+        {t('form.help.before')} <strong {...attrs('form.help.emphasis')}>{t('form.help.emphasis')}</strong> {t('form.help.after')}
       </p>
     </form>
   );

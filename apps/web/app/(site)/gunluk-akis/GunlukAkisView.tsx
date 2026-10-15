@@ -56,7 +56,7 @@ export default function GunlukAkisView({ data }: { data: ReaderData }) {
             <Editable c={c} k="gunlukakis.cta.title" as="h2" className="text-3xl text-white" />
             <Editable c={c} k="gunlukakis.cta.lead" as="p" className="mt-4 text-white/85" />
             <div className="mt-8 rounded-3xl bg-white p-6 shadow-xl shadow-ink/20 md:p-8">
-              <LeadForm />
+              <LeadForm data={pickData(data, ['form.'])} />
             </div>
           </div>
         </section>

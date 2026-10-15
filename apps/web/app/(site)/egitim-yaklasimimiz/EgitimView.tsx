@@ -4,7 +4,7 @@ import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
 import { Editable } from '@/app/components/edit/Editable';
 import { buildBreadcrumbSchema, buildFaqSchema } from '@/lib/schema';
-import { makeReader } from '@/lib/content/reader';
+import { makeReader, pickData } from '@/lib/content/reader';
 import type { ReaderData } from '@/lib/content/types';
 import type { FaqItem } from '@/content/faq';
 
@@ -132,7 +132,7 @@ export default function EgitimView({ data }: { data: ReaderData }) {
         <Editable c={c} k="egitim.cta.title" as="h2" className="text-center font-display text-3xl text-ink" />
         <Editable c={c} k="egitim.cta.lead" as="p" className="mt-4 text-center text-ink-soft" />
         <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 ring-1 ring-rule md:p-8">
-          <LeadForm />
+          <LeadForm data={pickData(data, ['form.'])} />
         </div>
       </section>
     </div>

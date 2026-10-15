@@ -10,6 +10,7 @@ import { GUVENLIK_SLOTS } from './slots/guvenlik';
 import { YASGRUPLARI_SLOTS } from './slots/yasgruplari';
 import { GUNLUKAKIS_SLOTS } from './slots/gunlukakis';
 import { AKTIVITELER_SLOTS } from './slots/aktiviteler';
+import { FORM_SLOTS } from './slots/form';
 
 // Her sayfa görevi kendi slots dosyasını buraya ekler.
 export const SLOTS: Record<string, SlotDef> = {
@@ -24,6 +25,7 @@ export const SLOTS: Record<string, SlotDef> = {
   ...YASGRUPLARI_SLOTS,
   ...GUNLUKAKIS_SLOTS,
   ...AKTIVITELER_SLOTS,
+  ...FORM_SLOTS,
 };
 
 export { PAGE_IDS } from './pageIds';
