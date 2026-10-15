@@ -4,14 +4,29 @@ import { randomUUID } from 'node:crypto';
 import { createServerSupabase } from '@seker/auth/server';
 import { getEditor } from '@seker/auth/editor';
 import { ACCEPTED_TYPES, MAX_UPLOAD_BYTES, processImage } from '@/lib/media/process';
-import { mediaKey, putImage } from '@/lib/media/s3';
+import { deleteImage, mediaKey, putImage } from '@/lib/media/s3';
 import { countChars } from '@/lib/content/chars';
 
 export type MediaAsset = { id: string; src: string; alt: string; width: number; height: number };
 
-export async function uploadImage(form: FormData): Promise<{ ok: true; asset: MediaAsset } | { ok: false; error: string }> {
+type UploadResult = { ok: true; asset: MediaAsset } | { ok: false; error: string };
+
+export async function uploadImage(form: FormData): Promise<UploadResult> {
+  try {
+    return await doUpload(form);
+  } catch (err) {
+    console.error('[media] beklenmeyen hata', (err as { code?: string } | null)?.code ?? 'unknown');
+    return { ok: false, error: 'Fotoğraf yüklenemedi, tekrar deneyin.' };
+  }
+}
+
+async function doUpload(form: FormData): Promise<UploadResult> {
   const editor = await getEditor();
   if (!editor) return { ok: false, error: 'Oturumunuz sona erdi. Panelden tekrar giriş yapın.' };
+
+  const mediaBase = process.env.NEXT_PUBLIC_MEDIA_BASE_URL;
+  if (!mediaBase || !process.env.S3_BUCKET)
+    return { ok: false, error: 'Fotoğraf yükleme henüz yapılandırılmamış. Site yöneticisine haber verin.' };
 
   const file = form.get('file');
   const alt = String(form.get('alt') ?? '').trim();
@@ -27,7 +42,8 @@ export async function uploadImage(form: FormData): Promise<{ ok: true; asset: Me
   let processed: Awaited<ReturnType<typeof processImage>>;
   try {
     processed = await processImage(Buffer.from(await file.arrayBuffer()));
-  } catch {
+  } catch (err) {
+    if ((err as Error).message === 'unsupported-format') return { ok: false, error: 'Bu dosya türü desteklenmiyor. JPEG, PNG veya WebP yükleyin.' };
     return { ok: false, error: 'Fotoğraf açılamadı. Başka bir dosya deneyin.' };
   }
 
@@ -46,13 +62,21 @@ export async function uploadImage(form: FormData): Promise<{ ok: true; asset: Me
     .insert({ id, s3_key: key, width: processed.width, height: processed.height, alt, faces, uploaded_by: editor.id })
     .select('id, s3_key, width, height, alt')
     .single();
-  if (error || !data) return { ok: false, error: 'Fotoğraf kaydedilemedi, tekrar deneyin.' };
+  if (error || !data) {
+    console.error('[media] kayıt hatası', error?.code ?? 'unknown');
+    try {
+      await deleteImage(key);
+    } catch {
+      console.error('[media] S3 temizliği başarısız');
+    }
+    return { ok: false, error: 'Fotoğraf kaydedilemedi, tekrar deneyin.' };
+  }
 
   return {
     ok: true,
     asset: {
       id: data.id,
-      src: `${process.env.NEXT_PUBLIC_MEDIA_BASE_URL}/${data.s3_key}`,
+      src: `${mediaBase}/${data.s3_key}`,
       alt: data.alt,
       width: data.width,
       height: data.height,

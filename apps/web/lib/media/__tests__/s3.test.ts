@@ -8,9 +8,12 @@ vi.mock('@aws-sdk/client-s3', () => ({
   PutObjectCommand: class {
     constructor(public input: unknown) {}
   },
+  DeleteObjectCommand: class {
+    constructor(public input: unknown) {}
+  },
 }));
 
-import { putImage, mediaKey } from '../s3';
+import { putImage, deleteImage, mediaKey } from '../s3';
 
 beforeEach(() => {
   send.mockReset();
@@ -36,5 +39,13 @@ describe('putImage', () => {
   it('S3 hatasını yukarı iletir', async () => {
     send.mockRejectedValue(new Error('boom'));
     await expect(putImage('site-images/2026/10/a.webp', Buffer.from('x'))).rejects.toThrow('boom');
+  });
+});
+
+describe('deleteImage', () => {
+  it('DeleteObjectCommand girdisi doğru', async () => {
+    await deleteImage('site-images/2026/10/a.webp');
+    const input = (send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
+    expect(input).toEqual({ Bucket: 'test-bucket', Key: 'site-images/2026/10/a.webp' });
   });
 });

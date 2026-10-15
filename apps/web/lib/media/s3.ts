@@ -1,5 +1,5 @@
 import 'server-only';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 let client: S3Client | null = null;
 
@@ -20,4 +20,9 @@ export async function putImage(key: string, body: Buffer): Promise<void> {
       CacheControl: 'public, max-age=31536000, immutable',
     }),
   );
+}
+
+export async function deleteImage(key: string): Promise<void> {
+  client ??= new S3Client({ region: process.env.S3_REGION });
+  await client.send(new DeleteObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key }));
 }

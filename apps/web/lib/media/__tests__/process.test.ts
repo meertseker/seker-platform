@@ -29,6 +29,11 @@ describe('processImage', () => {
     const out = await processImage(await sharp({ create: { width: 800, height: 600, channels: 3, background: '#fff' } }).png().toBuffer());
     expect([out.width, out.height]).toEqual([800, 600]);
   });
+  it('GIF ve TIFF içeriğini reddeder', async () => {
+    const base = { create: { width: 5, height: 5, channels: 3 as const, background: '#000' } };
+    await expect(processImage(await sharp(base).gif().toBuffer())).rejects.toThrow();
+    await expect(processImage(await sharp(base).tiff().toBuffer())).rejects.toThrow();
+  });
   it('görsel olmayan veriyi reddeder', async () => {
     await expect(processImage(Buffer.from('merhaba'))).rejects.toThrow();
   });
