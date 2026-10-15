@@ -27,6 +27,7 @@ import {
   istanbulDateString,
   overdueTotalKurus,
 } from "@/lib/cron-rules";
+import { reminderMessage } from "@/lib/overdue";
 import { formatTRY, tlToKurus } from "@/lib/money";
 import { getFunnel, getPaymentSummary } from "@/lib/queries/dashboard";
 import { badgeClass, LEAD_STATUS_STYLES } from "@/lib/status-styles";
@@ -69,9 +70,15 @@ interface StaleLeadRow {
   last_activity_at: string;
 }
 
+interface FamilyJoin {
+  phone: string | null;
+}
+
 interface StudentJoin {
   id: string;
   full_name: string;
+  phone: string | null;
+  family?: FamilyJoin | FamilyJoin[] | null;
 }
 
 interface DuePlanJoin {
@@ -303,7 +310,7 @@ export default async function Home() {
     supabase
       .from("installments")
       .select(
-        "id, due_date, amount, plan:payment_plans(item_type, student:students(id, full_name))",
+        "id, due_date, amount, plan:payment_plans(item_type, student:students(id, full_name, phone, family:families(phone)))",
       )
       .eq("status", "bekliyor")
       .lte("due_date", today)
@@ -355,6 +362,8 @@ export default async function Home() {
   const tahsilatTotalKurus = overdueTotalKurus(
     dueInstallments.map((row) => ({ amount: row.amount })),
   );
+  const overdueOnly = dueInstallments.filter((row) => daysLate(row.due_date, today) > 0);
+  const overdueOnlyKurus = overdueTotalKurus(overdueOnly.map((row) => ({ amount: row.amount })));
   const dueInstallmentsToShow = dueInstallments.slice(0, DISPLAY_LIMIT);
 
   const followupCount = tasks.length + staleLeads.length;
@@ -509,7 +518,7 @@ export default async function Home() {
         title="Bugünkü / geciken tahsilat"
         description="Vadesi bugün veya geçmiş, hâlâ bekleyen taksitler."
         count={dueInstallments.length}
-        seeAllHref="/odemeler"
+        seeAllHref="/odemeler/gecikenler"
       >
         {dueInstallmentsResult.error ? (
           <ErrorState text="Tahsilat bilgisi yüklenirken bir sorun oluştu." />
@@ -525,6 +534,15 @@ export default async function Home() {
                 {formatTRY(tahsilatTotalKurus)}
               </span>
             </div>
+            {overdueOnly.length > 0 ? (
+              <Link
+                href="/odemeler/gecikenler"
+                className="flex items-center justify-between rounded-2xl border border-red-200 bg-destructive-soft px-4 py-3 text-sm font-semibold text-red-700 hover:border-red-300"
+              >
+                <span>Geciken: {overdueOnly.length} taksit</span>
+                <span className="tabular-nums">{formatTRY(overdueOnlyKurus)} →</span>
+              </Link>
+            ) : null}
             <ul className="space-y-3">
               {dueInstallmentsToShow.map((row) => {
                 const plan = one(row.plan);
@@ -564,9 +582,26 @@ export default async function Home() {
                         )}
                       </p>
                     </div>
-                    <span className="text-base font-semibold tabular-nums text-foreground">
-                      {formatTRY(tlToKurus(Number(row.amount)))}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-semibold tabular-nums text-foreground">
+                        {formatTRY(tlToKurus(Number(row.amount)))}
+                      </span>
+                      {late > 0 && student ? (() => {
+                        const family = one(student.family);
+                        const phone = student.phone || family?.phone || null;
+                        return phone ? (
+                          <WhatsAppButton
+                            phone={phone}
+                            compact
+                            message={reminderMessage({
+                              studentName: student.full_name,
+                              totalKurus: tlToKurus(Number(row.amount)),
+                              items: [{ dueDate: row.due_date, itemType: plan?.item_type ?? "diger" }],
+                            })}
+                          />
+                        ) : null;
+                      })() : null}
+                    </div>
                   </li>
                 );
               })}
