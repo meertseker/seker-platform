@@ -85,3 +85,28 @@ describe('EditBar', () => {
     await waitFor(() => expect(saveContent).toHaveBeenCalledWith([{ key: 'hero.title', value: 'Yeni', baseUpdatedAt: 'taze' }]));
   });
 });
+
+describe('EditBar (önizleme iframe içinde)', () => {
+  it('hiçbir şey yapmaz: yansıtma, depolama yazımı, beforeunload yok', () => {
+    seed();
+    const before = sessionStorage.getItem(PENDING_STORAGE_KEY);
+    const original = Object.getOwnPropertyDescriptor(window, 'top');
+    Object.defineProperty(window, 'top', { configurable: true, value: {} });
+    const add = vi.spyOn(window, 'addEventListener');
+    document.body.innerHTML = '<h1 data-edit-key="hero.title" data-edit-kind="text">Eski</h1>';
+    try {
+      const { container } = bar();
+      expect(container.innerHTML).toBe('');
+      expect(document.querySelector('h1')!.textContent).toBe('Eski');
+      expect(document.querySelector('h1')!.getAttribute('data-edit-pending')).toBeNull();
+      expect(sessionStorage.getItem(PENDING_STORAGE_KEY)).toBe(before);
+      expect(add.mock.calls.some(([t]) => t === 'beforeunload')).toBe(false);
+      expect(screen.queryByText(/başkası değiştirdi/)).toBeNull();
+    } finally {
+      add.mockRestore();
+      if (original) Object.defineProperty(window, 'top', original);
+      else delete (window as unknown as { top?: unknown }).top;
+      document.body.innerHTML = '';
+    }
+  });
+});

@@ -150,9 +150,9 @@ describe('revertRevision', () => {
 });
 
 describe('listRevisions', () => {
-  it('oturum yoksa boş liste döner, sorgu yapmaz', async () => {
+  it('oturum yoksa hata döner, sorgu yapmaz', async () => {
     getEditor.mockResolvedValue(null);
-    expect(await listRevisions()).toEqual([]);
+    expect(await listRevisions()).toEqual({ ok: false, error: expect.stringContaining('Oturumunuz') });
     expect(from).not.toHaveBeenCalled();
   });
   it('editör için satırları eşler', async () => {
@@ -173,9 +173,14 @@ describe('listRevisions', () => {
         error: null,
       }),
     );
-    expect(await listRevisions()).toEqual([
+    expect(await listRevisions()).toEqual({ ok: true, rows: [
       { id: 'r1', key: 't.title', label: 'Başlık', createdAt: '2026-10-14T10:00:00Z', editorName: 'Ayşe', before: 'Eski metin', after: 'Yeni' },
       { id: 'r2', key: 't.title', label: 'Başlık', createdAt: '2026-10-13T10:00:00Z', editorName: '—', before: '(sitenin ilk hâli)', after: 'İlk' },
-    ]);
+    ] });
+  });
+  it('sorgu hatasında hata döner', async () => {
+    getEditor.mockResolvedValue({ id: 'u', fullName: 'A' });
+    from.mockImplementation(() => query({ data: null, error: { code: 'X' } }));
+    expect(await listRevisions()).toMatchObject({ ok: false });
   });
 });

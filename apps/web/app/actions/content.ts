@@ -78,16 +78,19 @@ function preview(v: unknown): string {
   return '';
 }
 
-export async function listRevisions(limit = 50): Promise<RevisionRow[]> {
+export type RevisionsResult = { ok: true; rows: RevisionRow[] } | { ok: false; error: string };
+
+export async function listRevisions(limit = 50): Promise<RevisionsResult> {
   try {
-    if (!(await getEditor())) return [];
+    if (!(await getEditor())) return { ok: false, error: SESSION_ERROR };
     const supabase = await createServerSupabase();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('content_revisions')
       .select('id, key, old_value, new_value, created_at, profiles(full_name)')
       .order('created_at', { ascending: false })
       .limit(Math.min(limit, 200));
-    return (data ?? []).map((r) => ({
+    if (error) throw error;
+    const rows = (data ?? []).map((r) => ({
       id: r.id,
       key: r.key,
       label: SLOTS[r.key]?.label ?? r.key,
@@ -96,8 +99,9 @@ export async function listRevisions(limit = 50): Promise<RevisionRow[]> {
       before: preview(r.old_value),
       after: preview(r.new_value),
     }));
+    return { ok: true, rows };
   } catch (err) {
     console.error('[content] revizyon listesi okunamadı', errorCode(err));
-    return [];
+    return { ok: false, error: 'Geçmiş yüklenemedi, tekrar deneyin.' };
   }
 }

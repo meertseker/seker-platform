@@ -20,7 +20,13 @@ const storage = () => (typeof window === 'undefined' ? null : window.sessionStor
 
 export type EditBarProps = { editor: Editor | null; data: ReaderData; announcements: AnnouncementRow[] };
 
-export default function EditBar({ editor, data, announcements }: EditBarProps) {
+/** Önizleme iframe'inde hiçbir durum/yan etki olmasın: durumlu kısım hiç monte edilmez. */
+export default function EditBar(props: EditBarProps) {
+  if (typeof window !== 'undefined' && window.self !== window.top) return null;
+  return <EditBarInner {...props} />;
+}
+
+function EditBarInner({ editor, data, announcements }: EditBarProps) {
   const router = useRouter();
   const [pending, dispatch] = useReducer(pendingReducer, undefined, () => loadPending(storage()));
   const [toasts, setToasts] = useState<Toast[]>([]);
