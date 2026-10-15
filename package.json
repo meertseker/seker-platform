@@ -12,6 +12,9 @@
     "db:start": "pnpm --filter @seker/db exec supabase start",
     "db:stop": "pnpm --filter @seker/db exec supabase stop"
   },
+  "pnpm": {
+    "overrides": { "sharp": "0.35.5" }
+  },
   "devDependencies": {
     "turbo": "2.11.8"
   }
