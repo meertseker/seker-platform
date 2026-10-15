@@ -4,6 +4,7 @@ import path from 'node:path';
 import { LANDING_SLUGS } from '@/content/landingPages';
 import { AGE_GROUPS, AGE_GROUPS_CONTENT } from '@/content/ageGroups';
 import { DAY_CHAPTERS } from '@/content/day';
+import { SLOTS } from '@/lib/content/registry';
 
 const APP_DIR = path.join(process.cwd(), 'app');
 
@@ -46,6 +47,10 @@ describe('K10 çapa hedefi', () => {
 describe('landing page hedefleri', () => {
   it.each(EXPECTED_LPS)('/lp/%s tanımlı', (slug) => {
     expect(LANDING_SLUGS).toContain(slug);
+  });
+
+  it('her LP h1 alanı reklam uyarısı taşır', () => {
+    for (const slug of LANDING_SLUGS) expect(SLOTS[`lp.${slug}.h1`].warn).toMatch(/Google Ads/);
   });
 
   it('dinamik LP rotası mevcut', () => {

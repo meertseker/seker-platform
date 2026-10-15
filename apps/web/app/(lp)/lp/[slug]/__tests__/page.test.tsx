@@ -3,8 +3,14 @@ import { render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { LANDING_PAGES, LANDING_SLUGS } from '@/content/landingPages';
+import { defaultData } from '@/lib/content/testing';
 
 vi.mock('next/cache', () => ({ cacheLife: vi.fn() }));
+// Sayfa içeriği Supabase'ten okunur; testte koddaki varsayılanlar kullanılır.
+vi.mock('@/lib/content/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/content/server')>();
+  return { ...actual, getReaderData: async () => actual.buildReaderData({}, false, 2026) };
+});
 
 /**
  * LeadForm ('use client') useRouter() çağırır; RTL bunu gerçek bir Next.js
@@ -40,7 +46,10 @@ import LandingPageRoute, { generateStaticParams, generateMetadata } from '../pag
  */
 
 const PAGE_PATH = path.join('app', '(lp)', 'lp', '[slug]', 'page.tsx');
-const PAGE_SRC = readFileSync(path.join(process.cwd(), PAGE_PATH), 'utf8');
+const VIEW_PATH = path.join('app', '(lp)', 'lp', '[slug]', 'LandingView.tsx');
+// Sayfa kaynağı iki dosyaya bölündü (page.tsx + LandingView.tsx); kaynak taramaları ikisini birlikte okur.
+const PAGE_SRC =
+  readFileSync(path.join(process.cwd(), PAGE_PATH), 'utf8') + readFileSync(path.join(process.cwd(), VIEW_PATH), 'utf8');
 
 const params = (slug: string) => ({ params: Promise.resolve({ slug }) });
 
@@ -119,7 +128,7 @@ describe('bölüm sırası — form gövde içeriğinden önce gelir (kasıtlı 
   it('id="form" bölümü ProofStrip ve gövde bloklarından önce render edilir', () => {
     const formIndex = PAGE_SRC.indexOf('id="form"');
     const proofStripIndex = PAGE_SRC.indexOf('<ProofStrip');
-    const bodyBlocksIndex = PAGE_SRC.indexOf('page.bodyBlocks.map');
+    const bodyBlocksIndex = PAGE_SRC.indexOf('blocks.map');
 
     expect(formIndex).toBeGreaterThan(-1);
     expect(proofStripIndex).toBeGreaterThan(-1);
@@ -144,7 +153,7 @@ describe('beş LP için temel render sağlığı', () => {
   it.each(LANDING_PAGES)('$slug h1 ve form alanını render eder', async (page) => {
     const jsx = await LandingPageRoute(params(page.slug));
     const { container, getByText } = render(jsx);
-    expect(getByText(page.h1)).toBeDefined();
+    expect(getByText(defaultData().values[`lp.${page.slug}.h1`] as string)).toBeDefined();
     expect(container.querySelector('#form')).not.toBeNull();
   });
 });

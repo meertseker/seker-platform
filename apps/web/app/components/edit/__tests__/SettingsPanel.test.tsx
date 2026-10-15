@@ -33,6 +33,9 @@ describe('settingsKeysFor', () => {
     expect(settingsKeysFor('/lp/kres-2-yas', meta, {})).toEqual([
       'lp.kres-2-yas.metaTitle',
       'lp.kres-2-yas.metaDescription',
+      // LP'de başvuru formu var: formun birleşik/koşullu yazıları sayfa ayarlarında.
+      'form.help.before',
+      'form.error',
       'site.phone',
       'chrome.footer.rights',
       'chrome.whatsapp.label',
