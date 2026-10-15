@@ -5,7 +5,21 @@ export type Database = {
   
   "public": {
           Tables: {
-            "announcements": {
+            "ad_spend_daily": {
+                  Row: {
+                    "campaign_id": string,"campaign_name": string,"clicks": number,"cost_micros": number,"date": string,"impressions": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "campaign_id": string,"campaign_name": string,"clicks"?: number,"cost_micros"?: number,"date": string,"impressions"?: number
+                  }
+                  Update: {
+                    "campaign_id"?: string,"campaign_name"?: string,"clicks"?: number,"cost_micros"?: number,"date"?: string,"impressions"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"announcements": {
                   Row: {
                     "body": string,"ends_on": string | null,"id": string,"image_id": string | null,"published": boolean,"sort": number,"starts_on": string,"title": string,"updated_at": string,"updated_by": string | null
                   }
@@ -88,6 +102,26 @@ isOneToOne: false
       columns: ["editor_id"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"conversion_uploads": {
+                  Row: {
+                    "conversion_action": string,"conversion_at": string,"error": string | null,"gclid": string | null,"id": string,"lead_id": string,"status": string,"uploaded_at": string | null,"value": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "conversion_action": string,"conversion_at"?: string,"error"?: string | null,"gclid"?: string | null,"id"?: string,"lead_id": string,"status"?: string,"uploaded_at"?: string | null,"value"?: number | null
+                  }
+                  Update: {
+                    "conversion_action"?: string,"conversion_at"?: string,"error"?: string | null,"gclid"?: string | null,"id"?: string,"lead_id"?: string,"status"?: string,"uploaded_at"?: string | null,"value"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "conversion_uploads_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: false
+      referencedRelation: "leads"
       referencedColumns: ["id"]
     }
                   ]
@@ -179,14 +213,14 @@ isOneToOne: false
                   ]
                 },"leads": {
                   Row: {
-                    "assigned_to": string | null,"beklemede_sezon": string | null,"child_birth_month": number | null,"child_birth_year": number | null,"child_name": string | null,"consent_at": string | null,"converted_student_id": string | null,"created_at": string,"family_id": string | null,"gclid": string | null,"id": string,"ingilizce_gerekli": boolean,"landing_path": string | null,"last_activity_at": string,"lost_reason": string | null,"ozel_durum": boolean,"ozel_durum_note": string | null,"parent_name": string,"phone": string,"source": string,"source_detail": string | null,"status": string,"updated_at": string,"utm_campaign": string | null,"utm_content": string | null,"utm_medium": string | null,"utm_source": string | null,"utm_term": string | null,"wants_summer": boolean,"web_payload": Json | null
+                    "ad_consent_revoked_at": string | null,"assigned_to": string | null,"beklemede_sezon": string | null,"child_birth_month": number | null,"child_birth_year": number | null,"child_name": string | null,"consent_at": string | null,"converted_student_id": string | null,"created_at": string,"family_id": string | null,"gclid": string | null,"id": string,"ingilizce_gerekli": boolean,"landing_path": string | null,"last_activity_at": string,"lost_reason": string | null,"ozel_durum": boolean,"ozel_durum_note": string | null,"parent_name": string,"phone": string,"source": string,"source_detail": string | null,"status": string,"updated_at": string,"utm_campaign": string | null,"utm_content": string | null,"utm_medium": string | null,"utm_source": string | null,"utm_term": string | null,"wants_summer": boolean,"web_payload": Json | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "assigned_to"?: string | null,"beklemede_sezon"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"consent_at"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"family_id"?: string | null,"gclid"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"landing_path"?: string | null,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name": string,"phone": string,"source": string,"source_detail"?: string | null,"status"?: string,"updated_at"?: string,"utm_campaign"?: string | null,"utm_content"?: string | null,"utm_medium"?: string | null,"utm_source"?: string | null,"utm_term"?: string | null,"wants_summer"?: boolean,"web_payload"?: Json | null
+                    "ad_consent_revoked_at"?: string | null,"assigned_to"?: string | null,"beklemede_sezon"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"consent_at"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"family_id"?: string | null,"gclid"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"landing_path"?: string | null,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name": string,"phone": string,"source": string,"source_detail"?: string | null,"status"?: string,"updated_at"?: string,"utm_campaign"?: string | null,"utm_content"?: string | null,"utm_medium"?: string | null,"utm_source"?: string | null,"utm_term"?: string | null,"wants_summer"?: boolean,"web_payload"?: Json | null
                   }
                   Update: {
-                    "assigned_to"?: string | null,"beklemede_sezon"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"consent_at"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"family_id"?: string | null,"gclid"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"landing_path"?: string | null,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name"?: string,"phone"?: string,"source"?: string,"source_detail"?: string | null,"status"?: string,"updated_at"?: string,"utm_campaign"?: string | null,"utm_content"?: string | null,"utm_medium"?: string | null,"utm_source"?: string | null,"utm_term"?: string | null,"wants_summer"?: boolean,"web_payload"?: Json | null
+                    "ad_consent_revoked_at"?: string | null,"assigned_to"?: string | null,"beklemede_sezon"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"consent_at"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"family_id"?: string | null,"gclid"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"landing_path"?: string | null,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name"?: string,"phone"?: string,"source"?: string,"source_detail"?: string | null,"status"?: string,"updated_at"?: string,"utm_campaign"?: string | null,"utm_content"?: string | null,"utm_medium"?: string | null,"utm_source"?: string | null,"utm_term"?: string | null,"wants_summer"?: boolean,"web_payload"?: Json | null
                   }
                   Relationships: [
                     {
