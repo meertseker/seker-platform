@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Fredoka, Nunito, Martian_Mono } from "next/font/google";
 import "./globals.css";
 import Analytics from "./components/Analytics";
@@ -44,24 +45,34 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function RootLayout({
+/**
+ * Ziyaretçide içerik "use cache" ile önbellekte olduğundan Suspense içindeki alt ağaç da statik kabuğa
+ * girer (sayfalar önceden üretilir). Draft mode'da Next önbelleği atlar ve içerik her istekte okunur;
+ * bu dinamik okuma sınırsız olursa "blocking route" hatası verir. Bu yüzden içeriği bekleyen her şey
+ * (JSON-LD, üst/alt bilgi, sayfalar) tek bir Suspense sınırının içindedir.
+ */
+async function SiteSchema() {
+  const c = makeReader(await getReaderData());
+  return <JsonLd data={buildPreschoolSchema(c)} />;
+}
+
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const c = makeReader(await getReaderData());
   return (
     <html lang="tr">
-      <head>
-        <JsonLd data={buildPreschoolSchema(c)} />
-      </head>
       <body
         className={`${fredoka.variable} ${nunito.variable} ${martian.variable} antialiased pb-14 md:pb-0`}
       >
-        <ConsentDefaults />
-        <Analytics />
-        {children}
-        <CookieBanner />
+        <Suspense fallback={null}>
+          <SiteSchema />
+          <ConsentDefaults />
+          <Analytics />
+          {children}
+          <CookieBanner />
+        </Suspense>
       </body>
     </html>
   );
