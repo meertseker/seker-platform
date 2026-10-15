@@ -370,7 +370,15 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "v_overdue_installments": {
+                  Row: {
+                    "amount": number | null,"days_overdue": number | null,"due_date": string | null,"family_phone": string | null,"installment_id": string | null,"item_type": string | null,"season": string | null,"student_id": string | null,"student_name": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                }
           }
           Functions: {
             "accept_counter_offer":
