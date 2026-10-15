@@ -1,7 +1,7 @@
 'use client';
 
 import './edit.css';
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Editor } from '@seker/auth/editor';
 import { UploadDialog } from './UploadDialog';
@@ -40,9 +40,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
   const [annId, setAnnId] = useState<string | 'new'>('new');
   const stopRef = useRef<null | (() => void)>(null);
   const metaRef = useRef(data.meta);
-  metaRef.current = data.meta;
   const varsRef = useRef(data.vars);
-  varsRef.current = data.vars;
   const inIframe = typeof window !== 'undefined' && window.self !== window.top;
 
   const toast = useCallback((t: Omit<Toast, 'id'>) => {
@@ -54,7 +52,11 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
   const currentValue = useCallback((key: string) => (key in pending ? pending[key].value : data.values[key]), [pending, data]);
 
   const currentValueRef = useRef(currentValue);
-  currentValueRef.current = currentValue;
+  useLayoutEffect(() => {
+    metaRef.current = data.meta;
+    varsRef.current = data.vars;
+    currentValueRef.current = currentValue;
+  });
 
   const setValue = useCallback(
     (key: string, value: unknown, path?: string) => {

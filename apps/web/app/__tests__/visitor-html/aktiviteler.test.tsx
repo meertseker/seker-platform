@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { cloneElement, type ReactElement } from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import Page from '@/app/(site)/aktiviteler/page';
 import AktivitelerView from '@/app/(site)/aktiviteler/AktivitelerView';
@@ -23,7 +24,11 @@ describe('aktiviteler ziyaretçi HTML', () => {
 
   // Anlık görüntü sayfanın gerçek bileşimiyle (searchParams Suspense sarmalı dahil) alındı; ilk yıl boyu dersi seçili.
   it('düzenleme katmanından önceki hâliyle aynı', async () => {
-    const { container } = render(await Page({ searchParams: Promise.resolve({}) }));
+    // Async sunucu bileşeni (BranchFromParams) istemci render'ında çalışmaz; önce sunucuda olduğu gibi çözülür.
+    const page = (await Page({ searchParams: Promise.resolve({}) })) as ReactElement<{ explorer: ReactElement<{ children: ReactElement<Record<string, unknown>> }> }>;
+    const child = page.props.explorer.props.children;
+    const resolved = await (child.type as (p: unknown) => Promise<ReactElement>)(child.props);
+    const { container } = render(cloneElement(page as ReactElement<{ explorer?: unknown }>, { explorer: resolved }));
     expect(container.innerHTML).toMatchSnapshot();
   });
 

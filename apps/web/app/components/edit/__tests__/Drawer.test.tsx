@@ -41,4 +41,12 @@ describe('Drawer odağı', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(n).toBe(1);
   });
+  it('prop değişince Escape yeni onClose çağırır', () => {
+    let a = 0;
+    let b = 0;
+    const { rerender } = render(<Drawer title="x" onClose={() => a++}>i</Drawer>);
+    rerender(<Drawer title="x" onClose={() => b++}>i</Drawer>);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect([a, b]).toEqual([0, 1]);
+  });
 });
