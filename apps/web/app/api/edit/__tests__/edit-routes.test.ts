@@ -24,19 +24,40 @@ describe('/api/edit/enable', () => {
     expect(res.headers.get('location')).toBe('https://panel.sekeranaokulu.com/login');
     expect(enable).not.toHaveBeenCalled();
   });
-  it('editörse draft açar ve güvenli yola yönlendirir', async () => {
+  it('PANEL_URL tanımsızsa varsayılan panel girişine yollar', async () => {
+    delete process.env.PANEL_URL;
+    getEditor.mockResolvedValue(null);
+    const res = await enableGET(new Request('https://sekeranaokulu.com/api/edit/enable?next=/kayit'));
+    expect(res.headers.get('location')).toBe('https://panel.sekeranaokulu.com/login');
+  });
+  it('editörse draft açar ve göreli güvenli yola yönlendirir', async () => {
     getEditor.mockResolvedValue({ id: 'u1', fullName: 'Ayşe' });
     const res = await enableGET(new Request('https://sekeranaokulu.com/api/edit/enable?next=//evil.com'));
     expect(enable).toHaveBeenCalledOnce();
-    expect(res.headers.get('location')).toBe('https://sekeranaokulu.com/');
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('/');
     expect(res.headers.get('cache-control')).toContain('no-store');
+  });
+  it('kontrol karakterli yolu (tab) kabul etmez', async () => {
+    getEditor.mockResolvedValue({ id: 'u1', fullName: 'Ayşe' });
+    const res = await enableGET(
+      new Request(`https://sekeranaokulu.com/api/edit/enable?next=${encodeURIComponent('/\t/evil.com')}`),
+    );
+    expect(res.headers.get('location')).toBe('/');
+  });
+  it('editörse geçerli yolu göreli olarak korur', async () => {
+    getEditor.mockResolvedValue({ id: 'u1', fullName: 'Ayşe' });
+    const res = await enableGET(new Request('https://sekeranaokulu.com/api/edit/enable?next=/kayit'));
+    expect(res.headers.get('location')).toBe('/kayit');
   });
 });
 
 describe('/api/edit/disable', () => {
-  it('draft kapatır ve ana sayfaya döner', async () => {
+  it('draft kapatır ve göreli yola yönlendirir', async () => {
     const res = await disableGET(new Request('https://sekeranaokulu.com/api/edit/disable?next=/kayit'));
     expect(disable).toHaveBeenCalledOnce();
-    expect(res.headers.get('location')).toBe('https://sekeranaokulu.com/kayit');
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('/kayit');
+    expect(res.headers.get('cache-control')).toContain('no-store');
   });
 });
