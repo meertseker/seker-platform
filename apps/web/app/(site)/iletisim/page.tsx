@@ -34,7 +34,7 @@ export default async function IletisimPage() {
         scallopTone="paper-warm"
       />
 
-      <ContactSection data={pickData(data, ['home.contact.', 'site.'])} />
+      <ContactSection data={pickData(data, ['home.contact.', 'chrome.contact.', 'site.'])} />
     </div>
   )
 }

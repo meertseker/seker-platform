@@ -1,10 +1,14 @@
 "use client"
 import React from 'react'
-import { SITE } from '@/lib/site'
+import { phoneE164, mapsUrl } from '@/lib/site'
+import { makeReader } from '@/lib/content/reader'
+import type { ReaderData } from '@/lib/content/types'
 
 interface ContactInfoItem {
   type: 'phone' | 'email' | 'location'
-  title: string
+  titleKey: string
+  /** Değer tek bir alandan geliyorsa o alanın anahtarı; adres iki alandan birleştiği için işaretsiz kalır. */
+  valueKey?: string
   value: string
   href: string
   external?: boolean
@@ -13,13 +17,16 @@ interface ContactInfoItem {
   iconColor: string
 }
 
-const ContactInfo = () => {
+// İstemci bileşen: sunucu ebeveyn pickData(data, ['home.contact.', 'chrome.contact.', 'site.']) geçirir.
+const ContactInfo = ({ data }: { data: ReaderData }) => {
+  const c = makeReader(data)
   const contactItems: ContactInfoItem[] = [
     {
       type: 'phone',
-      title: 'Telefon',
-      value: SITE.phone.display,
-      href: `tel:${SITE.phone.e164}`,
+      titleKey: 'chrome.contact.phone',
+      valueKey: 'site.phone',
+      value: c.text('site.phone'),
+      href: `tel:${phoneE164(c)}`,
       bgColor: 'bg-grape',
       iconColor: 'text-white',
       icon: (
@@ -30,9 +37,10 @@ const ContactInfo = () => {
     },
     {
       type: 'email',
-      title: 'E-posta',
-      value: SITE.email,
-      href: `mailto:${SITE.email}`,
+      titleKey: 'chrome.contact.email',
+      valueKey: 'site.email',
+      value: c.text('site.email'),
+      href: `mailto:${c.text('site.email')}`,
       bgColor: 'bg-mint-deep',
       iconColor: 'text-white',
       icon: (
@@ -43,9 +51,9 @@ const ContactInfo = () => {
     },
     {
       type: 'location',
-      title: 'Adres',
-      value: `${SITE.address.street}\n${SITE.address.district}/${SITE.address.city}`,
-      href: SITE.mapsUrl,
+      titleKey: 'chrome.contact.address',
+      value: `${c.text('site.address.street')}\n${c.text('site.address.district')}/${c.text('site.address.city')}`,
+      href: mapsUrl(c),
       external: true,
       bgColor: 'bg-bubble-deep',
       iconColor: 'text-white',
@@ -67,11 +75,12 @@ const ContactInfo = () => {
               {item.icon}
             </div>
           </div>
-          <h3 className="mb-2 font-display text-lg text-ink">{item.title}</h3>
+          <h3 className="mb-2 font-display text-lg text-ink" {...c.attrs(item.titleKey)}>{c.text(item.titleKey)}</h3>
           <a
             href={item.href}
             {...(item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
             className="whitespace-pre-line text-ink-soft hover:text-grape hover:underline"
+            {...(item.valueKey ? c.attrs(item.valueKey) : {})}
           >
             {item.value}
           </a>

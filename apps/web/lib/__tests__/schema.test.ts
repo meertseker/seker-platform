@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { preschoolSchema, buildFaqSchema } from '../schema';
+import { buildFaqSchema } from '../schema';
+import { preschoolSchema } from '../schemaDefaults';
 import { SITE } from '../site';
 
 describe('preschoolSchema', () => {

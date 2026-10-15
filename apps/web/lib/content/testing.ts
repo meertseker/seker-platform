@@ -29,7 +29,7 @@ export function sentinelData(prefixes: string[]): ReaderData {
   return { ...data, values };
 }
 
-const IGNORE = /^[\s\d.,:;·•–—\-+/()%&'"“”‘’!?…]*$/;
+const IGNORE = /^[\s\d©.,:;·•–—\-+/()%&'"“”‘’!?…]*$/;
 
 /** Görünür metin düğümlerinden slot'tan gelmeyenleri döndürür. */
 export function uncoveredText(root: HTMLElement): string[] {

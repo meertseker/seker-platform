@@ -97,7 +97,7 @@ const HomeView = ({ data }: { data: ReaderData }) => {
       </section>
 
       {/* Form, günün önizlemesinden hemen sonra — ilk kaydırmada erişilebilir olmalı */}
-      <ContactSection data={pickData(data, ['home.contact.', 'site.'])} />
+      <ContactSection data={pickData(data, ['home.contact.', 'chrome.contact.', 'site.'])} />
 
       {/* Okulun kendi bahçe ve atölye kareleri — formu geçenler için derin kanıt */}
       <GardenSection c={c} />

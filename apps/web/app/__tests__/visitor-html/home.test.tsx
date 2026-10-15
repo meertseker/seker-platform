@@ -5,7 +5,7 @@ import { defaultData, sentinelData, uncoveredText } from '@/lib/content/testing'
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
-const PREFIXES = ['home.', 'faq.', 'testimonials.', 'day.', 'program.', 'media.', 'meta.home.'];
+const PREFIXES = ['home.', 'faq.', 'testimonials.', 'day.', 'program.', 'media.', 'meta.home.', 'chrome.contact.'];
 
 describe('ana sayfa ziyaretçi HTML', () => {
   // Hesaplanan yıllar (kuruluştan beri) 1 Ocak'ta anlık görüntüyü bozmasın.
@@ -42,8 +42,8 @@ describe('ana sayfa ziyaretçi HTML', () => {
 
   it('görünür her metin bir içerik alanından geliyor', () => {
     const { container } = render(<HomeView data={sentinelData(PREFIXES)} />);
-    // Başvuru formu (LeadForm) ve iletişim bilgisi (ContactInfo) bu görevin kapsamı değil: kendi bileşenleri/SITE sabitleri.
-    container.querySelectorAll('form, .max-w-3xl > .mt-12').forEach((el) => el.remove());
+    // Başvuru formu (LeadForm) bu görevin kapsamı değil; iletişim kartları (ContactInfo) chrome.contact.* ve site.* alanlarından gelir.
+    container.querySelectorAll('form').forEach((el) => el.remove());
     // "Sahne 0N": SCHEDULE_READY false iken chapterLabel()'in sırasından türettiği etiket; gerçek saat `time` alanından gelir.
     expect(uncoveredText(container).filter((t) => !/^Sahne \d{2}$/.test(t))).toEqual([]);
   });

@@ -7,7 +7,7 @@ import { Editable } from './edit/Editable'
 import { makeReader } from '@/lib/content/reader'
 import type { ReaderData } from '@/lib/content/types'
 
-// İstemci bileşen: sunucu ebeveyn pickData(data, ['home.contact.', 'site.']) geçirir.
+// İstemci bileşen: sunucu ebeveyn pickData(data, ['home.contact.', 'chrome.contact.', 'site.']) geçirir.
 const ContactSection = ({ data }: { data: ReaderData }) => {
   const c = makeReader(data)
   return (
@@ -32,7 +32,7 @@ const ContactSection = ({ data }: { data: ReaderData }) => {
 
           {/* Contact Info */}
           <div className="mt-12">
-            <ContactInfo />
+            <ContactInfo data={data} />
           </div>
         </div>
       </div>

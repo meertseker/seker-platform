@@ -1,3 +1,4 @@
+import { normalizeTurkishPhone } from '@seker/shared';
 import { PROGRAM_HOURS } from '@/content/program';
 
 const address = {
@@ -49,3 +50,20 @@ export const SITE = {
 export const WHATSAPP_URL = `https://wa.me/${SITE.whatsapp.number}?text=${encodeURIComponent(
   SITE.whatsapp.defaultMessage,
 )}`;
+
+type SiteReader = { text(key: string): string };
+
+/** Telefon slot'undan E.164; geçersizse koddaki varsayılan numara (tel:/wa.me asla bozulmaz). */
+export function phoneE164(c: SiteReader): string {
+  return normalizeTurkishPhone(c.text('site.phone')) ?? SITE.phone.e164;
+}
+
+export function whatsappUrl(c: SiteReader): string {
+  return `https://wa.me/${phoneE164(c).slice(1)}?text=${encodeURIComponent(c.text('site.whatsappMessage'))}`;
+}
+
+export function mapsUrl(c: SiteReader): string {
+  return `https://maps.google.com/?q=${encodeURIComponent(
+    `${c.text('site.address.street')} ${c.text('site.address.district')}/${c.text('site.address.city')}`,
+  )}`;
+}

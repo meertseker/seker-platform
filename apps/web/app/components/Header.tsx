@@ -3,14 +3,18 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { SITE } from '@/lib/site'
-import { NAV_ITEMS } from '@/content/nav'
+import { makeReader } from '@/lib/content/reader'
+import { NAV_HREFS } from '@/lib/content/slots/chrome'
+import type { ReaderData } from '@/lib/content/types'
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-const Header = () => {
+// İstemci bileşen: sunucu ebeveyn pickData(data, ['chrome.nav.', 'chrome.header.', 'site.name']) geçirir.
+const Header = ({ data }: { data: ReaderData }) => {
+  const c = makeReader(data)
+  const navItems = c.list<{ id: string; label: string }>('chrome.nav.items').filter((item) => item.id in NAV_HREFS).map((item) => ({ ...item, href: NAV_HREFS[item.id] }))
   const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
@@ -21,20 +25,21 @@ const Header = () => {
   return (
     <div className="sticky top-0 z-50">
       <header className="flex items-center justify-between border-b border-rule bg-white/90 px-4 py-3 backdrop-blur-md md:px-8 md:py-4">
-        <Link href="/" aria-label={`${SITE.name} ana sayfa`} className="flex items-center font-bold text-lg md:text-xl text-ink">
+        <Link href="/" aria-label={`${c.text('site.name')} ana sayfa`} className="flex items-center font-bold text-lg md:text-xl text-ink">
           <div className="h-14 w-14 md:h-18 md:w-18">
-            <Image src="/logo.png" alt={SITE.name} width={72} height={72} priority />
+            <Image src="/logo.png" alt={c.text('site.name')} width={72} height={72} priority />
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-6 font-medium text-ink lg:flex xl:gap-8 xl:text-base text-sm">
-          {NAV_ITEMS.map((item) => {
+        <nav className="hidden items-center gap-6 font-medium text-ink lg:flex xl:gap-8 xl:text-base text-sm" {...c.listAttrs('chrome.nav.items')}>
+          {navItems.map((item) => {
             const active = isActivePath(pathname, item.href)
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
+                {...c.attrs('chrome.nav.items', `${item.id}.label`)}
                 className={
                   active
                     ? 'text-grape'
@@ -51,8 +56,9 @@ const Header = () => {
           href="/kayit"
           aria-current={pathname === '/kayit' ? 'page' : undefined}
           className="hidden shrink-0 rounded-full bg-grape px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-grape/25 transition-colors duration-200 hover:bg-ink lg:block"
+          {...c.attrs('chrome.header.cta')}
         >
-          Ön Görüşme Randevusu
+          {c.text('chrome.header.cta')}
         </Link>
 
         <button
@@ -75,13 +81,14 @@ const Header = () => {
 
       {isMenuOpen ? (
         <div className="absolute left-0 right-0 top-full z-10 flex flex-col space-y-4 border-b border-rule bg-white px-6 py-4 font-medium text-ink shadow-lg shadow-ink/5 lg:hidden">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const active = isActivePath(pathname, item.href)
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
+                {...c.attrs('chrome.nav.items', `${item.id}.label`)}
                 className={active ? 'text-grape' : 'text-ink hover:text-grape'}
               >
                 {item.label}
@@ -91,8 +98,9 @@ const Header = () => {
           <Link
             href="/kayit"
             className="mt-2 rounded-full bg-grape py-2.5 text-center font-semibold text-white shadow-lg shadow-grape/25 hover:bg-ink"
+            {...c.attrs('chrome.header.cta')}
           >
-            Ön Görüşme Randevusu
+            {c.text('chrome.header.cta')}
           </Link>
         </div>
       ) : null}

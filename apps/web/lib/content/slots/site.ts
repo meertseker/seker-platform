@@ -11,6 +11,7 @@ export const SITE_SLOTS: Record<string, SlotDef> = {
   'site.email': { kind: 'text', max: 80, default: SITE.email, label: 'E-posta', pattern: '^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$' },
   'site.address.street': { kind: 'text', max: 100, default: SITE.address.street, label: 'Adres (sokak, no)' },
   'site.address.district': { kind: 'text', max: 60, default: SITE.address.district, label: 'Semt, ilçe' },
+  'site.address.city': { kind: 'text', max: 40, default: SITE.address.city, label: 'Şehir' },
   'site.foundingYear': { kind: 'text', max: 4, default: String(SITE.foundingYear), label: 'Kuruluş yılı', pattern: '^(19|20)\\d{2}$' },
   'site.whatsappMessage': { kind: 'text', max: 200, default: SITE.whatsapp.defaultMessage, label: 'WhatsApp hazır mesajı' },
   'site.hours.full.opens': { kind: 'text', max: 5, default: PROGRAM_HOURS.full.opens, label: 'Tam gün açılış', pattern: HOUR },

@@ -1,14 +1,19 @@
 'use client';
-import { WHATSAPP_URL } from '@/lib/site';
+import { whatsappUrl } from '@/lib/site';
+import { makeReader } from '@/lib/content/reader';
+import type { ReaderData } from '@/lib/content/types';
 import { trackEvent } from '@/lib/analytics';
 
-export default function WhatsAppButton() {
+// İstemci bileşen: sunucu ebeveyn pickData(data, ['chrome.whatsapp.', 'site.']) geçirir.
+// Görünür metni yok: etiket yalnızca aria-label'dır, bu yüzden satır içi düzenleme işareti taşımaz.
+export default function WhatsAppButton({ data }: { data: ReaderData }) {
+  const c = makeReader(data);
   return (
     <a
-      href={WHATSAPP_URL}
+      href={whatsappUrl(c)}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="WhatsApp'tan yazın"
+      aria-label={c.text('chrome.whatsapp.label')}
       onClick={() => trackEvent('whatsapp_click', { location: 'float' })}
       className="fixed bottom-24 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] shadow-lg transition hover:scale-105 md:bottom-6"
     >

@@ -5,9 +5,11 @@ import Analytics from "./components/Analytics";
 import ConsentDefaults from "./components/ConsentDefaults";
 import CookieBanner from "./components/CookieBanner";
 import JsonLd from "./components/JsonLd";
-import { preschoolSchema } from "../lib/schema";
+import { buildPreschoolSchema } from "../lib/schema";
 import { SITE } from "../lib/site";
 import { buildMetadata } from "../lib/metadata";
+import { getReaderData } from "../lib/content/server";
+import { makeReader } from "../lib/content/reader";
 
 const fredoka = Fredoka({
   variable: "--font-fredoka",
@@ -30,24 +32,28 @@ const martian = Martian_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  ...buildMetadata({
-    title: SITE.name,
-    description: SITE.description,
-    path: "/",
-  }),
-  metadataBase: new URL(SITE.url),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = makeReader(await getReaderData());
+  return {
+    ...buildMetadata({
+      title: c.text("site.name"),
+      description: c.text("site.description"),
+      path: "/",
+    }),
+    metadataBase: new URL(SITE.url),
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const c = makeReader(await getReaderData());
   return (
     <html lang="tr">
       <head>
-        <JsonLd data={preschoolSchema} />
+        <JsonLd data={buildPreschoolSchema(c)} />
       </head>
       <body
         className={`${fredoka.variable} ${nunito.variable} ${martian.variable} antialiased pb-14 md:pb-0`}
