@@ -69,9 +69,9 @@ describe("uploadPending", () => {
 
     expect(result).toEqual({ sent: 2, failed: 1, skipped: 0 });
     expect(outcomes).toEqual([
-      { id: "u1", status: "gonderildi", error: null },
+      { id: "u1", status: "gonderildi", error: "requestId: r" },
       { id: "u2", status: "hata", error: "Invalid gclid" },
-      { id: "u3", status: "gonderildi", error: null },
+      { id: "u3", status: "gonderildi", error: "requestId: r" },
     ]);
     expect(fetchFn).toHaveBeenCalledTimes(3);
   });

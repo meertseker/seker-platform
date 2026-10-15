@@ -66,7 +66,7 @@ export async function uploadPending(
         deps.fetchFn,
       );
       if (result.ok) {
-        outcomes.push({ id: conv.id, status: "gonderildi", error: null });
+        outcomes.push({ id: conv.id, status: "gonderildi", error: result.requestId ? `requestId: ${result.requestId}` : null });
         sent += 1;
       } else {
         outcomes.push({ id: conv.id, status: "hata", error: result.error });
