@@ -36,6 +36,8 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
   const [panel, setPanel] = useState<null | 'rich' | 'list' | 'settings' | 'history' | 'upload' | 'announcement' | 'preview'>(null);
   const [target, setTarget] = useState<{ key: string; path?: string } | null>(null);
   const stopRef = useRef<null | (() => void)>(null);
+  const metaRef = useRef(data.meta);
+  metaRef.current = data.meta;
   const inIframe = typeof window !== 'undefined' && window.self !== window.top;
 
   const toast = useCallback((t: Omit<Toast, 'id'>) => {
@@ -112,7 +114,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       const key = el.dataset.editKey!;
       const path = el.dataset.editPath;
       const kind = el.dataset.editKind;
-      const warn = data.meta[key]?.warn;
+      const warn = metaRef.current[key]?.warn;
       if (warn) toast({ text: warn, tone: 'warn' });
       if (kind === 'image') return void (setTarget({ key, path }), setPanel('upload'));
       if (kind === 'rich') return void (setTarget({ key, path }), setPanel('rich'));
@@ -148,7 +150,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       document.removeEventListener('click', onClick, true);
       stopRef.current?.();
     };
-  }, [editor, inIframe, setValue, toast, data.meta]);
+  }, [editor, inIframe, setValue, toast]);
 
   const count = Object.keys(pending).length;
   useEffect(() => {

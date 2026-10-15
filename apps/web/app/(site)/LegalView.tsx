@@ -18,7 +18,7 @@ export default function LegalView({ data, page }: { data: ReaderData; page: Lega
               <p className="mb-10 text-sm text-ink-soft">
                 {c.text('legal.gizlilik.updatedLabel')} {c.text('legal.gizlilik.updatedOn')}
               </p>
-              <EditableRich c={c} k="legal.gizlilik.body" className="legal-body" />
+              <EditableRich c={c} k="legal.gizlilik.body" className="legal-body legal-body-relaxed" />
             </article>
           </div>
         </div>

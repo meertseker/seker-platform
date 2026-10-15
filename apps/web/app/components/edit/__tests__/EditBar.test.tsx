@@ -110,3 +110,33 @@ describe('EditBar (önizleme iframe içinde)', () => {
     }
   });
 });
+
+describe('EditBar (yasal uyarı)', () => {
+  const warnData = (): ReaderData => ({
+    ...mkData(),
+    values: { 'hero.title': 'Eski', 'legal.x': 'Gizli' },
+    meta: {
+      'hero.title': { label: 'Ana başlık' },
+      'legal.x': { label: 'Yasal', warn: 'Yasal metin: değişiklikten önce yöneticiye danışın.' },
+    } as never,
+  });
+  const dbl = (key: string) => {
+    document.body.innerHTML =
+      '<h1 data-edit-key="hero.title" data-edit-kind="text">Eski</h1><h2 data-edit-key="legal.x" data-edit-kind="text">Gizli</h2>';
+    bar(warnData());
+    fireEvent.dblClick(document.querySelector(`[data-edit-key="${key}"]`)!);
+  };
+
+  it('warn olan alanda çift tıklama uyarıyı gösterir ve düzenleyici yine açılır', () => {
+    dbl('legal.x');
+    expect(screen.getByText('Yasal metin: değişiklikten önce yöneticiye danışın.')).toBeInTheDocument();
+    expect(document.querySelector('[data-edit-key="legal.x"]')!.getAttribute('contenteditable')).not.toBeNull();
+    document.body.innerHTML = '';
+  });
+
+  it('warn olmayan alanda uyarı çıkmaz', () => {
+    dbl('hero.title');
+    expect(screen.queryByText(/Yasal metin/)).toBeNull();
+    document.body.innerHTML = '';
+  });
+});

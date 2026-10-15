@@ -219,7 +219,13 @@ p {
   @apply mt-0;
 }
 .legal-body p {
-  @apply mb-3 leading-relaxed text-ink-soft;
+  @apply mb-3 text-ink-soft; /* satır aralığı: genel p { 1.7 } (kullanım/çerez eski hâli) */
+}
+.legal-body-relaxed p {
+  @apply leading-relaxed; /* gizlilik eski paragrafları leading-relaxed idi */
+}
+.legal-body > :last-child {
+  @apply mb-0;
 }
 .legal-body ul {
   @apply mb-3 list-disc space-y-2 pl-6 text-ink-soft;
