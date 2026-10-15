@@ -90,6 +90,16 @@ export const EVENT_LABELS = {
   web_tekrar_basvuru: "Web sitesinden tekrar başvurdu",
 } as const;
 
+export const CONVERSION_ACTIONS = {
+  randevu: "Randevu", kayit: "Kayıt",
+} as const;
+export type ConversionAction = keyof typeof CONVERSION_ACTIONS;
+
+export const CONVERSION_UPLOAD_STATUSES = {
+  bekliyor: "Bekliyor", gonderildi: "Gönderildi", hata: "Hata", atlandi: "Atlandı",
+} as const;
+export type ConversionUploadStatus = keyof typeof CONVERSION_UPLOAD_STATUSES;
+
 export function label(group: Record<string, string>, value: string): string {
   return group[value] ?? value;
 }
