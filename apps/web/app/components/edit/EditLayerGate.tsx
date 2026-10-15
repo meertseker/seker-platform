@@ -24,7 +24,8 @@ async function EditLayerServer() {
     const { data: rows } = await supabase
       .from('announcements')
       .select('id, title, body, image_id, starts_on, ends_on, published, sort, updated_at')
-      .order('sort');
+      .order('sort')
+      .order('id');
     announcements = (rows ?? []).map((r) => ({
       id: r.id,
       title: r.title,

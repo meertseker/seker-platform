@@ -15,6 +15,7 @@ type R<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 const SESSION = 'Oturumunuz sona erdi. Panelden tekrar giriş yapın.';
 const SAVE_ERROR = 'Duyuru kaydedilemedi, tekrar deneyin.';
 const BAD_DATE = 'Tarih geçerli değil.';
+const NOT_FOUND = 'Duyuru bulunamadı. Sayfayı yenileyin.';
 const NO_IMAGE = 'Seçilen fotoğraf bulunamadı. Yeniden yükleyin.';
 
 const isRealDate = (s: string) => {
@@ -116,7 +117,7 @@ export async function updateAnnouncement(id: string, input: AnnouncementInput): 
       console.error('[announcements] güncelleme hatası', error.code);
       return { ok: false, error: SAVE_ERROR };
     }
-    if (!data?.length) return { ok: false, error: 'Duyuru bulunamadı. Sayfayı yenileyin.' };
+    if (!data?.length) return { ok: false, error: NOT_FOUND };
     updateTag('site-content');
     return { ok: true };
   });
@@ -127,11 +128,12 @@ export async function deleteAnnouncement(id: string): Promise<R> {
     if (!(await getEditor())) return { ok: false, error: SESSION };
     if (!idSchema.safeParse(id).success) return { ok: false, error: 'Duyuru silinemedi.' };
     const supabase = await createServerSupabase();
-    const { error } = await supabase.from('announcements').delete().eq('id', id);
+    const { data, error } = await supabase.from('announcements').delete().eq('id', id).select('id');
     if (error) {
       console.error('[announcements] silme hatası', error.code);
       return { ok: false, error: 'Duyuru silinemedi.' };
     }
+    if (!data?.length) return { ok: false, error: NOT_FOUND };
     updateTag('site-content');
     return { ok: true };
   });
@@ -142,19 +144,13 @@ export async function moveAnnouncement(id: string, direction: -1 | 1): Promise<R
     if (!(await getEditor())) return { ok: false, error: SESSION };
     if (!idSchema.safeParse(id).success || (direction !== -1 && direction !== 1)) return { ok: false, error: 'Duyuru taşınamadı.' };
     const supabase = await createServerSupabase();
-    const { data: rows, error } = await supabase.from('announcements').select('id, sort').order('sort').order('id');
-    if (error) throw error;
-    const list = [...(rows ?? [])];
-    const i = list.findIndex((r) => r.id === id);
-    const j = i + direction;
-    if (i < 0 || j < 0 || j >= list.length) return { ok: true };
-    [list[i], list[j]] = [list[j], list[i]];
-    // Eşit sort değerleri takas edilince sıra değişmezdi: değişen satırları sıra numarasıyla yeniden yaz.
-    for (const [idx, r] of list.entries()) {
-      if (r.sort === idx) continue;
-      const { error: e } = await supabase.from('announcements').update({ sort: idx }).eq('id', r.id);
-      if (e) throw e;
+    // Sıralama veritabanında tek işlemde yapılır (eşit sort değerleri (sort, id) ile belirlenir).
+    const { data, error } = await supabase.rpc('reorder_announcements', { p_id: id, p_dir: direction });
+    if (error) {
+      console.error('[announcements] sıralama hatası', error.code);
+      return { ok: false, error: 'Duyuru taşınamadı.' };
     }
+    if (!data) return { ok: false, error: NOT_FOUND };
     updateTag('site-content');
     return { ok: true };
   });

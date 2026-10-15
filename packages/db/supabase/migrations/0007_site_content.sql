@@ -175,3 +175,35 @@ begin
 end $$;
 revoke all on function public.save_site_content(jsonb) from public, anon;
 grant execute on function public.save_site_content(jsonb) to authenticated;
+
+-- Duyuru sırası: tek transaction'da yeniden numaralama; eşit sort değerleri (sort, id) ile belirlenir.
+-- Döner: duyuru bulundu mu (sınırda taşıma no-op, true).
+create or replace function public.reorder_announcements(p_id uuid, p_dir int) returns boolean
+language plpgsql security invoker set search_path = '' as $$
+declare
+  v_pos int;
+  v_n int;
+begin
+  if not public.can_edit_site() then
+    raise exception 'yetkisiz' using errcode = '42501';
+  end if;
+  if p_dir not in (-1, 1) then
+    raise exception 'geçersiz yön' using errcode = '22023';
+  end if;
+  select rn, total into v_pos, v_n from (
+    select id, row_number() over (order by sort, id) as rn, count(*) over () as total from public.announcements
+  ) o where o.id = p_id;
+  if v_pos is null then return false; end if;
+  if v_pos + p_dir < 1 or v_pos + p_dir > v_n then return true; end if;
+  update public.announcements a set sort = n.pos
+  from (
+    select id,
+      case when rn = v_pos then v_pos + p_dir when rn = v_pos + p_dir then v_pos else rn end as pos
+    from (select id, row_number() over (order by sort, id) as rn from public.announcements) r
+  ) n
+  where a.id = n.id and a.sort is distinct from n.pos;
+  return true;
+end;
+$$;
+revoke all on function public.reorder_announcements(uuid, int) from public, anon;
+grant execute on function public.reorder_announcements(uuid, int) to authenticated;

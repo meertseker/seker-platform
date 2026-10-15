@@ -160,4 +160,37 @@ rollback;`;
     expect(embed.error).toBeNull();
     expect(embed.data![0]).toMatchObject({ media_assets: { alt: "test alt" } });
   });
+  it("reorder_announcements: editör sıralar (eşit sort dahil), editör olmayan ve anon yapamaz", async () => {
+    await admin.from("announcements").delete().like("title", "test ord%");
+    const { data: rows } = await admin
+      .from("announcements")
+      .insert(["a", "b", "c"].map((t) => ({ title: "test ord " + t, body: "<p>x</p>", published: false, sort: 0 })))
+      .select("id,title");
+    const idOf = (t: string) => rows!.find((r) => r.title === "test ord " + t)!.id;
+    const order = async () => {
+      const { data } = await admin.from("announcements").select("title,sort,id").like("title", "test ord%").order("sort").order("id");
+      return data!.map((r) => r.title.slice(-1));
+    };
+    const initial = await order(); // eşit sort: id sırası
+    const target = initial[1];
+    const up = await dan.rpc("reorder_announcements", { p_id: idOf(target), p_dir: -1 });
+    expect(up.error).toBeNull();
+    expect(up.data).toBe(true);
+    expect(await order()).toEqual([initial[1], initial[0], initial[2]]);
+    const down = await dan.rpc("reorder_announcements", { p_id: idOf(initial[1]), p_dir: 1 });
+    expect(down.error).toBeNull();
+    expect(await order()).toEqual([initial[0], initial[1], initial[2]]);
+    // sınırda no-op
+    expect((await dan.rpc("reorder_announcements", { p_id: idOf(initial[0]), p_dir: -1 })).data).toBe(true);
+    expect(await order()).toEqual(initial);
+    // olmayan kimlik
+    expect((await dan.rpc("reorder_announcements", { p_id: "00000000-0000-4000-8000-000000000999", p_dir: 1 })).data).toBe(false);
+    // editör olmayan (yönetici bayrağı kapalı) ve anon
+    const denied = await yon.rpc("reorder_announcements", { p_id: idOf("a"), p_dir: 1 });
+    expect(denied.error?.code).toBe("42501");
+    const anonRes = await anon.rpc("reorder_announcements", { p_id: idOf("a"), p_dir: 1 });
+    expect(anonRes.error).not.toBeNull();
+    expect(await order()).toEqual(initial);
+    await admin.from("announcements").delete().like("title", "test ord%");
+  });
 });

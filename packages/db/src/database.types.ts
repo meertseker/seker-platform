@@ -520,6 +520,9 @@ isOneToOne: false
 "is_yonetici":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"reorder_announcements":
+{ Args: { "p_dir": number,"p_id": string }; Returns: boolean
+                           },
 "save_site_content":
 { Args: { "p_edits": Json }; Returns: Json
                            },

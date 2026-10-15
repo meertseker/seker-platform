@@ -3,6 +3,7 @@ import { cacheLife, cacheTag } from 'next/cache';
 import { draftMode } from 'next/headers';
 import { createPublicSupabase } from '@/lib/supabase/public';
 import { SLOTS } from './registry';
+import { sanitizeRich } from './sanitize';
 import type { ContentMap } from './types';
 
 export async function getContent(): Promise<ContentMap> {
@@ -49,14 +50,18 @@ export async function getAnnouncements(): Promise<PublicAnnouncement[]> {
     const { data, error } = await createPublicSupabase()
       .from('active_announcements')
       .select('id, title, body, starts_on, ends_on, sort, media_assets(s3_key, alt)')
-      .order('sort');
+      .order('sort')
+      .order('id');
     if (error || !data) throw new Error(error?.message ?? 'veri yok');
     cacheLife('hours');
     return data.map((r) => {
       const m = r.media_assets as { s3_key: string; alt: string } | null;
+      // Taban adres tanımsızsa next/image remotePatterns boştur ve sayfa çöker: görselsiz göster.
+      const base = process.env.NEXT_PUBLIC_MEDIA_BASE_URL;
+      const hasImage = Boolean(m?.s3_key && base);
       return {
-        id: r.id!, title: r.title!, body: r.body!, startsOn: r.starts_on!, endsOn: r.ends_on,
-        imageSrc: m ? `${process.env.NEXT_PUBLIC_MEDIA_BASE_URL}/${m.s3_key}` : null, imageAlt: m?.alt ?? null,
+        id: r.id!, title: r.title!, body: sanitizeRich(r.body!), startsOn: r.starts_on!, endsOn: r.ends_on,
+        imageSrc: hasImage ? `${base}/${m!.s3_key}` : null, imageAlt: hasImage ? m!.alt : null,
       };
     });
   } catch (err) {
