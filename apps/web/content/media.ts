@@ -45,6 +45,13 @@ export const MEDIA = {
     height: 1467,
     status: 'okul',
   },
+  mudKitchenSmall: {
+    src: '/mutfak-atolyesi.webp',
+    alt: 'Bahçedeki ahşap oyun mutfağı: tencereler, kepçeler ve kara tahta',
+    width: 1100,
+    height: 1467,
+    status: 'okul',
+  },
   outdoorClass: {
     src: '/acik-hava-sinifi.webp',
     alt: 'Açık hava sınıfında oltayla balık tutma oyunu oynayan çocuk, arkada tamir köşesi',

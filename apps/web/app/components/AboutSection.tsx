@@ -1,6 +1,9 @@
 "use client"
 import React from 'react'
 import Image from 'next/image'
+import { Editable } from '@/app/components/edit/Editable'
+import { makeReader } from '@/lib/content/reader'
+import type { ReaderData } from '@/lib/content/types'
 
 type Accent = 'mint' | 'bubble' | 'grape' | 'sunny'
 
@@ -12,32 +15,36 @@ const ACCENT_BLOB: Record<Accent, string> = {
 }
 
 interface AboutSectionProps {
-  title: string
-  description: string
-  buttonText: string
+  /** Sunucu ebeveynin `pickData(data, ['about.', 'media.'])` ile geçirdiği veri. */
+  data: ReaderData
+  /** Metin anahtarı öneki: `about.<id>.title|description|button`. */
+  id: string
+  /** Fotoğraf anahtarı (`media.…`). */
+  imageKey: string
   buttonLink: string
-  imageSrc: string
-  imageAlt: string
   imagePosition: 'left' | 'right'
   accent?: Accent
 }
 
 const AboutSection: React.FC<AboutSectionProps> = ({
-  title,
-  description,
-  buttonText,
+  data,
+  id,
+  imageKey,
   buttonLink,
-  imageSrc,
-  imageAlt,
   imagePosition,
   accent = 'mint'
 }) => {
+  const c = makeReader(data)
+  const image = c.image(imageKey)
   const isImageLeft = imagePosition === 'left'
 
   return (
     <div className="flex flex-col items-center gap-8 md:flex-row md:gap-16">
       {/* Image Area */}
-      <div className={`relative order-2 hidden md:block md:w-1/2 md:${isImageLeft ? 'order-1' : 'order-2'}`}>
+      <div
+        className={`relative order-2 hidden md:block md:w-1/2 md:${isImageLeft ? 'order-1' : 'order-2'}`}
+        {...c.attrs(imageKey)}
+      >
         {/* Decorative Background */}
         <div
           aria-hidden="true"
@@ -65,8 +72,8 @@ const AboutSection: React.FC<AboutSectionProps> = ({
 
         {/* Child image */}
         <Image
-          src={imageSrc}
-          alt={imageAlt}
+          src={image.src}
+          alt={image.alt}
           className="relative z-0 h-auto w-full max-w-md rounded-3xl object-cover shadow-lg shadow-ink/10"
           width={400}
           height={400}
@@ -75,21 +82,18 @@ const AboutSection: React.FC<AboutSectionProps> = ({
 
       {/* Text Content */}
       <div className={`order-1 md:w-1/2 md:${isImageLeft ? 'order-2' : 'order-1'}`}>
-        <h2 className="mb-4 font-display text-2xl text-ink md:text-3xl">
-          {title}
-        </h2>
-        <p className="mb-6 text-ink-soft">
-          {description}
-        </p>
+        <Editable c={c} k={`about.${id}.title`} as="h2" className="mb-4 font-display text-2xl text-ink md:text-3xl" />
+        <Editable c={c} k={`about.${id}.description`} as="p" className="mb-6 text-ink-soft" />
         <a
           href={buttonLink}
           className="inline-block rounded-full bg-grape px-6 py-3 font-semibold text-white shadow-lg shadow-grape/30 transition-colors duration-200 hover:bg-ink"
+          {...c.attrs(`about.${id}.button`)}
         >
-          {buttonText}
+          {c.text(`about.${id}.button`)}
         </a>
       </div>
     </div>
   )
 }
 
-export default AboutSection 
+export default AboutSection

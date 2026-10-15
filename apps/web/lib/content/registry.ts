@@ -4,6 +4,7 @@ import { MEDIA_SLOTS } from './slots/media';
 import { LIST_SLOTS } from './slots/lists';
 import { HOME_SLOTS } from './slots/home';
 import { CHROME_SLOTS } from './slots/chrome';
+import { HAKKIMIZDA_SLOTS } from './slots/hakkimizda';
 import { EGITIM_SLOTS } from './slots/egitim';
 import { GUVENLIK_SLOTS } from './slots/guvenlik';
 
@@ -14,6 +15,7 @@ export const SLOTS: Record<string, SlotDef> = {
   ...LIST_SLOTS,
   ...HOME_SLOTS,
   ...CHROME_SLOTS,
+  ...HAKKIMIZDA_SLOTS,
   ...EGITIM_SLOTS,
   ...GUVENLIK_SLOTS,
 };

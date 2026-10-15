@@ -1,5 +1,7 @@
-import { SITE } from '@/lib/site';
-import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from '@/content/day';
+import { ROSTER_STATUS } from '@/content/day';
+import { Editable } from '@/app/components/edit/Editable';
+import { makeReader } from '@/lib/content/reader';
+import type { ReaderData } from '@/lib/content/types';
 
 /**
  * Sınıf mevcudu ve öğretmen oranı yalnızca ROSTER_STATUS.ready true iken
@@ -12,42 +14,49 @@ import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from '@/content/day';
  * etiketinde geçtiği için (bkz. HeroSection), bu ikincil güven şeridi
  * mobilde gizlenir; md+ genişlikte (yan yana iki sütunlu hero'nun altında,
  * alan sıkışık olmadığında) tekrar görünür.
+ *
+ * Etiketler `trust.*` alanlarından gelir; yıl sayısı `{yilSayisi}` belirtecidir.
+ * Sınıf/öğretmen rakamları kodda kalır (düzenlenmez).
  */
-export default function TrustBar() {
-  const yearsActive = new Date().getFullYear() - SITE.foundingYear;
+type Stat = { value: string; valueKey?: string; label: string; labelKey: string };
 
-  const stats = [
+export default function TrustBar({ data }: { data: ReaderData }) {
+  const c = makeReader(data);
+
+  const stats: Stat[] = [
     ...(ROSTER_STATUS.ready
       ? [
-          { value: String(ROSTER_STATUS.childCount), label: 'Sınıfta çocuk' },
+          { value: String(ROSTER_STATUS.childCount), label: c.text('trust.children.label'), labelKey: 'trust.children.label' },
           {
             value: String(ROSTER_STATUS.teacherCount),
-            label: 'Her sınıfta öğretmen',
+            label: c.text('trust.teachers.label'),
+            labelKey: 'trust.teachers.label',
           },
         ]
       : []),
-    { value: `${ENGLISH_HOURS_PER_DAY} saat`, label: 'Her gün İngilizce' },
-    { value: `${yearsActive} yıl`, label: "Beykent'te aynı adreste" },
+    { value: c.text('trust.english.value'), valueKey: 'trust.english.value', label: c.text('trust.english.label'), labelKey: 'trust.english.label' },
+    { value: c.text('trust.years.value'), valueKey: 'trust.years.value', label: c.text('trust.years.label'), labelKey: 'trust.years.label' },
   ];
 
   return (
     <section className="hidden px-6 pb-4 md:block">
       <div className="mx-auto flex max-w-6xl flex-wrap justify-center gap-4 rounded-3xl bg-paper-warm px-6 py-8">
-        {stats.map((stat, index) => (
-          <div
-            key={stat.label}
-            className="min-w-48 flex-1 rounded-2xl bg-white px-6 py-5 text-center shadow-sm"
-          >
-            <p
-              className={`font-display text-2xl md:text-3xl ${
-                index % 2 === 0 ? 'text-grape' : 'text-bubble-deep'
-              }`}
+        {stats.map((stat, index) => {
+          const valueClass = `font-display text-2xl md:text-3xl ${index % 2 === 0 ? 'text-grape' : 'text-bubble-deep'}`;
+          return (
+            <div
+              key={stat.labelKey}
+              className="min-w-48 flex-1 rounded-2xl bg-white px-6 py-5 text-center shadow-sm"
             >
-              {stat.value}
-            </p>
-            <p className="mt-1 text-xs text-ink-soft md:mt-2 md:text-sm">{stat.label}</p>
-          </div>
-        ))}
+              {stat.valueKey ? (
+                <Editable c={c} k={stat.valueKey} as="p" className={valueClass} />
+              ) : (
+                <p className={valueClass}>{stat.value}</p>
+              )}
+              <Editable c={c} k={stat.labelKey} as="p" className="mt-1 text-xs text-ink-soft md:mt-2 md:text-sm" />
+            </div>
+          );
+        })}
       </div>
     </section>
   );
