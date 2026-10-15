@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getSessionProfile } from "@/lib/auth";
 import { LEAD_SOURCES, LOST_REASONS, label } from "@/lib/constants";
 import { formatTRY } from "@/lib/money";
+import { collectionRatePercent } from "@/lib/overdue";
 import {
   getConsultantBreakdown,
   getFunnel,
@@ -189,6 +190,7 @@ function LostReasonsSection({ rows }: { rows: LostReasonRow[] }) {
 }
 
 function PaymentSummarySection({ summary }: { summary: PaymentSummary }) {
+  const rate = collectionRatePercent(summary.paidThisMonthKurus, summary.dueThisMonthKurus);
   return (
     <section className="grid gap-4 md:grid-cols-3">
       <MetricCard
@@ -199,13 +201,20 @@ function PaymentSummarySection({ summary }: { summary: PaymentSummary }) {
       <MetricCard
         label="Bu ay tahsil edilen"
         value={formatTRY(summary.paidThisMonthKurus)}
-        helper="Seçili ay içinde ödendi işaretlenen taksitler"
+        helper={`Seçili ay içinde ödendi işaretlenen taksitler · vadesi gelenin ${rate == null ? "—" : `%${rate}`}'i`}
       />
-      <MetricCard
-        label="Toplam geciken"
-        value={formatTRY(summary.overdueKurus)}
-        helper="Bugünden önce vadeli, hâlâ bekleyen taksitler"
-      />
+      <div className="space-y-2">
+        <MetricCard
+          label="Toplam geciken"
+          value={formatTRY(summary.overdueKurus)}
+          helper="Bugünden önce vadeli, hâlâ bekleyen taksitler"
+        />
+        {summary.overdueKurus > 0 ? (
+          <Link href="/odemeler/gecikenler" className="inline-flex min-h-11 items-center text-sm font-semibold text-red-700 hover:underline">
+            Gecikenleri gör ve hatırlat →
+          </Link>
+        ) : null}
+      </div>
     </section>
   );
 }
