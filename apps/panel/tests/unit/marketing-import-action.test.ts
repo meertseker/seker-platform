@@ -36,7 +36,7 @@ describe("importSpendCsv", () => {
 
   it("geçerli CSV'yi yazar ve kayıt sayısını döner", async () => {
     const res = await importSpendCsv(formWith(`${HEADER}\n2026-10-12,555,A,\"10,00\",1,2`));
-    expect(res).toEqual({ ok: true, count: 1, warnings: [] });
+    expect(res).toEqual({ ok: true, count: 1, warnings: [], warningCount: 0 });
     expect(upsertSpend).toHaveBeenCalledWith([
       { date: "2026-10-12", campaignId: "555", campaignName: "A", costMicros: 10000000, clicks: 1, impressions: 2 },
     ]);
@@ -65,5 +65,23 @@ describe("importSpendCsv", () => {
     const redirectErr = Object.assign(new Error("NEXT_REDIRECT"), { digest: "NEXT_REDIRECT;replace;/login;307;" });
     getSessionProfile.mockRejectedValue(redirectErr);
     await expect(importSpendCsv(formWith(HEADER))).rejects.toBe(redirectErr);
+  });
+
+  it("UTF-16BE (FE FF BOM) dosyayı çözer", async () => {
+    const body = Buffer.from(`${HEADER}\n2026-10-12,555,A,\"10,00\",1,2`, "utf16le");
+    const be = Buffer.from(body).swap16();
+    const fd = new FormData();
+    fd.append("file", new File([Buffer.concat([Buffer.from([0xfe, 0xff]), be])], "rapor.csv", { type: "text/csv" }));
+    const res = await importSpendCsv(fd);
+    expect(res).toEqual({ ok: true, count: 1, warnings: [], warningCount: 0 });
+  });
+
+  it("uyarı sayısını toplam olarak, metinleri ilk 5 ile döner", async () => {
+    const lines = [HEADER];
+    for (let i = 0; i < 7; i += 1) lines.push(`2026-10-12,${555 + i},A,abc,1,2`);
+    lines.push("2026-10-12,999,A,5,1,2");
+    const res = await importSpendCsv(formWith(lines.join("\n")));
+    expect(res).toMatchObject({ ok: true, count: 1, warningCount: 7 });
+    expect((res as { warnings: string[] }).warnings).toHaveLength(5);
   });
 });

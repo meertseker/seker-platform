@@ -76,73 +76,143 @@ export function parseLocaleNumber(raw: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
+
+const TOTAL_ROW = /^(toplam|total)/;
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** Takvimde gerçekten var olan bir tarihi "YYYY-MM-DD" olarak döner; yoksa null (ör. 2026-02-30). */
+function toIsoDate(year: number, month: number, day: number): string | null {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
+/** ISO (2026-10-12), d.m.yyyy, d/m/yyyy ve dd/mm/yyyy biçimlerini ISO tarihe çevirir. */
 function parseDate(raw: string): string | null {
   const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (iso) return raw;
-  const tr = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (tr) return `${tr[3]}-${tr[2].padStart(2, "0")}-${tr[1].padStart(2, "0")}`;
+  if (iso) return toIsoDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  const local = raw.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
+  if (local) return toIsoDate(Number(local[3]), Number(local[2]), Number(local[1]));
   return null;
 }
 
-/** Google Ads "Kampanyalar" raporu CSV/TSV dışa aktarımını SpendRow listesine çevirir. */
+/** Sayaç kolonu (tıklama/gösterim): boş veya "--" ise 0; okunamaz ya da negatifse hata. */
+function readCount(raw: string, label: string): { value: number } | { error: string } {
+  if (raw === "" || raw === "--") return { value: 0 };
+  const value = parseLocaleNumber(raw);
+  if (value == null) return { error: `${label} okunamadı (${raw})` };
+  if (value < 0) return { error: `negatif değer (${raw})` };
+  return { value: Math.round(value) };
+}
+
+interface NumberedLine {
+  no: number; // dosyadaki 1 tabanlı satır numarası (boş satırlar dahil)
+  text: string;
+}
+
+/**
+ * Google Ads "Kampanyalar" raporu CSV/TSV dışa aktarımını SpendRow listesine çevirir.
+ * Aynı (tarih, kampanya kimliği) satırları tek satırda toplanır (segmentli raporlar birden çok satır verir).
+ * Toplam satırları ve kampanya kimliği boş satırlar sessizce atlanır; diğer hatalı satırlar satır numarasıyla bildirilir.
+ */
 export function parseSpendCsv(text: string): { rows: SpendRow[]; errors: string[] } {
-  const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
-  let headerIndex = -1;
+  const numbered: NumberedLine[] = text
+    .split(/\r?\n/)
+    .map((line, i) => ({ no: i + 1, text: line }))
+    .filter((line) => line.text.trim() !== "");
+
+  let headerPos = -1;
   let delimiter = ",";
   let columns: Partial<Record<Column, number>> = {};
 
-  for (let i = 0; i < Math.min(lines.length, 10); i += 1) {
-    const d = detectDelimiter(lines[i]);
-    const headers = splitLine(lines[i], d).map(headerVariants);
+  for (let i = 0; i < Math.min(numbered.length, 10); i += 1) {
+    const d = detectDelimiter(numbered[i].text);
+    const headers = splitLine(numbered[i].text, d).map(headerVariants);
     const found: Partial<Record<Column, number>> = {};
     for (const [column, aliases] of Object.entries(ALIASES) as [Column, readonly string[]][]) {
       const index = headers.findIndex((variants) => variants.some((v) => aliases.includes(v)));
       if (index >= 0) found[column] = index;
     }
     if (REQUIRED.every((c) => found[c] !== undefined)) {
-      headerIndex = i;
+      headerPos = i;
       delimiter = d;
       columns = found;
       break;
     }
   }
 
-  if (headerIndex < 0) {
+  if (headerPos < 0) {
     return {
       rows: [],
       errors: [`CSV'de şu kolonlar bulunamadı: ${REQUIRED_LABELS}. Raporu 'Gün' segmentiyle ve 'Kampanya kimliği' kolonuyla indirin.`],
     };
   }
 
-  const rows: SpendRow[] = [];
+  const merged = new Map<string, SpendRow>();
   const errors: string[] = [];
-  lines.slice(headerIndex + 1).forEach((line, offset) => {
-    const lineNo = headerIndex + offset + 2; // dosyadaki 1 tabanlı satır (boş satırlar hariç)
-    const cells = splitLine(line, delimiter);
-    const date = parseDate(cells[columns.date!] ?? "");
-    if (!date) return; // "Toplam" ve özet satırları
-    const campaignId = (cells[columns.campaignId!] ?? "").replace(/\D/g, "");
-    if (!campaignId) {
-      errors.push(`${lineNo}. satır: kampanya kimliği yok`);
-      return;
-    }
-    const costRaw = cells[columns.cost!] ?? "";
-    const cost = parseLocaleNumber(costRaw);
-    if (cost == null) {
-      errors.push(`${lineNo}. satır: maliyet okunamadı (${costRaw})`);
-      return;
-    }
-    const clicks = columns.clicks !== undefined ? parseLocaleNumber(cells[columns.clicks] ?? "") ?? 0 : 0;
-    const impressions = columns.impressions !== undefined ? parseLocaleNumber(cells[columns.impressions] ?? "") ?? 0 : 0;
-    rows.push({
-      date,
-      campaignId,
-      campaignName: cells[columns.campaignName!] ?? "",
-      costMicros: Math.round(cost * 1_000_000),
-      clicks: Math.round(clicks),
-      impressions: Math.round(impressions),
-    });
-  });
 
-  return { rows, errors };
+  for (const line of numbered.slice(headerPos + 1)) {
+    const where = `${line.no}. satır`;
+    const cells = splitLine(line.text, delimiter);
+    const firstCell = (cells[0] ?? "").toLocaleLowerCase("tr-TR");
+    if (TOTAL_ROW.test(firstCell)) continue; // "Toplam" / "Total" özet satırı
+
+    const date = parseDate(cells[columns.date!] ?? "");
+    if (!date) {
+      errors.push(`${where}: tarih okunamadı (${cells[columns.date!] ?? ""})`);
+      continue;
+    }
+
+    const campaignIdRaw = cells[columns.campaignId!] ?? "";
+    if (campaignIdRaw === "") continue; // kampanya kimliği boş satır
+    if (!/^\d+$/.test(campaignIdRaw)) {
+      errors.push(`${where}: kampanya kimliği geçersiz (${campaignIdRaw})`);
+      continue;
+    }
+
+    const costRaw = cells[columns.cost!] ?? "";
+    const cost = costRaw === "--" ? 0 : parseLocaleNumber(costRaw);
+    if (cost == null) {
+      errors.push(`${where}: maliyet okunamadı (${costRaw})`);
+      continue;
+    }
+    if (cost < 0) {
+      errors.push(`${where}: negatif değer (${costRaw})`);
+      continue;
+    }
+
+    const clicks = columns.clicks !== undefined ? readCount(cells[columns.clicks] ?? "", "tıklamalar") : { value: 0 };
+    if ("error" in clicks) {
+      errors.push(`${where}: ${clicks.error}`);
+      continue;
+    }
+    const impressions = columns.impressions !== undefined ? readCount(cells[columns.impressions] ?? "", "gösterimler") : { value: 0 };
+    if ("error" in impressions) {
+      errors.push(`${where}: ${impressions.error}`);
+      continue;
+    }
+
+    const key = `${date}|${campaignIdRaw}`;
+    const costMicros = Math.round(cost * 1_000_000);
+    const existing = merged.get(key);
+    if (existing) {
+      existing.costMicros += costMicros;
+      existing.clicks += clicks.value;
+      existing.impressions += impressions.value;
+    } else {
+      merged.set(key, {
+        date,
+        campaignId: campaignIdRaw,
+        campaignName: cells[columns.campaignName!] ?? "",
+        costMicros,
+        clicks: clicks.value,
+        impressions: impressions.value,
+      });
+    }
+  }
+
+  return { rows: [...merged.values()], errors };
 }

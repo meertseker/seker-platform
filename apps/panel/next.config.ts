@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: monorepoRoot,
   turbopack: { root: monorepoRoot },
   transpilePackages: ["@seker/auth", "@seker/shared", "@seker/db"],
+  experimental: {
+    // Harcama CSV'si en fazla 2 MB (actions/marketing.ts). Multipart zarfı için sınırın biraz üstü.
+    serverActions: { bodySizeLimit: "3mb" },
+  },
 };
 
 export default nextConfig;

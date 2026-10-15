@@ -20,9 +20,22 @@ function isRedirectError(error: unknown): boolean {
   );
 }
 
+/** BOM'a göre UTF-16LE (FF FE) / UTF-16BE (FE FF) veya UTF-8 olarak çözer. */
+function decodeCsvBuffer(buffer: Buffer): string {
+  if (buffer[0] === 0xff && buffer[1] === 0xfe) {
+    // Google Ads "Excel için CSV" dışa aktarımı UTF-16LE gelir.
+    return buffer.subarray(2, buffer.length - (buffer.length % 2)).toString("utf16le");
+  }
+  if (buffer[0] === 0xfe && buffer[1] === 0xff) {
+    const body = buffer.subarray(2, buffer.length - ((buffer.length - 2) % 2));
+    return Buffer.from(body).swap16().toString("utf16le");
+  }
+  return buffer.toString("utf8");
+}
+
 export async function importSpendCsv(
   formData: FormData,
-): Promise<{ ok: true; count: number; warnings: string[] } | { ok: false; error: string }> {
+): Promise<{ ok: true; count: number; warnings: string[]; warningCount: number } | { ok: false; error: string }> {
   try {
     const profile = await getSessionProfile();
     if (profile.role !== "yonetici") return { ok: false, error: "Bu işlem için yönetici yetkisi gerekir" };
@@ -33,15 +46,12 @@ export async function importSpendCsv(
     if (file.size > MAX_CSV_BYTES) return { ok: false, error: "Dosya 2 MB'tan büyük olamaz" };
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    // Google Ads "Excel için CSV" dışa aktarımı UTF-16LE gelir (BOM: FF FE).
-    const text = buffer[0] === 0xff && buffer[1] === 0xfe ? buffer.toString("utf16le") : buffer.toString("utf8");
-
-    const { rows, errors } = parseSpendCsv(text);
+    const { rows, errors } = parseSpendCsv(decodeCsvBuffer(buffer));
     if (rows.length === 0) return { ok: false, error: errors[0] ?? "Dosyada okunabilir satır yok" };
 
     await supabaseAdsStore(createAdminSupabase()).upsertSpend(rows);
     revalidatePath("/pazarlama");
-    return { ok: true, count: rows.length, warnings: errors.slice(0, 5) };
+    return { ok: true, count: rows.length, warnings: errors.slice(0, 5), warningCount: errors.length };
   } catch (error) {
     if (isRedirectError(error)) throw error;
     // Yalnızca hata sınıfı kaydedilir; dosya içeriği ve ham hata mesajı loglanmaz.
