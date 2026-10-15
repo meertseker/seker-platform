@@ -161,7 +161,8 @@ Panelin `lib/supabase/server.ts`, `lib/supabase/admin.ts`, `lib/supabase/middlew
 export type ContentKind = 'text' | 'rich' | 'image' | 'list';
 export type SlotDef = {
   kind: ContentKind; default: unknown; label: string;
-  max?: number; pattern?: string; // düzenli ifade kaynağı (RegExp istemciye serileştirilemez) warn?: string; allowHeadings?: boolean; // allowHeadings yalnızca legal.*
+  max?: number; pattern?: string; warn?: string; // pattern: düzenli ifade kaynağı (RegExp serileştirilemez)
+  allowHeadings?: boolean; // rich için; yalnızca legal.*
   // list için:
   fields?: Record<string, { kind: 'text' | 'rich' | 'image' | 'flag'; max?: number; label: string }>;
   maxItems?: number; fixedItems?: boolean; newItem?: Record<string, unknown>; // nesne (fonksiyon serileştirilemez)
