@@ -121,6 +121,7 @@ create or replace function public.save_site_content(p_edits jsonb) returns jsonb
 language plpgsql security invoker set search_path = '' as $$
 declare
   e jsonb;
+  k text;
   cur_value jsonb;
   cur_updated timestamptz;
   conflicts text[] := '{}';
@@ -132,6 +133,13 @@ begin
   if jsonb_typeof(p_edits) <> 'array' or jsonb_array_length(p_edits) > 100 then
     raise exception 'geçersiz istek' using errcode = '22023';
   end if;
+
+  -- Yeni anahtarda kilitlenecek satır yok: anahtar başına danışma kilidi (sıralı, kilitlenme olmasın).
+  for k in
+    select distinct x ->> 'key' from jsonb_array_elements(p_edits) x order by 1
+  loop
+    perform pg_advisory_xact_lock(hashtextextended(k, 0));
+  end loop;
 
   for e in select * from jsonb_array_elements(p_edits) loop
     select sc.updated_at into cur_updated from public.site_content sc where sc.key = e ->> 'key' for update;

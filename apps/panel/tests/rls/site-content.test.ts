@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { execFileSync } from "node:child_process";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { clientFor, admin } from "./helpers";
 
@@ -39,10 +40,34 @@ describe("site_content RLS", () => {
     expect(error?.code).toBe("42501");
   });
 
-  it("danışman kendi can_edit_site bayrağını açamaz", async () => {
-    await dan.from("profiles").update({ can_edit_site: true }).eq("id", DAN_ID);
-    const { data } = await admin.from("profiles").select("can_edit_site").eq("id", DAN_ID).single();
-    expect(data!.can_edit_site).toBe(false);
+  it("danışman kendi can_edit_site bayrağını açamaz (RLS: 0 satır etkilenir)", async () => {
+    const { data, error } = await dan.from("profiles").update({ can_edit_site: true }).eq("id", DAN_ID).select();
+    expect(error).toBeNull();
+    expect(data).toHaveLength(0);
+    const { data: row } = await admin.from("profiles").select("can_edit_site").eq("id", DAN_ID).single();
+    expect(row!.can_edit_site).toBe(false);
+  });
+
+  it("guard tetikleyicisi: UPDATE izni olsa bile yönetici olmayan bayrağı değiştiremez", () => {
+    // RLS'i aşan geçici politika ile tetikleyicinin kendisi sınanır; işlem geri alınır.
+    const sql = `begin;
+create policy tmp_upd on public.profiles for update to authenticated using (true) with check (true);
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"${DAN_ID}","role":"authenticated"}', true);
+update public.profiles set can_edit_site = true where id = '${DAN_ID}';
+reset role;
+select 'RESULT:' || can_edit_site from public.profiles where id = '${DAN_ID}';
+rollback;`;
+    let out: string;
+    try {
+      out = execFileSync("docker", ["exec", "-i", "supabase_db_anaokulcrm", "psql", "-U", "postgres", "-At"], {
+        input: sql,
+        encoding: "utf8",
+      });
+    } catch (e) {
+      throw new Error("docker/psql gerekli (yerel Supabase konteyneri supabase_db_anaokulcrm): " + String(e));
+    }
+    expect(out).toContain("RESULT:false");
   });
 
   it("yönetici set_can_edit_site ile bayrağı açar", async () => {
@@ -86,12 +111,26 @@ describe("site_content RLS", () => {
     expect(data).toHaveLength(0);
   });
 
+  it("yeni anahtarda eski (null) tabanla ikinci kayıt çakışma döner", async () => {
+    const k = "test.rls.newkey";
+    const mk = (v: string) => [{ key: k, kind: "text", value: v, baseUpdatedAt: null }];
+    const a = await dan.rpc("save_site_content", { p_edits: mk("A") });
+    expect(a.data.conflicts).toEqual([]);
+    const b = await dan.rpc("save_site_content", { p_edits: mk("B") });
+    expect(b.data.conflicts).toEqual([k]);
+    const { data } = await admin.from("site_content").select("value").eq("key", k).single();
+    expect(data!.value).toBe("A");
+  });
+
   it("revizyonlar değiştirilemez ve silinemez", async () => {
-    const { data: rev } = await admin.from("content_revisions").select("id").eq("key", KEY).limit(1).single();
-    await dan.from("content_revisions").update({ new_value: "hack" }).eq("id", rev!.id);
-    await dan.from("content_revisions").delete().eq("id", rev!.id);
-    const { data } = await admin.from("content_revisions").select("new_value").eq("id", rev!.id).single();
-    expect(data!.new_value).not.toBe("hack");
+    const { data: rev } = await admin
+      .from("content_revisions").select("id,new_value").eq("key", KEY).limit(1).single();
+    const upd = await dan.from("content_revisions").update({ new_value: "hack" }).eq("id", rev!.id).select();
+    expect(upd.data ?? []).toHaveLength(0);
+    const del = await dan.from("content_revisions").delete().eq("id", rev!.id).select();
+    expect(del.data ?? []).toHaveLength(0);
+    const { data } = await admin.from("content_revisions").select("id,new_value").eq("id", rev!.id).single();
+    expect(data).toEqual(rev);
   });
 
   it("anon yalnızca yayındaki duyuruları görür", async () => {
