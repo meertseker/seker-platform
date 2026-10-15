@@ -157,7 +157,7 @@ describe("fetchCampaignSpend", () => {
 describe("ingestConversion", () => {
   const conv = {
     id: "u1", leadId: "lead-1", gclid: "GCLID-X", action: "kayit" as const,
-    conversionAt: "2026-10-13T09:00:00Z", value: 19500, adUserData: "granted" as const,
+    conversionAt: "2026-10-13T09:00:00Z", clickAt: "2026-10-12T09:00:00Z", value: 19500, adUserData: "granted" as const,
   };
 
   it("Data Manager'a doğru hedef, transactionId ve değerle gönderir", async () => {
@@ -237,7 +237,7 @@ describe("ingestConversion", () => {
 describe("zaman aşımı ve hata dayanıklılığı", () => {
   const conv = {
     id: "u2", leadId: "lead-2", gclid: "GCLID-Y", action: "randevu" as const,
-    conversionAt: "2026-10-13T09:00:00Z", value: null, adUserData: null,
+    conversionAt: "2026-10-13T09:00:00Z", clickAt: "2026-10-12T09:00:00Z", value: null, adUserData: null,
   };
   const TS = "2026-10-13T12:00:00+03:00";
 

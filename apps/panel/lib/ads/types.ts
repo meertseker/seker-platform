@@ -17,6 +17,7 @@ export interface PendingConversion {
   gclid: string;
   action: ConversionAction;
   conversionAt: string; // ISO (DB timestamptz)
+  clickAt: string; // ISO; Google 90 gün sınırı tıklamadan sayılır
   value: number | null; // TL
   adUserData: "granted" | "denied" | null;
 }
