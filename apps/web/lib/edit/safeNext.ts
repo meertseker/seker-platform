@@ -18,5 +18,8 @@ export function safeNext(raw: string | null): string {
   }
   if (url.origin !== PROBE_ORIGIN) return '/';
   if (url.pathname.startsWith('/api/')) return '/';
-  return url.pathname + url.search + url.hash;
+  const path = url.pathname + url.search + url.hash;
+  // Nokta segmentleri çözülünce "/.//evil.com" gibi girdiler "//evil.com" olur.
+  if (path.startsWith('//') || path.startsWith('/\\')) return '/';
+  return path;
 }
