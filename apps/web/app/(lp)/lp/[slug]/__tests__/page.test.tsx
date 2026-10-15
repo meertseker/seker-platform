@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { LANDING_PAGES, LANDING_SLUGS } from '@/content/landingPages';
 
+vi.mock('next/cache', () => ({ cacheLife: vi.fn() }));
+
 /**
  * LeadForm ('use client') useRouter() çağırır; RTL bunu gerçek bir Next.js
  * App Router bağlamı olmadan mount eder ("invariant expected app router to

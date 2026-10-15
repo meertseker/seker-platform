@@ -1,4 +1,5 @@
-﻿import PageHero from '@/app/components/PageHero';
+﻿import { Suspense } from 'react';
+import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
 import BranchExplorer from './BranchExplorer';
@@ -13,13 +14,16 @@ export const metadata = buildMetadata({
   path: '/aktiviteler',
 });
 
-export default async function AktivitelerPage({
+async function BranchFromParams({ searchParams }: { searchParams: Promise<{ ders?: string }> }) {
+  const { ders } = await searchParams;
+  return <BranchExplorer initialSlug={ders} />;
+}
+
+export default function AktivitelerPage({
   searchParams,
 }: {
   searchParams: Promise<{ ders?: string }>
 }) {
-  const { ders } = await searchParams
-
   return (
     <div className="min-h-screen bg-paper-warm">
       <JsonLd
@@ -37,7 +41,9 @@ export default async function AktivitelerPage({
         scallopTone="white"
       />
 
-      <BranchExplorer initialSlug={ders} />
+      <Suspense fallback={<BranchExplorer />}>
+        <BranchFromParams searchParams={searchParams} />
+      </Suspense>
 
       {/* Haftanın günlerine bağlı ritüeller — derslerle birlikte okunması anlamlı. */}
       <section className="bg-paper-warm py-16">

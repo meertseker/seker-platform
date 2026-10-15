@@ -1,3 +1,4 @@
+import { todayIso } from '@/lib/time';
 import type { MetadataRoute } from 'next';
 import { SITE } from '@/lib/site';
 import { AGE_GROUPS_CONTENT } from '@/content/ageGroups';
@@ -25,8 +26,8 @@ const ROUTES: { path: string; priority: number; changeFrequency: 'weekly' | 'mon
   { path: '/cerez', priority: 0.3, changeFrequency: 'monthly' },
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const lastModified = new Date(await todayIso());
   return ROUTES.map((route) => ({
     url: `${SITE.url}${route.path === '/' ? '' : route.path}`,
     lastModified,

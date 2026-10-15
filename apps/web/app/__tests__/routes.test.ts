@@ -1,4 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('next/cache', () => ({ cacheLife: vi.fn() }));
+
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { NAV_ITEMS, FOOTER_LINKS } from '@/content/nav';
@@ -39,8 +42,10 @@ describe('menü rotaları', () => {
   });
 });
 
+const sitemapEntries = await sitemap();
+
 describe('sitemap rotaları', () => {
-  const paths = sitemap().map((e) => e.url.replace(SITE.url, '') || '/');
+  const paths = sitemapEntries.map((e) => e.url.replace(SITE.url, '') || '/');
 
   it.each(paths)('%s sayfası mevcut', (routePath) => {
     expect(pageExists(routePath)).toBe(true);

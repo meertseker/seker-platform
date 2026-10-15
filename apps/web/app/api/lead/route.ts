@@ -4,8 +4,6 @@ import { createWebLead } from '@/lib/websiteLeads';
 import { sendLeadEmail } from '@/lib/leadEmail';
 import { clientIp, createRateLimiter } from '@/lib/rateLimit';
 
-export const runtime = 'nodejs';
-
 const limiter = createRateLimiter({ limit: 5, windowMs: 10 * 60_000 });
 const FAILED = 'Talebiniz alınamadı, lütfen telefonla ulaşın.';
 

@@ -4,7 +4,7 @@ import SocialMediaLinks from './SocialMediaLinks'
 import { FOOTER_LINKS } from '@/content/nav'
 import { SITE } from '@/lib/site'
 
-const Footer = () => {
+const Footer = ({ year }: { year: number }) => {
   return (
     <footer className="band-grape text-white">
       {/* Şeker şeridi — footer'ın üst kenarı, sitenin aksan sırasını tekrarlar. */}
@@ -97,7 +97,7 @@ const Footer = () => {
         <div className="border-t border-paper/10 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-paper/70 text-sm mb-4 md:mb-0">
-              © {new Date().getFullYear()} Şeker Anaokulu. Tüm hakları saklıdır.
+              © {year} Şeker Anaokulu. Tüm hakları saklıdır.
             </div>
             <div className="flex space-x-6 text-sm">
               <Link href="/gizlilik" className="text-paper/70 transition-colors duration-200 hover:text-sunny">

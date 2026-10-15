@@ -19,8 +19,7 @@ import { MONTESSORI_DAYS_PER_WEEK } from '@/content/program';
 
 const HERO_QUOTE_ID = 'muge-ilkokul-olsa';
 
-export default function HeroSection() {
-  const yearsActive = new Date().getFullYear() - SITE.foundingYear;
+export default function HeroSection({ yearsActive }: { yearsActive: number }) {
   const quote = TESTIMONIALS.find((item) => item.id === HERO_QUOTE_ID && item.ready);
   const photo = MEDIA.candyCorner;
 

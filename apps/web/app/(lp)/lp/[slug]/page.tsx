@@ -8,6 +8,7 @@ import { PUBLISHED_TESTIMONIALS } from '@/content/testimonials';
 import { SITE, WHATSAPP_URL } from '@/lib/site';
 import { buildMetadata } from '@/lib/metadata';
 import { buildFaqSchema } from '@/lib/schema';
+import { currentYear, fillYears } from '@/lib/time';
 
 export function generateStaticParams() {
   return LANDING_PAGES.map((page) => ({ slug: page.slug }));
@@ -34,6 +35,8 @@ export default async function LandingPageRoute({
   const page = getLandingPage(slug);
   if (!page) notFound();
 
+  const yearsActive = (await currentYear()) - SITE.foundingYear;
+
   // Yalnızca yazılı onayla yayına hazır (ready: true) yorumlar gösterilir —
   // bkz. content/testimonials.ts. Bugün bu liste boşsa bölüm hiç render
   // edilmez; boş bir "yorumlar" başlığı görünür bir boşluk bırakmaz.
@@ -46,8 +49,8 @@ export default async function LandingPageRoute({
   const faqSchema = buildFaqSchema(
     page.faq.map((item, index) => ({
       id: `${page.slug}-faq-${index}`,
-      question: item.question,
-      answer: item.answer,
+      question: fillYears(item.question, yearsActive),
+      answer: fillYears(item.answer, yearsActive),
       featured: false,
       ready: true,
     })),
@@ -61,7 +64,7 @@ export default async function LandingPageRoute({
           eylemi mobilde uzun bir kaydırma gerektirmez. */}
       <section className="mx-auto max-w-5xl px-6 pt-10 pb-8">
         <h1 className="text-4xl text-ink md:text-5xl">{page.h1}</h1>
-        <p className="mt-6 max-w-2xl text-lg text-ink-soft">{page.subhead}</p>
+        <p className="mt-6 max-w-2xl text-lg text-ink-soft">{fillYears(page.subhead, yearsActive)}</p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <a href="#form" className="rounded-full bg-ink px-8 py-4 text-center font-medium text-paper">
             Ön Görüşme Randevusu
@@ -91,13 +94,13 @@ export default async function LandingPageRoute({
         <Frame mediaKey={page.mediaKey} ratio="wide" sizes="(max-width: 768px) 100vw, 1100px" />
       </div>
 
-      <ProofStrip points={page.proofPoints} />
+      <ProofStrip points={page.proofPoints.map((p) => ({ ...p, value: fillYears(p.value, yearsActive) }))} />
 
       <section className="mx-auto max-w-3xl px-6 py-14">
         {page.bodyBlocks.map((block) => (
           <div key={block.heading} className="mb-10 last:mb-0">
-            <h2 className="text-2xl text-ink">{block.heading}</h2>
-            <p className="mt-3 text-ink-soft">{block.text}</p>
+            <h2 className="text-2xl text-ink">{fillYears(block.heading, yearsActive)}</h2>
+            <p className="mt-3 text-ink-soft">{fillYears(block.text, yearsActive)}</p>
           </div>
         ))}
       </section>
@@ -122,8 +125,8 @@ export default async function LandingPageRoute({
         <dl className="mt-8 space-y-6">
           {page.faq.map((item) => (
             <div key={item.question} className="border-t border-rule pt-6">
-              <dt className="font-medium text-ink">{item.question}</dt>
-              <dd className="mt-2 text-ink-soft">{item.answer}</dd>
+              <dt className="font-medium text-ink">{fillYears(item.question, yearsActive)}</dt>
+              <dd className="mt-2 text-ink-soft">{fillYears(item.answer, yearsActive)}</dd>
             </div>
           ))}
         </dl>

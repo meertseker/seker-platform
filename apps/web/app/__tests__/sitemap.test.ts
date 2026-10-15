@@ -1,8 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
+
+vi.mock('next/cache', () => ({ cacheLife: vi.fn() }));
+
 import sitemap from '../sitemap';
 
 describe('sitemap', () => {
-  const entries = sitemap();
+  let entries: Awaited<ReturnType<typeof sitemap>>;
+  beforeAll(async () => {
+    entries = await sitemap();
+  });
 
   it('ana sayfayı içerir', () => {
     expect(entries.some((e) => e.url === 'https://sekeranaokulu.com')).toBe(true);

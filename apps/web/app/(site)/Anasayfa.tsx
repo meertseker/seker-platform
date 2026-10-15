@@ -9,14 +9,17 @@ import ActivitiesSection from '@/app/components/ActivitiesSection'
 import WeekRhythmSection from '@/app/components/WeekRhythmSection'
 import FAQSection from '@/app/components/FAQSection'
 import ContactSection from '@/app/components/ContactSection'
+import { currentYear } from '@/lib/time'
+import { SITE } from '@/lib/site'
 import { DAY_CHAPTERS, chapterLabel } from '@/content/day'
 
 const DAY_PREVIEW_IDS = ['sabah-cemberi', 'calisma-saati', 'atolye']
 
-const Anasayfa = () => {
+const Anasayfa = async () => {
+  const yearsActive = (await currentYear()) - SITE.foundingYear
   return (
     <div className="min-h-screen bg-paper">
-      <HeroSection />
+      <HeroSection yearsActive={yearsActive} />
 
       {/* Günün üç sahnesi — tam anlatı /gunluk-akis sayfasında */}
       <section className="mx-auto max-w-6xl px-6 py-8 md:py-16">

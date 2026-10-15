@@ -1,3 +1,4 @@
+import { SITE } from '@/lib/site';
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
@@ -172,29 +173,29 @@ describe('künye — okul sayıyı doğruladı (1 Ağustos 2026), hero rakamı g
   });
 
   it('HeroSection doğrulanmış sınıf mevcudunu ve öğretmen sayısını gösterir', () => {
-    const { container } = render(<HeroSection />);
+    const { container } = render(<HeroSection yearsActive={new Date().getFullYear() - SITE.foundingYear} />);
     const text = container.textContent ?? '';
     expect(text).toContain(String(ROSTER_STATUS.childCount));
     expect(text).toContain(String(ROSTER_STATUS.teacherCount));
   });
 
   it('HeroSection rakamı yönetmeliğin üst sınırıyla birlikte bağlama oturtur', () => {
-    const { container } = render(<HeroSection />);
+    const { container } = render(<HeroSection yearsActive={new Date().getFullYear() - SITE.foundingYear} />);
     expect(container.textContent ?? '').toContain(String(ROSTER_STATUS.limit));
   });
 
   it('HeroSection görsel taşır — bahçe karesi ve mekân kutusu', () => {
-    const { container } = render(<HeroSection />);
+    const { container } = render(<HeroSection yearsActive={new Date().getFullYear() - SITE.foundingYear} />);
     expect(container.querySelectorAll('img').length).toBeGreaterThanOrEqual(2);
   });
 
   it('HeroSection birincil CTA metni asset dosyası §4.4 ile eşleşir', () => {
-    const { getByText } = render(<HeroSection />);
+    const { getByText } = render(<HeroSection yearsActive={new Date().getFullYear() - SITE.foundingYear} />);
     expect(getByText('Ön Görüşme Randevusu Alın')).toBeDefined();
   });
 
   it('HeroSection veli sözünü kaynağıyla birlikte verir — uydurma alıntı taşımaz', () => {
-    const { container } = render(<HeroSection />);
+    const { container } = render(<HeroSection yearsActive={new Date().getFullYear() - SITE.foundingYear} />);
     const text = container.textContent ?? '';
     const quoted = PUBLISHED_TESTIMONIALS.some((item) => text.includes(item.quote));
     expect(quoted).toBe(true);

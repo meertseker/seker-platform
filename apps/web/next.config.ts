@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: monorepoRoot,
   turbopack: { root: monorepoRoot },
   transpilePackages: ['@seker/auth', '@seker/shared', '@seker/db'],
+  cacheComponents: true,
   experimental: {
     viewTransition: true,
   },

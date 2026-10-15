@@ -5,6 +5,7 @@ import LeadForm from '@/app/components/LeadForm';
 import { buildMetadata } from '@/lib/metadata';
 import { buildBreadcrumbSchema, buildFaqSchema } from '@/lib/schema';
 import { SITE } from '@/lib/site';
+import { currentYear } from '@/lib/time';
 import { PUBLISHED_FAQ } from '@/content/faq';
 import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from '@/content/day';
 import {
@@ -84,7 +85,8 @@ const SECTIONS = [
   },
 ];
 
-export default function EgitimYaklasimimizPage() {
+export default async function EgitimYaklasimimizPage() {
+  const yearsActive = (await currentYear()) - SITE.foundingYear;
   return (
     <div className="min-h-screen bg-paper">
       <JsonLd
@@ -163,7 +165,7 @@ export default function EgitimYaklasimimizPage() {
         </div>
         <p className="mx-auto mt-8 max-w-2xl text-center text-ink-soft">
           Tam gün {FULL_DAY_LABEL}, yarım gün {HALF_DAY_LABEL}. {SITE.foundingYear}
-          &apos;den beri, {new Date().getFullYear() - SITE.foundingYear} yıldır aynı
+          &apos;den beri, {yearsActive} yıldır aynı
           yaklaşımla {SITE.areaServed.slice(0, 3).join(', ')} ve çevresindeki ailelere
           hizmet veriyoruz.
         </p>

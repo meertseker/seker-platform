@@ -25,12 +25,11 @@ export type LandingPage = {
  * ikinci bir sayı yazılmaz. Okul yönetimi sınıf mevcudunu ve günlük
  * İngilizce süresini 1 Ağustos 2026'da doğruladı.
  */
-const YEARS_ACTIVE = new Date().getFullYear() - SITE.foundingYear;
 const CHILDREN_PER_TEACHER = Math.round(ROSTER_STATUS.childCount / ROSTER_STATUS.teacherCount);
 
 const AGE_RANGE_POINT = { value: '2-6', label: 'Yaş aralığı' };
 const HOURS_POINT = { value: `${SITE.hours.opens}–${SITE.hours.closes}`, label: 'Günlük çalışma saatleri' };
-const YEARS_ACTIVE_POINT = { value: `${YEARS_ACTIVE} yıl`, label: "Beykent'te aynı adreste" };
+const YEARS_ACTIVE_POINT = { value: '{yilSayisi} yıl', label: "Beykent'te aynı adreste" };
 
 function rosterProof(): { value: string; label: string }[] {
   return [
@@ -87,7 +86,7 @@ export const LANDING_PAGES: LandingPage[] = [
     proofPoints: [...rosterProof(), AGE_RANGE_POINT, HOURS_POINT],
     bodyBlocks: [
       {
-        heading: `${YEARS_ACTIVE} yıldır aynı sokakta`,
+        heading: '{yilSayisi} yıldır aynı sokakta',
         text: `Cumhuriyet Mahallesi Uludağ Sokak'ta ${SITE.foundingYear}'den beri buradayız. Süreklilik, okul öncesinde en zor taklit edilen özelliktir.`,
       },
       {

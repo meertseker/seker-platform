@@ -1,4 +1,5 @@
-﻿import Image from 'next/image'
+﻿import { currentYear } from '@/lib/time'
+import Image from 'next/image'
 import PageHero from '@/app/components/PageHero'
 import AboutSection from '@/app/components/AboutSection'
 import JsonLd from '@/app/components/JsonLd'
@@ -51,8 +52,8 @@ const VALUES = [
   },
 ]
 
-export default function HakkimizdaPage() {
-  const yearsActive = new Date().getFullYear() - SITE.foundingYear
+export default async function HakkimizdaPage() {
+  const yearsActive = (await currentYear()) - SITE.foundingYear
 
   const facts = [
     { value: String(SITE.foundingYear), label: 'Kuruluş yılı' },
