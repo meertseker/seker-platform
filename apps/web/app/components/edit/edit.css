@@ -1,0 +1,18 @@
+.seker-editing [data-edit-key] { outline: 2px dashed transparent; outline-offset: 3px; cursor: text; transition: outline-color 0.15s; }
+.seker-editing [data-edit-key]:hover { outline-color: #6d33b8; }
+.seker-editing [data-edit-kind='image'] { cursor: pointer; }
+.seker-editing [data-edit-pending='1'] { outline: 2px solid #b4234e; }
+.seker-edit-active { outline: 2px solid #6d33b8 !important; background: rgb(109 51 184 / 0.06); }
+.seker-editbar { position: fixed; inset-inline: 0; top: 0; z-index: 2147483000; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));
+  background: #2a1840; color: #fff; font: 600 14px/1.3 system-ui, sans-serif; box-shadow: 0 2px 12px rgb(0 0 0 / 0.25); }
+.seker-editbar button, .seker-editbar a { border-radius: 999px; padding: 6px 14px; background: rgb(255 255 255 / 0.12); color: #fff; }
+.seker-editbar button:focus-visible, .seker-editbar a:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.seker-editbar .primary { background: #fff; color: #2a1840; }
+.seker-editbar button:disabled { opacity: 0.5; cursor: not-allowed; }
+.seker-counter { position: absolute; z-index: 2147483001; padding: 2px 8px; border-radius: 6px; background: #2a1840; color: #fff; font: 600 12px system-ui; }
+.seker-counter.over { background: #b4234e; }
+.seker-toasts { position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); right: max(16px, env(safe-area-inset-right, 0px)); z-index: 2147483002; display: grid; gap: 8px; }
+.seker-toast { max-width: 360px; padding: 12px 16px; border-radius: 12px; background: #2a1840; color: #fff; font: 14px/1.4 system-ui; }
+.seker-toast.error { background: #b4234e; }
+body.seker-editing { padding-top: 56px; }
