@@ -156,6 +156,12 @@ isOneToOne: false
       referencedRelation: "students"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "leads_converted_student_id_fkey"
+      columns: ["converted_student_id"]
+isOneToOne: false
+      referencedRelation: "v_overdue_installments"
+      referencedColumns: ["student_id"]
+    },{
       foreignKeyName: "leads_family_id_fkey"
       columns: ["family_id"]
 isOneToOne: false
@@ -245,6 +251,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "students"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payment_plans_student_id_fkey"
+      columns: ["student_id"]
+isOneToOne: false
+      referencedRelation: "v_overdue_installments"
+      referencedColumns: ["student_id"]
     }
                   ]
                 },"price_list_items": {
@@ -319,6 +331,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "students"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "refunds_student_id_fkey"
+      columns: ["student_id"]
+isOneToOne: false
+      referencedRelation: "v_overdue_installments"
+      referencedColumns: ["student_id"]
     }
                   ]
                 },"students": {
