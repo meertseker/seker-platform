@@ -7,6 +7,8 @@ const meta = {
   'lp.kres-2-yas.metaTitle': { kind: 'text' as const, label: 'LP başlık' },
   'lp.kres-2-yas.metaDescription': { kind: 'text' as const, label: 'LP açıklama' },
   'site.phone': { kind: 'text' as const, label: 'Telefon' },
+  'chrome.footer.rights': { kind: 'text' as const, label: 'Telif satırı' },
+  'chrome.whatsapp.label': { kind: 'text' as const, label: 'WhatsApp etiketi' },
 };
 
 describe('settingsKeysFor', () => {
@@ -15,6 +17,8 @@ describe('settingsKeysFor', () => {
       'meta.bultenler.title',
       'meta.bultenler.description',
       'site.phone',
+      'chrome.footer.rights',
+      'chrome.whatsapp.label',
     ]);
   });
   it('reklam sayfası', () => {
@@ -22,6 +26,8 @@ describe('settingsKeysFor', () => {
       'lp.kres-2-yas.metaTitle',
       'lp.kres-2-yas.metaDescription',
       'site.phone',
+      'chrome.footer.rights',
+      'chrome.whatsapp.label',
     ]);
   });
 });

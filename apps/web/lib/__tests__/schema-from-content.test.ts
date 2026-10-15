@@ -21,6 +21,12 @@ describe('buildPreschoolSchema', () => {
     expect(preschoolSchema.telephone).toBe(SITE.phone.e164);
     expect(preschoolSchema.foundingDate).toBe(String(SITE.foundingYear));
     expect(preschoolSchema.address.addressRegion).toBe(SITE.address.city);
+    expect(preschoolSchema.name).toBe(SITE.name);
+    expect(preschoolSchema.description).toBe(SITE.description);
+    expect(preschoolSchema.email).toBe(SITE.email);
+    const hours = preschoolSchema.openingHoursSpecification[0];
+    expect(hours.opens).toBe(SITE.hours.opens);
+    expect(hours.closes).toBe(SITE.hours.closes);
   });
 });
 

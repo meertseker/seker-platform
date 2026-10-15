@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Timecode from './cine/Timecode';
 import TrackedLink from './TrackedLink';
 import { Editable } from './edit/Editable';
-import { WHATSAPP_URL } from '@/lib/site';
+import { whatsappUrl } from '@/lib/site';
 import type { Reader } from '@/lib/content/types';
 
 /**
@@ -75,7 +75,7 @@ export default function HeroSection({ c }: { c: Reader }) {
                   {c.text('home.hero.ctaPrimary')}
                 </TrackedLink>
                 <TrackedLink
-                  href={WHATSAPP_URL}
+                  href={whatsappUrl(c)}
                   event="whatsapp_click"
                   payload={{ location: 'hero' }}
                   external

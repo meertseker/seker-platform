@@ -4,12 +4,16 @@ import type { ReaderData } from '@/lib/content/types';
 import { countChars } from '@/lib/content/chars';
 import { Drawer } from './Drawer';
 
+/** Sayfada tıklanacak görünür yeri olmayan site geneli alanlar (telif satırı, WhatsApp düğmesi etiketi). */
+const EXTRA_SETTING_KEYS = ['chrome.footer.rights', 'chrome.whatsapp.label'];
+
 export function settingsKeysFor(pathname: string, meta: ReaderData['meta'], pageIds: Record<string, string>): string[] {
   const lp = pathname.match(/^\/lp\/([a-z0-9-]+)$/);
   const pageKeys = lp
     ? [`lp.${lp[1]}.metaTitle`, `lp.${lp[1]}.metaDescription`]
     : pageIds[pathname] ? [`meta.${pageIds[pathname]}.title`, `meta.${pageIds[pathname]}.description`] : [];
-  return [...pageKeys.filter((k) => k in meta), ...Object.keys(meta).filter((k) => k.startsWith('site.'))];
+  return [...pageKeys.filter((k) => k in meta), ...Object.keys(meta).filter((k) => k.startsWith('site.')),
+    ...EXTRA_SETTING_KEYS.filter((k) => k in meta)];
 }
 
 export function SettingsPanel({ keys, data, currentValue, onChange, onClose }: {
