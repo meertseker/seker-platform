@@ -7,4 +7,5 @@ export const PAGE_IDS: Record<string, string> = {
   '/yas-gruplari': 'yasgruplari',
   '/gunluk-akis': 'gunlukakis',
   '/aktiviteler': 'aktiviteler',
+  '/kayit': 'kayit',
 };
