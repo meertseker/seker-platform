@@ -154,7 +154,7 @@ function EnrollmentPlanForm({
       )}
 
       <label className="block text-sm font-semibold text-foreground">
-        İlk ödeme günü
+        İlk ödeme günü (sonraki aylar aynı gün; varsayılan ay sonu)
         <input type="date" value={firstDue} onChange={(e) => setFirstDue(e.target.value)} className={inputClass} />
       </label>
 

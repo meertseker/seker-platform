@@ -172,9 +172,12 @@ function longMonthLabel(monthKey: string) {
   return `${name.charAt(0).toLocaleUpperCase("tr")}${name.slice(1)} ${monthKey.slice(0, 4)}`;
 }
 
-/** Planın ilk vadesi: başlangıç tarihi, yoksa bugün (kayıt günü ilk ödeme alınır). */
+/** Planın ilk vadesi: başlangıç ayının son günü (okulun kuralı: aidat ay sonuna kadar ödenir). */
 function defaultFirstDue(startDate: string | null, today: string) {
-  return startDate && startDate > today ? startDate : today;
+  const base = startDate && startDate > today ? startDate : today;
+  const [year, month] = base.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${base.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`;
 }
 
 export default async function StudentDetailPage({
