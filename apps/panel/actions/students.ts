@@ -59,7 +59,7 @@ export async function convertLeadToStudent(leadId: string, startDate: string) {
     activeSeason(),
   ]);
 
-  if (!lead) return { error: "Lead bulunamadı" };
+  if (!lead) return { error: "Veli bulunamadı" };
   if (lead.converted_student_id) return { error: "Bu lead zaten öğrenciye dönüştürülmüş" };
   if (!season) return { error: "Aktif sezon bulunamadı" };
 
@@ -100,7 +100,7 @@ export async function convertLeadToStudent(leadId: string, startDate: string) {
     return {
       error: cleanup.error
         ? "Dönüştürme başarısız oldu; oluşturulan öğrenci kaydı silinemedi, manuel kontrol edilmeli"
-        : "Lead öğrenciye dönüştürülemedi",
+        : "Veli öğrenciye dönüştürülemedi",
     };
   }
 

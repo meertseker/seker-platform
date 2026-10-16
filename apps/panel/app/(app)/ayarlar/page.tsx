@@ -22,7 +22,7 @@ interface PriceListItemRow {
 
 export default async function AyarlarPage() {
   const profile = await getSessionProfile();
-  if (profile.role !== "yonetici") redirect("/pipeline");
+  if (profile.role !== "yonetici") redirect("/bugun");
 
   const supabase = await createServerSupabase();
   const { data: priceLists } = await supabase

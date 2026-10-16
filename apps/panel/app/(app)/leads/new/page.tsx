@@ -89,7 +89,7 @@ export default function NewLeadPage() {
       });
 
       if (result.error || !result.id) {
-        setError(result.error ?? "Lead kaydedilemedi, lütfen tekrar deneyin.");
+        setError(result.error ?? "Veli kaydedilemedi, lütfen tekrar deneyin.");
         return;
       }
 
@@ -104,9 +104,9 @@ export default function NewLeadPage() {
           href="/pipeline"
           className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          Pipeline ekranına dön
+          Veliler
         </Link>
-        <h1 className="mt-3 text-3xl font-semibold">Yeni Lead</h1>
+        <h1 className="mt-3 text-3xl font-semibold">Yeni veli</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Veli iletişim bilgilerini ve çocuğa dair ilk bilgileri girin.
         </p>
@@ -329,7 +329,7 @@ export default function NewLeadPage() {
           disabled={isPending}
           className="min-h-11 w-full cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isPending ? "Kaydediliyor..." : "Lead Oluştur"}
+          {isPending ? "Kaydediliyor..." : "Veliyi kaydet"}
         </button>
       </form>
     </div>

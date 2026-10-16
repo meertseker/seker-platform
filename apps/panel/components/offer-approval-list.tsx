@@ -86,7 +86,7 @@ export function OfferApprovalList({ offers }: OfferApprovalListProps) {
 
       <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
         <div className="hidden grid-cols-[1.4fr_1fr_0.9fr_0.9fr_0.7fr_1.8fr] gap-4 border-b border-border bg-muted px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground lg:grid">
-          <span>Lead</span>
+          <span>Veli</span>
           <span>Danışman</span>
           <span>Liste</span>
           <span>Teklif</span>

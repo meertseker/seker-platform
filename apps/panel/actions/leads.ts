@@ -32,7 +32,7 @@ export async function createLead(input: CreateLeadInput) {
     ozel_durum_note: ozelDurum ? (input.ozelDurumNote?.trim() || null) : null,
     wants_summer: input.wantsSummer ?? false,
   }).select("id").single();
-  if (error) return { error: "Lead kaydedilemedi, lütfen tekrar deneyin" };
+  if (error) return { error: "Veli kaydedilemedi, lütfen tekrar deneyin" };
   await logEvent(supabase, {
     entityType: "lead", entityId: data.id, eventType: "lead_olusturuldu",
     actorId: profile.id, payload: { source: input.source },
@@ -57,7 +57,7 @@ export async function updateLeadStatus(leadId: string, to: LeadStatus, lostReaso
   const supabase = await createServerSupabase();
   const { data: lead } = await supabase.from("leads")
     .select("status, converted_student_id").eq("id", leadId).single();
-  if (!lead) return { error: "Lead bulunamadı" };
+  if (!lead) return { error: "Veli bulunamadı" };
   const check = canTransition(lead.status as LeadStatus, to, {
     converted: lead.converted_student_id !== null,
   });
@@ -87,13 +87,13 @@ export async function reopenLead(leadId: string) {
 export async function deleteLead(leadId: string) {
   const profile = await getSessionProfile();
   if (profile.role !== "yonetici") return { error: "Bu işlem için yönetici yetkisi gerekir" };
-  if (!leadId) return { error: "Lead bulunamadı" };
+  if (!leadId) return { error: "Veli bulunamadı" };
 
   const admin = createAdminSupabase();
   const db = admin ?? (await createServerSupabase());
   // lead_notes / appointments / offers / tasks ON DELETE CASCADE ile otomatik silinir.
   const { error } = await db.from("leads").delete().eq("id", leadId);
-  if (error) return { error: "Lead silinemedi" };
+  if (error) return { error: "Veli silinemedi" };
 
   const supabase = await createServerSupabase();
   await logEvent(supabase, {
@@ -159,7 +159,7 @@ export async function updateLead(leadId: string, fields: UpdateLeadFields) {
 
   patch.last_activity_at = new Date().toISOString();
   const { error } = await supabase.from("leads").update(patch).eq("id", leadId);
-  if (error) return { error: "Lead güncellenemedi" };
+  if (error) return { error: "Veli güncellenemedi" };
   await logEvent(supabase, {
     entityType: "lead", entityId: leadId, eventType: "lead_guncellendi",
     actorId: profile.id, payload: { fields: changedFields },

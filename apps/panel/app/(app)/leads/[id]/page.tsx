@@ -348,11 +348,11 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
             href="/pipeline"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            Pipeline ekranına dön
+            Veliler
           </Link>
           <h1 className="mt-3 text-3xl font-semibold">{lead.parent_name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Lead detayını, notları ve sistem aktivitelerini takip edin.
+            Velinin bilgileri, notları ve geçmişi.
           </p>
         </div>
         <Link

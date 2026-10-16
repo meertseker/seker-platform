@@ -35,6 +35,11 @@
   --font-mono: var(--font-fira-code);
 }
 
+/* Taban 17 px: tablette ve telefonda okunur yazı, büyük dokunma alanı (rem ile her şey ölçeklenir). */
+html {
+  font-size: 106.25%;
+}
+
 body {
   background: var(--color-background);
   color: var(--color-foreground);

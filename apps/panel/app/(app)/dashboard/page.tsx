@@ -82,7 +82,7 @@ function Bar({ widthPct, fillClass = "bg-primary" }: { widthPct: number; fillCla
 
 function FunnelSection({ funnel }: { funnel: FunnelResult }) {
   const stages = [
-    { key: "leads", title: "Lead", value: funnel.leads, fillClass: "bg-primary" },
+    { key: "leads", title: "Veli adayı", value: funnel.leads, fillClass: "bg-primary" },
     { key: "randevu", title: "Randevu", value: funnel.randevu, fillClass: "bg-blue-500" },
     { key: "gorusme", title: "Görüşme", value: funnel.gorusme, fillClass: "bg-violet-500" },
     { key: "kayit", title: "Kayıt", value: funnel.kayit, fillClass: "bg-emerald-500" },
@@ -93,7 +93,7 @@ function FunnelSection({ funnel }: { funnel: FunnelResult }) {
       <div>
         <h2 className="text-xl font-semibold text-foreground">Huni</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Seçili ayda oluşturulan lead&apos;lerin aşamalara göre ilerleyişi.
+          Seçili ayda gelen velilerin aşamalara göre ilerleyişi.
         </p>
       </div>
       <div className="space-y-4">
@@ -124,7 +124,7 @@ function SourceConversionSection({ rows }: { rows: SourceConversionRow[] }) {
       <div className="border-b border-border bg-muted px-5 py-4">
         <h2 className="text-xl font-semibold text-foreground">Kaynak dönüşümü</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Tüm zamanların kaynak bazında lead ve kayıt sayıları.
+          Tüm zamanların kaynak bazında veli ve kayıt sayıları.
         </p>
       </div>
       <div className="overflow-x-auto">
@@ -132,7 +132,7 @@ function SourceConversionSection({ rows }: { rows: SourceConversionRow[] }) {
           <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-5 py-3">Kaynak</th>
-              <th className="px-5 py-3 text-right">Lead</th>
+              <th className="px-5 py-3 text-right">Veli</th>
               <th className="px-5 py-3 text-right">Kayıt</th>
               <th className="px-5 py-3 text-right">Dönüşüm %</th>
             </tr>
@@ -165,7 +165,7 @@ function LostReasonsSection({ rows }: { rows: LostReasonRow[] }) {
       <div>
         <h2 className="text-xl font-semibold text-foreground">Kayıp nedenleri</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Kaybedilen lead&apos;lerin neden dağılımı (tüm zamanlar).
+          Kaybedilen velilerin neden dağılımı (tüm zamanlar).
         </p>
       </div>
       {rows.every((row) => row.count === 0) ? (
@@ -233,7 +233,7 @@ function ConsultantBreakdownSection({ rows }: { rows: ConsultantBreakdownRow[] }
           <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-5 py-3">Danışman</th>
-              <th className="px-5 py-3 text-right">Lead</th>
+              <th className="px-5 py-3 text-right">Veli</th>
               <th className="px-5 py-3 text-right">Kayıt</th>
               <th className="px-5 py-3 text-right">Dönüşüm %</th>
             </tr>
@@ -278,7 +278,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-medium text-muted-foreground">Analiz</p>
-          <h1 className="mt-1 text-3xl font-semibold text-foreground">Dashboard</h1>
+          <h1 className="mt-1 text-3xl font-semibold text-foreground">Rapor</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {formatMonthLabel(month)} ayı için huni, kaynak dönüşümü ve ödeme özeti.
           </p>

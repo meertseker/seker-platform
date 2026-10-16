@@ -190,7 +190,7 @@ export function AppointmentList({
                         href={`/leads/${appointment.leadId}`}
                         className="text-sm font-semibold text-foreground transition-colors hover:underline"
                       >
-                        {appointment.leadName ?? "Lead detayına git"}
+                        {appointment.leadName ?? "Veli kartına git"}
                       </Link>
                       {appointment.leadPhone ? (
                         <>

@@ -38,7 +38,7 @@ export const ITEM_TYPES = {
 export type ItemType = keyof typeof ITEM_TYPES;
 
 export const PAYMENT_METHODS = {
-  havale: "Havale/EFT", nakit: "Nakit", pos: "POS", diger: "Diğer",
+  havale: "Havale/EFT", nakit: "Nakit", pos: "Kart (POS)", diger: "Diğer",
 } as const;
 export type PaymentMethod = keyof typeof PAYMENT_METHODS;
 
@@ -68,9 +68,9 @@ export const STUDENT_STATUSES = {
 } as const;
 
 export const EVENT_LABELS = {
-  lead_olusturuldu: "Lead oluşturuldu",
+  lead_olusturuldu: "Veli eklendi",
   durum_degisti: "Durum değişti",
-  lead_guncellendi: "Lead güncellendi",
+  lead_guncellendi: "Veli bilgileri güncellendi",
   randevu_olusturuldu: "Randevu oluşturuldu",
   randevu_sonuclandi: "Randevu sonuçlandı",
   teklif_olusturuldu: "Teklif oluşturuldu",

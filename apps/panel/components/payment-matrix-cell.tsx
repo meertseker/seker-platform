@@ -174,7 +174,7 @@ export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: Payme
       >
         <span className="whitespace-nowrap">{display}</span>
         {hint || cell.cancelledCount > 0 ? (
-          <span className="whitespace-nowrap text-[11px] font-medium opacity-90">
+          <span className="whitespace-nowrap text-xs font-medium opacity-90">
             {hint}
             {cell.cancelledCount > 0 ? ` · ${cell.cancelledCount} iptal` : null}
           </span>

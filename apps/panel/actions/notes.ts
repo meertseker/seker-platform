@@ -20,7 +20,7 @@ export async function addNote(leadId: string, body: string) {
   const { error: leadError } = await supabase.from("leads").update({
     last_activity_at: new Date().toISOString(),
   }).eq("id", leadId);
-  if (leadError) return { error: "Lead güncellenemedi" };
+  if (leadError) return { error: "Veli güncellenemedi" };
 
   revalidatePath(`/leads/${leadId}`);
   return {};

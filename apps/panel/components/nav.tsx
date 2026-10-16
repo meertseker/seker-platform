@@ -14,6 +14,7 @@ import {
   PencilLine,
   Plus,
   Settings,
+  Sun,
   User,
   Users,
   type LucideIcon,
@@ -34,9 +35,10 @@ interface NavProps {
   siteEditUrl: string | null;
 }
 
-const HOME_HREF = "/pipeline";
+const HOME_HREF = "/bugun";
 
 const mainItems = [
+  { href: "/bugun", label: "Bugün", icon: Sun },
   { href: "/pipeline", label: "Veliler", icon: Users },
   { href: "/ogrenciler", label: "Öğrenciler", icon: GraduationCap },
   { href: "/odemeler", label: "Ödemeler", icon: Banknote },
@@ -48,7 +50,7 @@ const profileLinks = [
   { href: "/ayarlar", label: "Ayarlar", icon: Settings, roles: ["yonetici"] },
   { href: "/teklifler", label: "Teklifler", icon: BadgePercent, roles: ["yonetici"] },
   { href: "/pazarlama", label: "Pazarlama", icon: Megaphone, roles: ["yonetici"] },
-  { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
+  { href: "/dashboard", label: "Rapor", icon: BarChart3 },
   { href: "/geri-bildirim", label: "Geri bildirim", icon: MessageSquarePlus },
 ] as const;
 
@@ -97,7 +99,7 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       className={
         compact
-          ? `flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+          ? `flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
               active
                 ? "bg-primary-soft text-primary"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -290,7 +292,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
         aria-label="Alt navigasyon"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface px-2 pb-[calc(env(safe-area-inset-bottom)+0.375rem)] pt-1.5 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] md:hidden"
       >
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {mainItems.map((item) => (
             <NavLink
               key={item.href}
@@ -304,7 +306,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
           <Link
             href={NEW_LEAD_HREF}
             aria-label="Yeni veli ekle"
-            className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl bg-primary px-1 py-1.5 text-center text-[11px] font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl bg-primary px-1 py-1.5 text-center text-xs font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           >
             <Plus aria-hidden className="size-5" />
             <span className="leading-tight">Yeni Veli</span>

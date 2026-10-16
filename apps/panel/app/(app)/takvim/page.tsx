@@ -281,7 +281,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                           href={`/leads/${lead?.id ?? appointment.lead_id}`}
                           className="mt-2 block text-sm font-semibold text-foreground transition-colors hover:text-primary"
                         >
-                          {lead?.parent_name ?? "Lead detayına git"}
+                          {lead?.parent_name ?? "Veli kartına git"}
                         </Link>
                         <p className="mt-1 text-xs font-medium text-muted-foreground">
                           {label(APPOINTMENT_TYPES, appointment.type)}

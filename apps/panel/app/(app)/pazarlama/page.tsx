@@ -22,7 +22,7 @@ function first(value: string | string[] | undefined) {
 
 export default async function PazarlamaPage({ searchParams }: { searchParams: SearchParams }) {
   const profile = await getSessionProfile();
-  if (profile.role !== "yonetici") redirect("/pipeline");
+  if (profile.role !== "yonetici") redirect("/bugun");
 
   const params = await searchParams;
   const { from, to } = normalizeRange(first(params.bas), first(params.bit), istanbulDateString());

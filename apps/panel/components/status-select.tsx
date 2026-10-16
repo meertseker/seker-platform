@@ -121,7 +121,7 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
               Kayıp nedeni seçin
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Lead kaybedildi olarak işaretlenmeden önce neden zorunludur.
+              Veliyi kaybedildi olarak işaretlemeden önce bir neden seçin.
             </p>
 
             <div className="mt-4 space-y-2">

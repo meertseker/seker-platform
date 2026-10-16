@@ -113,7 +113,7 @@ export async function createAppointment(
   const profile = await getSessionProfile();
   const supabase = await createServerSupabase();
 
-  if (!leadId) return { error: "Lead bulunamadı." };
+  if (!leadId) return { error: "Veli bulunamadı." };
   if (!appointmentTypes.includes(type)) return { error: "Geçerli bir randevu türü seçin." };
 
   const scheduledAt = parseIstanbulDateTime(scheduledAtIso);
@@ -125,7 +125,7 @@ export async function createAppointment(
     .eq("id", leadId)
     .maybeSingle();
 
-  if (!lead) return { error: "Lead bulunamadı." };
+  if (!lead) return { error: "Veli bulunamadı." };
 
   const windowMinutes = await conflictWindowMinutes();
   const { from, to } = isoAround(scheduledAt, windowMinutes);

@@ -134,7 +134,7 @@ export async function createOffer(
   const profile = await getSessionProfile();
   const supabase = await createServerSupabase();
 
-  if (!leadId) return { error: "Lead bulunamadı" };
+  if (!leadId) return { error: "Veli bulunamadı" };
   if (!validProgram(program)) return { error: "Geçerli bir program seçin" };
 
   const offeredPrice = normalizeMoney(offeredPriceTl);

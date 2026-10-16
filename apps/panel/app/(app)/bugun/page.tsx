@@ -670,7 +670,7 @@ export default async function Home() {
         </h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <SummaryStat
-            label="Yeni lead"
+            label="Yeni veli"
             value={String(funnel.leads)}
             icon={<Users aria-hidden className="size-4" />}
             iconClass="bg-primary-soft text-primary"

@@ -93,7 +93,7 @@ export function LeadEditForm({ lead, role }: LeadEditFormProps) {
     <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Lead Bilgileri</h2>
+          <h2 className="text-xl font-semibold text-foreground">Veli bilgileri</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Yanlış girilen veli adı, telefon, kaynak veya çocuk bilgisini düzeltin.
           </p>
