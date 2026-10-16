@@ -3,15 +3,17 @@ import {
   ArrowRight,
   BadgePercent,
   CalendarClock,
-  Phone,
   Users,
   Wallet,
 } from "lucide-react";
 import { AppointmentList, type AppointmentListItem } from "@/components/appointment-list";
+import { CallButton } from "@/components/call-outcome";
+import { OfferApprovalCard } from "@/components/offer-approval-list";
 import { TaskCompleteButton } from "@/components/task-complete-button";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { getSessionProfile } from "@/lib/auth";
 import {
+  APPOINTMENT_TYPES,
   ITEM_TYPES,
   LEAD_STATUSES,
   label,
@@ -19,7 +21,6 @@ import {
   type AppointmentType,
   type ItemType,
   type LeadStatus,
-  type Program,
 } from "@/lib/constants";
 import {
   STALE_LEAD_STATUSES,
@@ -30,13 +31,20 @@ import {
 import { reminderMessage } from "@/lib/overdue";
 import { formatTRY, tlToKurus } from "@/lib/money";
 import { getFunnel, getPaymentSummary } from "@/lib/queries/dashboard";
+import { loadPendingOffers } from "@/lib/queries/pending-offers";
+import {
+  daysSince,
+  elapsedText,
+  formatAppointmentTime,
+  WEB_APPLICATION_SOURCES,
+} from "@/lib/next-step";
 import { badgeClass, LEAD_STATUS_STYLES } from "@/lib/status-styles";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const CALL_COMPACT_CLASS =
-  "inline-flex size-11 items-center justify-center rounded-xl border border-border bg-surface text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const PRIMARY_LINK_CLASS =
+  "inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-base font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto";
 
 interface LeadJoin {
   id: string;
@@ -93,18 +101,19 @@ interface DueInstallmentRow {
   plan?: DuePlanJoin | DuePlanJoin[] | null;
 }
 
-interface OfferLeadJoin {
+interface ApplicationRow {
   id: string;
   parent_name: string;
-  child_name: string | null;
+  phone: string;
+  created_at: string;
 }
 
-interface PendingOfferRow {
-  id: string;
-  offered_price: number;
-  list_price: number;
-  program: Program;
-  lead?: OfferLeadJoin | OfferLeadJoin[] | null;
+interface NextJob {
+  kind: string;
+  title: string;
+  context: string;
+  action: React.ReactNode;
+  secondary?: React.ReactNode;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
@@ -121,11 +130,6 @@ function one<T>(value: T | T[] | null | undefined) {
 
 function formatDate(value: string) {
   return dateFormatter.format(new Date(`${value}T12:00:00+03:00`));
-}
-
-function daysSince(value: string, referenceDate: Date) {
-  const elapsed = referenceDate.getTime() - new Date(value).getTime();
-  return Math.max(0, Math.floor(elapsed / 86400000));
 }
 
 function daysLate(dueDate: string, today: string) {
@@ -158,6 +162,26 @@ function normalizeAppointments(rows: TodayAppointmentRow[]): AppointmentListItem
       outcome_note: row.outcome_note,
     };
   });
+}
+
+function NextJobCard({ job }: { job: NextJob | null }) {
+  if (!job) return null;
+  return (
+    <section
+      aria-labelledby="next-job-title"
+      className="rounded-2xl bg-primary-soft p-5 sm:p-6"
+    >
+      <p className="text-sm font-semibold uppercase tracking-wide text-primary">Sıradaki iş</p>
+      <h2 id="next-job-title" className="mt-1 text-2xl font-semibold text-foreground">
+        {job.title}
+      </h2>
+      <p className="mt-1 text-base text-slate-700">{job.context}</p>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        {job.action}
+        {job.secondary}
+      </div>
+    </section>
+  );
 }
 
 function SectionBlock({
@@ -284,10 +308,49 @@ export default async function Home() {
     tasksQuery = tasksQuery.eq("assigned_to", profile.id);
   }
 
-  const [settingsResult, appointmentsResult, tasksResult] = await Promise.all([
+  let doneTasksQuery = supabase
+    .from("tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "tamamlandi")
+    .gte("updated_at", dayStart);
+  if (!isYonetici) {
+    doneTasksQuery = doneTasksQuery.eq("assigned_to", profile.id);
+  }
+
+  const [
+    settingsResult,
+    appointmentsResult,
+    tasksResult,
+    applicationResult,
+    pastAppointmentResult,
+    doneTasksResult,
+    doneAppointmentsResult,
+  ] = await Promise.all([
     settingsPromise,
     appointmentsPromise,
     tasksQuery,
+    supabase
+      .from("leads")
+      .select("id, parent_name, phone, created_at")
+      .eq("status", "yeni")
+      .in("source", WEB_APPLICATION_SOURCES)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("appointments")
+      .select("id, lead_id, scheduled_at, type, outcome, outcome_note, lead:leads(id, parent_name, phone)")
+      .eq("outcome", "bekliyor")
+      .lt("scheduled_at", now.toISOString())
+      .order("scheduled_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    doneTasksQuery,
+    supabase
+      .from("appointments")
+      .select("id", { count: "exact", head: true })
+      .neq("outcome", "bekliyor")
+      .gte("updated_at", dayStart),
   ]);
 
   const staleDays = Number(settingsResult.data?.value ?? 3);
@@ -316,19 +379,12 @@ export default async function Home() {
       .lte("due_date", today)
       .order("due_date", { ascending: true }),
     isYonetici
-      ? supabase
-          .from("offers")
-          .select(
-            "id, offered_price, list_price, program, lead:leads(id, parent_name, child_name)",
-            { count: "exact" },
-          )
-          .eq("status", "onay_bekliyor")
-          .order("created_at", { ascending: false })
-          .limit(DISPLAY_LIMIT)
+      ? loadPendingOffers(DISPLAY_LIMIT)
       : supabase
           .from("offers")
           .select("id", { count: "exact", head: true })
-          .eq("status", "onay_bekliyor"),
+          .eq("status", "onay_bekliyor")
+          .then((result) => ({ offers: [], count: result.count ?? 0, error: Boolean(result.error) })),
     getFunnel(month),
     getPaymentSummary(month),
   ]);
@@ -340,10 +396,8 @@ export default async function Home() {
   const staleLeads = (staleLeadsResult.data ?? []) as unknown as StaleLeadRow[];
   const dueInstallments = (dueInstallmentsResult.data ??
     []) as unknown as DueInstallmentRow[];
-  const pendingOfferRows = (isYonetici
-    ? (pendingOffersResult.data ?? [])
-    : []) as unknown as PendingOfferRow[];
-  const pendingOffersCount = pendingOffersResult.count ?? 0;
+  const pendingOfferItems = pendingOffersResult.offers;
+  const pendingOffersCount = pendingOffersResult.count;
 
   // Randevular: geçmiş-ama-bekleyen üstte, sonra saate göre.
   const sortedAppointments = [...appointments].sort((a, b) => {
@@ -370,6 +424,100 @@ export default async function Home() {
   const onayCount = isYonetici ? pendingOffersCount : 0;
   const totalJobs =
     pendingAppointmentCount + followupCount + dueInstallments.length + onayCount;
+  const doneJobs = (doneTasksResult.count ?? 0) + (doneAppointmentsResult.count ?? 0);
+  const nowIso = now.toISOString();
+
+  // Sıradaki iş: web başvurusu → sonuçlanmamış randevu → bugünkü randevu → görev → geciken ödeme
+  const application = applicationResult.data as ApplicationRow | null;
+  const pastAppointment = pastAppointmentResult.data
+    ? normalizeAppointments([pastAppointmentResult.data as unknown as TodayAppointmentRow])[0]
+    : null;
+  const nextTodayAppointment = sortedAppointments.find(
+    (appointment) =>
+      appointment.outcome === "bekliyor" &&
+      new Date(appointment.scheduled_at).getTime() >= now.getTime(),
+  );
+  const urgentTask = tasks.find((task) => task.due_date <= today);
+  const firstDue = dueInstallments[0];
+
+  let nextJob: NextJob | null = null;
+  if (application) {
+    nextJob = {
+      kind: "basvuru",
+      title: "Yeni başvuruyu ara",
+      context: `${application.parent_name} · ${elapsedText(application.created_at, nowIso)} başvurdu`,
+      action: (
+        <CallButton
+          leadId={application.id}
+          phone={application.phone}
+          leadName={application.parent_name}
+          label={`${application.parent_name.split(" ")[0]} ara`}
+          variant="primary"
+          className="w-full sm:w-auto"
+        />
+      ),
+    };
+  } else if (pastAppointment) {
+    nextJob = {
+      kind: "sonuc",
+      title: "Ziyaret sonucunu gir",
+      context: `${pastAppointment.leadName ?? "Veli"} · ${formatAppointmentTime(pastAppointment.scheduled_at)}`,
+      action: (
+        <Link href={`/leads/${pastAppointment.leadId}?adim=sonuc`} className={PRIMARY_LINK_CLASS}>
+          Sonucu gir
+        </Link>
+      ),
+    };
+  } else if (nextTodayAppointment) {
+    nextJob = {
+      kind: "randevu",
+      title: "Sıradaki randevu",
+      context: `${nextTodayAppointment.leadName ?? "Veli"} · ${formatAppointmentTime(nextTodayAppointment.scheduled_at)} · ${label(APPOINTMENT_TYPES, nextTodayAppointment.type)}`,
+      action: (
+        <Link href={`/leads/${nextTodayAppointment.leadId}`} className={PRIMARY_LINK_CLASS}>
+          Veli kartını aç
+        </Link>
+      ),
+    };
+  } else if (urgentTask) {
+    const lead = one(urgentTask.lead);
+    nextJob = {
+      kind: "gorev",
+      title: urgentTask.title,
+      context: `${lead?.parent_name ?? "Genel görev"} · Vade: ${formatDate(urgentTask.due_date)}`,
+      action: lead?.phone ? (
+        <CallButton
+          leadId={lead.id}
+          phone={lead.phone}
+          leadName={lead.parent_name}
+          variant="primary"
+          className="w-full sm:w-auto"
+        />
+      ) : lead ? (
+        <Link href={`/leads/${lead.id}`} className={PRIMARY_LINK_CLASS}>
+          Veli kartını aç
+        </Link>
+      ) : null,
+      secondary: <TaskCompleteButton id={urgentTask.id} />,
+    };
+  } else if (firstDue) {
+    const plan = one(firstDue.plan);
+    const student = one(plan?.student);
+    const late = daysLate(firstDue.due_date, today);
+    nextJob = {
+      kind: "odeme",
+      title: late > 0 ? "Geciken ödemeyi hatırlat" : "Bugün vadeli ödeme",
+      context: `${student?.full_name ?? "Öğrenci"} · ${formatTRY(tlToKurus(Number(firstDue.amount)))}${late > 0 ? ` · ${late} gün gecikmiş` : ""}`,
+      action: (
+        <Link
+          href={student ? `/ogrenciler/${student.id}` : "/odemeler/gecikenler"}
+          className={PRIMARY_LINK_CLASS}
+        >
+          Öğrenciyi aç
+        </Link>
+      ),
+    };
+  }
 
   return (
     <div className="space-y-6">
@@ -380,12 +528,17 @@ export default async function Home() {
         <h1 className="mt-1 text-2xl font-semibold text-foreground sm:text-3xl">
           {greetingByHour(istanbulHour)} {firstName}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-base text-muted-foreground">
           {totalJobs > 0
             ? `Bugün ${totalJobs} işin var.`
             : "Bugün bekleyen bir işin yok, harika gidiyorsun."}
+          {totalJobs + doneJobs > 0
+            ? ` ${totalJobs + doneJobs} işten ${doneJobs} tanesi bitti.`
+            : ""}
         </p>
       </div>
+
+      <NextJobCard job={nextJob} />
 
       {/* 1 — Bugünkü randevular */}
       <SectionBlock
@@ -454,14 +607,11 @@ export default async function Home() {
                     <div className="flex flex-wrap items-center gap-2">
                       {lead?.phone ? (
                         <>
-                          <a
-                            href={`tel:${lead.phone}`}
-                            aria-label="Telefonla ara"
-                            title="Ara"
-                            className={CALL_COMPACT_CLASS}
-                          >
-                            <Phone aria-hidden className="size-4" />
-                          </a>
+                          <CallButton
+                            leadId={lead.id}
+                            phone={lead.phone}
+                            leadName={lead.parent_name}
+                          />
                           <WhatsAppButton phone={lead.phone} compact />
                         </>
                       ) : null}
@@ -491,19 +641,16 @@ export default async function Home() {
                           {label(LEAD_STATUSES, lead.status)}
                         </span>
                         <span>
-                          Son işlem: {daysSince(lead.last_activity_at, now)} gün önce
+                          Son işlem: {daysSince(lead.last_activity_at, nowIso)} gün önce
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <a
-                        href={`tel:${lead.phone}`}
-                        aria-label="Telefonla ara"
-                        title="Ara"
-                        className={CALL_COMPACT_CLASS}
-                      >
-                        <Phone aria-hidden className="size-4" />
-                      </a>
+                      <CallButton
+                        leadId={lead.id}
+                        phone={lead.phone}
+                        leadName={lead.parent_name}
+                      />
                       <WhatsAppButton phone={lead.phone} compact />
                     </div>
                   </div>
@@ -621,44 +768,14 @@ export default async function Home() {
         >
           {pendingOffersResult.error ? (
             <ErrorState text="Teklifler yüklenirken bir sorun oluştu." />
-          ) : pendingOfferRows.length === 0 ? (
+          ) : pendingOfferItems.length === 0 ? (
             <EmptyState text="Onay bekleyen teklif yok." />
           ) : (
-            <ul className="space-y-3">
-              {pendingOfferRows.map((offer) => {
-                const lead = one(offer.lead);
-
-                return (
-                  <li
-                    key={offer.id}
-                    className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-semibold text-foreground">
-                        {lead?.parent_name ?? "Veli bilgisi yok"}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {lead?.child_name ?? "Çocuk bilgisi yok"} · Teklif:{" "}
-                        <span className="font-semibold tabular-nums text-foreground">
-                          {formatTRY(tlToKurus(Number(offer.offered_price)))}
-                        </span>{" "}
-                        / Liste:{" "}
-                        <span className="tabular-nums">
-                          {formatTRY(tlToKurus(Number(offer.list_price)))}
-                        </span>
-                      </p>
-                    </div>
-                    <Link
-                      href="/teklifler"
-                      className="inline-flex min-h-11 items-center justify-center gap-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      Detayı aç
-                      <ArrowRight aria-hidden className="size-4" />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="space-y-3">
+              {pendingOfferItems.map((offer) => (
+                <OfferApprovalCard key={offer.id} offer={offer} />
+              ))}
+            </div>
           )}
         </SectionBlock>
       ) : null}

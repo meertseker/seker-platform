@@ -371,3 +371,111 @@ export async function createOfferFromCounter(
   revalidateOfferViews(source.lead_id);
   return { id: newOfferId };
 }
+
+/**
+ * Yönetici "Karşı rakam" verdiğinde teklifi danışmana geri göndermek yerine
+ * doğrudan karşı rakamla ONAYLI yeni teklif açar.
+ *
+ * Değişmezler korunur (bkz. 0002_offer_lead_guards.sql):
+ *  1) Kaynak teklif önce 'onay_bekliyor' → 'revize_edildi' (counter_price ile)
+ *     olarak kapatılır; lead başına tek bekleyen teklif kuralı bozulmaz.
+ *  2) Yeni onaylı teklif accept_counter_offer() RPC'si ile atomik açılır:
+ *     lead'in eski onaylı teklifleri 'gecersiz' olur, kaynağın
+ *     superseded_by_offer_id'si yeni teklife bağlanır.
+ * RPC başarısız olursa kaynak 'revize_edildi' olarak kalır ve danışman
+ * mevcut "Karşı rakamla teklif oluştur" butonuyla devam edebilir.
+ */
+export async function approveOfferWithCounter(
+  offerId: string,
+  counterPriceTl: number,
+): Promise<OfferActionResult> {
+  const profile = await getSessionProfile();
+  const supabase = await createServerSupabase();
+
+  if (profile.role !== "yonetici") return { error: "Bu işlem için yönetici yetkisi gerekir" };
+  if (!offerId) return { error: "Teklif bulunamadı" };
+
+  const counterPrice = normalizeMoney(counterPriceTl);
+  if (!counterPrice) return { error: "Geçerli bir karşı rakam girin" };
+
+  const { data: offer } = await supabase
+    .from("offers")
+    .select("id, lead_id, created_by, status, program, list_price")
+    .eq("id", offerId)
+    .maybeSingle();
+
+  if (!offer) return { error: "Teklif bulunamadı" };
+  if (offer.status !== "onay_bekliyor") return { error: "Teklif zaten sonuçlandırılmış" };
+
+  const decidedAt = new Date().toISOString();
+  const { data: revised, error: reviseError } = await supabase
+    .from("offers")
+    .update({
+      status: "revize_edildi",
+      counter_price: counterPrice,
+      decided_by: profile.id,
+      decided_at: decidedAt,
+    })
+    .eq("id", offerId)
+    .eq("status", "onay_bekliyor")
+    .select("id")
+    .maybeSingle();
+
+  if (reviseError) return { error: "Karşı rakam kaydedilemedi" };
+  if (!revised) return { error: "Teklif zaten sonuçlandırılmış" };
+
+  await logEvent(supabase, {
+    entityType: "offer",
+    entityId: offerId,
+    eventType: "teklif_revize_edildi",
+    actorId: profile.id,
+    payload: { leadId: offer.lead_id, counterPrice },
+  });
+
+  const { data: newOfferId, error: acceptError } = await supabase.rpc(
+    "accept_counter_offer",
+    { source_offer_id: offerId },
+  );
+
+  if (acceptError || !newOfferId) {
+    await notify(supabase, offer.created_by, "teklif_revize_edildi", {
+      leadId: offer.lead_id,
+      offerId,
+      counterPrice,
+    });
+    revalidateOfferViews(offer.lead_id);
+    return {
+      error:
+        "Karşı rakam kaydedildi ama onaylı teklif açılamadı. Danışman veli sayfasından devam edebilir.",
+    };
+  }
+
+  await logEvent(supabase, {
+    entityType: "offer",
+    entityId: newOfferId,
+    eventType: "teklif_onaylandi",
+    actorId: profile.id,
+    payload: {
+      leadId: offer.lead_id,
+      sourceOfferId: offerId,
+      program: offer.program,
+      listPrice: Number(offer.list_price),
+      offeredPrice: counterPrice,
+      counter: true,
+    },
+  });
+  await notify(supabase, offer.created_by, "teklif_karsi_onaylandi", {
+    leadId: offer.lead_id,
+    offerId: newOfferId,
+    counterPrice,
+  });
+  await supabase
+    .from("leads")
+    .update({ last_activity_at: decidedAt })
+    .eq("id", offer.lead_id);
+  await advanceLeadStatusAfterApproval(offer.lead_id);
+
+  revalidateOfferViews(offer.lead_id);
+  revalidatePath("/bugun");
+  return { id: newOfferId };
+}

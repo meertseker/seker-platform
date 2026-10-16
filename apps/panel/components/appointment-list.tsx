@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Clock, Phone } from "lucide-react";
+import { ChevronDown, Clock } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setAppointmentOutcome } from "@/actions/appointments";
+import { CallButton } from "@/components/call-outcome";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { APPOINTMENT_OUTCOME_STYLES, badgeClass } from "@/lib/status-styles";
 import {
@@ -30,6 +31,7 @@ interface AppointmentListProps {
   appointments: AppointmentListItem[];
   emptyText?: string;
   compactTime?: boolean;
+  onResult?: () => void;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
@@ -41,10 +43,6 @@ const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
   timeZone: "Europe/Istanbul",
 });
 
-const outcomeOptions = (Object.keys(APPOINTMENT_OUTCOMES) as AppointmentOutcome[])
-  .filter((value) => value !== "bekliyor")
-  .map((value) => ({ value, label: label(APPOINTMENT_OUTCOMES, value) }));
-
 interface NoteDraft {
   id: string;
   outcome: AppointmentOutcome;
@@ -52,10 +50,11 @@ interface NoteDraft {
 }
 
 const OUTCOME_BUTTON_BASE =
-  "min-h-11 cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
-
-const CALL_COMPACT_CLASS =
-  "inline-flex size-11 items-center justify-center rounded-xl border border-border bg-surface text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "min-h-12 cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+const PRIMARY_OUTCOME_CLASS = `${OUTCOME_BUTTON_BASE} min-h-14 bg-primary px-5 text-base text-on-primary hover:bg-primary-strong focus-visible:ring-offset-2`;
+const OUTLINE_OUTCOME_CLASS = `${OUTCOME_BUTTON_BASE} min-h-14 border border-border bg-surface px-5 text-base text-slate-700 hover:border-slate-300 hover:text-foreground`;
+const MENU_ITEM_CLASS =
+  "min-h-12 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 /** Geçmiş saatli ama hâlâ "bekliyor" olan randevu = gecikmiş iş (üstte kırmızı gösterilir). */
 function isOverduePending(appointment: AppointmentListItem) {
@@ -63,16 +62,6 @@ function isOverduePending(appointment: AppointmentListItem) {
     appointment.outcome === "bekliyor" &&
     new Date(appointment.scheduled_at).getTime() < Date.now()
   );
-}
-
-function outcomeButtonClass(outcome: AppointmentOutcome) {
-  if (outcome === "geldi") {
-    return `${OUTCOME_BUTTON_BASE} bg-accent text-white hover:bg-accent-strong focus-visible:ring-offset-2`;
-  }
-  if (outcome === "gelmedi" || outcome === "iptal") {
-    return `${OUTCOME_BUTTON_BASE} border border-border bg-surface text-slate-700 hover:border-red-300 hover:text-red-700`;
-  }
-  return `${OUTCOME_BUTTON_BASE} border border-border bg-surface text-slate-700 hover:border-slate-300 hover:text-foreground`;
 }
 
 function formatDate(value: string) {
@@ -95,6 +84,7 @@ export function AppointmentList({
   appointments,
   emptyText = "Henüz randevu yok. İlk randevuyu ekleyin.",
   compactTime = false,
+  onResult,
 }: AppointmentListProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -116,6 +106,7 @@ export function AppointmentList({
 
       setNoteDraft(null);
       router.refresh();
+      onResult?.();
     });
   }
 
@@ -194,14 +185,12 @@ export function AppointmentList({
                       </Link>
                       {appointment.leadPhone ? (
                         <>
-                          <a
-                            href={`tel:${appointment.leadPhone}`}
-                            aria-label="Telefonla ara"
-                            title="Ara"
-                            className={CALL_COMPACT_CLASS}
-                          >
-                            <Phone aria-hidden className="size-4" />
-                          </a>
+                          <CallButton
+                            leadId={appointment.leadId}
+                            phone={appointment.leadPhone}
+                            leadName={appointment.leadName}
+                            variant="icon"
+                          />
                           <WhatsAppButton phone={appointment.leadPhone} compact />
                         </>
                       ) : null}
@@ -228,18 +217,45 @@ export function AppointmentList({
 
               {appointment.outcome === "bekliyor" ? (
                 <>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {outcomeOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        disabled={isPending}
-                        onClick={() => updateOutcome(appointment.id, option.value)}
-                        className={outcomeButtonClass(option.value)}
-                      >
-                        {isSavingAppointment ? "Kaydediliyor..." : option.label}
-                      </button>
-                    ))}
+                  <div className="mt-4 flex flex-wrap items-start gap-2">
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => updateOutcome(appointment.id, "geldi")}
+                      className={PRIMARY_OUTCOME_CLASS}
+                    >
+                      {isSavingAppointment ? "Kaydediliyor..." : label(APPOINTMENT_OUTCOMES, "geldi")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => updateOutcome(appointment.id, "gelmedi")}
+                      className={OUTLINE_OUTCOME_CLASS}
+                    >
+                      {label(APPOINTMENT_OUTCOMES, "gelmedi")}
+                    </button>
+                    <details className="relative">
+                      <summary className="flex min-h-14 cursor-pointer list-none items-center gap-1 rounded-xl px-3 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                        Diğer…
+                        <ChevronDown aria-hidden className="size-4" />
+                      </summary>
+                      <div className="absolute left-0 z-20 mt-1 w-44 rounded-xl border border-border bg-surface p-1 shadow-lg">
+                        {(["ertelendi", "iptal"] as AppointmentOutcome[]).map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            disabled={isPending}
+                            onClick={(event) => {
+                              event.currentTarget.closest("details")?.removeAttribute("open");
+                              updateOutcome(appointment.id, value);
+                            }}
+                            className={MENU_ITEM_CLASS}
+                          >
+                            {label(APPOINTMENT_OUTCOMES, value)}
+                          </button>
+                        ))}
+                      </div>
+                    </details>
                   </div>
 
                   {activeNoteDraft ? (
@@ -261,7 +277,7 @@ export function AppointmentList({
                             note: event.target.value,
                           })
                         }
-                        className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+                        className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
                         placeholder="Örn. veli tekrar aranacak"
                       />
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -275,7 +291,7 @@ export function AppointmentList({
                               activeNoteDraft.note,
                             )
                           }
-                          className="min-h-11 cursor-pointer rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="min-h-12 cursor-pointer rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isSavingAppointment ? "Kaydediliyor..." : "Kaydet"}
                         </button>
@@ -283,7 +299,7 @@ export function AppointmentList({
                           type="button"
                           disabled={isPending}
                           onClick={() => setNoteDraft(null)}
-                          className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          className="min-h-12 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Vazgeç
                         </button>
