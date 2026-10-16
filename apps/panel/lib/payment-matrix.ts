@@ -148,7 +148,7 @@ function buildCell(monthKeyValue: string, items: MatrixCellItem[], cancelledCoun
   let state: CellState;
   if (items.length === 0) {
     state = "bos";
-  } else if (items.every((item) => item.status === "odendi")) {
+  } else if (items.every((item) => item.status === "odendi") && paidKurus >= totalKurus) {
     state = "odendi";
   } else if (items.some((item) => item.status === "odendi")) {
     state = "kismi";

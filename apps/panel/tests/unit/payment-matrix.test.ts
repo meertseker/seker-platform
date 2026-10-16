@@ -295,6 +295,17 @@ describe("buildPaymentMatrix — hücre durumları", () => {
     expect(cell.paidKurus).toBe(1000000);
   });
 
+  it("tek taksit eksik ödendiyse (paid_amount < amount) 'kismi'", () => {
+    const matrix = buildPaymentMatrix(
+      [student("Ali", [plan("aidat", 230000, 10, [odendi("2026-09-05", 4000, 3000)])])],
+      TODAY,
+      SEASON,
+    );
+
+    expect(cellOf(matrix, 0, "2026-09").state).toBe("kismi");
+    expect(cellOf(matrix, 0, "2026-09").paidKurus).toBe(300000);
+  });
+
   it("paid_amount boşsa ödenen tutar amount'a düşer", () => {
     const eksik: MatrixInstallmentInput = { ...odendi("2026-09-05", 23000), paid_amount: null };
     const matrix = buildPaymentMatrix(
