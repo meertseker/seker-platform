@@ -145,8 +145,8 @@ describe("buildPaymentMatrix — ay sütunlarının türetilmesi", () => {
     const matrix = buildPaymentMatrix(
       [
         student("Ali", [
-          plan("aidat", 23000, 1, [bekliyor("2026-09-05", 23000)]),
-          plan("aidat", 20000, 1, [bekliyor("2025-09-05", 20000)], "2025-2026"),
+          plan("aidat", 23000, 10, [bekliyor("2026-09-05", 23000)]),
+          plan("aidat", 20000, 10, [bekliyor("2025-09-05", 20000)], "2025-2026"),
         ]),
       ],
       TODAY,
@@ -163,8 +163,8 @@ describe("buildPaymentMatrix — hücre durumları", () => {
     const matrix = buildPaymentMatrix(
       [
         student("Ali", [
-          plan("aidat", 23000, 1, [odendi("2026-09-05", 23000)]),
-          plan("kitap", 8500, 1, [odendi("2026-09-05", 8500)]),
+          plan("aidat", 23000, 10, [odendi("2026-09-05", 23000)]),
+          plan("diger", 8500, 1, [odendi("2026-09-05", 8500)]),
         ]),
       ],
       TODAY,
@@ -182,8 +182,8 @@ describe("buildPaymentMatrix — hücre durumları", () => {
     const matrix = buildPaymentMatrix(
       [
         student("Ali", [
-          plan("aidat", 23000, 1, [odendi("2026-12-05", 23000)]),
-          plan("kitap", 8500, 1, [bekliyor("2026-12-05", 8500)]),
+          plan("aidat", 23000, 10, [odendi("2026-12-05", 23000)]),
+          plan("diger", 8500, 1, [bekliyor("2026-12-05", 8500)]),
         ]),
       ],
       TODAY,
@@ -199,7 +199,7 @@ describe("buildPaymentMatrix — hücre durumları", () => {
 
   it("hiç ödenmemiş ve vadesi geçmişse 'gecikti'", () => {
     const matrix = buildPaymentMatrix(
-      [student("Ali", [plan("aidat", 23000, 1, [bekliyor("2026-10-05", 23000)])])],
+      [student("Ali", [plan("aidat", 23000, 10, [bekliyor("2026-10-05", 23000)])])],
       TODAY,
       SEASON,
     );
@@ -211,7 +211,7 @@ describe("buildPaymentMatrix — hücre durumları", () => {
 
   it("vadesi gelmemiş bekleyen taksit 'bekliyor'", () => {
     const matrix = buildPaymentMatrix(
-      [student("Ali", [plan("aidat", 23000, 1, [bekliyor("2026-12-05", 23000)])])],
+      [student("Ali", [plan("aidat", 23000, 10, [bekliyor("2026-12-05", 23000)])])],
       TODAY,
       SEASON,
     );
@@ -223,7 +223,7 @@ describe("buildPaymentMatrix — hücre durumları", () => {
 
   it("vadesi bugün olan taksit henüz gecikmiş sayılmaz", () => {
     const matrix = buildPaymentMatrix(
-      [student("Ali", [plan("aidat", 23000, 1, [bekliyor(TODAY, 23000)])])],
+      [student("Ali", [plan("aidat", 23000, 10, [bekliyor(TODAY, 23000)])])],
       TODAY,
       SEASON,
     );
@@ -234,8 +234,8 @@ describe("buildPaymentMatrix — hücre durumları", () => {
   it("o ayda taksiti olmayan öğrencinin hücresi 'bos'", () => {
     const matrix = buildPaymentMatrix(
       [
-        student("Ali", [plan("aidat", 23000, 1, [bekliyor("2026-09-05", 23000)])]),
-        student("Berk", [plan("aidat", 23000, 1, [bekliyor("2026-10-05", 23000)])]),
+        student("Ali", [plan("aidat", 23000, 10, [bekliyor("2026-09-05", 23000)])]),
+        student("Berk", [plan("aidat", 23000, 10, [bekliyor("2026-10-05", 23000)])]),
       ],
       TODAY,
       SEASON,
@@ -248,7 +248,7 @@ describe("buildPaymentMatrix — hücre durumları", () => {
   it("her satırda her ay için hücre üretir", () => {
     const matrix = buildPaymentMatrix(
       [
-        student("Ali", [plan("aidat", 23000, 1, [bekliyor("2026-09-05", 23000)])]),
+        student("Ali", [plan("aidat", 23000, 10, [bekliyor("2026-09-05", 23000)])]),
         student("Berk", []),
       ],
       TODAY,
@@ -263,8 +263,8 @@ describe("buildPaymentMatrix — hücre durumları", () => {
     const matrix = buildPaymentMatrix(
       [
         student("Ali", [
-          plan("aidat", 23000, 1, [odendi("2026-10-05", 23000)]),
-          plan("kitap", 8500, 1, [bekliyor("2026-10-05", 8500)]),
+          plan("aidat", 23000, 10, [odendi("2026-10-05", 23000)]),
+          plan("diger", 8500, 1, [bekliyor("2026-10-05", 8500)]),
         ]),
       ],
       TODAY,
@@ -282,7 +282,7 @@ describe("buildPaymentMatrix — hücre durumları", () => {
     const matrix = buildPaymentMatrix(
       [
         student("Ali", [
-          plan("aidat", 23000, 1, [odendi("2026-12-05", 10000), bekliyor("2026-12-05", 13000)]),
+          plan("aidat", 23000, 10, [odendi("2026-12-05", 10000), bekliyor("2026-12-05", 13000)]),
         ]),
       ],
       TODAY,
@@ -298,7 +298,7 @@ describe("buildPaymentMatrix — hücre durumları", () => {
   it("paid_amount boşsa ödenen tutar amount'a düşer", () => {
     const eksik: MatrixInstallmentInput = { ...odendi("2026-09-05", 23000), paid_amount: null };
     const matrix = buildPaymentMatrix(
-      [student("Ali", [plan("aidat", 23000, 1, [eksik])])],
+      [student("Ali", [plan("aidat", 23000, 10, [eksik])])],
       TODAY,
       SEASON,
     );
@@ -310,8 +310,8 @@ describe("buildPaymentMatrix — hücre durumları", () => {
     const matrix = buildPaymentMatrix(
       [
         student("Ali", [
-          plan("kitap", 8500, 1, [bekliyor("2026-09-20", 8500)]),
-          plan("aidat", 23000, 1, [bekliyor("2026-09-05", 23000)]),
+          plan("diger", 8500, 1, [bekliyor("2026-09-20", 8500)]),
+          plan("aidat", 23000, 10, [bekliyor("2026-09-05", 23000)]),
         ]),
       ],
       TODAY,
@@ -320,7 +320,7 @@ describe("buildPaymentMatrix — hücre durumları", () => {
 
     expect(cellOf(matrix, 0, "2026-09").items.map((item) => item.itemType)).toEqual([
       "aidat",
-      "kitap",
+      "diger",
     ]);
   });
 });
@@ -359,14 +359,17 @@ describe("buildPaymentMatrix — iptal taksitler", () => {
   });
 });
 
-describe("buildPaymentMatrix — referans sütunları", () => {
-  it("aidat ve servisi aylığa böler, kitabı tek çekim alır", () => {
+describe("buildPaymentMatrix — Excel yan sütunları", () => {
+  it("kitap kendi hücresindedir, ay sütununa girmez", () => {
     const matrix = buildPaymentMatrix(
       [
         student("Ali", [
-          plan("aidat", 230000, 10, [bekliyor("2026-09-05", 23000)]),
-          plan("kitap", 8500, 1, [bekliyor("2026-09-05", 8500)]),
-          plan("servis", 60000, 10, [bekliyor("2026-09-05", 6000)]),
+          plan("aidat", 230000, 10, [odendi("2026-09-05", 23000)]),
+          plan("kitap", 45000, 3, [
+            odendi("2026-09-05", 15000),
+            bekliyor("2026-10-05", 15000),
+            bekliyor("2026-11-05", 15000),
+          ]),
         ]),
       ],
       TODAY,
@@ -374,56 +377,120 @@ describe("buildPaymentMatrix — referans sütunları", () => {
     );
 
     const row = matrix.rows[0];
-    expect(row.aidatMonthlyKurus).toBe(2300000);
-    expect(row.kitapKurus).toBe(850000);
-    expect(row.servisMonthlyKurus).toBe(600000);
+    expect(matrix.months).toEqual(["2026-09"]);
+    expect(row.cells["2026-09"].totalKurus).toBe(2300000);
+    expect(row.kitapCell?.state).toBe("kismi");
+    expect(row.kitapCell?.totalKurus).toBe(4500000);
+    expect(row.kitapCell?.paidKurus).toBe(1500000);
+    expect(row.kitapCell?.items).toHaveLength(3);
   });
 
-  it("ilgili plan yoksa referans sütunu null", () => {
+  it("tek taksitli aidat yıllık peşindir: AİDAT TUTARI sütununa gider", () => {
     const matrix = buildPaymentMatrix(
-      [student("Ali", [plan("aidat", 230000, 10, [bekliyor("2026-09-05", 23000)])])],
+      [student("Ali", [plan("aidat", 250000, 1, [bekliyor("2026-09-05", 250000)])])],
       TODAY,
       SEASON,
     );
 
-    expect(matrix.rows[0].kitapKurus).toBeNull();
-    expect(matrix.rows[0].servisMonthlyKurus).toBeNull();
+    expect(matrix.months).toEqual([]);
+    expect(matrix.rows[0].aidatCell?.totalKurus).toBe(25000000);
+    expect(matrix.rows[0].aidatCell?.state).toBe("gecikti");
   });
 
-  it("referans tutarını fiili taksitlerden değil plandan okur", () => {
-    // Kısmi ödeme taksitleri böler; sözleşmedeki aylık rakam değişmemeli.
+  it("peşin aidat kısmi ödemede bölünse de aynı hücrede kalır", () => {
     const matrix = buildPaymentMatrix(
       [
         student("Ali", [
-          plan("aidat", 230000, 10, [odendi("2026-09-05", 10000), bekliyor("2026-09-05", 13000)]),
+          plan("aidat", 250000, 1, [odendi("2026-09-05", 100000), bekliyor("2026-09-05", 150000)]),
         ]),
       ],
       TODAY,
       SEASON,
     );
 
-    expect(matrix.rows[0].aidatMonthlyKurus).toBe(2300000);
+    expect(matrix.rows[0].aidatCell?.state).toBe("kismi");
+    expect(matrix.rows[0].aidatCell?.paidKurus).toBe(10000000);
   });
-});
 
-describe("buildPaymentMatrix — satırlar", () => {
-  it("planı olmayanları en üste, sonrasını Türkçe alfabetik sıralar", () => {
-    const withPlan = (name: string) =>
-      student(name, [plan("aidat", 23000, 1, [bekliyor("2026-09-05", 23000)])]);
-
+  it("servis kendi hücresindedir", () => {
     const matrix = buildPaymentMatrix(
-      [withPlan("Zeynep"), withPlan("Çınar"), student("Ahmet", []), withPlan("İpek"), student("Ümit", [])],
+      [
+        student("Ali", [
+          plan("servis", 12000, 2, [bekliyor("2026-12-05", 6000), bekliyor("2027-01-05", 6000)]),
+        ]),
+      ],
       TODAY,
       SEASON,
     );
 
-    expect(matrix.rows.map((row) => row.fullName)).toEqual([
-      "Ahmet",
-      "Ümit",
-      "Çınar",
-      "İpek",
-      "Zeynep",
-    ]);
+    expect(matrix.months).toEqual([]);
+    expect(matrix.rows[0].servisCell?.totalKurus).toBe(1200000);
+    expect(matrix.rows[0].servisCell?.state).toBe("bekliyor");
+  });
+
+  it("ilgili plan yoksa yan hücre null", () => {
+    const matrix = buildPaymentMatrix(
+      [student("Ali", [plan("aidat", 230000, 10, [bekliyor("2026-09-05", 23000)])])],
+      TODAY,
+      SEASON,
+    );
+
+    expect(matrix.rows[0].kitapCell).toBeNull();
+    expect(matrix.rows[0].aidatCell).toBeNull();
+    expect(matrix.rows[0].servisCell).toBeNull();
+  });
+
+  it("satır toplamı yan sütunları da içerir", () => {
+    const matrix = buildPaymentMatrix(
+      [
+        student("Ali", [
+          plan("aidat", 230000, 10, [odendi("2026-09-05", 23000)]),
+          plan("kitap", 50000, 1, [bekliyor("2026-09-05", 50000)]),
+        ]),
+      ],
+      TODAY,
+      SEASON,
+    );
+
+    expect(matrix.rows[0].totalKurus).toBe(7300000);
+    expect(matrix.rows[0].paidKurus).toBe(2300000);
+    expect(matrix.sideTotals.kitap).toEqual({ monthKey: "kitap", expectedKurus: 5000000, paidKurus: 0 });
+  });
+
+  it("tamamı nakit ödenen hücre mor (cash) işaretlenir", () => {
+    const nakit = { ...odendi("2026-09-05", 23000), payment_method: "nakit" as const };
+    const matrix = buildPaymentMatrix(
+      [
+        student("Ali", [plan("aidat", 230000, 10, [nakit, odendi("2026-10-05", 23000)])]),
+      ],
+      TODAY,
+      SEASON,
+    );
+
+    expect(cellOf(matrix, 0, "2026-09").cash).toBe(true);
+    expect(cellOf(matrix, 0, "2026-10").cash).toBe(false);
+  });
+});
+
+describe("buildPaymentMatrix — satırlar", () => {
+  it("Excel'deki gibi deftere eklenme sırasıyla dizer", () => {
+    const withPlan = (name: string, createdAt: string) =>
+      student(name, [plan("aidat", 230000, 10, [bekliyor("2026-09-05", 23000)])], {
+        created_at: createdAt,
+      });
+
+    const matrix = buildPaymentMatrix(
+      [
+        withPlan("Zeynep", "2026-09-12T10:00:01Z"),
+        withPlan("Çınar", "2026-10-16T13:00:00Z"),
+        student("Ahmet", [], { created_at: "2026-09-12T10:00:03Z" }),
+        withPlan("İpek", "2026-09-12T10:00:02Z"),
+      ],
+      TODAY,
+      SEASON,
+    );
+
+    expect(matrix.rows.map((row) => row.fullName)).toEqual(["Zeynep", "İpek", "Ahmet", "Çınar"]);
   });
 
   it("planı olmayan satırı işaretler", () => {
@@ -435,7 +502,7 @@ describe("buildPaymentMatrix — satırlar", () => {
 
   it("başka sezonun planı olan öğrenci bu sezonda plansız sayılır", () => {
     const matrix = buildPaymentMatrix(
-      [student("Ahmet", [plan("aidat", 20000, 1, [bekliyor("2025-09-05", 20000)], "2025-2026")])],
+      [student("Ahmet", [plan("aidat", 20000, 10, [bekliyor("2025-09-05", 20000)], "2025-2026")])],
       TODAY,
       SEASON,
     );
@@ -449,7 +516,7 @@ describe("buildPaymentMatrix — satırlar", () => {
         student("Ali", [
           plan("aidat", 46000, 2, [bekliyor("2026-10-05", 23000), bekliyor("2026-12-05", 23000)]),
         ]),
-        student("Berk", [plan("aidat", 23000, 1, [bekliyor("2026-12-05", 23000)])]),
+        student("Berk", [plan("aidat", 23000, 10, [bekliyor("2026-12-05", 23000)])]),
       ],
       TODAY,
       SEASON,
@@ -505,7 +572,9 @@ describe("buildPaymentMatrix — toplamlar", () => {
     );
 
     const rowTotal = matrix.rows.reduce((sum, row) => sum + row.totalKurus, 0);
-    const columnTotal = matrix.columnTotals.reduce((sum, col) => sum + col.expectedKurus, 0);
+    const columnTotal =
+      matrix.columnTotals.reduce((sum, col) => sum + col.expectedKurus, 0) +
+      Object.values(matrix.sideTotals).reduce((sum, col) => sum + col.expectedKurus, 0);
 
     expect(matrix.grandTotal.totalKurus).toBe(rowTotal);
     expect(matrix.grandTotal.totalKurus).toBe(columnTotal);
@@ -517,8 +586,8 @@ describe("buildPaymentMatrix — toplamlar", () => {
     // Sayfa, filtre çipleriyle satır süzüyor; alt toplam ekranda görünenle tutmalı.
     const matrix = buildPaymentMatrix(
       [
-        student("Ali", [plan("aidat", 23000, 1, [bekliyor("2026-10-05", 23000)])]),
-        student("Berk", [plan("aidat", 20000, 1, [bekliyor("2026-12-05", 20000)])]),
+        student("Ali", [plan("aidat", 23000, 10, [bekliyor("2026-10-05", 23000)])]),
+        student("Berk", [plan("aidat", 20000, 10, [bekliyor("2026-12-05", 20000)])]),
       ],
       TODAY,
       SEASON,

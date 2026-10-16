@@ -2,9 +2,11 @@
  * Öğrenci × ay ödeme matrisi — saf pivot. DB, React veya `Date.now()` yok;
  * bugün dışarıdan (Europe/Istanbul, "YYYY-MM-DD") verilir.
  *
- * Bir hücre = bir öğrencinin bir aydaki BÜTÜN taksitleri (aidat + kitap +
- * servis + diğer). Kalem ayrımı yapılmaz; Zehra Hanım'ın aidat defterinde de
- * ay hücresi "bu aile bu ay ne ödedi" demek.
+ * Düzen, okulun "AİDAT LİSTESİ" Excel defterinin birebir aynısıdır:
+ *   KİTAP - KIRTASİYE | AİDAT TUTARI (yıllık peşin) | SERVİS TUTARI | EYLÜL … HAZİRAN
+ * Kitap ve servis kendi sütununda tek hücredir (bütün taksitleriyle); tek taksitli
+ * aidat planı peşin sayılır ve AİDAT TUTARI sütununa gider. Ay hücrelerinde yalnız
+ * aylık aidat (ve kayıt/yemek/diğer) kalır.
  */
 import type { InstallmentStatus, ItemType, PaymentMethod } from "@/lib/constants";
 import { tlToKurus } from "@/lib/money";
@@ -34,6 +36,8 @@ export interface MatrixStudentInput {
   parent_name: string | null;
   season: string;
   status: StudentStatus;
+  /** Excel'deki satır sırası: öğrenciler deftere eklendikleri sırayla durur. */
+  created_at?: string | null;
   payment_plans?: MatrixPlanInput[] | null;
 }
 
@@ -50,6 +54,7 @@ export interface MatrixCellItem {
   status: InstallmentStatus;
   paidAmountKurus: number | null;
   paymentMethod: PaymentMethod | null;
+  paidAt: string | null;
   overdue: boolean;
 }
 
@@ -57,6 +62,8 @@ export interface MatrixCell {
   monthKey: string;
   state: CellState;
   overdue: boolean;
+  /** Ödendi ve tamamı nakit — Excel'de mor boya. */
+  cash: boolean;
   totalKurus: number;
   paidKurus: number;
   items: MatrixCellItem[];
@@ -69,9 +76,10 @@ export interface MatrixRow {
   parentName: string | null;
   status: StudentStatus;
   hasPlan: boolean;
-  aidatMonthlyKurus: number | null;
-  kitapKurus: number | null;
-  servisMonthlyKurus: number | null;
+  /** Yıllık peşin aidat (tek taksitli plan); aylık ödeyende null. */
+  aidatCell: MatrixCell | null;
+  kitapCell: MatrixCell | null;
+  servisCell: MatrixCell | null;
   cells: Record<string, MatrixCell>;
   totalKurus: number;
   paidKurus: number;
@@ -85,10 +93,14 @@ export interface MatrixColumnTotal {
   paidKurus: number;
 }
 
+export type SideColumn = "kitap" | "aidat" | "servis";
+export const SIDE_COLUMNS: SideColumn[] = ["kitap", "aidat", "servis"];
+
 export interface PaymentMatrix {
   months: string[];
   rows: MatrixRow[];
   columnTotals: MatrixColumnTotal[];
+  sideTotals: Record<SideColumn, MatrixColumnTotal>;
   grandTotal: { totalKurus: number; paidKurus: number; remainingKurus: number };
 }
 
@@ -100,16 +112,6 @@ function monthKey(dueDate: string) {
 
 function seasonPlans(student: MatrixStudentInput, season: string) {
   return (student.payment_plans ?? []).filter((plan) => plan.season === season);
-}
-
-/** Sözleşmedeki aylık rakam: fiili taksitler kısmi ödemeyle bölünmüş olabilir. */
-function referenceKurus(plans: MatrixPlanInput[], itemType: ItemType, perInstallment: boolean) {
-  const plan = plans.find((candidate) => candidate.item_type === itemType);
-  if (!plan) return null;
-  const totalKurus = tlToKurus(Number(plan.total_amount));
-  if (!perInstallment) return totalKurus;
-  const count = Number(plan.installment_count);
-  return count > 0 ? Math.round(totalKurus / count) : totalKurus;
 }
 
 function toCellItem(
@@ -127,6 +129,7 @@ function toCellItem(
     paidAmountKurus:
       installment.paid_amount == null ? null : tlToKurus(Number(installment.paid_amount)),
     paymentMethod: installment.payment_method,
+    paidAt: installment.paid_at,
     overdue: installment.status === "bekliyor" && installment.due_date < today,
   };
 }
@@ -153,85 +156,119 @@ function buildCell(monthKeyValue: string, items: MatrixCellItem[], cancelledCoun
     state = overdue ? "gecikti" : "bekliyor";
   }
 
-  return { monthKey: monthKeyValue, state, overdue, totalKurus, paidKurus, items, cancelledCount };
+  const cash =
+    state === "odendi" && items.every((item) => item.paymentMethod === "nakit");
+
+  return { monthKey: monthKeyValue, state, overdue, cash, totalKurus, paidKurus, items, cancelledCount };
 }
 
 /**
  * Sütun ve genel toplamlar. Sayfa filtre çipleriyle satır süzdüğünde alt
  * toplamın ekranda görünenle tutması için ayrı çağrılabilir.
  */
+export function sideCellOf(row: MatrixRow, column: SideColumn) {
+  if (column === "kitap") return row.kitapCell;
+  if (column === "servis") return row.servisCell;
+  return row.aidatCell;
+}
+
 export function summarizeRows(
   months: string[],
   rows: MatrixRow[],
-): Pick<PaymentMatrix, "columnTotals" | "grandTotal"> {
+): Pick<PaymentMatrix, "columnTotals" | "sideTotals" | "grandTotal"> {
   const columnTotals: MatrixColumnTotal[] = months.map((month) => ({
     monthKey: month,
     expectedKurus: rows.reduce((sum, row) => sum + (row.cells[month]?.totalKurus ?? 0), 0),
     paidKurus: rows.reduce((sum, row) => sum + (row.cells[month]?.paidKurus ?? 0), 0),
   }));
 
+  const sideTotals = Object.fromEntries(
+    SIDE_COLUMNS.map((column) => [
+      column,
+      {
+        monthKey: column,
+        expectedKurus: rows.reduce((sum, row) => sum + (sideCellOf(row, column)?.totalKurus ?? 0), 0),
+        paidKurus: rows.reduce((sum, row) => sum + (sideCellOf(row, column)?.paidKurus ?? 0), 0),
+      },
+    ]),
+  ) as Record<SideColumn, MatrixColumnTotal>;
+
   const totalKurus = rows.reduce((sum, row) => sum + row.totalKurus, 0);
   const paidKurus = rows.reduce((sum, row) => sum + row.paidKurus, 0);
 
   return {
     columnTotals,
+    sideTotals,
     grandTotal: { totalKurus, paidKurus, remainingKurus: totalKurus - paidKurus },
   };
 }
+
+/** Taksitin gideceği sütun: Excel'deki yan sütunlardan biri ya da ayı. */
+function columnOf(plan: MatrixPlanInput, installment: MatrixInstallmentInput): string {
+  if (plan.item_type === "kitap") return "kitap";
+  if (plan.item_type === "servis") return "servis";
+  if (plan.item_type === "aidat" && Number(plan.installment_count) === 1) return "aidat";
+  return monthKey(installment.due_date);
+}
+
+const byDue = (a: MatrixCellItem, b: MatrixCellItem) =>
+  a.dueDate.localeCompare(b.dueDate) || a.installmentId.localeCompare(b.installmentId);
 
 export function buildPaymentMatrix(
   students: MatrixStudentInput[],
   today: string,
   season: string,
 ): PaymentMatrix {
-  // ① Öğrenci başına, seçili sezonun iptal olmayan taksitlerini aya göre topla.
+  // ① Öğrenci başına, seçili sezonun iptal olmayan taksitlerini sütuna göre topla.
   const collected = students.map((student) => {
     const plans = seasonPlans(student, season);
-    const itemsByMonth = new Map<string, MatrixCellItem[]>();
-    const cancelledByMonth = new Map<string, number>();
+    const itemsByColumn = new Map<string, MatrixCellItem[]>();
+    const cancelledByColumn = new Map<string, number>();
 
     for (const plan of plans) {
       for (const installment of plan.installments ?? []) {
-        const key = monthKey(installment.due_date);
+        const key = columnOf(plan, installment);
         if (installment.status === "iptal") {
-          cancelledByMonth.set(key, (cancelledByMonth.get(key) ?? 0) + 1);
+          cancelledByColumn.set(key, (cancelledByColumn.get(key) ?? 0) + 1);
           continue;
         }
-        const bucket = itemsByMonth.get(key);
+        const bucket = itemsByColumn.get(key);
         const item = toCellItem(installment, plan, today);
         if (bucket) bucket.push(item);
-        else itemsByMonth.set(key, [item]);
+        else itemsByColumn.set(key, [item]);
       }
     }
 
-    for (const bucket of itemsByMonth.values()) {
-      bucket.sort(
-        (a, b) => a.dueDate.localeCompare(b.dueDate) || a.installmentId.localeCompare(b.installmentId),
-      );
-    }
+    for (const bucket of itemsByColumn.values()) bucket.sort(byDue);
 
-    return { student, plans, itemsByMonth, cancelledByMonth };
+    return { student, plans, itemsByColumn, cancelledByColumn };
   });
 
-  // ② Ay sütunları yalnız gerçek taksitlerden doğar; boş aylar sütun açmaz.
+  // ② Ay sütunları yalnız gerçek aylık taksitlerden doğar; boş aylar sütun açmaz.
+  const sideKeys = new Set<string>(SIDE_COLUMNS);
   const months = [
-    ...new Set(collected.flatMap((entry) => [...entry.itemsByMonth.keys()])),
+    ...new Set(
+      collected.flatMap((entry) => [...entry.itemsByColumn.keys()].filter((key) => !sideKeys.has(key))),
+    ),
   ].sort();
 
   // ③ Satırları kur — her satırda her ay için hücre var, tablo düzgün hizalansın.
-  const rows: MatrixRow[] = collected.map(({ student, plans, itemsByMonth, cancelledByMonth }) => {
-    const cells: Record<string, MatrixCell> = {};
-    let totalKurus = 0;
-    let paidKurus = 0;
-    let hasOverdue = false;
+  const rows: MatrixRow[] = collected.map(({ student, plans, itemsByColumn, cancelledByColumn }) => {
+    const cellFor = (key: string) =>
+      buildCell(key, itemsByColumn.get(key) ?? [], cancelledByColumn.get(key) ?? 0);
+    const sideFor = (key: SideColumn) => (itemsByColumn.has(key) ? cellFor(key) : null);
 
-    for (const month of months) {
-      const cell = buildCell(month, itemsByMonth.get(month) ?? [], cancelledByMonth.get(month) ?? 0);
-      cells[month] = cell;
-      totalKurus += cell.totalKurus;
-      paidKurus += cell.paidKurus;
-      hasOverdue ||= cell.overdue;
-    }
+    const cells: Record<string, MatrixCell> = {};
+    for (const month of months) cells[month] = cellFor(month);
+    const kitapCell = sideFor("kitap");
+    const aidatCell = sideFor("aidat");
+    const servisCell = sideFor("servis");
+
+    const all = [...Object.values(cells), kitapCell, aidatCell, servisCell].filter(
+      (cell): cell is MatrixCell => cell !== null,
+    );
+    const totalKurus = all.reduce((sum, cell) => sum + cell.totalKurus, 0);
+    const paidKurus = all.reduce((sum, cell) => sum + cell.paidKurus, 0);
 
     return {
       studentId: student.id,
@@ -239,22 +276,24 @@ export function buildPaymentMatrix(
       parentName: student.parent_name,
       status: student.status,
       hasPlan: plans.length > 0,
-      aidatMonthlyKurus: referenceKurus(plans, "aidat", true),
-      kitapKurus: referenceKurus(plans, "kitap", false),
-      servisMonthlyKurus: referenceKurus(plans, "servis", true),
+      aidatCell,
+      kitapCell,
+      servisCell,
       cells,
       totalKurus,
       paidKurus,
       remainingKurus: totalKurus - paidKurus,
-      hasOverdue,
+      hasOverdue: all.some((cell) => cell.overdue),
     };
   });
 
-  // Planı olmayanlar en üstte: eksik veri gizlenmesin.
-  rows.sort((a, b) => {
-    if (a.hasPlan !== b.hasPlan) return a.hasPlan ? 1 : -1;
-    return nameCollator.compare(a.fullName, b.fullName);
-  });
+  // Excel'deki gibi: deftere eklenme sırası (aynı anda eklenenlerde ad sırası).
+  const createdAt = new Map(students.map((student) => [student.id, student.created_at ?? ""]));
+  rows.sort(
+    (a, b) =>
+      (createdAt.get(a.studentId) ?? "").localeCompare(createdAt.get(b.studentId) ?? "") ||
+      nameCollator.compare(a.fullName, b.fullName),
+  );
 
   return { months, rows, ...summarizeRows(months, rows) };
 }

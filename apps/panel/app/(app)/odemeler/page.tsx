@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { AlertTriangle, Banknote, Clock } from "lucide-react";
-import { PaymentMatrixCell } from "@/components/payment-matrix-cell";
+import { EXCEL_FILLS, PaymentMatrixCell } from "@/components/payment-matrix-cell";
 import { STUDENT_STATUSES, label } from "@/lib/constants";
 import { getSessionProfile } from "@/lib/auth";
 import { formatTRY, tlToKurus } from "@/lib/money";
 import {
   buildPaymentMatrix,
+  SIDE_COLUMNS,
+  sideCellOf,
   summarizeRows,
+  type SideColumn,
   type MatrixRow,
   type MatrixStudentInput,
 } from "@/lib/payment-matrix";
@@ -24,8 +27,8 @@ const FILTERS = {
 } as const;
 type FilterKey = keyof typeof FILTERS;
 
-const monthShortFormatter = new Intl.DateTimeFormat("tr-TR", {
-  month: "short",
+const monthNameFormatter = new Intl.DateTimeFormat("tr-TR", {
+  month: "long",
   timeZone: "Europe/Istanbul",
 });
 const monthLongFormatter = new Intl.DateTimeFormat("tr-TR", {
@@ -38,10 +41,30 @@ function monthDate(monthKey: string) {
   return new Date(`${monthKey}-01T12:00:00+03:00`);
 }
 
-/** "2026-09" -> "Eyl 26" */
-function shortMonthLabel(monthKey: string) {
-  return `${monthShortFormatter.format(monthDate(monthKey))} ${monthKey.slice(2, 4)}`;
+/** "2026-09" -> "EYLÜL" (Excel defterindeki başlık) */
+function sheetMonthLabel(monthKey: string) {
+  return monthNameFormatter.format(monthDate(monthKey)).toLocaleUpperCase("tr");
 }
+
+/** Excel defterindeki yan sütun başlıkları. */
+const SIDE_HEADERS: Record<SideColumn, string> = {
+  kitap: "Kitap - Kırtasiye",
+  aidat: "Aidat Tutarı",
+  servis: "Servis Tutarı",
+};
+const SIDE_DIALOG_LABELS: Record<SideColumn, string> = {
+  kitap: "Kitap - Kırtasiye",
+  aidat: "Yıllık aidat (peşin)",
+  servis: "Servis",
+};
+
+const LEGEND = [
+  { fill: EXCEL_FILLS.odendi, text: "Ödendi" },
+  { fill: EXCEL_FILLS.nakit, text: "Nakit ödendi" },
+  { fill: EXCEL_FILLS.kismi, text: "Kısmi ödendi" },
+  { fill: EXCEL_FILLS.gecikti, text: "Alınmadı" },
+  { fill: "border border-border bg-surface", text: "Vadesi gelmedi" },
+];
 
 /** "2026-09" -> "Eylül 2026" */
 function longMonthLabel(monthKey: string) {
@@ -164,7 +187,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
     supabase
       .from("students")
       .select(
-        "id, full_name, parent_name, phone, season, status, payment_plans(id, item_type, season, total_amount, installment_count, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method))",
+        "id, full_name, parent_name, phone, season, status, created_at, payment_plans(id, item_type, season, total_amount, installment_count, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method))",
       ),
     supabase
       .from("installments")
@@ -212,7 +235,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
     if (filter === "plansiz") return !row.hasPlan;
     return true;
   });
-  const { columnTotals, grandTotal } = summarizeRows(matrix.months, rows);
+  const { columnTotals, sideTotals, grandTotal } = summarizeRows(matrix.months, rows);
 
   const dueThisMonthKurus = matrix.rows.reduce((sum, row) => {
     const cell = row.cells[currentMonth];
@@ -230,7 +253,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
     filtre: filter === "tumu" ? undefined : filter,
     gecmis: includePast ? "1" : undefined,
   };
-  const columnCount = 4 + matrix.months.length + 3;
+  const columnCount = 2 + SIDE_COLUMNS.length + matrix.months.length + 3;
 
   return (
     <div className="space-y-6">
@@ -238,8 +261,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         <p className="text-sm font-medium text-muted-foreground">Ödeme takibi</p>
         <h1 className="mt-1 text-3xl font-semibold text-foreground">Ödemeler</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Tüm öğrencilerin aylık ödeme durumu tek tabloda. Bir hücreye tıklayarak o ayın
-          kalemlerini görebilir ve ödendi işaretleyebilirsiniz.
+          Aidat listesi defterinin düzeni: kitap, aidat ve servis sütunları, ardından aylar.
+          Renkler defterdeki gibi. Bir hücreye tıklayarak ayrıntısını görebilir ve ödendi
+          işaretleyebilirsiniz.
         </p>
         <Link
           href="/odemeler/gecikenler"
@@ -347,6 +371,18 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         </Link>
       </div>
 
+      <ul
+        className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground"
+        aria-label="Renklerin anlamı"
+      >
+        {LEGEND.map((item) => (
+          <li key={item.text} className="flex items-center gap-2">
+            <span aria-hidden className={`inline-block size-4 rounded ${item.fill}`} />
+            {item.text}
+          </li>
+        ))}
+      </ul>
+
       <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
         <table className="min-w-full text-sm">
           <caption className="sr-only">
@@ -355,27 +391,30 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           <thead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <tr>
               <th scope="col" className="sticky left-0 z-10 min-w-56 bg-muted px-4 py-3 text-left">
-                Öğrenci
+                Öğrenci Adı ve Soyadı
               </th>
-              <th scope="col" className="whitespace-nowrap px-3 py-3 text-right">
-                Aidat/ay
+              <th scope="col" className="min-w-44 whitespace-nowrap px-3 py-3 text-left">
+                Anne &amp; Baba Adı
               </th>
-              <th scope="col" className="px-3 py-3 text-right">
-                Kitap
-              </th>
-              <th scope="col" className="px-3 py-3 text-right">
-                Servis
-              </th>
+              {SIDE_COLUMNS.map((column) => (
+                <th
+                  key={column}
+                  scope="col"
+                  className="whitespace-nowrap border-l border-border px-2 py-3 text-right"
+                >
+                  {SIDE_HEADERS[column]}
+                </th>
+              ))}
               {matrix.months.map((monthKey) => (
                 <th
                   key={monthKey}
                   scope="col"
                   title={longMonthLabel(monthKey)}
-                  className={`whitespace-nowrap px-2 py-3 text-right ${
+                  className={`whitespace-nowrap border-l border-border px-2 py-3 text-right ${
                     monthKey === currentMonth ? "text-primary" : ""
                   }`}
                 >
-                  {shortMonthLabel(monthKey)}
+                  {sheetMonthLabel(monthKey)}
                 </th>
               ))}
               <th scope="col" className="px-3 py-3 text-right">
@@ -405,10 +444,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                   >
                     {row.fullName}
                   </Link>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {row.parentName || "Veli bilgisi yok"}
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <div className="mt-1 flex flex-wrap items-center gap-2 empty:hidden">
                     {row.hasPlan ? null : (
                       <>
                         <span className="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">
@@ -429,15 +465,23 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                     )}
                   </div>
                 </th>
-                <td className="whitespace-nowrap px-3 py-2 text-right">
-                  <Money kurus={row.aidatMonthlyKurus} muted />
+                <td className="whitespace-nowrap px-3 py-2 text-left text-sm text-muted-foreground">
+                  {row.parentName || "—"}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 text-right">
-                  <Money kurus={row.kitapKurus} muted />
-                </td>
-                <td className="whitespace-nowrap px-3 py-2 text-right">
-                  <Money kurus={row.servisMonthlyKurus} muted />
-                </td>
+                {SIDE_COLUMNS.map((column) => {
+                  const cell = sideCellOf(row, column);
+                  return cell ? (
+                    <PaymentMatrixCell
+                      key={column}
+                      cell={cell}
+                      studentName={row.fullName}
+                      monthLabel={SIDE_DIALOG_LABELS[column]}
+                      role={profile.role}
+                    />
+                  ) : (
+                    <td key={column} className="border-l border-border" />
+                  );
+                })}
                 {matrix.months.map((monthKey) => (
                   <PaymentMatrixCell
                     key={monthKey}
@@ -481,9 +525,29 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                 >
                   Toplam · {rows.length} öğrenci
                 </th>
-                <td colSpan={3} />
+                <td />
+                {SIDE_COLUMNS.map((column) => (
+                  <td
+                    key={column}
+                    className="whitespace-nowrap border-l border-border px-2 py-3 text-right"
+                  >
+                    {sideTotals[column].expectedKurus > 0 ? (
+                      <>
+                        <span className="block tabular-nums text-foreground">
+                          {formatTRY(sideTotals[column].expectedKurus)}
+                        </span>
+                        <span className="block text-xs font-medium tabular-nums text-accent-strong">
+                          {formatTRY(sideTotals[column].paidKurus)} tahsil
+                        </span>
+                      </>
+                    ) : null}
+                  </td>
+                ))}
                 {columnTotals.map((column) => (
-                  <td key={column.monthKey} className="whitespace-nowrap px-2 py-3 text-right">
+                  <td
+                    key={column.monthKey}
+                    className="whitespace-nowrap border-l border-border px-2 py-3 text-right"
+                  >
                     <span className="block tabular-nums text-foreground">
                       {formatTRY(column.expectedKurus)}
                     </span>

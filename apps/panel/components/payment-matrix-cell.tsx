@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Banknote } from "lucide-react";
+import { Banknote } from "lucide-react";
 import {
   markInstallmentPaid,
   revertInstallment,
@@ -27,17 +27,28 @@ const STATE_LABELS: Record<CellState, string> = {
   bos: "Taksit yok",
   odendi: "Ödendi",
   kismi: "Kısmi ödendi",
-  gecikti: "Gecikti",
-  bekliyor: "Bekliyor",
+  gecikti: "Alınmadı",
+  bekliyor: "Vadesi gelmedi",
 };
 
-const STATE_CLASSES: Record<CellState, string> = {
-  bos: "",
-  odendi: "bg-accent-soft text-accent-strong",
-  kismi: "bg-warning-soft text-amber-800",
-  gecikti: "bg-destructive-soft text-red-700",
-  bekliyor: "text-muted-foreground hover:bg-muted",
-};
+/**
+ * Aidat defterinin boyaları: yeşil ödendi, mor nakit ödendi, kırmızı alınmadı,
+ * gri kısmi, boyasız henüz vadesi gelmedi.
+ */
+export const EXCEL_FILLS = {
+  odendi: "bg-[#92D050] text-zinc-900",
+  nakit: "bg-[#7030A0] text-white",
+  kismi: "bg-[#A6A6A6] text-zinc-900",
+  gecikti: "bg-[#FF0000] text-white",
+  bekliyor: "text-foreground hover:bg-muted",
+} as const;
+
+function fillOf(cell: MatrixCell) {
+  if (cell.state === "odendi") return cell.cash ? EXCEL_FILLS.nakit : EXCEL_FILLS.odendi;
+  if (cell.state === "kismi") return EXCEL_FILLS.kismi;
+  if (cell.state === "gecikti") return EXCEL_FILLS.gecikti;
+  return EXCEL_FILLS.bekliyor;
+}
 
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
   day: "numeric",
@@ -139,38 +150,35 @@ export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: Payme
   }
 
   if (cell.state === "bos") {
-    return (
-      <td className="px-2 py-2 text-center text-sm text-muted-foreground/60" aria-label="Taksit yok">
-        —
-      </td>
-    );
+    return <td className="border-l border-border px-2 py-2" aria-label="Taksit yok" />;
   }
 
-  const stateLabel = STATE_LABELS[cell.state];
-  const display =
+  const stateLabel = cell.state === "odendi" && cell.cash ? "Nakit ödendi" : STATE_LABELS[cell.state];
+  // Excel'deki gibi hücrede hep o kalemin tutarı yazar; durumu boya söyler.
+  const display = formatTRY(cell.totalKurus);
+  const hint =
     cell.state === "kismi"
-      ? `${formatTRY(cell.paidKurus)} / ${formatTRY(cell.totalKurus)}`
-      : formatTRY(cell.state === "odendi" ? cell.paidKurus : cell.totalKurus);
+      ? `${formatTRY(cell.paidKurus)} alındı`
+      : cell.state === "bekliyor"
+        ? null
+        : stateLabel;
 
   return (
-    <td
-      className={`p-1 align-middle ${cell.overdue && cell.state === "kismi" ? "border-l-2 border-destructive" : ""}`}
-    >
+    <td className="border-l border-border p-0 align-middle">
       <button
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
         aria-label={`${studentName}, ${monthLabel}, ${display}, ${stateLabel}`}
-        className={`flex min-h-11 w-full cursor-pointer flex-col items-end justify-center gap-0.5 rounded-lg px-2 py-1.5 text-right text-sm font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${STATE_CLASSES[cell.state]}`}
+        className={`flex min-h-12 w-full cursor-pointer flex-col items-end justify-center gap-0.5 px-2 py-1.5 text-right text-sm font-semibold tabular-nums transition-[filter] hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${fillOf(cell)}`}
       >
         <span className="whitespace-nowrap">{display}</span>
-        <span className="flex items-center gap-1 text-[11px] font-medium">
-          {cell.overdue ? <AlertTriangle aria-hidden className="size-3" /> : null}
-          {stateLabel}
-          {cell.cancelledCount > 0 ? (
-            <span className="text-muted-foreground">· {cell.cancelledCount} iptal</span>
-          ) : null}
-        </span>
+        {hint || cell.cancelledCount > 0 ? (
+          <span className="whitespace-nowrap text-[11px] font-medium opacity-90">
+            {hint}
+            {cell.cancelledCount > 0 ? ` · ${cell.cancelledCount} iptal` : null}
+          </span>
+        ) : null}
       </button>
 
       {open ? (
@@ -223,11 +231,11 @@ export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: Payme
                           {label(ITEM_TYPES, item.itemType)}
                         </p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {formatDate(item.dueDate)} vadeli
-                          {item.status === "odendi" && item.paymentMethod
-                            ? ` · ${label(PAYMENT_METHODS, item.paymentMethod)}`
-                            : null}
-                          {item.overdue ? " · gecikti" : null}
+                          {item.status === "odendi"
+                            ? `${item.paidAt ? `${formatDate(item.paidAt.slice(0, 10))} ödendi` : "Ödendi"}${
+                                item.paymentMethod ? ` · ${label(PAYMENT_METHODS, item.paymentMethod)}` : ""
+                              }`
+                            : `${formatDate(item.dueDate)} vadeli${item.overdue ? " · alınmadı" : ""}`}
                         </p>
                       </div>
                       <p className="font-semibold tabular-nums text-foreground">
