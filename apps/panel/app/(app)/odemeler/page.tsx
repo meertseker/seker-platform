@@ -386,7 +386,81 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         ))}
       </ul>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+      {/* Telefon: tablo yerine öğrenci kartları; her kartta aidat listesindeki satır kutular hâlinde */}
+      <ul className="space-y-3 md:hidden" aria-label={`${season} sezonu öğrenci ödemeleri`}>
+        {rows.map((row) => (
+          <li
+            key={row.studentId}
+            className={`rounded-2xl border p-4 shadow-sm ${row.hasPlan ? "border-border bg-surface" : "border-amber-200 bg-warning-soft"}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link href={`/ogrenciler/${row.studentId}`} className="text-base font-semibold text-foreground hover:underline">
+                  {row.fullName}
+                </Link>
+                <p className="truncate text-sm text-muted-foreground">{row.parentName || "Veli bilgisi yok"}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className={`text-base font-semibold tabular-nums ${row.hasOverdue ? "text-red-700" : "text-foreground"}`}>
+                  {formatTRY(row.remainingKurus)}
+                </p>
+                <p className="text-xs text-muted-foreground">kalan</p>
+              </div>
+            </div>
+            {row.hasPlan ? (
+              <div className="mt-3 grid grid-cols-3 gap-1.5">
+                <PaymentRowProvider
+                  value={paymentContextFor(
+                    row,
+                    { id: row.studentId, phone: phoneById.get(row.studentId) ?? null },
+                    traces,
+                  )}
+                >
+                  {SIDE_COLUMNS.map((column) => {
+                    const cell = sideCellOf(row, column);
+                    return cell ? (
+                      <PaymentMatrixCell
+                        key={column}
+                        cell={cell}
+                        studentName={row.fullName}
+                        monthLabel={SIDE_DIALOG_LABELS[column]}
+                        role={profile.role}
+                        variant="tile"
+                        tileLabel={column === "kitap" ? "Kitap" : column === "aidat" ? "Aidat (peşin)" : "Servis"}
+                      />
+                    ) : null;
+                  })}
+                  {matrix.months.map((monthKey) => (
+                    <PaymentMatrixCell
+                      key={monthKey}
+                      cell={row.cells[monthKey]}
+                      studentName={row.fullName}
+                      monthLabel={longMonthLabel(monthKey)}
+                      role={profile.role}
+                      variant="tile"
+                      tileLabel={sheetMonthLabel(monthKey)}
+                    />
+                  ))}
+                </PaymentRowProvider>
+              </div>
+            ) : (
+              <Link
+                href={`/ogrenciler/${row.studentId}`}
+                className="mt-3 inline-flex min-h-12 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary"
+              >
+                Ödeme planı kur
+              </Link>
+            )}
+          </li>
+        ))}
+        {rows.length === 0 ? (
+          <li className="rounded-2xl border border-border bg-surface p-6 text-center text-muted-foreground">
+            Bu filtrelerle öğrenci bulunamadı.
+          </li>
+        ) : null}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm md:block">
         <table className="min-w-full text-sm">
           <caption className="sr-only">
             {season} sezonu öğrenci bazlı aylık ödeme tablosu

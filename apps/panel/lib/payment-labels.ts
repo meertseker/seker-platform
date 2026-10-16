@@ -27,3 +27,11 @@ export function installmentLabel(itemType: ItemType, dueDate: string) {
 export function shortDate(iso: string) {
   return shortDateFormatter.format(new Date(iso.length === 10 ? `${iso}T12:00:00+03:00` : iso));
 }
+
+/** Taksitlendirmede varsayılan ilk vade: gelecek ayın 5'i ("YYYY-MM-DD", İstanbul günü). */
+export function nextMonthFifth(today: string) {
+  const [year, month] = today.split("-").map(Number);
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}-05`;
+}

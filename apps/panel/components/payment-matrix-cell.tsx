@@ -3,13 +3,13 @@
 import { createContext, useContext, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote } from "lucide-react";
-import { revertInstallment, updateInstallment } from "@/actions/payments";
+import { rescheduleInstallments, revertInstallment, updateInstallment } from "@/actions/payments";
 import { PaymentDialog, type OpenPaymentItem } from "@/components/payment-dialog";
 import { ReminderButton } from "@/components/reminder-button";
 import { Sheet } from "@/components/sheet";
 import { ITEM_TYPES, PAYMENT_METHODS, label } from "@/lib/constants";
 import { formatTRY, kurusToTl } from "@/lib/money";
-import { shortDate } from "@/lib/payment-labels";
+import { nextMonthFifth, shortDate } from "@/lib/payment-labels";
 import type { CellState, MatrixCell, MatrixCellItem } from "@/lib/payment-matrix";
 import { formatTlInput, parseTlInput } from "@/lib/tl-input";
 
@@ -44,6 +44,10 @@ interface PaymentMatrixCellProps {
   /** "Ekim 2026" — ekran okuyucu ve pencere başlığı için tam ad. */
   monthLabel: string;
   role: "yonetici" | "danisman";
+  /** "tile": telefondaki kart listesinde, üstte kısa başlıklı kutu olarak çizilir. */
+  variant?: "td" | "tile";
+  /** tile başlığı ("EKİM", "Kitap") */
+  tileLabel?: string;
 }
 
 const STATE_LABELS: Record<CellState, string> = {
@@ -86,7 +90,14 @@ function formatDate(date: string) {
 const secondaryButton =
   "min-h-12 cursor-pointer rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
-export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: PaymentMatrixCellProps) {
+export function PaymentMatrixCell({
+  cell,
+  studentName,
+  monthLabel,
+  role,
+  variant = "td",
+  tileLabel,
+}: PaymentMatrixCellProps) {
   const router = useRouter();
   const payment = useContext(PaymentRowContext);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -96,11 +107,14 @@ export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: Payme
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [splitting, setSplitting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   if (cell.state === "bos" || !payment) {
+    if (variant === "tile") return null;
     return <td className="border-l border-border px-2 py-2" aria-label="Taksit yok" />;
   }
+  const Wrapper = variant === "tile" ? "div" : "td";
 
   const stateLabel = cell.state === "odendi" && cell.cash ? "Nakit ödendi" : STATE_LABELS[cell.state];
   // Excel'deki gibi hücrede hep o kalemin tutarı yazar; durumu boya söyler.
@@ -112,7 +126,10 @@ export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: Payme
         ? null
         : stateLabel;
 
-  const openIds = cell.items.filter((item) => item.status === "bekliyor").map((item) => item.installmentId);
+  const openItems = cell.items.filter((item) => item.status === "bekliyor");
+  const openIds = openItems.map((item) => item.installmentId);
+  // Taksitlendirme tek kalem (plan) üzerinde yapılır; hücrede birden fazla kalem varsa ilki.
+  const splitItems = openItems.filter((item) => item.planId === openItems[0]?.planId);
   const overdueIds = cell.items.filter((item) => item.overdue).map((item) => item.installmentId);
   const reminders = cell.items.flatMap((item) => payment.reminders[item.installmentId] ?? []);
   const lastReminder = [...reminders].sort((a, b) => b.at.localeCompare(a.at))[0];
@@ -121,6 +138,7 @@ export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: Payme
   function close() {
     setOpen(false);
     setEditing(null);
+    setSplitting(false);
     setError(null);
     triggerRef.current?.focus();
   }
@@ -155,7 +173,18 @@ export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: Payme
   }
 
   return (
-    <td className="relative border-l border-border p-0 align-middle">
+    <Wrapper
+      className={
+        variant === "tile"
+          ? "relative overflow-hidden rounded-lg border border-border"
+          : "relative border-l border-border p-0 align-middle"
+      }
+    >
+      {variant === "tile" && tileLabel ? (
+        <span className="block bg-muted px-2 py-0.5 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {tileLabel}
+        </span>
+      ) : null}
       <button
         ref={triggerRef}
         type="button"
@@ -301,6 +330,23 @@ export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: Payme
             ) : null}
           </div>
         ) : null}
+        {splitItems.length > 0 ? (
+          splitting ? (
+            <RescheduleForm
+              installmentIds={splitItems.map((item) => item.installmentId)}
+              totalKurus={splitItems.reduce((sum, item) => sum + item.amountKurus, 0)}
+              onCancel={() => setSplitting(false)}
+              onDone={() => {
+                close();
+                router.refresh();
+              }}
+            />
+          ) : (
+            <button type="button" onClick={() => setSplitting(true)} className={`mt-2 w-full ${secondaryButton}`}>
+              Taksitlendir · vadeyi değiştir
+            </button>
+          )
+        ) : null}
         {overdueIds.length > 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">
             {lastReminder
@@ -318,6 +364,90 @@ export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: Payme
         items={payment.openItems}
         preselect={openIds}
       />
-    </td>
+    </Wrapper>
+  );
+}
+
+function todayInIstanbul() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/** Bekleyen tutarı ayda bir taksite böler (1 = yalnız vadeyi değiştir). */
+function RescheduleForm({
+  installmentIds,
+  totalKurus,
+  onCancel,
+  onDone,
+}: {
+  installmentIds: string[];
+  totalKurus: number;
+  onCancel: () => void;
+  onDone: () => void;
+}) {
+  const [count, setCount] = useState(2);
+  const [firstDue, setFirstDue] = useState(() => nextMonthFifth(todayInIstanbul()));
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function save() {
+    setError(null);
+    startTransition(async () => {
+      const result = await rescheduleInstallments(installmentIds, count, firstDue);
+      if (result.error) return setError(result.error);
+      onDone();
+    });
+  }
+
+  return (
+    <div className="mt-3 space-y-3 rounded-xl bg-muted/60 p-3">
+      <p className="text-sm font-semibold text-foreground">Bekleyen {formatTRY(totalKurus)} kaç taksit olsun?</p>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        {[1, 2, 3, 4, 5, 6].map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setCount(option)}
+            className={`min-h-12 cursor-pointer rounded-xl border text-base font-semibold ${
+              count === option ? "border-primary bg-primary text-on-primary" : "border-border bg-surface text-foreground hover:bg-muted"
+            }`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+      <label className="block text-sm font-semibold text-foreground">
+        {count === 1 ? "Yeni vade" : "İlk taksit"}
+        <input
+          type="date"
+          value={firstDue}
+          onChange={(event) => setFirstDue(event.target.value)}
+          className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+        />
+      </label>
+      <p className="text-sm text-muted-foreground">
+        {count === 1
+          ? "Tutar tek seferde, yeni vadede alınır."
+          : `${count} taksit, ayda bir · her biri yaklaşık ${formatTRY(Math.round(totalKurus / count))}`}
+      </p>
+      {error ? <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p> : null}
+      <div className="flex gap-2">
+        <button type="button" onClick={onCancel} disabled={isPending} className={`flex-1 ${secondaryButton}`}>
+          Vazgeç
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={isPending}
+          className="min-h-12 flex-1 cursor-pointer rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-strong disabled:opacity-50"
+        >
+          {isPending ? "Kaydediliyor…" : "Kaydet"}
+        </button>
+      </div>
+    </div>
   );
 }

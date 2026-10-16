@@ -347,6 +347,8 @@ export interface TakePaymentInput {
   /** "YYYY-MM-DD" (İstanbul günü). */
   paidOn: string;
   note?: string;
+  /** Eksik ödemede kalanın taksitleri; yoksa kalan aynı vadeyle tek taksit bekler. */
+  remainder?: { count: number; firstDueDate: string };
 }
 
 interface PaymentSnapshot {
@@ -406,6 +408,16 @@ export async function takePayment(input: TakePaymentInput) {
   );
   if (!result.ok) return { error: result.error };
 
+  let remainderPlan: { count: number; firstDueDate: string } | null = null;
+  if (input.remainder) {
+    const firstDueDate = normalizeDate(input.remainder.firstDueDate);
+    const count = input.remainder.count;
+    if (!firstDueDate || !Number.isInteger(count) || count < 1 || count > 12) {
+      return { error: "Kalanın taksitleri için geçerli sayı ve tarih girin" };
+    }
+    remainderPlan = { count, firstDueDate };
+  }
+
   const byId = new Map(typed.map((row) => [row.id, row]));
   const createdIds: string[] = [];
   const paidIds: string[] = [];
@@ -437,7 +449,11 @@ export async function takePayment(input: TakePaymentInput) {
     const inserts = [
       ...extraParts.map((part) => ({ plan_id: row.plan_id, due_date: row.due_date, ...paidFields(part.kurus, part.method) })),
       ...(allocation.remainderKurus > 0
-        ? [{ plan_id: row.plan_id, due_date: row.due_date, amount: kurusToTl(allocation.remainderKurus) }]
+        ? remainderPlan
+          ? generateInstallments(allocation.remainderKurus, remainderPlan.count, remainderPlan.firstDueDate).map(
+              (draft) => ({ plan_id: row.plan_id, due_date: draft.dueDate, amount: kurusToTl(draft.amountKurus) }),
+            )
+          : [{ plan_id: row.plan_id, due_date: row.due_date, amount: kurusToTl(allocation.remainderKurus) }]
         : []),
     ];
     if (inserts.length) {
@@ -648,5 +664,62 @@ export async function createEnrollmentPlan(input: EnrollmentPlanInput) {
   revalidatePath("/ogrenciler");
   revalidatePath("/odemeler");
   revalidatePath(`/ogrenciler/${input.studentId}`);
+  return {};
+}
+
+/**
+ * Taksitlendir: aynı plandaki bekleyen taksitlerin toplamı yeni sayıda aylık taksite
+ * bölünür (ör. kırtasiye kalanı 3 taksit, ilki Kasım). Plan toplamı değişmez.
+ * Taksit silmeye RLS izin vermediği için işlem sunucu anahtarıyla yapılır.
+ */
+export async function rescheduleInstallments(installmentIds: string[], count: number, firstDueDate: string) {
+  const profile = await getSessionProfile();
+  const supabase = await createServerSupabase();
+  const dueDate = normalizeDate(firstDueDate);
+  if (installmentIds.length === 0) return { error: "Taksit seçin" };
+  if (!Number.isInteger(count) || count < 1 || count > 12) return { error: "Taksit sayısı 1-12 arasında olmalı" };
+  if (!dueDate) return { error: "Geçerli bir ilk vade girin" };
+
+  const { data: rows } = await supabase
+    .from("installments")
+    .select("id, plan_id, amount, status, plan:payment_plans!inner(student_id)")
+    .in("id", installmentIds);
+  type Row = { id: string; plan_id: string; amount: number; status: string; plan: { student_id: string } | { student_id: string }[] };
+  const typed = (rows ?? []) as unknown as Row[];
+  if (typed.length !== installmentIds.length) return { error: "Taksitler bulunamadı" };
+  if (typed.some((row) => row.status !== "bekliyor")) return { error: "Yalnız bekleyen taksitler taksitlendirilebilir" };
+  const planId = typed[0].plan_id;
+  if (typed.some((row) => row.plan_id !== planId)) return { error: "Taksitler aynı kaleme ait olmalı" };
+  const plan = Array.isArray(typed[0].plan) ? typed[0].plan[0] : typed[0].plan;
+
+  const admin = createAdminSupabase();
+  if (!admin) return { error: "Taksitlendirme şu an yapılamıyor" };
+
+  const totalKurus = typed.reduce((sum, row) => sum + tlToKurus(Number(row.amount)), 0);
+  const drafts = generateInstallments(totalKurus, count, dueDate);
+  const { data: inserted, error: insertError } = await admin
+    .from("installments")
+    .insert(drafts.map((draft) => ({ plan_id: planId, due_date: draft.dueDate, amount: kurusToTl(draft.amountKurus) })))
+    .select("id");
+  if (insertError || !inserted) return { error: "Taksitler oluşturulamadı" };
+  const { error: deleteError } = await admin.from("installments").delete().in("id", installmentIds);
+  if (deleteError) {
+    await admin.from("installments").delete().in("id", inserted.map((row) => row.id));
+    return { error: "Taksitlendirilemedi, hiçbir değişiklik yapılmadı" };
+  }
+
+  await logEvent(supabase, {
+    entityType: "student",
+    entityId: plan.student_id,
+    eventType: "taksitlendirildi",
+    actorId: profile.id,
+    payload: { planId, totalTl: kurusToTl(totalKurus), count, firstDueDate: dueDate, replaced: installmentIds },
+  });
+
+  revalidatePath("/ogrenciler");
+  revalidatePath("/odemeler");
+  revalidatePath("/odemeler/gecikenler");
+  revalidatePath("/bugun");
+  revalidatePath(`/ogrenciler/${plan.student_id}`);
   return {};
 }

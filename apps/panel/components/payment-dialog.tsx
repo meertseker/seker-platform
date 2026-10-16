@@ -7,6 +7,7 @@ import { takePayment, undoPayment } from "@/actions/payments";
 import { Sheet } from "@/components/sheet";
 import type { PaymentMethod } from "@/lib/constants";
 import { formatTRY, kurusToTl, tlToKurus } from "@/lib/money";
+import { nextMonthFifth } from "@/lib/payment-labels";
 import { formatTlInput, parseTlInput } from "@/lib/tl-input";
 
 export interface OpenPaymentItem {
@@ -149,6 +150,9 @@ function PaymentForm({ studentId, studentName, items, preselect, onDone }: Payme
   const [paidOn, setPaidOn] = useState(todayInIstanbul);
   const [note, setNote] = useState("");
   const [showAll, setShowAll] = useState(false);
+  /** Eksik ödemede kalan: 0 = aynı vadede tek taksit, n = n taksit. */
+  const [remainderCount, setRemainderCount] = useState(0);
+  const [remainderFirst, setRemainderFirst] = useState(() => nextMonthFifth(todayInIstanbul()));
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -185,7 +189,15 @@ function PaymentForm({ studentId, studentName, items, preselect, onDone }: Payme
     }
 
     startTransition(async () => {
-      const result = await takePayment({ studentId, installmentIds: selected, payments, paidOn, note });
+      const partial = !twoMethods && singleKurus < dueKurus;
+      const result = await takePayment({
+        studentId,
+        installmentIds: selected,
+        payments,
+        paidOn,
+        note,
+        remainder: partial && remainderCount > 0 ? { count: remainderCount, firstDueDate: remainderFirst } : undefined,
+      });
       if ("error" in result && result.error) {
         setError(result.error);
         return;
@@ -323,13 +335,39 @@ function PaymentForm({ studentId, studentName, items, preselect, onDone }: Payme
             onChange={(event) => setAmount(event.target.value)}
             className={`mt-2 ${inputClass}`}
           />
-          {singleKurus > 0 && singleKurus < dueKurus ? (
-            <span className="mt-1 block text-sm font-normal text-muted-foreground">
-              Kısmi ödeme: kalan {formatTRY(dueKurus - singleKurus)} aynı vadeyle bekler.
-            </span>
-          ) : null}
         </label>
       )}
+
+      {!twoMethods && singleKurus > 0 && singleKurus < dueKurus ? (
+        <div className="space-y-3 rounded-xl bg-muted/60 p-3">
+          <p className="text-sm font-semibold text-foreground">
+            Kalan {formatTRY(dueKurus - singleKurus)} nasıl ödenecek?
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[0, 2, 3, 4].map((count) => (
+              <button key={count} type="button" onClick={() => setRemainderCount(count)} className={chip(remainderCount === count)}>
+                {count === 0 ? "Tek seferde" : `${count} taksit`}
+              </button>
+            ))}
+          </div>
+          {remainderCount > 0 ? (
+            <label className="block text-sm font-semibold text-foreground">
+              İlk taksit
+              <input
+                type="date"
+                value={remainderFirst}
+                onChange={(event) => setRemainderFirst(event.target.value)}
+                className={`mt-2 ${inputClass}`}
+              />
+              <span className="mt-1 block text-sm font-normal text-muted-foreground">
+                {remainderCount} taksit, ayda bir · her biri yaklaşık {formatTRY(Math.round((dueKurus - singleKurus) / remainderCount))}
+              </span>
+            </label>
+          ) : (
+            <p className="text-sm text-muted-foreground">Kalan, aynı vadeyle tek taksit olarak bekler.</p>
+          )}
+        </div>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-semibold text-foreground">
