@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { AlertTriangle, Banknote, Clock } from "lucide-react";
-import { EXCEL_FILLS, PaymentMatrixCell } from "@/components/payment-matrix-cell";
+import { EXCEL_FILLS, PaymentMatrixCell, PaymentRowProvider } from "@/components/payment-matrix-cell";
+import { paymentContextFor } from "@/lib/payment-context";
+import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
 import { STUDENT_STATUSES, label } from "@/lib/constants";
 import { getSessionProfile } from "@/lib/auth";
 import { formatTRY, tlToKurus } from "@/lib/money";
@@ -183,7 +185,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
   const currentMonth = today.slice(0, 7);
   const [year, month] = today.split("-").map(Number);
 
-  const [studentsResult, paidResult] = await Promise.all([
+  const [studentsResult, paidResult, traces] = await Promise.all([
     supabase
       .from("students")
       .select(
@@ -195,6 +197,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
       .eq("status", "odendi")
       .gte("paid_at", istanbulMonthUtcIso(year, month - 1))
       .lt("paid_at", istanbulMonthUtcIso(year, month)),
+    fetchPaymentTraces(supabase),
   ]);
 
   const allStudents = (studentsResult.data ?? []) as unknown as (MatrixStudentInput & {
@@ -230,6 +233,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
   });
 
   const matrix = buildPaymentMatrix(inScope, today, season);
+  const phoneById = new Map(allStudents.map((student) => [student.id, student.phone]));
   const rows = matrix.rows.filter((row) => {
     if (filter === "geciken") return row.hasOverdue;
     if (filter === "plansiz") return !row.hasPlan;
@@ -262,8 +266,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         <h1 className="mt-1 text-3xl font-semibold text-foreground">Ödemeler</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Aidat listesi defterinin düzeni: kitap, aidat ve servis sütunları, ardından aylar.
-          Renkler defterdeki gibi. Bir hücreye tıklayarak ayrıntısını görebilir ve ödendi
-          işaretleyebilirsiniz.
+          Renkler defterdeki gibi. Bir hücreye dokunarak ayrıntısını ve notunu görebilir, ödeme
+          alabilir ya da WhatsApp ile hatırlatabilirsiniz.
         </p>
         <Link
           href="/odemeler/gecikenler"
@@ -468,6 +472,13 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                 <td className="whitespace-nowrap px-3 py-2 text-left text-sm text-muted-foreground">
                   {row.parentName || "—"}
                 </td>
+                <PaymentRowProvider
+                  value={paymentContextFor(
+                    row,
+                    { id: row.studentId, phone: phoneById.get(row.studentId) ?? null },
+                    traces,
+                  )}
+                >
                 {SIDE_COLUMNS.map((column) => {
                   const cell = sideCellOf(row, column);
                   return cell ? (
@@ -491,6 +502,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                     role={profile.role}
                   />
                 ))}
+                </PaymentRowProvider>
                 <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">
                   <Money kurus={row.totalKurus} />
                 </td>

@@ -1,27 +1,50 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { createContext, useContext, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote } from "lucide-react";
-import {
-  markInstallmentPaid,
-  revertInstallment,
-  updateInstallment,
-} from "@/actions/payments";
-import { ITEM_TYPES, PAYMENT_METHODS, label, type PaymentMethod } from "@/lib/constants";
+import { revertInstallment, updateInstallment } from "@/actions/payments";
+import { PaymentDialog, type OpenPaymentItem } from "@/components/payment-dialog";
+import { ReminderButton } from "@/components/reminder-button";
+import { Sheet } from "@/components/sheet";
+import { ITEM_TYPES, PAYMENT_METHODS, label } from "@/lib/constants";
 import { formatTRY, kurusToTl } from "@/lib/money";
+import { shortDate } from "@/lib/payment-labels";
 import type { CellState, MatrixCell, MatrixCellItem } from "@/lib/payment-matrix";
 import { formatTlInput, parseTlInput } from "@/lib/tl-input";
+
+/** Sunucudan gelen not / hatırlatma izi (Excel'deki hücre yorumunun karşılığı). */
+export interface TraceDTO {
+  at: string;
+  actorName: string | null;
+  note: string | null;
+}
+
+export interface CellPaymentContext {
+  studentId: string;
+  phone: string | null;
+  /** Öğrencinin bütün bekleyen taksitleri — "Ödeme al" penceresi için. */
+  openItems: OpenPaymentItem[];
+  notes: Record<string, TraceDTO[]>;
+  reminders: Record<string, TraceDTO[]>;
+  /** Gecikmiş taksitler için hazır WhatsApp metni. */
+  reminderMessage: string;
+}
+
+const PaymentRowContext = createContext<CellPaymentContext | null>(null);
+
+/** Satırın ödeme bağlamı bir kez gönderilir; satırdaki bütün hücreler buradan okur. */
+export function PaymentRowProvider({ value, children }: { value: CellPaymentContext; children: ReactNode }) {
+  return <PaymentRowContext.Provider value={value}>{children}</PaymentRowContext.Provider>;
+}
 
 interface PaymentMatrixCellProps {
   cell: MatrixCell;
   studentName: string;
-  /** "Ekim 2026" — ekran okuyucu ve panel başlığı için tam ay adı. */
+  /** "Ekim 2026" — ekran okuyucu ve pencere başlığı için tam ad. */
   monthLabel: string;
   role: "yonetici" | "danisman";
 }
-
-const paymentMethods = Object.keys(PAYMENT_METHODS) as PaymentMethod[];
 
 const STATE_LABELS: Record<CellState, string> = {
   bos: "Taksit yok",
@@ -43,7 +66,7 @@ export const EXCEL_FILLS = {
   bekliyor: "text-foreground hover:bg-muted",
 } as const;
 
-function fillOf(cell: MatrixCell) {
+export function fillOf(cell: MatrixCell) {
   if (cell.state === "odendi") return cell.cash ? EXCEL_FILLS.nakit : EXCEL_FILLS.odendi;
   if (cell.state === "kismi") return EXCEL_FILLS.kismi;
   if (cell.state === "gecikti") return EXCEL_FILLS.gecikti;
@@ -60,96 +83,22 @@ function formatDate(date: string) {
   return dateFormatter.format(new Date(`${date}T12:00:00+03:00`));
 }
 
-function todayInIstanbul() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Istanbul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
-type FormTarget = { mode: "pay" | "edit"; item: MatrixCellItem };
+const secondaryButton =
+  "min-h-12 cursor-pointer rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: PaymentMatrixCellProps) {
   const router = useRouter();
+  const payment = useContext(PaymentRowContext);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [target, setTarget] = useState<FormTarget | null>(null);
+  const [paying, setPaying] = useState(false);
+  const [editing, setEditing] = useState<MatrixCellItem | null>(null);
   const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState<PaymentMethod>("havale");
-  const [paidAt, setPaidAt] = useState(() => todayInIstanbul());
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (open) panelRef.current?.focus();
-  }, [open]);
-
-  function close() {
-    setOpen(false);
-    setTarget(null);
-    setError(null);
-    triggerRef.current?.focus();
-  }
-
-  function openPay(item: MatrixCellItem) {
-    setError(null);
-    setTarget({ mode: "pay", item });
-    setAmount(formatTlInput(kurusToTl(item.amountKurus)));
-    setMethod("havale");
-    setPaidAt(todayInIstanbul());
-  }
-
-  function openEdit(item: MatrixCellItem) {
-    setError(null);
-    setTarget({ mode: "edit", item });
-    setAmount(formatTlInput(kurusToTl(item.amountKurus)));
-    setDueDate(item.dueDate);
-  }
-
-  function submit() {
-    if (!target) return;
-    const parsed = parseTlInput(amount);
-    if (parsed === null) {
-      setError("Geçerli bir tutar girin");
-      return;
-    }
-    setError(null);
-    startTransition(async () => {
-      const result =
-        target.mode === "pay"
-          ? await markInstallmentPaid(target.item.installmentId, parsed, method, paidAt)
-          : await updateInstallment(target.item.installmentId, {
-              amountTl: parsed,
-              dueDate,
-            });
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      // Panel açık kalır: aynı ayın diğer kalemi de sırada olabilir.
-      setTarget(null);
-      router.refresh();
-    });
-  }
-
-  function revert(item: MatrixCellItem) {
-    if (!window.confirm("Bu ödemenin geri alınmasını onaylıyor musunuz?")) return;
-    setError(null);
-    startTransition(async () => {
-      const result = await revertInstallment(item.installmentId);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      router.refresh();
-    });
-  }
-
-  if (cell.state === "bos") {
+  if (cell.state === "bos" || !payment) {
     return <td className="border-l border-border px-2 py-2" aria-label="Taksit yok" />;
   }
 
@@ -163,8 +112,50 @@ export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: Payme
         ? null
         : stateLabel;
 
+  const openIds = cell.items.filter((item) => item.status === "bekliyor").map((item) => item.installmentId);
+  const overdueIds = cell.items.filter((item) => item.overdue).map((item) => item.installmentId);
+  const reminders = cell.items.flatMap((item) => payment.reminders[item.installmentId] ?? []);
+  const lastReminder = [...reminders].sort((a, b) => b.at.localeCompare(a.at))[0];
+  const hasNote = cell.items.some((item) => (payment.notes[item.installmentId] ?? []).length > 0);
+
+  function close() {
+    setOpen(false);
+    setEditing(null);
+    setError(null);
+    triggerRef.current?.focus();
+  }
+
+  function startEdit(item: MatrixCellItem) {
+    setError(null);
+    setEditing(item);
+    setAmount(formatTlInput(kurusToTl(item.amountKurus)));
+    setDueDate(item.dueDate);
+  }
+
+  function saveEdit() {
+    if (!editing) return;
+    const parsed = parseTlInput(amount);
+    if (parsed === null) return setError("Geçerli bir tutar girin");
+    startTransition(async () => {
+      const result = await updateInstallment(editing.installmentId, { amountTl: parsed, dueDate });
+      if (result.error) return setError(result.error);
+      setEditing(null);
+      router.refresh();
+    });
+  }
+
+  function revert(item: MatrixCellItem) {
+    if (!window.confirm("Bu ödemenin geri alınmasını onaylıyor musunuz?")) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await revertInstallment(item.installmentId);
+      if (result.error) return setError(result.error);
+      router.refresh();
+    });
+  }
+
   return (
-    <td className="border-l border-border p-0 align-middle">
+    <td className="relative border-l border-border p-0 align-middle">
       <button
         ref={triggerRef}
         type="button"
@@ -180,185 +171,153 @@ export function PaymentMatrixCell({ cell, studentName, monthLabel, role }: Payme
           </span>
         ) : null}
       </button>
-
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end bg-zinc-950/40 p-4 sm:items-center sm:justify-center"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) close();
-          }}
-        >
-          <div
-            ref={panelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${studentName} · ${monthLabel} ödemeleri`}
-            tabIndex={-1}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") close();
-            }}
-            className="w-full rounded-2xl border border-border bg-surface p-5 text-left shadow-xl focus:outline-none sm:max-w-lg"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">{monthLabel}</h2>
-                <p className="mt-0.5 text-sm text-muted-foreground">{studentName}</p>
-              </div>
-              <button
-                type="button"
-                onClick={close}
-                className="min-h-11 cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                Kapat
-              </button>
-            </div>
-
-            {error ? (
-              <p className="mt-3 rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
-                {error}
-              </p>
-            ) : null}
-
-            <ul className="mt-4 divide-y divide-border">
-              {cell.items.map((item) => {
-                const editing = target?.item.installmentId === item.installmentId;
-
-                return (
-                  <li key={item.installmentId} className="py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-foreground">
-                          {label(ITEM_TYPES, item.itemType)}
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {item.status === "odendi"
-                            ? `${item.paidAt ? `${formatDate(item.paidAt.slice(0, 10))} ödendi` : "Ödendi"}${
-                                item.paymentMethod ? ` · ${label(PAYMENT_METHODS, item.paymentMethod)}` : ""
-                              }`
-                            : `${formatDate(item.dueDate)} vadeli${item.overdue ? " · alınmadı" : ""}`}
-                        </p>
-                      </div>
-                      <p className="font-semibold tabular-nums text-foreground">
-                        {formatTRY(item.paidAmountKurus ?? item.amountKurus)}
-                      </p>
-                    </div>
-
-                    {editing ? (
-                      <div className="mt-3 space-y-3 rounded-xl bg-muted/60 p-3">
-                        <label className="block text-sm font-medium text-foreground">
-                          {target.mode === "pay" ? "Ödenen tutar" : "Tutar"}
-                          <input
-                            inputMode="decimal"
-                            value={amount}
-                            onChange={(event) => setAmount(event.target.value)}
-                            className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm tabular-nums outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
-                          />
-                        </label>
-                        {target.mode === "pay" ? (
-                          <>
-                            <label className="block text-sm font-medium text-foreground">
-                              Yöntem
-                              <select
-                                value={method}
-                                onChange={(event) => setMethod(event.target.value as PaymentMethod)}
-                                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
-                              >
-                                {paymentMethods.map((value) => (
-                                  <option key={value} value={value}>
-                                    {label(PAYMENT_METHODS, value)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="block text-sm font-medium text-foreground">
-                              Ödeme tarihi
-                              <input
-                                type="date"
-                                value={paidAt}
-                                onChange={(event) => setPaidAt(event.target.value)}
-                                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
-                              />
-                            </label>
-                          </>
-                        ) : (
-                          <label className="block text-sm font-medium text-foreground">
-                            Vade
-                            <input
-                              type="date"
-                              value={dueDate}
-                              onChange={(event) => setDueDate(event.target.value)}
-                              className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
-                            />
-                          </label>
-                        )}
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setTarget(null)}
-                            disabled={isPending}
-                            className="min-h-11 flex-1 cursor-pointer rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            Vazgeç
-                          </button>
-                          <button
-                            type="button"
-                            onClick={submit}
-                            disabled={isPending}
-                            className="min-h-11 flex-1 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {isPending ? "Kaydediliyor..." : "Kaydet"}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {item.status === "bekliyor" ? (
-                          <button
-                            type="button"
-                            onClick={() => openPay(item)}
-                            className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          >
-                            <Banknote aria-hidden className="size-4" />
-                            Ödendi işaretle
-                          </button>
-                        ) : null}
-                        {role === "yonetici" ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => openEdit(item)}
-                              className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                              Düzenle
-                            </button>
-                            {item.status === "odendi" ? (
-                              <button
-                                type="button"
-                                onClick={() => revert(item)}
-                                disabled={isPending}
-                                className="min-h-11 cursor-pointer rounded-xl border border-red-200 bg-destructive-soft px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:border-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                Geri Al
-                              </button>
-                            ) : null}
-                          </>
-                        ) : null}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-
-            <div className="mt-2 flex items-center justify-between border-t border-border pt-3 text-sm font-semibold">
-              <span className="text-muted-foreground">Toplam</span>
-              <span className="tabular-nums text-foreground">
-                {formatTRY(cell.paidKurus)} / {formatTRY(cell.totalKurus)}
-              </span>
-            </div>
-          </div>
-        </div>
+      {/* Excel'deki yorum üçgeni: notu ya da hatırlatması olan hücre */}
+      {hasNote || lastReminder ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-0 top-0 size-0 border-l-[8px] border-t-[8px] border-l-transparent border-t-zinc-900/70"
+        />
       ) : null}
+
+      <Sheet open={open} onClose={close} title={monthLabel} description={studentName}>
+        {error ? (
+          <p className="mb-3 rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p>
+        ) : null}
+
+        <ul className="divide-y divide-border">
+          {cell.items.map((item) => {
+            const notes = payment.notes[item.installmentId] ?? [];
+            return (
+              <li key={item.installmentId} className="py-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-foreground">{label(ITEM_TYPES, item.itemType)}</p>
+                    <p className={`mt-0.5 text-sm ${item.overdue ? "font-semibold text-red-700" : "text-muted-foreground"}`}>
+                      {item.status === "odendi"
+                        ? `${item.paidAt ? `${formatDate(item.paidAt.slice(0, 10))} ödendi` : "Ödendi"}${
+                            item.paymentMethod ? ` · ${label(PAYMENT_METHODS, item.paymentMethod)}` : ""
+                          }`
+                        : `${formatDate(item.dueDate)} vadeli${item.overdue ? " · alınmadı" : ""}`}
+                    </p>
+                    {notes.map((trace) => (
+                      <p key={trace.at} className="mt-1 rounded-lg bg-warning-soft px-2 py-1 text-sm text-foreground">
+                        {trace.note}
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · {trace.actorName ?? "Panel"}, {shortDate(trace.at)}
+                        </span>
+                      </p>
+                    ))}
+                  </div>
+                  <p className="font-semibold tabular-nums text-foreground">
+                    {formatTRY(item.paidAmountKurus ?? item.amountKurus)}
+                  </p>
+                </div>
+
+                {editing?.installmentId === item.installmentId ? (
+                  <div className="mt-3 space-y-3 rounded-xl bg-muted/60 p-3">
+                    <label className="block text-sm font-semibold text-foreground">
+                      Tutar
+                      <input
+                        inputMode="decimal"
+                        value={amount}
+                        onChange={(event) => setAmount(event.target.value)}
+                        className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 text-base tabular-nums outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                      />
+                    </label>
+                    <label className="block text-sm font-semibold text-foreground">
+                      Vade
+                      <input
+                        type="date"
+                        value={dueDate}
+                        onChange={(event) => setDueDate(event.target.value)}
+                        className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                      />
+                    </label>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setEditing(null)} disabled={isPending} className={`flex-1 ${secondaryButton}`}>
+                        Vazgeç
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveEdit}
+                        disabled={isPending}
+                        className="min-h-12 flex-1 cursor-pointer rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-strong disabled:opacity-50"
+                      >
+                        {isPending ? "Kaydediliyor…" : "Kaydet"}
+                      </button>
+                    </div>
+                  </div>
+                ) : role === "yonetici" ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => startEdit(item)} className={secondaryButton}>
+                      Düzenle
+                    </button>
+                    {item.status === "odendi" ? (
+                      <button
+                        type="button"
+                        onClick={() => revert(item)}
+                        disabled={isPending}
+                        className="min-h-12 cursor-pointer rounded-xl border border-red-200 bg-destructive-soft px-4 text-sm font-semibold text-red-700 hover:border-red-300 disabled:opacity-50"
+                      >
+                        Ödemeyi geri al
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="mt-2 flex items-center justify-between border-t border-border pt-3 text-base font-semibold">
+          <span className="text-muted-foreground">Alınan / tutar</span>
+          <span className="tabular-nums text-foreground">
+            {formatTRY(cell.paidKurus)} / {formatTRY(cell.totalKurus)}
+          </span>
+        </div>
+
+        {openIds.length > 0 ? (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setPaying(true);
+              }}
+              className="inline-flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 text-base font-semibold text-on-primary hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Banknote aria-hidden className="size-5" />
+              Ödeme al
+            </button>
+            {overdueIds.length > 0 ? (
+              <ReminderButton
+                studentId={payment.studentId}
+                installmentIds={overdueIds}
+                phone={payment.phone}
+                message={payment.reminderMessage}
+                big
+              />
+            ) : null}
+          </div>
+        ) : null}
+        {overdueIds.length > 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {lastReminder
+              ? `${shortDate(lastReminder.at)} tarihinde hatırlatıldı · ${lastReminder.actorName ?? "Panel"}`
+              : "Henüz hatırlatılmadı"}
+          </p>
+        ) : null}
+      </Sheet>
+
+      <PaymentDialog
+        open={paying}
+        onClose={() => setPaying(false)}
+        studentId={payment.studentId}
+        studentName={studentName}
+        items={payment.openItems}
+        preselect={openIds}
+      />
     </td>
   );
 }

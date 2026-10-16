@@ -35,6 +35,8 @@ interface InstallmentTableProps {
   today: string;
   /** Kalem sütununu + aya göre gruplamayı göster (öğrenci detayında tüm planlar tek takvimde). */
   showItemColumn?: boolean;
+  /** false: satır başına "Ödendi işaretle" gösterilmez (ödeme sayfanın "Ödeme al" düğmesinden alınır). */
+  allowPay?: boolean;
 }
 
 const paymentMethods = Object.keys(PAYMENT_METHODS) as PaymentMethod[];
@@ -69,7 +71,7 @@ function formatMonth(date: string) {
   return monthFormatter.format(new Date(`${date}T12:00:00+03:00`));
 }
 
-export function InstallmentTable({ installments, role, today, showItemColumn = false }: InstallmentTableProps) {
+export function InstallmentTable({ installments, role, today, showItemColumn = false, allowPay = true }: InstallmentTableProps) {
   const router = useRouter();
   const [paying, setPaying] = useState<InstallmentTableItem | null>(null);
   const [editing, setEditing] = useState<InstallmentTableItem | null>(null);
@@ -262,7 +264,7 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap justify-end gap-2">
-                      {installment.status === "bekliyor" ? (
+                      {allowPay && installment.status === "bekliyor" ? (
                         <button
                           type="button"
                           onClick={() => openPayModal(installment)}
@@ -354,7 +356,7 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {installment.status === "bekliyor" ? (
+                  {allowPay && installment.status === "bekliyor" ? (
                     <button
                       type="button"
                       onClick={() => openPayModal(installment)}

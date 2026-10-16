@@ -10,6 +10,7 @@ import {
   type OverdueRow,
   type OverdueSort,
 } from "@/lib/overdue";
+import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,20 @@ export default async function GecikenlerPage({ searchParams }: { searchParams: S
     .select("installment_id, student_id, student_name, family_phone, due_date, amount, days_overdue, item_type, season")
     .order("due_date", { ascending: true });
 
-  const students = sortOverdue(groupOverdueByStudent((data ?? []) as OverdueRow[]), sort);
+  const sorted = sortOverdue(groupOverdueByStudent((data ?? []) as OverdueRow[]), sort);
+  const traces = await fetchPaymentTraces(supabase, sorted.map((student) => student.studentId));
+  const lastReminderOf = (studentId: string, ids: string[]) =>
+    ids
+      .flatMap((id) => traces.reminders.get(id) ?? [])
+      .sort((a, b) => b.at.localeCompare(a.at))[0] ?? null;
+  const withReminder = sorted.map((student) => ({
+    student,
+    lastReminder: lastReminderOf(student.studentId, student.items.map((item) => item.installmentId)),
+  }));
+  // Hatırlatılmamış veliler üstte; kendi içinde seçilen sıralama korunur.
+  const ordered = [...withReminder.filter((entry) => !entry.lastReminder), ...withReminder.filter((entry) => entry.lastReminder)];
+  const students = ordered.map((entry) => entry.student);
+  const notReminded = withReminder.filter((entry) => !entry.lastReminder).length;
   const totals = overdueTotals(students);
 
   return (
@@ -39,7 +53,7 @@ export default async function GecikenlerPage({ searchParams }: { searchParams: S
         <Link href="/odemeler" className="text-sm font-medium text-muted-foreground hover:underline">← Ödemeler</Link>
         <h1 className="mt-1 text-3xl font-semibold text-foreground">Gecikenler</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Vadesi geçmiş, hâlâ bekleyen taksitler. WhatsApp düğmesi hazır bir hatırlatma metniyle kendi telefonunuzda açılır; göndermeden önce düzenleyebilirsiniz.
+          Vadesi geçmiş, hâlâ bekleyen ödemeler. Hatırlatılmamış veliler en üstte. “WhatsApp ile hatırlat” hazır mesajı telefonunuzda açar ve kimin ne zaman hatırlattığını kaydeder.
         </p>
       </div>
 
@@ -57,6 +71,7 @@ export default async function GecikenlerPage({ searchParams }: { searchParams: S
             <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
               <p className="text-sm font-medium text-muted-foreground">Öğrenci</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{totals.students}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{notReminded} veli henüz hatırlatılmadı</p>
             </div>
             <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
               <p className="text-sm font-medium text-muted-foreground">Taksit</p>
@@ -85,8 +100,8 @@ export default async function GecikenlerPage({ searchParams }: { searchParams: S
             </p>
           ) : (
             <ul className="space-y-3">
-              {students.map((student) => (
-                <OverdueStudentCard key={student.studentId} student={student} />
+              {ordered.map(({ student, lastReminder }) => (
+                <OverdueStudentCard key={student.studentId} student={student} lastReminder={lastReminder} />
               ))}
             </ul>
           )}
