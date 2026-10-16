@@ -4,7 +4,7 @@ import type { AdsStore, PendingConversion, SpendRow, UploadOutcome } from "@/lib
 import type { AdsConfig } from "@/lib/ads/config";
 
 const CFG: AdsConfig = {
-  developerToken: "d", clientId: "c", clientSecret: "s", refreshToken: "r",
+  clientId: "c", clientSecret: "s", refreshToken: "r",
   customerId: "1234567890", loginCustomerId: null, conversionActionIds: { randevu: "111", kayit: "222" },
 };
 

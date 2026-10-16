@@ -8,7 +8,7 @@
  *
  * Güvenlik: betik hiçbir gizli değeri (token, secret, müşteri kimliği) yazdırmaz. 3. adım validateOnly: true ile
  * yapılır; Data Manager hiçbir veri yazmaz. Sahte gclid ile 400 dönmesi bağlantı ve yetkinin doğru olduğu anlamına gelir.
- * Geliştirici belirteci yoksa harcama adımı atlanır (Ads API okuması belirteç ister); validateOnly adımı yine çalışır.
+ * Harcama adımı CLOUD_PROJECT_NOT_APPROVED_FOR_PRODUCTION verirse Cloud projesi için Explorer erişimi istenmelidir.
  */
 import "dotenv/config";
 import { readAdsConfig } from "../../lib/ads/config";
@@ -22,11 +22,12 @@ async function main() {
   const token = await getAccessToken(cfg);
   console.log("1/3 OAuth: tamam");
 
-  if (cfg.developerToken) {
+  try {
     const rows = await fetchCampaignSpend(cfg, token, istanbulDaysAgo(7), istanbulDaysAgo(1));
     console.log(`2/3 Harcama: son 7 günde ${rows.length} kampanya-gün satırı`);
-  } else {
-    console.log("2/3 Harcama: geliştirici belirteci yok — harcama adımı atlandı");
+  } catch (error) {
+    // Harcama hatası dönüşüm kontrolünü durdurmaz; ikisi ayrı yetkilere bağlı.
+    console.log(`2/3 Harcama: HATA — ${(error as Error).message}`);
   }
 
   const destination: Record<string, unknown> = {

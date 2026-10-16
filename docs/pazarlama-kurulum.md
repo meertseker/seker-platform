@@ -15,16 +15,20 @@
       Authorized redirect URI: `https://developers.google.com/oauthplayground`.
       Client ID ve secret'ı not et → `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`.
 
-## 2. Developer token
-- [ ] ads.google.com → Yönetici hesabı (MCC) yoksa oluştur, okulun reklam hesabını bağla.
-- [ ] MCC → Tools → API Center → developer token al (başta "Test" seviyesinde gelir).
-- [ ] Aynı ekrandan **Explorer access** başvurusu yap (canlı hesaplara günde 2.880 işlem; bizim ihtiyacımız günde ~5).
-      Token → `GOOGLE_ADS_DEVELOPER_TOKEN`. MCC ID (tiresiz) → `GOOGLE_ADS_LOGIN_CUSTOMER_ID`.
-- [ ] Okulun reklam hesabı ID'si (tiresiz) → `GOOGLE_ADS_CUSTOMER_ID`.
-- Not: Dönüşümler Data Manager API ile OAuth üzerinden yüklenir. Developer token yalnızca harcamayı
-  okumak (Google Ads API searchStream) için gerekir. Token onaylanana kadar harcama "Token beklerken"
-  bölümündeki CSV ile yüklenebilir; dönüşüm yüklemeleri ise OAuth, müşteri ID'si ve dönüşüm işlem ID'leri
-  hazır olunca çalışabilir.
+## 2. API erişimi (developer token artık yok)
+> Google, developer token'ı **9 Eylül 2026'da kaldırdı**. Erişim düzeyi artık OAuth istemcisinin bulunduğu
+> Google Cloud projesine bağlı. API Center'dan başvuru yapmayın; o başvurular işlenmiyor.
+> Kaynak: https://developers.google.com/google-ads/api/docs/first-call/dev-token
+- [ ] §1'deki Cloud projesinde **faturalandırma hesabı bağlı ve aktif** olsun. Free Trial veya askıdaki
+      faturalandırma, Explorer onayını engelliyor (Google'ın bilinen sorunu). Google Ads API ücretsiz; bu sadece uygunluk şartı.
+- [ ] Cloud Console → APIs & Services → **Google Ads API** → Overview → "Upgrade access level" → Next access level
+      **Explorer** → **Apply for access**. Otomatik incelenir (canlı hesaplara günde 2.880 işlem; bizim ihtiyacımız günde ~5).
+- [ ] Onay gelmeden harcama sorgusu `CLOUD_PROJECT_NOT_APPROVED_FOR_PRODUCTION` hatası verir; panel bunu
+      "Explorer erişimi almadı" diye bildirir. Dönüşüm gönderimi (Data Manager API) bundan etkilenmez.
+- [ ] Google Ads'te yönetici hesabı (MCC) **gerekmez**. Varsa MCC ID'si (tiresiz) → `GOOGLE_ADS_LOGIN_CUSTOMER_ID`, yoksa boş bırak.
+- [ ] Okulun reklam hesabı ID'si (sağ üstteki 123-456-7890, tiresiz) → `GOOGLE_ADS_CUSTOMER_ID`.
+- Bilinen sorun: proje 9 Eylül'den önce Test düzeyinde kullanıldıysa ve sonradan yükseltildiyse `AUTHORIZATION_ERROR`
+  alabilir. Çözüm: yeni bir Cloud projesi açıp oradan Explorer başvurusu.
 
 ## 3. Refresh token
 - [ ] https://developers.google.com/oauthplayground → sağ üst dişli → "Use your own OAuth credentials" → client ID/secret.
@@ -48,7 +52,7 @@
       Böylece sitenin yakaladığı `utm_campaign` = kampanya ID'si olur ve panel adayları kampanyaya bağlar.
 
 ## 6. Sunucu
-- [ ] Yukarıdaki 8 değeri `/opt/seker/.env` dosyasına ekle, `docker compose up -d panel` ile paneli yeniden başlat.
+- [ ] Yukarıdaki 7 değeri (`GOOGLE_ADS_LOGIN_CUSTOMER_ID` boş olabilir) `/opt/seker/.env` dosyasına ekle, `docker compose up -d panel` ile paneli yeniden başlat.
 
 ## 7. Veri rızası ve geri çekme
 - Eski siteden içe aktarılan adaylar hiçbir zaman Google'a gönderilmez. Bunların eski rızası yalnızca telefon görüşmesini kapsıyordu.
@@ -68,13 +72,11 @@
 
 ### 8a. Ortam değişkenlerini oturuma ver ve betiği çalıştır
 Değerleri `<…>` yerlerine kendi kasanızdan yapıştırın; değerleri sohbete, dosyaya veya commit'e yazmayın.
-Geliştirici belirteci henüz onaylı değilse `GOOGLE_ADS_DEVELOPER_TOKEN` satırını boş bırakın (ya da hiç ayarlamayın):
-betik harcama adımını atlar, doğrulama adımı yine çalışır.
+Explorer onayı henüz gelmediyse 2. adım hata yazar ama 3. adım (dönüşüm doğrulaması) yine çalışır.
 
 PowerShell:
 ```powershell
 cd apps/panel
-$env:GOOGLE_ADS_DEVELOPER_TOKEN = "<developer-token>"
 $env:GOOGLE_ADS_CLIENT_ID = "<client-id>"
 $env:GOOGLE_ADS_CLIENT_SECRET = "<client-secret>"
 $env:GOOGLE_ADS_REFRESH_TOKEN = "<refresh-token>"
@@ -89,7 +91,6 @@ Remove-Item Env:GOOGLE_ADS_*
 bash:
 ```bash
 cd apps/panel
-export GOOGLE_ADS_DEVELOPER_TOKEN="<developer-token>"
 export GOOGLE_ADS_CLIENT_ID="<client-id>"
 export GOOGLE_ADS_CLIENT_SECRET="<client-secret>"
 export GOOGLE_ADS_REFRESH_TOKEN="<refresh-token>"
@@ -98,26 +99,25 @@ export GOOGLE_ADS_LOGIN_CUSTOMER_ID="<mcc-id>"
 export GOOGLE_ADS_CONVERSION_ACTION_RANDEVU="<randevu-ctid>"
 export GOOGLE_ADS_CONVERSION_ACTION_KAYIT="<kayit-ctid>"
 pnpm ads:check
-unset GOOGLE_ADS_DEVELOPER_TOKEN GOOGLE_ADS_CLIENT_ID GOOGLE_ADS_CLIENT_SECRET GOOGLE_ADS_REFRESH_TOKEN \
+unset GOOGLE_ADS_CLIENT_ID GOOGLE_ADS_CLIENT_SECRET GOOGLE_ADS_REFRESH_TOKEN \
       GOOGLE_ADS_CUSTOMER_ID GOOGLE_ADS_LOGIN_CUSTOMER_ID GOOGLE_ADS_CONVERSION_ACTION_RANDEVU GOOGLE_ADS_CONVERSION_ACTION_KAYIT
 ```
 
 ### 8b. Beklenen sonuç ve sorun giderme
-- [ ] Beklenen çıktı (belirteç varsa):
+- [ ] Beklenen çıktı:
       ```
       1/3 OAuth: tamam
       2/3 Harcama: son 7 günde N kampanya-gün satırı
       3/3 Data Manager (validateOnly): HTTP 200 …
       ```
-- [ ] Belirteç yoksa 2. satır "geliştirici belirteci yok — harcama adımı atlandı" olur. Harcama kontrolü
-      (searchStream) onaylı geliştirici belirtecini gerektirir; o zamana kadar bu adım doğrulanmış sayılmaz.
+- [ ] 2. satır `HATA — … CLOUD_PROJECT_NOT_APPROVED_FOR_PRODUCTION …` ise Explorer başvurusu (§2) henüz onaylanmamıştır.
 - [ ] 3. adımda HTTP 400 ve mesaj "gclid" ile ilgiliyse (sahte gclid) bağlantı ve yetki doğrudur; sorun yok.
 - [ ] 401 veya 403 ise: §1'deki kapsamları (scope), "In production" durumunu ve Data Manager API'nin etkin
       olduğunu kontrol et.
 - [ ] Betik hiçbir gizli değer yazdırmaz; çıktıyı yine de paylaşmadan önce gözden geçir.
 
 ### 8c. Cron'u bir kez elle tetikleme (sunucu)
-- [ ] Bu adım harcama çektiği için onaylı geliştirici belirteci gerektirir.
+- [ ] Bu adım harcama çektiği için Cloud projesinin Explorer erişimi almış olması gerekir.
 - [ ] `docker compose -f /opt/seker/docker-compose.yml exec cron sh -c 'curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://panel:3000/api/cron/ads'`
       Beklenen: `{"ok":true,"spendRows":N,"sent":0,"failed":0,"skipped":0}` (N ≥ 0).
 - [ ] Panel → Pazarlama tablosunda dünün harcamasının göründüğünü doğrula.
@@ -131,6 +131,6 @@ unset GOOGLE_ADS_DEVELOPER_TOKEN GOOGLE_ADS_CLIENT_ID GOOGLE_ADS_CLIENT_SECRET G
 - [ ] Not: "Gönderildi" yalnızca Google'ın isteği kabul ettiği anlamına gelir (satırdaki `requestId: …` Data Manager yanıt
       kimliğidir); dönüşümün gerçekten hesaba yazıldığı Google Ads'te doğrulanır.
 
-## Token beklerken
+## Explorer onayı beklerken
 - Google Ads → Raporlar → Kampanyalar raporu; segment "Gün"; kolonlar: Gün, Kampanya kimliği, Kampanya, Maliyet,
   Tıklamalar, Gösterimler → İndir → CSV. Panel → Pazarlama → "Harcama CSV'si yükle".

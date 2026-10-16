@@ -13,13 +13,8 @@ describe("adsStatusLines", () => {
     expect(l.spend).toBe("Google Ads bağlantısı yok — harcamayı CSV ile yükleyin");
     expect(l.conversion).toBe("kapalı (Google bağlantısı kurulmadı); bekleyen kayıtlar bağlantı kurulunca gönderilir");
   });
-  it("belirteç yoksa harcama hâlâ CSV, dönüşüm açık", () => {
-    const l = adsStatusLines({ ...base, developerToken: null } as AdsConfig);
-    expect(l.spend).toBe("Google Ads bağlantısı yok — harcamayı CSV ile yükleyin");
-    expect(l.conversion).toBe("açık");
-  });
-  it("belirteç varsa harcama otomatik", () => {
-    const l = adsStatusLines({ ...base, developerToken: "t" } as AdsConfig);
+  it("yapılandırma varsa harcama otomatik, dönüşüm açık", () => {
+    const l = adsStatusLines(base as AdsConfig);
     expect(l.spend).toBe("her sabah 06:00'da otomatik");
     expect(l.conversion).toBe("açık");
   });

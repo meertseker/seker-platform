@@ -9,7 +9,7 @@ import {
 } from "@/lib/ads/googleAds";
 
 const FULL_ENV = {
-  GOOGLE_ADS_DEVELOPER_TOKEN: "dev-token",
+  GOOGLE_ADS_DEVELOPER_TOKEN: "eski-belirtec",
   GOOGLE_ADS_CLIENT_ID: "client-id",
   GOOGLE_ADS_CLIENT_SECRET: "client-secret",
   GOOGLE_ADS_REFRESH_TOKEN: "refresh",
@@ -22,7 +22,6 @@ const FULL_ENV = {
 describe("readAdsConfig", () => {
   it("tüm değerler varsa yapılandırmayı tiresiz müşteri ID'siyle döner", () => {
     expect(readAdsConfig(FULL_ENV)).toEqual({
-      developerToken: "dev-token",
       clientId: "client-id",
       clientSecret: "client-secret",
       refreshToken: "refresh",
@@ -40,11 +39,10 @@ describe("readAdsConfig", () => {
     expect(readAdsConfig({ ...FULL_ENV, GOOGLE_ADS_LOGIN_CUSTOMER_ID: "999-888-7777" })?.loginCustomerId).toBe("9998887777");
   });
 
-  it("developer token yoksa yapılandırma döner, developerToken null", () => {
+  it("developer token gerekmez (Google 9 Eylül 2026'da kaldırdı); verilse de yok sayılır", () => {
     const cfg = readAdsConfig({ ...FULL_ENV, GOOGLE_ADS_DEVELOPER_TOKEN: "" });
     expect(cfg).not.toBeNull();
-    expect(cfg?.developerToken).toBeNull();
-    expect(cfg?.clientId).toBe("client-id");
+    expect(cfg).not.toHaveProperty("developerToken");
     expect(cfg?.conversionActionIds).toEqual({ randevu: "111", kayit: "222" });
   });
 
@@ -54,7 +52,6 @@ describe("readAdsConfig", () => {
 });
 
 const CFG: AdsConfig = {
-  developerToken: "dev-token",
   clientId: "cid",
   clientSecret: "csecret",
   refreshToken: "rtok",
@@ -126,9 +123,9 @@ describe("fetchCampaignSpend", () => {
     expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(init.headers).toMatchObject({
       authorization: "Bearer acc",
-      "developer-token": "dev-token",
       "login-customer-id": "9998887777",
     });
+    expect(init.headers).not.toHaveProperty("developer-token");
     expect(JSON.parse(init.body).query).toContain("segments.date BETWEEN '2026-10-12' AND '2026-10-12'");
   });
 
@@ -138,12 +135,13 @@ describe("fetchCampaignSpend", () => {
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
-  it("developer token yoksa istek atmadan 'developer token yok' hatası verir", async () => {
-    const fetchFn = vi.fn();
-    const cfg = { ...CFG, developerToken: null };
-    await expect(fetchCampaignSpend(cfg, "acc", "2026-10-12", "2026-10-12", fetchFn)).rejects.toThrow("developer token yok");
-    await expect(searchStream(cfg, "acc", "SELECT campaign.id FROM campaign", fetchFn)).rejects.toThrow("developer token yok");
-    expect(fetchFn).not.toHaveBeenCalled();
+  it("Cloud projesi Explorer erişimi almamışsa hata Türkçe ipucu taşır", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(
+      jsonResponse({ error: { message: "CLOUD_PROJECT_NOT_APPROVED_FOR_PRODUCTION" } }, 403),
+    );
+    await expect(searchStream(CFG, "acc", "SELECT campaign.id FROM campaign", fetchFn)).rejects.toThrow(
+      "Explorer erişimi almadı",
+    );
   });
 
   it("MCC ID'si yoksa login-customer-id başlığı gönderilmez", async () => {

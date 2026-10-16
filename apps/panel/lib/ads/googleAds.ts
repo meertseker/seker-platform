@@ -54,16 +54,13 @@ export async function getAccessToken(cfg: AdsConfig, fetchFn: FetchFn = fetch): 
   return data.access_token;
 }
 
-/** Google Ads API için geliştirici belirteci zorunludur; yoksa istek atılmadan hata verilir. */
-function requireDeveloperToken(cfg: AdsConfig): string {
-  if (!cfg.developerToken) throw new Error("developer token yok");
-  return cfg.developerToken;
-}
-
-function adsHeaders(cfg: AdsConfig, token: string, developerToken: string): Record<string, string> {
+/**
+ * developer-token başlığı gönderilmez: Google 9 Eylül 2026'da belirteçleri kaldırdı, başlığı yok sayıyor ve
+ * gelecek bir ana sürümde reddedecek. Erişim düzeyi OAuth istemcisinin Cloud projesinden gelir.
+ */
+function adsHeaders(cfg: AdsConfig, token: string): Record<string, string> {
   const headers: Record<string, string> = {
     authorization: `Bearer ${token}`,
-    "developer-token": developerToken,
     "content-type": "application/json",
   };
   if (cfg.loginCustomerId) headers["login-customer-id"] = cfg.loginCustomerId;
@@ -77,16 +74,19 @@ export async function searchStream(
   query: string,
   fetchFn: FetchFn = fetch,
 ): Promise<unknown[]> {
-  const developerToken = requireDeveloperToken(cfg);
   const url = `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${cfg.customerId}/googleAds:searchStream`;
   const response = await fetchFn(url, {
     method: "POST",
-    headers: adsHeaders(cfg, token, developerToken),
+    headers: adsHeaders(cfg, token),
     body: JSON.stringify({ query }),
     signal: AbortSignal.timeout(ADS_TIMEOUT_MS),
   });
   if (!response.ok) {
-    throw new GoogleApiError(`Google Ads sorgusu başarısız: ${await errorText(response)}`, response.status);
+    const text = await errorText(response);
+    const hint = /CLOUD_PROJECT_NOT_APPROVED_FOR_PRODUCTION|ACTION_NOT_PERMITTED/.test(text)
+      ? " (Google Cloud projesi henüz Explorer erişimi almadı; kurulum belgesi §2)"
+      : "";
+    throw new GoogleApiError(`Google Ads sorgusu başarısız: ${text}${hint}`, response.status);
   }
   const batches: unknown = await response.json();
   if (!Array.isArray(batches)) {

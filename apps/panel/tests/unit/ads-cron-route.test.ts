@@ -42,7 +42,6 @@ import { NextRequest } from "next/server";
 import { GET } from "@/app/api/cron/ads/route";
 
 const ADS_ENV = {
-  GOOGLE_ADS_DEVELOPER_TOKEN: "dev",
   GOOGLE_ADS_CLIENT_ID: "cid",
   GOOGLE_ADS_CLIENT_SECRET: "csec",
   GOOGLE_ADS_REFRESH_TOKEN: "rt",
@@ -152,28 +151,29 @@ describe("GET /api/cron/ads", () => {
   it("harcama patlasa da yüklemeler çalışır; 500 ve bildirim", async () => {
     stubAdsEnv();
     getAccessToken.mockResolvedValue("tok");
-    fetchCampaignSpend.mockRejectedValue(new Error("403 developer token onaysız"));
+    fetchCampaignSpend.mockRejectedValue(new Error("403 CLOUD_PROJECT_NOT_APPROVED_FOR_PRODUCTION"));
     store.listPending.mockResolvedValue([pending]);
     ingestConversion.mockResolvedValue({ ok: true, requestId: "r" });
     const response = await GET(request("Bearer s3cret"));
     expect(response.status).toBe(500);
     const body = await response.json();
-    expect(body).toMatchObject({ ok: false, sent: 1, failed: 0, skipped: 0, spendRows: "token_yok" });
+    expect(body).toMatchObject({ ok: false, sent: 1, failed: 0, skipped: 0, spendRows: null });
     expect(body.error).toContain("Harcama:");
     expect(ingestConversion).toHaveBeenCalledTimes(1);
     expect(store.saveOutcomes).toHaveBeenCalledTimes(1);
     expect(inserts).toHaveLength(2);
   });
 
-  it("geliştirici belirteci yoksa harcama atlanır, dönüşümler yine gider, hata yok", async () => {
-    stubAdsEnv({ GOOGLE_ADS_DEVELOPER_TOKEN: "" });
+  it("developer token olmadan da harcama çekilir ve dönüşümler gider", async () => {
+    stubAdsEnv();
     getAccessToken.mockResolvedValue("tok");
+    fetchCampaignSpend.mockResolvedValue([]);
     store.listPending.mockResolvedValue([pending]);
     ingestConversion.mockResolvedValue({ ok: true, requestId: "r" });
     const response = await GET(request("Bearer s3cret"));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, spendRows: "token_yok", sent: 1, failed: 0, skipped: 0 });
-    expect(fetchCampaignSpend).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({ ok: true, spendRows: 0, sent: 1, failed: 0, skipped: 0 });
+    expect(fetchCampaignSpend).toHaveBeenCalledTimes(1);
   });
 
   it("saveOutcomes patlarsa hata kaydedilir ve bildirilir", async () => {

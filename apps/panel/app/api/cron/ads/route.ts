@@ -38,20 +38,18 @@ export async function GET(req: NextRequest) {
 
   const db = createAdminSupabase();
   const errors: string[] = [];
-  let spendRows: number | "token_yok" = "token_yok";
+  let spendRows: number | null = null;
   let upload = { sent: 0, failed: 0, skipped: 0 };
 
   try {
     const token = await getAccessToken(cfg);
     const deps = { cfg, token, store: supabaseAdsStore(db) };
 
-    // Harcama ve dönüşüm birbirinden bağımsız: geliştirici belirteci onaylanmadan harcama patlasa da dönüşümler gider.
-    if (cfg.developerToken) {
-      try {
-        spendRows = await syncSpend(deps, istanbulDaysAgo(RESYNC_DAYS), istanbulDaysAgo(1));
-      } catch (e) {
-        errors.push(`Harcama: ${(e as Error).message.slice(0, 240)}`);
-      }
+    // Harcama ve dönüşüm birbirinden bağımsız: Cloud projesi Explorer erişimi almadan harcama patlasa da dönüşümler gider.
+    try {
+      spendRows = await syncSpend(deps, istanbulDaysAgo(RESYNC_DAYS), istanbulDaysAgo(1));
+    } catch (e) {
+      errors.push(`Harcama: ${(e as Error).message.slice(0, 240)}`);
     }
     try {
       upload = await uploadPending(deps);
