@@ -111,7 +111,9 @@ unset GOOGLE_ADS_CLIENT_ID GOOGLE_ADS_CLIENT_SECRET GOOGLE_ADS_REFRESH_TOKEN \
       3/3 Data Manager (validateOnly): HTTP 200 …
       ```
 - [ ] 2. satır `HATA — … CLOUD_PROJECT_NOT_APPROVED_FOR_PRODUCTION …` ise Explorer başvurusu (§2) henüz onaylanmamıştır.
-- [ ] 3. adımda HTTP 400 ve mesaj "gclid" ile ilgiliyse (sahte gclid) bağlantı ve yetki doğrudur; sorun yok.
+- [ ] 3. adımda HTTP 400 ve `events.events[0].destination_references` / `Resource not found` (NOT_FOUND) dönerse
+      bu sahte gclid'in hesapta bulunmamasıdır; bağlantı, yetki ve dönüşüm ID'si doğrudur (2026-10-16 doğrulandı).
+      Dönüşüm ID'si yanlışsa `INVALID_CONVERSION_ACTION_ID`, hesap yanlışsa 403 gelir.
 - [ ] 401 veya 403 ise: §1'deki kapsamları (scope), "In production" durumunu ve Data Manager API'nin etkin
       olduğunu kontrol et.
 - [ ] Betik hiçbir gizli değer yazdırmaz; çıktıyı yine de paylaşmadan önce gözden geçir.
