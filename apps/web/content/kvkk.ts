@@ -29,6 +29,7 @@ export const KVKK_TEXT: { updatedOn: string; sections: KvkkSection[] } = {
         'Başvuru bilgisi: formun doldurulduğu sayfa, tarih ve saat, onay kaydı.',
         'Reklam ve pazarlama bilgisi: bir Google reklamına tıklayarak geldiyseniz reklam tıklama kimliği (gclid) ve kampanya bilgisi (UTM parametreleri).',
         'Görüşme süreci: sizinle yaptığımız görüşme, randevu ve kayıt aşamalarına ilişkin notlar.',
+        'Site kullanım bilgisi (yalnızca çerezlere onay verirseniz): ziyaret ettiğiniz sayfalar, siteye hangi kaynaktan geldiğiniz, cihaz ve tarayıcı türü, yaklaşık konum (şehir düzeyi).',
       ],
     },
     {
@@ -39,6 +40,7 @@ export const KVKK_TEXT: { updatedOn: string; sections: KvkkSection[] } = {
         'Başvurunuza dönüş yapmak, sizi aramak, WhatsApp üzerinden yazmak ve okul ziyareti randevusu oluşturmak.',
         'Kayıt sürecini yürütmek ve kayıt olmanız halinde sözleşme ilişkisini kurmak.',
         'Hangi reklam ve sayfaların başvuru ve kayıt getirdiğini ölçmek; bu amaçla başvurunuzun bir randevuya veya kayda dönüştüğü bilgisini, reklam tıklama kimliğiyle birlikte Google\'a bildirmek.',
+        'Sitemizin nasıl kullanıldığını ölçmek ve geliştirmek (Google Analytics; yalnızca çerez onayınızla).',
         'Yasal yükümlülüklerimizi yerine getirmek ve olası uyuşmazlıklarda hakkımızı korumak.',
       ],
     },
@@ -57,7 +59,8 @@ export const KVKK_TEXT: { updatedOn: string; sections: KvkkSection[] } = {
         'Verilerinizi satmıyoruz. Yalnızca hizmeti yürütmek için aşağıdaki hizmet sağlayıcılarla, bu amaçla sınırlı olarak paylaşıyoruz. Bu sağlayıcıların sunucuları yurt dışındadır; aktarım KVKK md. 9 kapsamında açık rızanıza ve/veya Kurul\'un öngördüğü standart sözleşmelere dayanır.',
       ],
       items: [
-        'Google (Google Ads, Google Tag Manager): reklam ölçümü; başvurunuzun randevu veya kayda dönüştüğü bilgisi reklam tıklama kimliğiyle birlikte bildirilir. Ad ve telefon numaranız Google Ads\'e gönderilmez; reklam ölçümü için yalnızca tıklama kimliği ve kampanya bilgisi paylaşılır.',
+        'Google Analytics: site kullanım istatistikleri; yalnızca çerezleri kabul ederseniz çerez kullanılır. Form bilgileriniz (ad, telefon) Google Analytics\'e gönderilmez (yurt dışı).',
+        'Google (Google Ads): reklam ölçümü; başvurunuzun randevu veya kayda dönüştüğü bilgisi reklam tıklama kimliğiyle birlikte bildirilir. Ad ve telefon numaranız Google Ads\'e gönderilmez; reklam ölçümü için yalnızca tıklama kimliği ve kampanya bilgisi paylaşılır.',
         'Supabase: başvuru ve kayıt bilgilerinin saklandığı veritabanı (Avrupa Birliği, Frankfurt [OKULDAN TEYİT ALINACAK: Supabase proje bölgesi]).',
         'Amazon Web Services: web sitesi ve okul yönetim panelinin çalıştığı sunucu ve yedekler (Avrupa Birliği, Frankfurt).',
         'Resend: yeni başvuru bildiriminin okul yönetimine e-posta ile iletilmesi (ABD).',

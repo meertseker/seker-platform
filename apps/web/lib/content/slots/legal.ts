@@ -1,5 +1,6 @@
 import type { SlotDef } from '../types';
 import { KVKK_TEXT } from '@/content/kvkk';
+import { CEREZ_DESC, CEREZ_HTML } from '@/content/cerez';
 import { limitFor, metaDescriptionMax } from './limits';
 
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -25,8 +26,6 @@ const PLACEHOLDER = (what: string) =>
 const GIZLILIK_DESC = 'Özel Şeker Anaokulu kişisel verilerin korunması aydınlatma metni.';
 const KULLANIM_DESC =
   'Bu sayfa şu anda hazırlanmaktadır. Kullanım şartlarımız hakkında bilgi almak için bizimle iletişime geçebilirsiniz.';
-const CEREZ_DESC =
-  'Bu sayfa şu anda hazırlanmaktadır. Çerez politikamız hakkında bilgi almak için bizimle iletişime geçebilirsiniz.';
 
 const title = (label: string, def: string): SlotDef => ({ kind: 'text', label, default: def, max: 80, warn: WARN });
 const body = (label: string, def: string): SlotDef => ({
@@ -57,7 +56,7 @@ export const LEGAL_SLOTS: Record<string, SlotDef> = {
   'legal.kullanim.body': body('Kullanım şartları metni', PLACEHOLDER('Kullanım şartlarımız')),
 
   'legal.cerez.title': title('Sayfa başlığı', 'Çerez Politikası'),
-  'legal.cerez.body': body('Çerez politikası metni', PLACEHOLDER('Çerez politikamız')),
+  'legal.cerez.body': body('Çerez politikası metni', CEREZ_HTML),
 
   'legal.common.contactCta': { kind: 'text', label: 'İletişim düğmesi', default: 'İletişim', max: limitFor('İletişim') },
 };

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { trackEvent, LEAD_VALUE_BY_AGE, leadValue, trackLead } from '../analytics';
 import { AGE_GROUPS } from '@/content/ageGroups';
 
@@ -15,6 +15,30 @@ describe('trackEvent', () => {
   it('payload olmadan çalışır', () => {
     trackEvent('whatsapp_click');
     expect(window.dataLayer).toEqual([{ event: 'whatsapp_click' }]);
+  });
+
+  it('GA4 kimliği ve gtag varsa olay GA4 hedefine de gönderilir', () => {
+    const gtag = vi.fn();
+    window.gtag = gtag;
+    process.env.NEXT_PUBLIC_GA4_ID = 'G-TEST';
+    try {
+      trackEvent('tel_click', { location: 'header' });
+      expect(gtag).toHaveBeenCalledWith('event', 'tel_click', { location: 'header', send_to: 'G-TEST' });
+    } finally {
+      delete window.gtag;
+      delete process.env.NEXT_PUBLIC_GA4_ID;
+    }
+  });
+
+  it('GA4 kimliği yoksa gtag çağrılmaz', () => {
+    const gtag = vi.fn();
+    window.gtag = gtag;
+    try {
+      trackEvent('tel_click');
+      expect(gtag).not.toHaveBeenCalled();
+    } finally {
+      delete window.gtag;
+    }
   });
 
   it('dataLayer tanımsızsa hata fırlatmaz', () => {

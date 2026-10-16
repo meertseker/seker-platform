@@ -14,6 +14,10 @@ export function trackEvent(name: TrackedEvent, payload: Record<string, unknown> 
   // Öğretmen siteyi düzenlerken bağlantılara tıklaması reklam/analitik olayı üretmemeli.
   if (document.body.classList.contains('seker-editing')) return;
   window.dataLayer.push({ event: name, ...payload });
+  // GA4 doğrudan gtag.js ile yüklüyse olay ona da gider (dataLayer nesneleri yalnız GTM'in işidir).
+  // send_to yalnız GA4: Google Ads etiketine dönüşüm olmayan olay gönderilmez. Onay yoksa gtag çerez yazmaz.
+  const ga4Id = process.env.NEXT_PUBLIC_GA4_ID;
+  if (ga4Id && window.gtag) window.gtag('event', name, { ...payload, send_to: ga4Id });
 }
 
 /**

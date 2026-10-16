@@ -24,6 +24,7 @@ describe('Analytics', () => {
     editing = false;
     process.env.NEXT_PUBLIC_GTM_ID = 'GTM-TEST';
     process.env.NEXT_PUBLIC_GOOGLE_ADS_TAG_ID = '';
+    process.env.NEXT_PUBLIC_GA4_ID = '';
   });
 
   it('ziyaretçiye GTM betiğini verir', async () => {
@@ -45,9 +46,26 @@ describe('Analytics', () => {
     expect(html).not.toContain('data-id="gtm"');
   });
 
+  it('Google Ads ve GA4 birlikteyse gtag.js bir kez yüklenir, iki config çağrılır', async () => {
+    process.env.NEXT_PUBLIC_GTM_ID = '';
+    process.env.NEXT_PUBLIC_GOOGLE_ADS_TAG_ID = 'AW-18516861263';
+    process.env.NEXT_PUBLIC_GA4_ID = 'G-ABC123XYZ';
+    const html = await markup();
+    expect(html.match(/gtag\/js\?id=/g)).toHaveLength(1);
+    expect(html).toContain("window.gtag('config', 'AW-18516861263')");
+    expect(html).toContain("window.gtag('config', 'G-ABC123XYZ')");
+  });
+
+  it('yalnız GA4 varsa gtag.js GA4 kimliğiyle yüklenir', async () => {
+    process.env.NEXT_PUBLIC_GTM_ID = '';
+    process.env.NEXT_PUBLIC_GA4_ID = 'G-ABC123XYZ';
+    expect(await markup()).toContain('gtag/js?id=G-ABC123XYZ');
+  });
+
   it('biçimi bozuk etiket kimliği yok sayılır (betik enjeksiyonu yok)', async () => {
     process.env.NEXT_PUBLIC_GTM_ID = '';
     process.env.NEXT_PUBLIC_GOOGLE_ADS_TAG_ID = "AW-1');alert(1);//";
+    process.env.NEXT_PUBLIC_GA4_ID = "G-1');alert(1);//";
     expect(await Analytics()).toBeNull();
   });
 

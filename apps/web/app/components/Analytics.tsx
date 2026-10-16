@@ -1,20 +1,28 @@
 import Script from 'next/script';
 import { isEditing } from '@/lib/content/getContent';
 
-/** Google Ads etiketi (gtag.js) kimliği; yalnızca AW-<rakam> biçimi kabul edilir. */
+/** gtag.js ile yüklenen Google etiketleri: Google Ads (AW-<rakam>) ve Google Analytics 4 (G-<harf/rakam>). */
 const ADS_TAG_ID = /^AW-\d+$/;
+const GA4_ID = /^G-[A-Z0-9]+$/;
+
+function validId(raw: string | undefined, pattern: RegExp): string {
+  const value = raw?.trim() ?? '';
+  return pattern.test(value) ? value : '';
+}
 
 export default async function Analytics() {
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
-  const rawAdsTagId = process.env.NEXT_PUBLIC_GOOGLE_ADS_TAG_ID?.trim() ?? '';
-  const adsTagId = ADS_TAG_ID.test(rawAdsTagId) ? rawAdsTagId : '';
-  if (!gtmId && !adsTagId) return null;
+  const gtagIds = [
+    validId(process.env.NEXT_PUBLIC_GOOGLE_ADS_TAG_ID, ADS_TAG_ID),
+    validId(process.env.NEXT_PUBLIC_GA4_ID, GA4_ID),
+  ].filter(Boolean);
+  if (!gtmId && gtagIds.length === 0) return null;
   // Düzenleme (draft) modunda etiketler yüklenmez: öğretmenin gezintisi ölçüme karışmasın.
   if (await isEditing()) return null;
 
-  // Onay varsayılanları (ConsentDefaults) beforeInteractive ile önce kurulur; Google etiketi veli
-  // çerezleri kabul edene kadar çerez yazmaz. GTM'e ayrıca bir Google Ads etiketi eklenirse bu değişken
-  // boşaltılmalı, yoksa etiket iki kez çalışır.
+  // Onay varsayılanları (ConsentDefaults) beforeInteractive ile önce kurulur; Google etiketleri veli
+  // çerezleri kabul edene kadar çerez yazmaz. GTM'e ayrıca Google Ads/GA4 etiketi eklenirse ilgili
+  // değişken boşaltılmalı, yoksa etiket iki kez çalışır.
   return (
     <>
       {gtmId && (
@@ -26,16 +34,16 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer','${gtmId}');`}
         </Script>
       )}
-      {adsTagId && (
+      {gtagIds.length > 0 && (
         <>
           <Script
-            id="google-ads-tag-src"
-            src={`https://www.googletagmanager.com/gtag/js?id=${adsTagId}`}
+            id="google-tag-src"
+            src={`https://www.googletagmanager.com/gtag/js?id=${gtagIds[0]}`}
             strategy="afterInteractive"
           />
-          <Script id="google-ads-tag" strategy="afterInteractive">
+          <Script id="google-tag" strategy="afterInteractive">
             {`window.gtag('js', new Date());
-window.gtag('config', '${adsTagId}');`}
+${gtagIds.map((id) => `window.gtag('config', '${id}');`).join('\n')}`}
           </Script>
         </>
       )}

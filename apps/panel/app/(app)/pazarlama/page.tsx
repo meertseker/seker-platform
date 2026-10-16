@@ -8,6 +8,8 @@ import { getMarketingData } from "@/lib/queries/marketing";
 import { MarketingTable } from "@/components/marketing-table";
 import { ConversionUploadList } from "@/components/conversion-upload-list";
 import { SpendCsvForm } from "@/components/spend-csv-form";
+import { SiteTrafficSection } from "@/components/site-traffic";
+import { describeGa4Error, fetchSiteTraffic, readGa4Config, type SiteTraffic } from "@/lib/analytics/ga4";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +26,22 @@ export default async function PazarlamaPage({ searchParams }: { searchParams: Se
   const params = await searchParams;
   const { from, to } = normalizeRange(first(params.bas), first(params.bit), istanbulDateString());
 
+  const ga4 = readGa4Config();
+  const [marketing, site] = await Promise.allSettled([
+    getMarketingData(from, to),
+    ga4 ? fetchSiteTraffic(ga4, from, to) : Promise.resolve(null),
+  ]);
+
   let data: Awaited<ReturnType<typeof getMarketingData>> | null = null;
-  try {
-    data = await getMarketingData(from, to);
-  } catch (error) {
-    console.error("[pazarlama] veri okunamadı:", error instanceof Error ? error.name : "bilinmeyen");
+  if (marketing.status === "fulfilled") data = marketing.value;
+  else console.error("[pazarlama] veri okunamadı:", marketing.reason instanceof Error ? marketing.reason.name : "bilinmeyen");
+
+  let traffic: SiteTraffic | null = null;
+  let trafficError: string | null = null;
+  if (site.status === "fulfilled") traffic = site.value;
+  else {
+    console.error("[pazarlama] GA4:", site.reason instanceof Error ? site.reason.message : "bilinmeyen");
+    trafficError = describeGa4Error(site.reason);
   }
   const status = adsStatusLines(readAdsConfig());
 
@@ -57,6 +70,7 @@ export default async function PazarlamaPage({ searchParams }: { searchParams: Se
       <ul className="space-y-1 rounded-2xl border border-border bg-warning-soft p-4 text-sm text-foreground">
         <li><span className="font-semibold">Harcama:</span> {status.spend}</li>
         <li><span className="font-semibold">Dönüşüm bildirimi:</span> {status.conversion}</li>
+        <li><span className="font-semibold">Site ziyaretleri:</span> {ga4 ? "Google Analytics bağlı" : "Google Analytics bağlantısı yok"}</li>
       </ul>
 
       {data ? (
@@ -76,6 +90,8 @@ export default async function PazarlamaPage({ searchParams }: { searchParams: Se
           Pazarlama verileri şu an okunamadı. Lütfen sayfayı yenileyin; sorun sürerse daha sonra tekrar deneyin.
         </p>
       )}
+
+      <SiteTrafficSection traffic={traffic} error={trafficError} />
 
       <section className="space-y-3 rounded-2xl border border-border bg-surface p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-foreground">Harcamayı elle yükle</h2>
