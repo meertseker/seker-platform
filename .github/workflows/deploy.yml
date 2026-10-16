@@ -45,6 +45,7 @@ jobs:
             NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
             NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID }}
             NEXT_PUBLIC_GOOGLE_ADS_TAG_ID=${{ vars.NEXT_PUBLIC_GOOGLE_ADS_TAG_ID }}
+            NEXT_PUBLIC_GA4_ID=${{ vars.NEXT_PUBLIC_GA4_ID }}
             NEXT_PUBLIC_PANEL_URL=${{ vars.NEXT_PUBLIC_PANEL_URL }}
             NEXT_PUBLIC_MEDIA_BASE_URL=${{ vars.NEXT_PUBLIC_MEDIA_BASE_URL }}
           cache-from: type=gha,scope=${{ matrix.app }}
