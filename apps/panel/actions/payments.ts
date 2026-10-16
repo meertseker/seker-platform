@@ -10,6 +10,7 @@ import {
 import { getSessionProfile } from "@/lib/auth";
 import { generateInstallments, remainderInstallment } from "@/lib/installments";
 import { allocatePayment } from "@/lib/payment-allocation";
+import { applyPaymentDay, type PaymentDay } from "@/lib/payment-day";
 import { buildEnrollmentPlans, seasonLastMonth } from "@/lib/enrollment-plan";
 import { logEvent } from "@/lib/events";
 import { formatTRY, kurusToTl, tlToKurus } from "@/lib/money";
@@ -722,4 +723,55 @@ export async function rescheduleInstallments(installmentIds: string[], count: nu
   revalidatePath("/bugun");
   revalidatePath(`/ogrenciler/${plan.student_id}`);
   return {};
+}
+
+/**
+ * Velinin ödeme günü: öğrencinin bekleyen aylık aidat taksitleri (istenirse kırtasiye
+ * taksitleri de) aynı ay içinde yeni güne taşınır. Danışman vade değiştiremediği (RLS)
+ * için işlem sunucu anahtarıyla yapılır.
+ */
+export async function setPaymentDay(studentId: string, day: PaymentDay, includeKitap: boolean) {
+  const profile = await getSessionProfile();
+  const supabase = await createServerSupabase();
+  if (!studentId) return { error: "Öğrenci bulunamadı" };
+  if (day !== "son" && (!Number.isInteger(day) || day < 1 || day > 31)) {
+    return { error: "Gün 1-31 arasında olmalı" };
+  }
+
+  const { data: plans } = await supabase
+    .from("payment_plans")
+    .select("id, item_type, installment_count, installments(id, due_date, status)")
+    .eq("student_id", studentId);
+  type PlanRow = { id: string; item_type: ItemType; installment_count: number; installments: { id: string; due_date: string; status: string }[] };
+  const moves: { id: string; to: string }[] = [];
+  for (const plan of (plans ?? []) as unknown as PlanRow[]) {
+    const monthlyAidat = plan.item_type === "aidat" && Number(plan.installment_count) > 1;
+    if (!monthlyAidat && !(includeKitap && plan.item_type === "kitap")) continue;
+    for (const item of plan.installments ?? []) {
+      if (item.status !== "bekliyor") continue;
+      const to = applyPaymentDay(item.due_date, day);
+      if (to !== item.due_date) moves.push({ id: item.id, to });
+    }
+  }
+
+  const client = createAdminSupabase() ?? (profile.role === "yonetici" ? supabase : null);
+  if (!client) return { error: "Ödeme günü şu an değiştirilemiyor" };
+  for (const move of moves) {
+    const { error } = await client.from("installments").update({ due_date: move.to }).eq("id", move.id).eq("status", "bekliyor");
+    if (error) return { error: "Ödeme günü kaydedilemedi" };
+  }
+
+  await logEvent(supabase, {
+    entityType: "student",
+    entityId: studentId,
+    eventType: "odeme_gunu_degisti",
+    actorId: profile.id,
+    payload: { day, includeKitap, moved: moves.length },
+  });
+
+  revalidatePath("/odemeler");
+  revalidatePath("/odemeler/gecikenler");
+  revalidatePath("/bugun");
+  revalidatePath(`/ogrenciler/${studentId}`);
+  return { moved: moves.length };
 }

@@ -6,6 +6,7 @@ import {
 } from "@/components/installment-table";
 import { EnrollmentPlanButton } from "@/components/enrollment-plan-form";
 import { PaymentButton } from "@/components/payment-dialog";
+import { PaymentDayControl } from "@/components/payment-day-control";
 import { PaymentMatrixCell, PaymentRowProvider } from "@/components/payment-matrix-cell";
 import { PlanWizard } from "@/components/plan-wizard";
 import { ReminderButton } from "@/components/reminder-button";
@@ -25,6 +26,7 @@ import {
 import { getSessionProfile } from "@/lib/auth";
 import { formatTRY, tlToKurus } from "@/lib/money";
 import { seasonLastMonth } from "@/lib/enrollment-plan";
+import { inferPaymentDay } from "@/lib/payment-day";
 import { openItemsOf, paymentContextFor } from "@/lib/payment-context";
 import { buildPaymentMatrix, SIDE_COLUMNS, sideCellOf, type SideColumn } from "@/lib/payment-matrix";
 import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
@@ -275,6 +277,19 @@ export default async function StudentDetailPage({
   const hasAidatPlan = plans.some((plan) => plan.item_type === "aidat" && plan.season === student.season);
   const lastMonth = seasonLastMonth(student.season) ?? `${Number(today.slice(0, 4)) + 1}-06`;
   const isActive = student.status === "aktif";
+  // Ödeme günü: bekleyen aylık aidat vadelerinden (yoksa bütün aylık aidat vadelerinden) okunur.
+  const monthlyAidat = plans.filter(
+    (plan) => plan.item_type === "aidat" && plan.season === student.season && Number(plan.installment_count) > 1,
+  );
+  const pendingAidatDues = monthlyAidat.flatMap((plan) =>
+    (plan.installments ?? []).filter((item) => item.status === "bekliyor").map((item) => item.due_date),
+  );
+  const paymentDay = inferPaymentDay(
+    pendingAidatDues.length
+      ? pendingAidatDues
+      : monthlyAidat.flatMap((plan) => (plan.installments ?? []).map((item) => item.due_date)),
+  );
+  const hasKitapPlan = plans.some((plan) => plan.item_type === "kitap" && plan.season === student.season);
   const hasRow = Boolean(row && (row.kitapCell || row.aidatCell || row.servisCell || matrix.months.length > 0));
 
   let statusTitle: string;
@@ -454,6 +469,14 @@ export default async function StudentDetailPage({
             <dt className="text-sm font-medium text-muted-foreground">Başlangıç</dt>
             <dd className="mt-1 text-base font-semibold text-foreground">{formatDate(student.start_date)}</dd>
           </div>
+          {isActive && monthlyAidat.length > 0 ? (
+            <PaymentDayControl
+              studentId={student.id}
+              studentName={student.full_name}
+              current={paymentDay}
+              hasKitap={hasKitapPlan}
+            />
+          ) : null}
           {student.status === "ayrildi" ? (
             <>
               <div>
