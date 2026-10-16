@@ -479,6 +479,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"site_visit_daily": {
+                  Row: {
+                    "day": string,"device": string,"entrances": number,"pageviews": number,"path": string,"source": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "day": string,"device": string,"entrances"?: number,"pageviews"?: number,"path": string,"source": string
+                  }
+                  Update: {
+                    "day"?: string,"device"?: string,"entrances"?: number,"pageviews"?: number,"path"?: string,"source"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"students": {
                   Row: {
                     "birth_month": number | null,"birth_year": number | null,"created_at": string,"family_id": string | null,"full_name": string,"id": string,"leave_reason": string | null,"left_date": string | null,"parent_name": string | null,"phone": string | null,"program": string | null,"season": string,"start_date": string | null,"status": string,"updated_at": string
@@ -573,6 +587,9 @@ isOneToOne: false
                            },
 "is_yonetici":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"record_site_visit":
+{ Args: { "p_device": string,"p_entrance": boolean,"p_path": string,"p_source": string }; Returns: undefined
                            },
 "reorder_announcements":
 { Args: { "p_dir": number,"p_id": string }; Returns: boolean

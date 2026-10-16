@@ -9,6 +9,7 @@ import { MarketingTable } from "@/components/marketing-table";
 import { ConversionUploadList } from "@/components/conversion-upload-list";
 import { SpendCsvForm } from "@/components/spend-csv-form";
 import { SiteTrafficSection } from "@/components/site-traffic";
+import { getSiteVisits, type VisitSummary } from "@/lib/queries/site-visits";
 import { describeGa4Error, fetchSiteTraffic, readGa4Config, type SiteTraffic } from "@/lib/analytics/ga4";
 
 export const dynamic = "force-dynamic";
@@ -27,9 +28,10 @@ export default async function PazarlamaPage({ searchParams }: { searchParams: Se
   const { from, to } = normalizeRange(first(params.bas), first(params.bit), istanbulDateString());
 
   const ga4 = readGa4Config();
-  const [marketing, site] = await Promise.allSettled([
+  const [marketing, site, counter] = await Promise.allSettled([
     getMarketingData(from, to),
     ga4 ? fetchSiteTraffic(ga4, from, to) : Promise.resolve(null),
+    getSiteVisits(from, to),
   ]);
 
   let data: Awaited<ReturnType<typeof getMarketingData>> | null = null;
@@ -42,6 +44,14 @@ export default async function PazarlamaPage({ searchParams }: { searchParams: Se
   else {
     console.error("[pazarlama] GA4:", site.reason instanceof Error ? site.reason.message : "bilinmeyen");
     trafficError = describeGa4Error(site.reason);
+  }
+
+  let visits: VisitSummary | null = null;
+  let visitsError: string | null = null;
+  if (counter.status === "fulfilled") visits = counter.value;
+  else {
+    console.error("[pazarlama] ziyaret sayacı:", counter.reason instanceof Error ? counter.reason.message : "bilinmeyen");
+    visitsError = "Ziyaret sayacı şu an okunamadı. Daha sonra tekrar deneyin.";
   }
   const status = adsStatusLines(readAdsConfig());
 
@@ -91,7 +101,7 @@ export default async function PazarlamaPage({ searchParams }: { searchParams: Se
         </p>
       )}
 
-      <SiteTrafficSection traffic={traffic} error={trafficError} />
+      <SiteTrafficSection visits={visits} visitsError={visitsError} traffic={traffic} error={trafficError} />
 
       <section className="space-y-3 rounded-2xl border border-border bg-surface p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-foreground">Harcamayı elle yükle</h2>

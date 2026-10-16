@@ -26,6 +26,9 @@ export const CEREZ_HTML = [
   '<li><strong>Google Ads (_gcl_au, _gcl_aw):</strong> bir Google reklamına tıklayarak geldiyseniz, reklamın bir başvuruya dönüşüp dönüşmediğini ölçmek için. Saklama süresi 90 gün.</li>',
   '</ul>',
 
+  '<h2>Çerezsiz ziyaret sayımı</h2>',
+  '<p>Sitemizin kaç kez ziyaret edildiğini ve hangi sayfalara bakıldığını, çerez veya tarayıcı depolaması kullanmadan, kendi sunucumuzda sayıyoruz. Bu sayımda yalnızca bakılan sayfa, sitemize hangi kaynaktan (arama motoru, sosyal medya, reklam, doğrudan) gelindiği ve cihazın telefon mu bilgisayar mı olduğu, günlük toplamlar halinde tutulur. IP adresiniz, tarayıcı kimliğiniz veya sizi tanımlayabilecek başka bir bilgi kaydedilmez; bu nedenle sayım çerez tercihinizden bağımsız olarak yapılır.</p>',
+
   '<h2>Onay vermezseniz</h2>',
   '<p>"Reddet" seçerseniz analitik ve reklam çerezleri tarayıcınıza yazılmaz. Bu durumda Google etiketleri, sizi tanımlayan bir çerez veya kimlik kullanmadan, yalnızca sayfanın açıldığına dair sınırlı bir sinyal gönderebilir (Google onay modu). Sitenin tüm özellikleri onay vermeden de çalışır.</p>',
 

@@ -5,6 +5,7 @@ import "./globals.css";
 import Analytics from "./components/Analytics";
 import ConsentDefaults from "./components/ConsentDefaults";
 import CookieBanner from "./components/CookieBanner";
+import VisitBeacon from "./components/VisitBeacon";
 import JsonLd from "./components/JsonLd";
 import { buildPreschoolSchema } from "../lib/schema";
 import { SITE } from "../lib/site";
@@ -74,6 +75,7 @@ export default function RootLayout({
           <SiteSchema />
           {children}
           <CookieBanner />
+          <VisitBeacon />
         </Suspense>
       </body>
     </html>
