@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, Banknote, Clock } from "lucide-react";
+import { AlertTriangle, Banknote, Clock, Download, PiggyBank } from "lucide-react";
 import { EXCEL_FILLS, PaymentMatrixCell, PaymentRowProvider } from "@/components/payment-matrix-cell";
 import { paymentContextFor } from "@/lib/payment-context";
 import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
@@ -12,22 +12,29 @@ import {
   sideCellOf,
   summarizeRows,
   type SideColumn,
-  type MatrixRow,
-  type MatrixStudentInput,
 } from "@/lib/payment-matrix";
 import { badgeClass, STUDENT_STATUS_STYLES } from "@/lib/status-styles";
+import {
+  filterRows,
+  PAYMENT_FILTERS as FILTERS,
+  PAYMENT_STUDENTS_SELECT,
+  resolveScope,
+  seasonsOf,
+  studentsInScope,
+  todayInIstanbul,
+  type PaymentFilterKey as FilterKey,
+  type PaymentStudent,
+} from "@/lib/payments-scope";
+import {
+  dueThisMonthKurusOf,
+  overdueKurusOf,
+  seasonSummaryOf,
+} from "@/lib/payments-summary";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-const FILTERS = {
-  tumu: "Tümü",
-  geciken: "Gecikeni olanlar",
-  plansiz: "Planı olmayanlar",
-} as const;
-type FilterKey = keyof typeof FILTERS;
 
 const monthNameFormatter = new Intl.DateTimeFormat("tr-TR", {
   month: "long",
@@ -73,51 +80,8 @@ function longMonthLabel(monthKey: string) {
   return monthLongFormatter.format(monthDate(monthKey));
 }
 
-function todayInIstanbul() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Istanbul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
 function istanbulMonthUtcIso(year: number, monthIndex: number) {
   return new Date(Date.UTC(year, monthIndex, 1, -3)).toISOString();
-}
-
-function first(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-/** Türkçe'ye duyarlı, aksansız arama karşılaştırması. */
-function normalize(value: string) {
-  return value
-    .toLocaleLowerCase("tr")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-function matchesSearch(student: MatrixStudentInput & { phone: string | null }, query: string) {
-  if (!query) return true;
-  const needle = normalize(query);
-  return [student.full_name, student.parent_name, student.phone].some(
-    (field) => field && normalize(field).includes(needle),
-  );
-}
-
-function overdueKurus(rows: MatrixRow[]) {
-  return rows.reduce(
-    (rowSum, row) =>
-      rowSum +
-      Object.values(row.cells).reduce(
-        (cellSum, cell) =>
-          cellSum +
-          cell.items.reduce((sum, item) => (item.overdue ? sum + item.amountKurus : sum), 0),
-        0,
-      ),
-    0,
-  );
 }
 
 function hrefWith(
@@ -188,9 +152,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
   const [studentsResult, paidResult, traces] = await Promise.all([
     supabase
       .from("students")
-      .select(
-        "id, full_name, parent_name, phone, season, status, created_at, payment_plans(id, item_type, season, total_amount, installment_count, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method))",
-      ),
+      .select(PAYMENT_STUDENTS_SELECT),
     supabase
       .from("installments")
       .select("amount, paid_amount")
@@ -200,51 +162,18 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
     fetchPaymentTraces(supabase),
   ]);
 
-  const allStudents = (studentsResult.data ?? []) as unknown as (MatrixStudentInput & {
-    phone: string | null;
-  })[];
-
-  const seasons = [
-    ...new Set(
-      allStudents.flatMap((student) => [
-        student.season,
-        ...(student.payment_plans ?? []).map((plan) => plan.season),
-      ]),
-    ),
-  ]
-    .filter(Boolean)
-    .sort()
-    .reverse();
-
-  const seasonParam = first(params.sezon) ?? "";
-  const season = seasons.includes(seasonParam) ? seasonParam : (seasons[0] ?? "");
-  const query = (first(params.q) ?? "").trim();
-  const filterParam = first(params.filtre) ?? "";
-  const filter: FilterKey = filterParam in FILTERS ? (filterParam as FilterKey) : "tumu";
-  const includePast = first(params.gecmis) === "1";
-
-  const inScope = allStudents.filter((student) => {
-    if (!includePast && student.status !== "aktif") return false;
-    if (!matchesSearch(student, query)) return false;
-    return (
-      student.season === season ||
-      (student.payment_plans ?? []).some((plan) => plan.season === season)
-    );
-  });
+  const allStudents = (studentsResult.data ?? []) as unknown as PaymentStudent[];
+  const seasons = seasonsOf(allStudents);
+  const { season, query, filter, includePast } = resolveScope(params, seasons);
+  const inScope = studentsInScope(allStudents, { season, query, filter, includePast });
 
   const matrix = buildPaymentMatrix(inScope, today, season);
   const phoneById = new Map(allStudents.map((student) => [student.id, student.phone]));
-  const rows = matrix.rows.filter((row) => {
-    if (filter === "geciken") return row.hasOverdue;
-    if (filter === "plansiz") return !row.hasPlan;
-    return true;
-  });
+  const rows = filterRows(matrix.rows, filter, currentMonth);
   const { columnTotals, sideTotals, grandTotal } = summarizeRows(matrix.months, rows);
 
-  const dueThisMonthKurus = matrix.rows.reduce((sum, row) => {
-    const cell = row.cells[currentMonth];
-    return cell ? sum + (cell.totalKurus - cell.paidKurus) : sum;
-  }, 0);
+  const dueThisMonthKurus = dueThisMonthKurusOf(matrix.rows, currentMonth);
+  const seasonSummary = seasonSummaryOf(matrix.rows);
   const collectedThisMonthKurus = (paidResult.data ?? []).reduce(
     (sum, row: { amount: number; paid_amount: number | null }) =>
       sum + tlToKurus(Number(row.paid_amount ?? row.amount)),
@@ -283,6 +212,68 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         </p>
       ) : null}
 
+      {seasonSummary.totalKurus > 0 ? (
+        <section
+          aria-label={`${season} sezonu toplamı`}
+          className="rounded-2xl border border-border bg-surface p-5 shadow-sm"
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
+              <PiggyBank aria-hidden className="size-5" />
+            </span>
+            <p className="text-sm font-medium text-muted-foreground">
+              {season} sezonu toplamı · {seasonSummary.studentCount} öğrenci
+            </p>
+          </div>
+          <dl className="mt-4 grid gap-4 sm:grid-cols-4">
+            <div>
+              <dt className="text-xs text-muted-foreground">Toplam alacak</dt>
+              <dd className="mt-1 text-xl font-semibold tabular-nums text-foreground">
+                {formatTRY(seasonSummary.totalKurus)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Tahsil edilen</dt>
+              <dd className="mt-1 text-xl font-semibold tabular-nums text-accent-strong">
+                {formatTRY(seasonSummary.paidKurus)}
+                {seasonSummary.collectionRate != null ? (
+                  <span className="ml-2 text-sm font-medium text-muted-foreground">
+                    %{Math.round(seasonSummary.collectionRate * 100)}
+                  </span>
+                ) : null}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Kalan</dt>
+              <dd className="mt-1 text-xl font-semibold tabular-nums text-foreground">
+                {formatTRY(seasonSummary.remainingKurus)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Geciken</dt>
+              <dd className="mt-1 text-xl font-semibold tabular-nums text-red-700">
+                {formatTRY(seasonSummary.overdueKurus)}
+                <span className="ml-2 text-sm font-medium text-muted-foreground">
+                  {seasonSummary.overdueStudentCount} öğrenci
+                </span>
+              </dd>
+            </div>
+          </dl>
+          {seasonSummary.totalKurus > 0 ? (
+            <div
+              className="mt-4 h-2 overflow-hidden rounded-full bg-muted"
+              role="img"
+              aria-label={`Tahsilat oranı %${Math.round((seasonSummary.collectionRate ?? 0) * 100)}`}
+            >
+              <div
+                className="h-full rounded-full bg-accent-strong"
+                style={{ width: `${Math.round((seasonSummary.collectionRate ?? 0) * 100)}%` }}
+              />
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <section className="grid gap-4 md:grid-cols-3">
         <SummaryCard
           label="Bu ay beklenen"
@@ -300,7 +291,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         />
         <SummaryCard
           label="Toplam geciken"
-          value={formatTRY(overdueKurus(matrix.rows))}
+          value={formatTRY(overdueKurusOf(matrix.rows))}
           helper="Vadesi geçmiş, hâlâ bekleyen taksitler"
           icon={<AlertTriangle aria-hidden className="size-5" />}
           chipClass="bg-destructive-soft text-red-700"
@@ -373,6 +364,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         >
           Ayrılan ve mezunlar {includePast ? "dahil" : "hariç"}
         </Link>
+        <a
+          href={hrefWith(currentParams, {}).replace("/odemeler", "/odemeler/excel")}
+          download
+          className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Download aria-hidden className="size-4" />
+          Excel indir
+        </a>
       </div>
 
       <ul
