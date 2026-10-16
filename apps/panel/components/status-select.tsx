@@ -19,9 +19,10 @@ interface StatusSelectProps {
   leadId: string;
   status: LeadStatus;
   converted: boolean;
+  onChanged?: () => void;
 }
 
-export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
+export function StatusSelect({ leadId, status, converted, onChanged }: StatusSelectProps) {
   const router = useRouter();
   const [optimisticStatus, setOptimisticStatus] = useState<LeadStatus | null>(null);
   const [pendingStatus, setPendingStatus] = useState<LeadStatus | null>(null);
@@ -52,6 +53,7 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
       setPendingStatus(null);
       setLostReason("");
       router.refresh();
+      onChanged?.();
     });
   }
 
@@ -85,7 +87,7 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
         value={selected}
         disabled={isPending || converted || options.length <= 1}
         onChange={(event) => handleChange(event.target.value as LeadStatus)}
-        className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+        className="min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -95,13 +97,13 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
       </select>
 
       {isPending ? (
-        <p className="text-xs font-medium text-muted-foreground">Kaydediliyor...</p>
+        <p className="text-sm font-medium text-muted-foreground">Kaydediliyor...</p>
       ) : null}
       {converted ? (
-        <p className="text-xs text-muted-foreground">Öğrenciye dönüştürüldü.</p>
+        <p className="text-sm text-muted-foreground">Öğrenciye dönüştürüldü.</p>
       ) : null}
       {error ? (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}
@@ -154,7 +156,7 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
                 type="button"
                 onClick={closeModal}
                 disabled={isPending}
-                className="min-h-11 flex-1 cursor-pointer rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-12 flex-1 cursor-pointer rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Vazgeç
               </button>
@@ -166,7 +168,7 @@ export function StatusSelect({ leadId, status, converted }: StatusSelectProps) {
                     ? submitStatus(pendingStatus, lostReason)
                     : setError("Kayıp nedeni zorunludur")
                 }
-                className="min-h-11 flex-1 cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-12 flex-1 cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPending ? "Kaydediliyor..." : "Kaydet"}
               </button>

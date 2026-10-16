@@ -55,3 +55,14 @@ describe("notificationText geri_bildirim", () => {
     expect(notificationText({ type: "geri_bildirim", payload: {} })).toBe("Bir kullanıcı öneri gönderdi");
   });
 });
+
+describe("notificationText teklif_karsi_onaylandi", () => {
+  it("karşı rakamla onayı tutarla yazar", () => {
+    expect(
+      notificationText({ type: "teklif_karsi_onaylandi", payload: { counterPrice: 18000 } }),
+    ).toBe("Teklif karşı rakamla onaylandı: 18.000,00 ₺");
+    expect(notificationText({ type: "teklif_karsi_onaylandi", payload: {} })).toBe(
+      "Teklif karşı rakamla onaylandı.",
+    );
+  });
+});

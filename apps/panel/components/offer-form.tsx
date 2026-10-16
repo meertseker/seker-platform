@@ -15,12 +15,13 @@ export interface ActivePriceItem {
 interface OfferFormProps {
   leadId: string;
   priceItems: ActivePriceItem[];
+  onSuccess?: () => void;
 }
 
 const programKeys = Object.keys(PROGRAMS) as Program[];
 const installmentOptions = Array.from({ length: 12 }, (_, index) => index + 1);
 
-export function OfferForm({ leadId, priceItems }: OfferFormProps) {
+export function OfferForm({ leadId, priceItems, onSuccess }: OfferFormProps) {
   const router = useRouter();
   const [selectedProgram, setSelectedProgram] = useState<Program>(
     priceItems[0]?.program ?? "tam_gun",
@@ -70,20 +71,15 @@ export function OfferForm({ leadId, priceItems }: OfferFormProps) {
       form.reset();
       setSelectedProgram(priceItems[0]?.program ?? "tam_gun");
       router.refresh();
+      onSuccess?.();
     });
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
-    >
-      <div>
-        <h3 className="text-lg font-semibold text-foreground">Yeni teklif</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Liste fiyatına eşit veya üzeri teklifler otomatik onaylanır.
-        </p>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Liste fiyatı veya üzeri teklif hemen onaylanır. Altındaysa yönetici onayına gider.
+      </p>
 
       {priceItems.length === 0 ? (
         <p className="rounded-2xl bg-warning-soft px-4 py-3 text-sm font-medium text-amber-800">
@@ -103,7 +99,7 @@ export function OfferForm({ leadId, priceItems }: OfferFormProps) {
             value={selectedProgram}
             disabled={isPending || priceItems.length === 0}
             onChange={(event) => setSelectedProgram(event.target.value as Program)}
-            className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+            className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
           >
             {priceItems.map((item) => (
               <option key={item.program} value={item.program}>
@@ -111,7 +107,7 @@ export function OfferForm({ leadId, priceItems }: OfferFormProps) {
               </option>
             ))}
           </select>
-          <p className="mt-2 text-xs text-muted-foreground tabular-nums">
+          <p className="mt-2 text-sm text-muted-foreground tabular-nums">
             Liste fiyatı: {selectedPriceText ?? "Yok"}
           </p>
         </div>
@@ -128,7 +124,7 @@ export function OfferForm({ leadId, priceItems }: OfferFormProps) {
             name="installmentCount"
             defaultValue="10"
             disabled={isPending || priceItems.length === 0}
-            className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+            className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
           >
             {installmentOptions.map((count) => (
               <option key={count} value={count}>
@@ -139,32 +135,22 @@ export function OfferForm({ leadId, priceItems }: OfferFormProps) {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <div>
-          <label
-            htmlFor="offer-offered-price"
-            className="text-sm font-medium text-foreground"
-          >
-            Teklif tutarı (aylık TL)
-          </label>
-          <input
-            id="offer-offered-price"
-            name="offeredPrice"
-            type="text"
-            inputMode="decimal"
-            placeholder="Örn. 20000"
-            disabled={isPending || priceItems.length === 0}
-            className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={isPending || priceItems.length === 0}
-          className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      <div>
+        <label
+          htmlFor="offer-offered-price"
+          className="text-sm font-medium text-foreground"
         >
-          {isPending ? "Kaydediliyor..." : "Teklif Oluştur"}
-        </button>
+          Teklif tutarı (aylık TL)
+        </label>
+        <input
+          id="offer-offered-price"
+          name="offeredPrice"
+          type="text"
+          inputMode="decimal"
+          placeholder="Örn. 20000"
+          disabled={isPending || priceItems.length === 0}
+          className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+        />
       </div>
 
       <div>
@@ -176,7 +162,7 @@ export function OfferForm({ leadId, priceItems }: OfferFormProps) {
           name="note"
           rows={2}
           disabled={isPending || priceItems.length === 0}
-          className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+          className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
           placeholder="Örn. kardeş indirimi talebi"
         />
       </div>
@@ -186,6 +172,14 @@ export function OfferForm({ leadId, priceItems }: OfferFormProps) {
           {error}
         </p>
       ) : null}
+
+      <button
+        type="submit"
+        disabled={isPending || priceItems.length === 0}
+        className="min-h-14 w-full cursor-pointer rounded-xl bg-primary px-5 py-3 text-base font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isPending ? "Kaydediliyor..." : "Teklifi kaydet"}
+      </button>
     </form>
   );
 }

@@ -1,26 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Phone } from "lucide-react";
+import { ChevronDown, ChevronLeft } from "lucide-react";
 import { ActivityFeed, type ActivityFeedItem } from "@/components/activity-feed";
-import { AppointmentForm } from "@/components/appointment-form";
 import {
   AppointmentList,
   type AppointmentListItem,
 } from "@/components/appointment-list";
-import { LeadConversionForm } from "@/components/lead-conversion-form";
-import { LeadEditForm } from "@/components/lead-edit-form";
+import { CallButton } from "@/components/call-outcome";
+import { LeadActions, type LeadSheet } from "@/components/lead-actions";
 import { NoteForm } from "@/components/note-form";
-import { OfferForm, type ActivePriceItem } from "@/components/offer-form";
+import { type ActivePriceItem } from "@/components/offer-form";
 import { OfferList, type OfferListItem } from "@/components/offer-list";
-import { StatusSelect } from "@/components/status-select";
+import { StageStepper } from "@/components/stage-stepper";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import {
   label,
   type AppointmentOutcome,
   type AppointmentType,
   LEAD_SOURCES,
-  LEAD_STATUSES,
-  LOST_REASONS,
   type LeadSource,
   type LeadStatus,
   type LostReason,
@@ -31,13 +28,23 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { formatTRY, tlToKurus } from "@/lib/money";
 import { attributionLines, type LeadAttribution } from "@/lib/lead-attribution";
+import { nextStep } from "@/lib/next-step";
 
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ id: string }>;
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 interface LeadDetailPageProps {
   params: Params;
+  searchParams: SearchParams;
+}
+
+const SHEETS: LeadSheet[] = ["randevu", "teklif", "kayit", "not", "sonuc", "durum", "duzenle"];
+
+function parseSheet(value: string | string[] | undefined): LeadSheet | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw && SHEETS.includes(raw as LeadSheet) ? (raw as LeadSheet) : null;
 }
 
 interface ProfileJoin {
@@ -166,35 +173,6 @@ function normalizeFeed(notes: NoteRow[], events: EventRow[]): ActivityFeedItem[]
   );
 }
 
-function LeadAppointmentsSection({
-  leadId,
-  appointments,
-  hasError,
-}: {
-  leadId: string;
-  appointments: AppointmentListItem[];
-  hasError: boolean;
-}) {
-  return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold text-foreground">Randevular</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Geçmiş ve gelecek randevuları takip edin, sonuçlarını işaretleyin.
-        </p>
-      </div>
-      <AppointmentForm leadId={leadId} />
-      {hasError ? (
-        <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
-          Randevular yüklenirken bir sorun oluştu.
-        </p>
-      ) : (
-        <AppointmentList appointments={appointments} />
-      )}
-    </section>
-  );
-}
-
 function normalizeOffers(offers: OfferRow[]): OfferListItem[] {
   const acceptedCounterPrices = new Set(
     offers
@@ -242,39 +220,9 @@ function normalizePriceItems(items: PriceItemRow[]): ActivePriceItem[] {
   }));
 }
 
-function LeadOffersSection({
-  leadId,
-  offers,
-  priceItems,
-  hasError,
-}: {
-  leadId: string;
-  offers: OfferListItem[];
-  priceItems: ActivePriceItem[];
-  hasError: boolean;
-}) {
-  return (
-    <section id="teklifler" className="space-y-4 scroll-mt-24">
-      <div>
-        <h2 className="text-xl font-semibold text-foreground">Teklifler</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Liste fiyatı, indirim ve yönetici onay sürecini buradan takip edin.
-        </p>
-      </div>
-      <OfferForm leadId={leadId} priceItems={priceItems} />
-      {hasError ? (
-        <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
-          Teklifler yüklenirken bir sorun oluştu.
-        </p>
-      ) : (
-        <OfferList offers={offers} />
-      )}
-    </section>
-  );
-}
-
-export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
+export default async function LeadDetailPage({ params, searchParams }: LeadDetailPageProps) {
   const { id } = await params;
+  const initialSheet = parseSheet((await searchParams).adim);
   const supabase = await createServerSupabase();
   const profile = await getSessionProfile();
 
@@ -339,180 +287,133 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
   const converted = lead.converted_student_id !== null;
   const hasApprovedOffer = offers.some((offer) => offer.status === "onaylandi");
   const canConvert = !converted && hasApprovedOffer;
+  const nowIso = new Date().toISOString();
+  const step = nextStep({
+    lead: {
+      status: lead.status,
+      converted_student_id: lead.converted_student_id,
+      lost_reason: lead.lost_reason,
+    },
+    appointments,
+    offers,
+    now: nowIso,
+  });
+  const appointmentItems: AppointmentListItem[] = appointments.map((item) => ({ ...item }));
+  const resultAppointments = appointmentItems
+    .filter(
+      (item) =>
+        item.outcome === "bekliyor" && Date.parse(item.scheduled_at) <= Date.parse(nowIso),
+    )
+    .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+  const counterOffer = offers.find(
+    (offer) =>
+      offer.status === "revize_edildi" &&
+      offer.counter_price !== null &&
+      !offer.superseded_by_offer_id &&
+      !offer.counterAccepted,
+  );
+  const convertBlocker = converted
+    ? "Bu veli zaten öğrenci."
+    : lead.status === "kaybedildi"
+      ? "Kaybedilen veli öğrenciye dönüştürülemez. Önce yeniden açın."
+      : offers.some((offer) => offer.status === "onay_bekliyor")
+        ? "Teklif yönetici onayı bekliyor. Onaylanınca kayıt açılabilir."
+        : counterOffer
+          ? "Yönetici karşı rakam verdi. Önce o rakamla teklif oluşturun."
+          : "Kayıt için onaylı bir teklif gerekiyor. Önce teklif hazırlayın.";
+  const attribution = attributionLines(lead);
+  const hasApplicationInfo = Boolean(lead.source_detail) || attribution.length > 0;
+  const tags = [
+    lead.ingilizce_gerekli ? "İngilizce" : null,
+    lead.ozel_durum ? "Özel durum" : null,
+    lead.wants_summer ? "Yaz okulu" : null,
+  ].filter((tag): tag is string => tag !== null);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link
-            href="/pipeline"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Veliler
-          </Link>
-          <h1 className="mt-3 text-3xl font-semibold">{lead.parent_name}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Velinin bilgileri, notları ve geçmişi.
-          </p>
-        </div>
+      <div>
         <Link
-          href="/leads/new"
-          className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          href="/pipeline"
+          className="inline-flex min-h-12 items-center gap-1 rounded-xl pr-3 text-base font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Yeni Lead
+          <ChevronLeft aria-hidden className="size-5" />
+          Veliler
         </Link>
+        <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-semibold text-foreground">{lead.parent_name}</h1>
+            <p className="mt-1 text-base text-muted-foreground">
+              {formatChild(lead)} · {label(LEAD_SOURCES, lead.source)}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <CallButton leadId={lead.id} phone={lead.phone} leadName={lead.parent_name} />
+            <WhatsAppButton phone={lead.phone} />
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <StageStepper status={lead.status} lostReason={lead.lost_reason} />
+
+      <LeadActions
+        lead={{
+          id: lead.id,
+          parent_name: lead.parent_name,
+          phone: lead.phone,
+          source: lead.source,
+          source_detail: lead.source_detail,
+          child_name: lead.child_name,
+          child_birth_month: lead.child_birth_month,
+          child_birth_year: lead.child_birth_year,
+          ingilizce_gerekli: lead.ingilizce_gerekli,
+          ozel_durum: lead.ozel_durum,
+          ozel_durum_note: lead.ozel_durum_note,
+          wants_summer: lead.wants_summer,
+        }}
+        status={lead.status}
+        convertedStudentId={lead.converted_student_id}
+        role={profile.role}
+        step={step}
+        initialSheet={initialSheet}
+        priceItems={priceItems}
+        resultAppointments={resultAppointments}
+        counterOfferId={counterOffer?.id ?? null}
+        canConvert={canConvert}
+        convertBlocker={convertBlocker}
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
-          <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Veli</p>
-                <h2 className="mt-1 text-2xl font-semibold text-foreground">
-                  {lead.parent_name}
-                </h2>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <a
-                    href={`tel:${lead.phone}`}
-                    className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <Phone aria-hidden="true" className="size-4" />
-                    Ara
-                  </a>
-                  <WhatsAppButton phone={lead.phone} />
-                </div>
-              </div>
-              <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-semibold text-slate-700">
-                {label(LEAD_SOURCES, lead.source)}
-              </span>
-            </div>
-
-            <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Telefon</dt>
-                <dd className="mt-1 text-sm font-medium text-foreground">
-                  {lead.phone}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Çocuk</dt>
-                <dd className="mt-1 text-sm font-medium text-foreground">
-                  {formatChild(lead)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Danışman</dt>
-                <dd className="mt-1 text-sm font-medium text-foreground">
-                  {assigned?.full_name ?? "Atanmamış"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Kaynak</dt>
-                <dd className="mt-1 text-sm font-medium text-foreground">
-                  {label(LEAD_SOURCES, lead.source)}
-                </dd>
-              </div>
-              {lead.source_detail ? (
-                <div className="sm:col-span-2">
-                  <dt className="text-xs font-medium text-muted-foreground">
-                    Kaynak detayı
-                  </dt>
-                  <dd className="mt-1 rounded-2xl bg-muted px-3 py-2 text-sm text-slate-700">
-                    {lead.source_detail}
-                  </dd>
-                </div>
-              ) : null}
-              {attributionLines(lead).length > 0 ? (
-                <div className="sm:col-span-2">
-                  <dt className="text-xs font-medium text-muted-foreground">
-                    Web kaynağı
-                  </dt>
-                  <dd className="mt-1 space-y-1 rounded-2xl bg-muted px-3 py-2 text-sm text-slate-700">
-                    {attributionLines(lead).map((line) => (
-                      <p key={line}>{line}</p>
-                    ))}
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-
-            {lead.ingilizce_gerekli || lead.ozel_durum || lead.wants_summer ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {lead.ingilizce_gerekli ? (
-                  <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-semibold text-slate-700">
-                    İngilizce
-                  </span>
-                ) : null}
-                {lead.ozel_durum ? (
-                  <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-semibold text-slate-700">
-                    Özel durum
-                  </span>
-                ) : null}
-                {lead.wants_summer ? (
-                  <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-semibold text-slate-700">
-                    Yaz okulu
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-
-            {lead.ozel_durum && lead.ozel_durum_note ? (
-              <div className="mt-3">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Özel durum notu
-                </p>
-                <p className="mt-1 rounded-2xl bg-muted px-3 py-2 text-sm text-slate-700">
-                  {lead.ozel_durum_note}
-                </p>
-              </div>
-            ) : null}
+          <section className="space-y-3">
+            <h2 className="text-xl font-semibold text-foreground">Randevular</h2>
+            {appointmentsResult.error ? (
+              <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
+                Randevular yüklenirken bir sorun oluştu.
+              </p>
+            ) : (
+              <AppointmentList appointments={appointmentItems} emptyText="Henüz randevu yok." />
+            )}
           </section>
 
-          {converted ? null : (
-            <LeadEditForm
-              lead={{
-                id: lead.id,
-                parent_name: lead.parent_name,
-                phone: lead.phone,
-                source: lead.source,
-                source_detail: lead.source_detail,
-                child_name: lead.child_name,
-                child_birth_month: lead.child_birth_month,
-                child_birth_year: lead.child_birth_year,
-                ingilizce_gerekli: lead.ingilizce_gerekli,
-                ozel_durum: lead.ozel_durum,
-                ozel_durum_note: lead.ozel_durum_note,
-                wants_summer: lead.wants_summer,
-              }}
-              role={profile.role}
-            />
-          )}
-
-          <LeadAppointmentsSection
-            leadId={lead.id}
-            appointments={appointments}
-            hasError={Boolean(appointmentsResult.error)}
-          />
-          <LeadOffersSection
-            leadId={lead.id}
-            offers={offers}
-            priceItems={priceItems}
-            hasError={Boolean(offersResult.error || priceItemsResult.error)}
-          />
-
-          <section className="space-y-4">
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">
-                Aktivite Akışı
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Sistem aktiviteleri ve ekip notları en yeniden eskiye sıralanır.
+          <section className="space-y-3">
+            <h2 className="text-xl font-semibold text-foreground">Teklifler</h2>
+            {offersResult.error || priceItemsResult.error ? (
+              <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
+                Teklifler yüklenirken bir sorun oluştu.
               </p>
+            ) : (
+              <OfferList offers={offers} />
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-xl font-semibold text-foreground">Geçmiş</h2>
+            <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+              <NoteForm leadId={lead.id} rows={2} />
             </div>
             {notesResult.error || eventsResult.error ? (
               <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
-                Aktivite akışı yüklenirken bir sorun oluştu.
+                Geçmiş yüklenirken bir sorun oluştu.
               </p>
             ) : (
               <ActivityFeed items={feedItems} />
@@ -520,73 +421,68 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
           </section>
         </div>
 
-        <aside className="space-y-6">
+        <aside className="space-y-4">
           <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-foreground">Durum</h2>
-            <div className="mt-4">
-              {converted ? (
-                <div className="space-y-3">
-                  <div className="rounded-2xl bg-muted px-4 py-3 text-sm font-semibold text-slate-700">
-                    {label(LEAD_STATUSES, lead.status)}
-                    {lead.lost_reason
-                      ? ` - ${label(LOST_REASONS, lead.lost_reason)}`
-                      : ""}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Bu lead öğrenciye dönüştürüldüğü için durum kilitli.
-                  </p>
-                  <Link
-                    href={`/ogrenciler/${lead.converted_student_id}`}
-                    className="inline-flex min-h-11 cursor-pointer items-center rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <h2 className="text-lg font-semibold text-foreground">Bilgiler</h2>
+            <dl className="mt-3 space-y-3">
+              <div>
+                <dt className="text-sm text-muted-foreground">Telefon</dt>
+                <dd className="text-base font-medium tabular-nums text-foreground">{lead.phone}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Çocuk</dt>
+                <dd className="text-base font-medium text-foreground">{formatChild(lead)}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Danışman</dt>
+                <dd className="text-base font-medium text-foreground">
+                  {assigned?.full_name ?? "Atanmamış"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Kaynak</dt>
+                <dd className="text-base font-medium text-foreground">
+                  {label(LEAD_SOURCES, lead.source)}
+                </dd>
+              </div>
+            </dl>
+            {tags.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-muted px-3 py-1 text-sm font-semibold text-slate-700"
                   >
-                    Öğrenci kaydına git
-                  </Link>
-                </div>
-              ) : (
-                <StatusSelect
-                  leadId={lead.id}
-                  status={lead.status}
-                  converted={converted}
-                />
-              )}
-            </div>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            {lead.ozel_durum && lead.ozel_durum_note ? (
+              <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-sm text-slate-700">
+                <span className="font-semibold">Özel durum:</span> {lead.ozel_durum_note}
+              </p>
+            ) : null}
           </section>
 
-          {converted ? null : (
-            <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-foreground">
-                Kayıt işlemi
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {canConvert
-                  ? "Onaylı teklif ile öğrenci kaydı ve ödeme planı hazırlayın."
-                  : "Öğrenciye dönüştürmek için önce teklif oluşturup onaylayın."}
-              </p>
-              <div className="mt-4 space-y-3">
-                {canConvert ? (
-                  <LeadConversionForm leadId={lead.id} canConvert />
-                ) : (
-                  <>
-                    <a
-                      href="#teklifler"
-                      className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
-                    >
-                      Teklifler bölümüne git
-                    </a>
-                    <button
-                      type="button"
-                      disabled
-                      className="min-h-11 w-full cursor-not-allowed rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white opacity-50"
-                    >
-                      Öğrenciye Dönüştür
-                    </button>
-                  </>
-                )}
+          {hasApplicationInfo ? (
+            <details className="group rounded-2xl border border-border bg-surface shadow-sm">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 rounded-2xl px-5 py-3 text-base font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                Başvuru bilgisi
+                <ChevronDown aria-hidden className="size-5 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="space-y-2 px-5 pb-5 text-sm text-slate-700">
+                {lead.source_detail ? (
+                  <p>
+                    <span className="font-semibold">Kaynak detayı:</span> {lead.source_detail}
+                  </p>
+                ) : null}
+                {attribution.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
               </div>
-            </section>
-          )}
-
-          <NoteForm leadId={lead.id} />
+            </details>
+          ) : null}
         </aside>
       </div>
     </div>

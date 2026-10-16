@@ -7,6 +7,15 @@ import { normalizeTurkishPhone } from "@/lib/phone";
 import { canTransition, requiresLostReason, reopenTarget } from "@/lib/lead-state";
 import { logEvent } from "@/lib/events";
 import type { LeadStatus, LeadSource, LostReason } from "@/lib/constants";
+import {
+  addDaysToDateString,
+  CALL_NEXT_STEPS,
+  CALL_OUTCOMES,
+  planCallOutcome,
+  type CallNextStep,
+  type CallOutcome,
+} from "@/lib/call-outcome";
+import { istanbulDateString } from "@/lib/cron-rules";
 
 export interface CreateLeadInput {
   parentName: string; phone: string; source: LeadSource; sourceDetail?: string;
@@ -167,4 +176,77 @@ export async function updateLead(leadId: string, fields: UpdateLeadFields) {
   revalidatePath("/pipeline");
   revalidatePath(`/leads/${leadId}`);
   return {};
+}
+
+export interface LogCallOutcomeInput {
+  leadId: string;
+  outcome: CallOutcome;
+  note?: string;
+  next?: CallNextStep | null;
+}
+
+/** "Ara" butonundan sonra açılan "Görüşme nasıl geçti?" panelinin kaydı. */
+export async function logCallOutcome(
+  input: LogCallOutcomeInput,
+): Promise<{ error?: string; redirect?: string }> {
+  const profile = await getSessionProfile();
+  const supabase = await createServerSupabase();
+
+  if (!input.leadId) return { error: "Veli bulunamadı" };
+  if (!Object.hasOwn(CALL_OUTCOMES, input.outcome)) return { error: "Görüşme sonucunu seçin" };
+  if (input.next && !Object.hasOwn(CALL_NEXT_STEPS, input.next)) return { error: "Sıradaki adımı seçin" };
+
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("id, status, converted_student_id")
+    .eq("id", input.leadId)
+    .maybeSingle();
+  if (!lead) return { error: "Veli bulunamadı" };
+
+  const plan = planCallOutcome({
+    outcome: input.outcome,
+    next: input.next ?? null,
+    status: lead.status as LeadStatus,
+    note: input.note,
+  });
+
+  const { error: noteError } = await supabase.from("lead_notes").insert({
+    lead_id: input.leadId,
+    author_id: profile.id,
+    body: plan.note,
+  });
+  if (noteError) return { error: "Görüşme notu kaydedilemedi" };
+
+  if (plan.status && !lead.converted_student_id) {
+    const result = await updateLeadStatus(
+      input.leadId,
+      plan.status.to,
+      plan.status.lostReason,
+    );
+    if (result.error) return { error: result.error };
+  }
+
+  if (plan.task) {
+    const { error: taskError } = await supabase.from("tasks").insert({
+      lead_id: input.leadId,
+      assigned_to: profile.id,
+      due_date: addDaysToDateString(istanbulDateString(new Date()), plan.task.dueInDays),
+      title: plan.task.title,
+    });
+    if (taskError) return { error: "Not kaydedildi, görev oluşturulamadı" };
+  }
+
+  await supabase
+    .from("leads")
+    .update({ last_activity_at: new Date().toISOString() })
+    .eq("id", input.leadId);
+
+  revalidatePath("/pipeline");
+  revalidatePath(`/leads/${input.leadId}`);
+  revalidatePath("/bugun");
+  revalidatePath("/");
+
+  return plan.redirectToAppointment
+    ? { redirect: `/leads/${input.leadId}?adim=randevu` }
+    : {};
 }

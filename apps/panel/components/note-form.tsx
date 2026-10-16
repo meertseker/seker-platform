@@ -1,15 +1,25 @@
 "use client";
 
-import { FormEvent, useState, useTransition } from "react";
+import { FormEvent, useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addNote } from "@/actions/notes";
 
 interface NoteFormProps {
   leadId: string;
+  onSuccess?: () => void;
+  rows?: number;
+  /** Panel içinde tek ana buton olarak dolu gösterilir. */
+  primary?: boolean;
 }
 
-export function NoteForm({ leadId }: NoteFormProps) {
+const PRIMARY_BUTTON =
+  "min-h-14 w-full cursor-pointer rounded-xl bg-primary px-5 py-3 text-base font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+const OUTLINE_BUTTON =
+  "min-h-12 w-full cursor-pointer rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto";
+
+export function NoteForm({ leadId, onSuccess, rows = 3, primary = false }: NoteFormProps) {
   const router = useRouter();
+  const fieldId = useId();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -35,30 +45,28 @@ export function NoteForm({ leadId }: NoteFormProps) {
 
       form.reset();
       router.refresh();
+      onSuccess?.();
     });
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-3 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
-    >
+    <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label htmlFor="note-body" className="text-sm font-medium text-foreground">
-          Yeni not
+        <label htmlFor={fieldId} className="text-sm font-medium text-foreground">
+          Not
         </label>
         <textarea
-          id="note-body"
+          id={fieldId}
           name="body"
-          rows={4}
+          rows={rows}
           disabled={isPending}
-          placeholder="Görüşme notunu yazın..."
-          className="mt-2 block w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+          placeholder="Görüşmede ne konuştunuz?"
+          className="mt-2 block w-full resize-y rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
         />
       </div>
 
       {error ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p className="rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}
@@ -66,9 +74,9 @@ export function NoteForm({ leadId }: NoteFormProps) {
       <button
         type="submit"
         disabled={isPending}
-        className="min-h-11 w-full cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+        className={primary ? PRIMARY_BUTTON : OUTLINE_BUTTON}
       >
-        {isPending ? "Ekleniyor..." : "Not Ekle"}
+        {isPending ? "Kaydediliyor..." : "Notu kaydet"}
       </button>
     </form>
   );
