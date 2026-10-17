@@ -109,7 +109,7 @@ export function PaymentDialog({ open, onClose, studentId, studentName, items, pr
           role="status"
           className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-6"
         >
-          <div className="flex w-full max-w-lg flex-wrap items-center justify-between gap-3 rounded-2xl bg-foreground px-4 py-3 text-base text-background shadow-xl">
+          <div className="flex w-full max-w-lg animate-pop-in flex-wrap items-center justify-between gap-3 rounded-full bg-foreground/85 px-5 py-2.5 text-base text-background shadow-xl backdrop-blur-2xl backdrop-saturate-150">
             <span>{toast.text}</span>
             {toast.eventId ? (
               <button

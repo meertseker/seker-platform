@@ -211,7 +211,7 @@ export function LeadActions({
               Diğer
               <ChevronDown aria-hidden className="size-4" />
             </summary>
-            <div className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-border bg-surface p-1 shadow-lg sm:left-0 sm:right-auto">
+            <div className="glass-thick absolute right-0 z-20 mt-1 w-56 origin-top-right animate-pop-in rounded-2xl p-1 sm:left-0 sm:right-auto sm:origin-top-left">
               {!converted ? (
                 <>
                   <button

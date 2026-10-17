@@ -396,11 +396,11 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
 
       {paying ? (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-zinc-950/40 p-4 sm:items-center sm:justify-center"
+          className="scrim fixed inset-0 z-50 flex animate-scrim-in items-end p-4 sm:items-center sm:justify-center"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full rounded-2xl border border-border bg-surface p-5 shadow-xl sm:max-w-md">
+          <div className="glass-thick w-full animate-materialize rounded-[1.75rem] p-5 sm:max-w-md">
             <h2 className="text-lg font-semibold text-foreground">Taksiti ödendi işaretle</h2>
             <div className="mt-4 space-y-3">
               <label className="block text-sm font-medium text-foreground">
@@ -461,11 +461,11 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
 
       {editing ? (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-zinc-950/40 p-4 sm:items-center sm:justify-center"
+          className="scrim fixed inset-0 z-50 flex animate-scrim-in items-end p-4 sm:items-center sm:justify-center"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full rounded-2xl border border-border bg-surface p-5 shadow-xl sm:max-w-md">
+          <div className="glass-thick w-full animate-materialize rounded-[1.75rem] p-5 sm:max-w-md">
             <h2 className="text-lg font-semibold text-foreground">Taksiti düzenle</h2>
             <div className="mt-4 space-y-3">
               <label className="block text-sm font-medium text-foreground">

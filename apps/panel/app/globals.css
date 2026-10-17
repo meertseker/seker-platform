@@ -1,13 +1,15 @@
 @import "tailwindcss";
 
 /*
- * AnaOkulCRM tasarım sistemi (ui-ux-pro-max önerisi):
- * profesyonel mavi + anlaşma yeşili, slate yüzeyler, WCAG AA kontrast.
+ * Şeker CRM tasarım sistemi — Apple tarzı, Liquid Glass kontrol katmanı.
+ * İçerik (kartlar, tablolar, formlar) katı yüzeylerde durur; gezinme ve
+ * kontroller (kenar çubuğu, üst bar, sekme çubuğu, sheet, açılır menü)
+ * içeriğin üstünde yüzen cam katmandır.
  * Bileşenlerde ham hex kullanmayın; bu semantik token'ları kullanın.
  */
 @theme {
-  --color-background: #f8fafc; /* slate-50 */
-  --color-foreground: #0f172a; /* slate-900 */
+  --color-background: #f5f5f7; /* Apple açık gri zemin */
+  --color-foreground: #1d1d1f;
   --color-surface: #ffffff;
 
   --color-primary: #e11d48; /* rose-600 — ana eylem (marka kırmızısı) */
@@ -26,13 +28,94 @@
   --color-warning: #d97706; /* amber-600 — geciken/bekleyen */
   --color-warning-soft: #fffbeb;
 
-  --color-muted: #f1f5f9; /* slate-100 */
-  --color-muted-foreground: #475569; /* slate-600 — 4.5:1 beyaz üzerinde */
-  --color-border: #e2e8f0; /* slate-200 */
+  --color-muted: #f2f2f5;
+  --color-muted-foreground: #4b4b52; /* beyaz üzerinde 4.5:1 üstü */
+  --color-border: #e3e3e8; /* ince ayraç */
   --color-ring: #e11d48;
 
-  --font-sans: var(--font-fira-sans);
+  /* Sistem yazı tipi: Apple'da SF Pro (optik boyutlu), Windows'ta Segoe UI Variable. */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI",
+    system-ui, sans-serif;
   --font-mono: var(--font-fira-code);
+
+  /* Yumuşak, katmanlı gölgeler: büyük yüzey = daha derin gölge. */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04), 0 2px 8px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 4px 12px rgb(0 0 0 / 0.06), 0 16px 40px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 8px 24px rgb(0 0 0 / 0.08), 0 32px 64px rgb(0 0 0 / 0.14);
+
+  /* Kritik sönümlü yay (bounce 0) ve hafif sekmeli yay (momentumlu jestler için). */
+  --ease-spring: linear(
+    0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 18.3%, 1.017 23.5%, 1.032 27.8%,
+    1.018 33.4%, 0.996 44.7%, 1
+  );
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-materialize: materialize 380ms var(--ease-out-quint) both;
+  --animate-sheet-up: sheet-up 420ms var(--ease-out-quint) both;
+  --animate-scrim-in: scrim-in 240ms ease-out both;
+  --animate-pop-in: pop-in 240ms var(--ease-out-quint) both;
+}
+
+@keyframes materialize {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+    filter: blur(8px);
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+    filter: blur(4px);
+  }
+}
+
+/*
+ * Liquid Glass — içeriğin üstünde yüzen, arkasını kıran yarı saydam malzeme.
+ * Üst kenardaki parlak çizgi ışığın malzemeye çarptığı yer; iç gölge kalınlık hissi verir.
+ * Asla açık cam üstüne açık cam koymayın.
+ */
+@utility glass {
+  background-color: rgb(255 255 255 / 0.5);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgb(255 255 255 / 0.55);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.8),
+    inset 0 -1px 0 rgb(0 0 0 / 0.03),
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 8px 32px rgb(0 0 0 / 0.08);
+}
+
+/* Büyük yüzeyler (sheet, açılır panel) daha kalın: daha güçlü bulanıklık, daha derin gölge. */
+@utility glass-thick {
+  background-color: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(40px) saturate(190%);
+  border: 1px solid rgb(255 255 255 / 0.6);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    0 4px 12px rgb(0 0 0 / 0.06),
+    0 24px 64px rgb(0 0 0 / 0.16);
+}
+
+/* Modal görevlerde arka planı karartıp geri iter. */
+@utility scrim {
+  background-color: rgb(0 0 0 / 0.28);
+  backdrop-filter: blur(2px);
 }
 
 /* Taban 17 px: tablette ve telefonda okunur yazı, büyük dokunma alanı (rem ile her şey ölçeklenir). */
@@ -41,12 +124,54 @@ html {
 }
 
 body {
-  background: var(--color-background);
+  /* Cam katmanın kırabileceği yumuşak, sabit bir ortam ışığı. */
+  background:
+    radial-gradient(60rem 40rem at 0% 0%, rgb(225 29 72 / 0.11), transparent 60%),
+    radial-gradient(50rem 40rem at 100% 0%, rgb(56 189 248 / 0.13), transparent 60%),
+    radial-gradient(60rem 50rem at 50% 100%, rgb(16 185 129 / 0.09), transparent 60%),
+    var(--color-background);
+  background-attachment: fixed;
   color: var(--color-foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
 }
 
-/* Hareket azaltma tercihine saygı (WCAG / Apple HIG) */
+@layer base {
+  /* Harf aralığı boyuta özgü: büyük başlıkta sıkı, gövdede nötr. */
+  h1 {
+    letter-spacing: -0.022em;
+    line-height: 1.15;
+  }
+  h2 {
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+  }
+  h3 {
+    letter-spacing: -0.01em;
+  }
+
+  /* Geri bildirim basışta başlar, bırakışta değil. */
+  button:not(:disabled),
+  [role="button"],
+  a.rounded-xl,
+  a.rounded-2xl,
+  a.rounded-full {
+    -webkit-tap-highlight-color: transparent;
+    transition-property: color, background-color, border-color, box-shadow, transform;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out-quint);
+  }
+  button:not(:disabled):active,
+  [role="button"]:active,
+  a.rounded-xl:active,
+  a.rounded-2xl:active,
+  a.rounded-full:active {
+    transform: scale(0.97);
+    transition-duration: 80ms;
+  }
+}
+
+/* Hareket azaltma: kaydırma/ölçek yerine kısa saydamlık geçişi (WCAG / Apple HIG). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -55,5 +180,36 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  button:not(:disabled):active,
+  [role="button"]:active,
+  a:active {
+    transform: none !important;
+  }
+}
+
+/* Saydamlığı azalt: cam katı ve buzlu hale gelir. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-thick {
+    background-color: var(--color-surface);
+    backdrop-filter: none;
+    border-color: var(--color-border);
+  }
+  body {
+    background: var(--color-background);
+  }
+}
+
+/* Yüksek kontrast: katı zemin, belirgin kenar. */
+@media (prefers-contrast: more) {
+  .glass,
+  .glass-thick {
+    background-color: var(--color-surface);
+    backdrop-filter: none;
+    border-color: var(--color-foreground);
+  }
+  :root {
+    --color-border: #8e8e93;
   }
 }

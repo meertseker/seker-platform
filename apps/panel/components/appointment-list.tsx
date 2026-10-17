@@ -239,7 +239,7 @@ export function AppointmentList({
                         Diğer…
                         <ChevronDown aria-hidden className="size-4" />
                       </summary>
-                      <div className="absolute left-0 z-20 mt-1 w-44 rounded-xl border border-border bg-surface p-1 shadow-lg">
+                      <div className="glass-thick absolute left-0 z-20 mt-1 w-44 origin-top-left animate-pop-in rounded-2xl p-1">
                         {(["ertelendi", "iptal"] as AppointmentOutcome[]).map((value) => (
                           <button
                             key={value}

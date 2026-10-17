@@ -1,15 +1,9 @@
 import type { Metadata } from "next";
-import { Fira_Sans, Fira_Code } from "next/font/google";
+import { Fira_Code } from "next/font/google";
 import "./globals.css";
 
+// Gövde yazısı sistem fontu (globals.css --font-sans); yalnız mono için web fontu.
 // latin-ext şart: Türkçe ğ/ş/ı/ç/ö/ü karakterleri için.
-const firaSans = Fira_Sans({
-  variable: "--font-fira-sans",
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin", "latin-ext"],
-  display: "swap",
-});
-
 const firaCode = Fira_Code({
   variable: "--font-fira-code",
   subsets: ["latin", "latin-ext"],
@@ -29,7 +23,7 @@ export default function RootLayout({
   return (
     <html
       lang="tr"
-      className={`${firaSans.variable} ${firaCode.variable} h-full antialiased`}
+      className={`${firaCode.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

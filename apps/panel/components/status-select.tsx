@@ -110,12 +110,12 @@ export function StatusSelect({ leadId, status, converted, onChanged }: StatusSel
 
       {pendingStatus ? (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"
+          className="scrim fixed inset-0 z-50 flex animate-scrim-in items-end p-4 sm:items-center sm:justify-center"
           role="dialog"
           aria-modal="true"
           aria-labelledby={`lost-title-${leadId}`}
         >
-          <div className="w-full rounded-2xl border border-border bg-surface p-5 shadow-xl sm:max-w-md">
+          <div className="glass-thick w-full animate-materialize rounded-[1.75rem] p-5 sm:max-w-md">
             <h2
               id={`lost-title-${leadId}`}
               className="text-lg font-semibold text-foreground"

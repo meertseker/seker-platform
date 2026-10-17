@@ -99,15 +99,15 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       className={
         compact
-          ? `flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+          ? `flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] px-1 py-1.5 text-center text-[0.6875rem] font-semibold tracking-[0.01em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               active
-                ? "bg-primary-soft text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-white/85 text-primary shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`
-          : `flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+          : `flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               active
-                ? "bg-primary-soft font-semibold text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-white/85 font-semibold text-primary shadow-sm"
+                : "text-muted-foreground hover:bg-black/[0.04] hover:text-foreground"
             }`
       }
     >
@@ -140,7 +140,7 @@ function ProfileMenuContents({
 }) {
   return (
     <>
-      <div className="border-b border-border px-3 pb-3">
+      <div className="border-b border-black/[0.06] px-3 pb-3">
         <p className="truncate text-sm font-semibold text-foreground">{fullName}</p>
         <p className="mt-0.5 text-xs font-medium text-muted-foreground">{roleLabel}</p>
       </div>
@@ -158,17 +158,17 @@ function ProfileMenuContents({
         {siteEditUrl ? (
           <a
             href={siteEditUrl}
-            className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-black/[0.04]"
           >
             <PencilLine className="size-5 shrink-0" aria-hidden="true" />
             Siteyi düzenle
           </a>
         ) : null}
       </div>
-      <form action={signOut} className="border-t border-border pt-2">
+      <form action={signOut} className="border-t border-black/[0.06] pt-2">
         <button
           type="submit"
-          className="flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-black/[0.04] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <LogOut aria-hidden className="size-5 shrink-0" />
           Çıkış
@@ -193,18 +193,18 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-border bg-surface px-4 py-5 md:flex md:flex-col">
+      <aside className="glass fixed bottom-3 left-3 top-3 z-30 hidden w-[15.25rem] overflow-y-auto overscroll-contain rounded-[1.75rem] px-3 py-4 md:flex md:flex-col">
         <Link
           href={HOME_HREF}
           className="flex items-center gap-2.5 rounded-xl px-3 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="" className="size-9 object-contain" />
-          <span className="text-lg font-bold tracking-tight text-foreground">
+          <span className="text-lg font-semibold tracking-[-0.02em] text-foreground">
             Şeker CRM
           </span>
         </Link>
-        <nav aria-label="Ana navigasyon" className="mt-8 flex flex-1 flex-col gap-1">
+        <nav aria-label="Ana navigasyon" className="mt-6 flex flex-1 flex-col gap-1">
           {mainItems.map((item) => (
             <NavLink
               key={item.href}
@@ -217,7 +217,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
           {siteEditUrl ? (
             <a
               href={siteEditUrl}
-              className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-black/[0.04]"
             >
               <PencilLine className="size-5 shrink-0" aria-hidden="true" />
               Siteyi düzenle
@@ -225,13 +225,13 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
           ) : null}
           <Link
             href={NEW_LEAD_HREF}
-            className="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-3 py-2.5 text-sm font-semibold text-on-primary shadow-[0_4px_14px_rgb(225_29_72/0.3),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <Plus aria-hidden className="size-5 shrink-0" />
             Yeni Veli
           </Link>
         </nav>
-        <div className="rounded-2xl border border-border bg-muted/60 p-3">
+        <div className="border-t border-black/[0.06] pt-3">
           <ProfileMenuContents
             fullName={fullName}
             roleLabel={roleLabel}
@@ -241,7 +241,8 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
         </div>
       </aside>
 
-      <header className="sticky top-0 z-20 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:ml-64">
+      {/* Bulanıklık sözde öğede: başlığın kendisinde olsaydı içindeki cam açılır menüler sayfayı kıramazdı. */}
+      <header className="sticky top-0 z-20 px-4 py-3 before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-background/60 before:backdrop-blur-2xl before:backdrop-saturate-150 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-4 after:bg-gradient-to-b after:from-background/60 after:to-transparent md:ml-64 md:before:hidden md:after:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
           <Link
             href={HOME_HREF}
@@ -249,7 +250,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="" className="size-8 object-contain" />
-            <span className="text-base font-bold tracking-tight">Şeker CRM</span>
+            <span className="text-base font-semibold tracking-[-0.02em]">Şeker CRM</span>
           </Link>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <NotificationBell
@@ -264,15 +265,15 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
                 onClick={() =>
                   setOpenMenuPathname(profileMenuOpen ? null : pathname)
                 }
-                className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-2.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="glass flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-1.5 py-1.5 pr-2.5 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <span className="flex size-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <User aria-hidden className="size-4" />
                 </span>
                 <span className="hidden max-w-28 truncate sm:inline">{fullName}</span>
               </button>
               {profileMenuOpen ? (
-                <div className="absolute right-0 top-14 z-50 min-w-56 rounded-2xl border border-border bg-surface p-2 shadow-lg">
+                <div className="glass-thick absolute right-0 top-14 z-50 min-w-60 origin-top-right animate-pop-in rounded-3xl p-2">
                   <ProfileMenuContents
                     fullName={fullName}
                     roleLabel={roleLabel}
@@ -290,7 +291,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
 
       <nav
         aria-label="Alt navigasyon"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface px-2 pb-[calc(env(safe-area-inset-bottom)+0.375rem)] pt-1.5 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] md:hidden"
+        className="glass fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 rounded-[1.75rem] p-1.5 md:hidden"
       >
         <div className="grid grid-cols-5 gap-1">
           {mainItems.map((item) => (
@@ -306,7 +307,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
           <Link
             href={NEW_LEAD_HREF}
             aria-label="Yeni veli ekle"
-            className="flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl bg-primary px-1 py-1.5 text-center text-xs font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] bg-primary px-1 py-1.5 text-center text-[0.6875rem] font-semibold tracking-[0.01em] text-on-primary shadow-[0_4px_14px_rgb(225_29_72/0.3),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           >
             <Plus aria-hidden className="size-5" />
             <span className="leading-tight">Yeni Veli</span>

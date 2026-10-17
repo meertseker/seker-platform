@@ -96,19 +96,19 @@ export function NotificationBell({
         aria-label="Bildirimler"
         aria-expanded={open}
         onClick={toggleOpen}
-        className="relative min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="glass relative flex size-11 cursor-pointer items-center justify-center rounded-full text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Bell aria-hidden className="size-5" />
         {displayUnreadCount > 0 ? (
-          <span className="absolute -right-2 -top-2 min-w-5 rounded-full bg-destructive px-1.5 py-0.5 text-center text-xs font-bold text-white tabular-nums">
+          <span className="absolute -right-1.5 -top-1.5 min-w-5 rounded-full bg-destructive px-1.5 py-0.5 text-center text-xs font-bold text-white tabular-nums">
             {displayUnreadCount > 99 ? "99+" : displayUnreadCount}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-12 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border bg-surface shadow-lg">
-          <div className="border-b border-border px-4 py-3">
+        <div className="glass-thick absolute right-0 top-14 z-50 w-80 max-w-[calc(100vw-2rem)] origin-top-right animate-pop-in overflow-hidden rounded-3xl">
+          <div className="border-b border-black/[0.06] px-4 py-3">
             <p className="text-sm font-semibold text-foreground">Bildirimler</p>
             <p className="mt-1 text-xs text-muted-foreground">Son 20 bildirim</p>
           </div>
@@ -124,8 +124,8 @@ export function NotificationBell({
                   <button
                     type="button"
                     onClick={() => openNotification(notification)}
-                    className={`block w-full cursor-pointer px-4 py-3 text-left transition-colors hover:bg-muted ${
-                      notification.read_at ? "bg-surface" : "bg-primary-soft"
+                    className={`block w-full cursor-pointer px-4 py-3 text-left hover:bg-black/[0.04] ${
+                      notification.read_at ? "" : "bg-primary/[0.07]"
                     }`}
                   >
                     <span className="block text-sm font-medium text-foreground tabular-nums">
