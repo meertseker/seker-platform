@@ -23,9 +23,10 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() oturumu yeniler ve JWT'yi yerelde doğrular; getUser() gibi her
+  // istekte (önceden yüklemeler dahil) Auth sunucusuna gitmez.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims.sub ?? null;
   const isLogin = request.nextUrl.pathname.startsWith("/login");
 
   if (!user && !isLogin) {

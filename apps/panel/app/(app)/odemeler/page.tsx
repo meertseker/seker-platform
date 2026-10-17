@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { AlertTriangle, Banknote, Clock, Download, PiggyBank } from "lucide-react";
 import { EXCEL_FILLS, PaymentMatrixCell, PaymentRowProvider } from "@/components/payment-matrix-cell";
@@ -5,6 +6,7 @@ import { paymentContextFor } from "@/lib/payment-context";
 import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
 import { STUDENT_STATUSES, label } from "@/lib/constants";
 import { getSessionProfile } from "@/lib/auth";
+import { isPhoneRequest } from "@/lib/device";
 import { formatTRY, tlToKurus } from "@/lib/money";
 import {
   buildPaymentMatrix,
@@ -142,6 +144,7 @@ function Money({ kurus, muted = false }: { kurus: number | null; muted?: boolean
 
 export default async function PaymentsPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
+  const phone = isPhoneRequest(await headers());
   const profile = await getSessionProfile();
   const supabase = await createServerSupabase();
 
@@ -170,6 +173,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
   const matrix = buildPaymentMatrix(inScope, today, season);
   const phoneById = new Map(allStudents.map((student) => [student.id, student.phone]));
   const rows = filterRows(matrix.rows, filter, currentMonth);
+  // Satır bağlamı telefon kartlarında ve masaüstü tablosunda aynı nesne olarak
+  // verilir; React onu sayfa verisine bir kez yazar (yoksa iki kopya gider).
+  const contextById = new Map(
+    rows.map((row) => [
+      row.studentId,
+      paymentContextFor(row, { id: row.studentId, phone: phoneById.get(row.studentId) ?? null }, traces),
+    ]),
+  );
   const { columnTotals, sideTotals, grandTotal } = summarizeRows(matrix.months, rows);
 
   const dueThisMonthKurus = dueThisMonthKurusOf(matrix.rows, currentMonth);
@@ -386,36 +397,166 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         ))}
       </ul>
 
-      {/* Telefon: tablo yerine öğrenci kartları; her kartta aidat listesindeki satır kutular hâlinde */}
-      <ul className="space-y-3 md:hidden" aria-label={`${season} sezonu öğrenci ödemeleri`}>
-        {rows.map((row) => (
-          <li
-            key={row.studentId}
-            className={`rounded-2xl border p-4 shadow-sm ${row.hasPlan ? "border-border bg-surface" : "border-amber-200 bg-warning-soft"}`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <Link href={`/ogrenciler/${row.studentId}`} className="text-base font-semibold text-foreground hover:underline">
-                  {row.fullName}
-                </Link>
-                <p className="truncate text-sm text-muted-foreground">{row.parentName || "Veli bilgisi yok"}</p>
+      {/* Telefon: tablo yerine öğrenci kartları; her kartta aidat listesindeki satır kutular hâlinde.
+          İki düzenden yalnız cihaza uyanı çizilir: ikisi birden ~2000 hücreyi iki kez gönderiyordu. */}
+      {phone ? (
+        <ul className="space-y-3" aria-label={`${season} sezonu öğrenci ödemeleri`}>
+          {rows.map((row) => (
+            <li
+              key={row.studentId}
+              className={`rounded-2xl border p-4 shadow-sm ${row.hasPlan ? "border-border bg-surface" : "border-amber-200 bg-warning-soft"}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link href={`/ogrenciler/${row.studentId}`} className="text-base font-semibold text-foreground hover:underline">
+                    {row.fullName}
+                  </Link>
+                  <p className="truncate text-sm text-muted-foreground">{row.parentName || "Veli bilgisi yok"}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className={`text-base font-semibold tabular-nums ${row.hasOverdue ? "text-red-700" : "text-foreground"}`}>
+                    {formatTRY(row.remainingKurus)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">kalan</p>
+                </div>
               </div>
-              <div className="shrink-0 text-right">
-                <p className={`text-base font-semibold tabular-nums ${row.hasOverdue ? "text-red-700" : "text-foreground"}`}>
-                  {formatTRY(row.remainingKurus)}
-                </p>
-                <p className="text-xs text-muted-foreground">kalan</p>
-              </div>
-            </div>
-            {row.hasPlan ? (
-              <div className="mt-3 grid grid-cols-3 gap-1.5">
-                <PaymentRowProvider
-                  value={paymentContextFor(
-                    row,
-                    { id: row.studentId, phone: phoneById.get(row.studentId) ?? null },
-                    traces,
-                  )}
+              {row.hasPlan ? (
+                <div className="mt-3 grid grid-cols-3 gap-1.5">
+                  <PaymentRowProvider
+                    value={contextById.get(row.studentId)!}
+                  >
+                    {SIDE_COLUMNS.map((column) => {
+                      const cell = sideCellOf(row, column);
+                      return cell ? (
+                        <PaymentMatrixCell
+                          key={column}
+                          cell={cell}
+                          studentName={row.fullName}
+                          monthLabel={SIDE_DIALOG_LABELS[column]}
+                          role={profile.role}
+                          variant="tile"
+                          tileLabel={column === "kitap" ? "Kitap" : column === "aidat" ? "Aidat (peşin)" : "Servis"}
+                        />
+                      ) : null;
+                    })}
+                    {matrix.months.map((monthKey) => (
+                      <PaymentMatrixCell
+                        key={monthKey}
+                        cell={row.cells[monthKey]}
+                        studentName={row.fullName}
+                        monthLabel={longMonthLabel(monthKey)}
+                        role={profile.role}
+                        variant="tile"
+                        tileLabel={sheetMonthLabel(monthKey)}
+                      />
+                    ))}
+                  </PaymentRowProvider>
+                </div>
+              ) : (
+                <Link
+                  href={`/ogrenciler/${row.studentId}`}
+                  className="mt-3 inline-flex min-h-12 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary"
                 >
+                  Ödeme planı kur
+                </Link>
+              )}
+            </li>
+          ))}
+          {rows.length === 0 ? (
+            <li className="rounded-2xl border border-border bg-surface p-6 text-center text-muted-foreground">
+              Bu filtrelerle öğrenci bulunamadı.
+            </li>
+          ) : null}
+        </ul>
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+          <table className="min-w-full text-sm">
+            <caption className="sr-only">
+              {season} sezonu öğrenci bazlı aylık ödeme tablosu
+            </caption>
+            <thead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th scope="col" className="sticky left-0 z-10 min-w-56 bg-muted px-4 py-3 text-left">
+                  Öğrenci Adı ve Soyadı
+                </th>
+                <th scope="col" className="min-w-44 whitespace-nowrap px-3 py-3 text-left">
+                  Anne &amp; Baba Adı
+                </th>
+                {SIDE_COLUMNS.map((column) => (
+                  <th
+                    key={column}
+                    scope="col"
+                    className="whitespace-nowrap border-l border-border px-2 py-3 text-right"
+                  >
+                    {SIDE_HEADERS[column]}
+                  </th>
+                ))}
+                {matrix.months.map((monthKey) => (
+                  <th
+                    key={monthKey}
+                    scope="col"
+                    title={longMonthLabel(monthKey)}
+                    className={`whitespace-nowrap border-l border-border px-2 py-3 text-right ${
+                      monthKey === currentMonth ? "text-primary" : ""
+                    }`}
+                  >
+                    {sheetMonthLabel(monthKey)}
+                  </th>
+                ))}
+                <th scope="col" className="px-3 py-3 text-right">
+                  Toplam
+                </th>
+                <th scope="col" className="px-3 py-3 text-right">
+                  Ödenen
+                </th>
+                <th scope="col" className="px-3 py-3 text-right">
+                  Kalan
+                </th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-border">
+              {rows.map((row) => (
+                <tr key={row.studentId} className={row.hasPlan ? undefined : "bg-warning-soft/50"}>
+                  <th
+                    scope="row"
+                    className={`sticky left-0 z-10 min-w-56 border-r border-border px-4 py-2 text-left font-normal ${
+                      row.hasPlan ? "bg-surface" : "bg-warning-soft"
+                    }`}
+                  >
+                    <Link
+                      href={`/ogrenciler/${row.studentId}`}
+                      className="whitespace-nowrap font-semibold text-foreground hover:underline"
+                    >
+                      {row.fullName}
+                    </Link>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 empty:hidden">
+                      {row.hasPlan ? null : (
+                        <>
+                          <span className="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">
+                            Plan yok
+                          </span>
+                          <Link
+                            href={`/ogrenciler/${row.studentId}`}
+                            className="text-xs font-semibold text-primary hover:underline"
+                          >
+                            Plan oluştur
+                          </Link>
+                        </>
+                      )}
+                      {row.status === "aktif" ? null : (
+                        <span className={badgeClass(STUDENT_STATUS_STYLES[row.status])}>
+                          {label(STUDENT_STATUSES, row.status)}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <td className="whitespace-nowrap px-3 py-2 text-left text-sm text-muted-foreground">
+                    {row.parentName || "—"}
+                  </td>
+                  <PaymentRowProvider
+                    value={contextById.get(row.studentId)!}
+                  >
                   {SIDE_COLUMNS.map((column) => {
                     const cell = sideCellOf(row, column);
                     return cell ? (
@@ -425,10 +566,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                         studentName={row.fullName}
                         monthLabel={SIDE_DIALOG_LABELS[column]}
                         role={profile.role}
-                        variant="tile"
-                        tileLabel={column === "kitap" ? "Kitap" : column === "aidat" ? "Aidat (peşin)" : "Servis"}
                       />
-                    ) : null;
+                    ) : (
+                      <td key={column} className="border-l border-border" />
+                    );
                   })}
                   {matrix.months.map((monthKey) => (
                     <PaymentMatrixCell
@@ -437,224 +578,89 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                       studentName={row.fullName}
                       monthLabel={longMonthLabel(monthKey)}
                       role={profile.role}
-                      variant="tile"
-                      tileLabel={sheetMonthLabel(monthKey)}
                     />
                   ))}
-                </PaymentRowProvider>
-              </div>
-            ) : (
-              <Link
-                href={`/ogrenciler/${row.studentId}`}
-                className="mt-3 inline-flex min-h-12 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary"
-              >
-                Ödeme planı kur
-              </Link>
-            )}
-          </li>
-        ))}
-        {rows.length === 0 ? (
-          <li className="rounded-2xl border border-border bg-surface p-6 text-center text-muted-foreground">
-            Bu filtrelerle öğrenci bulunamadı.
-          </li>
-        ) : null}
-      </ul>
-
-      <div className="hidden overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm md:block">
-        <table className="min-w-full text-sm">
-          <caption className="sr-only">
-            {season} sezonu öğrenci bazlı aylık ödeme tablosu
-          </caption>
-          <thead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th scope="col" className="sticky left-0 z-10 min-w-56 bg-muted px-4 py-3 text-left">
-                Öğrenci Adı ve Soyadı
-              </th>
-              <th scope="col" className="min-w-44 whitespace-nowrap px-3 py-3 text-left">
-                Anne &amp; Baba Adı
-              </th>
-              {SIDE_COLUMNS.map((column) => (
-                <th
-                  key={column}
-                  scope="col"
-                  className="whitespace-nowrap border-l border-border px-2 py-3 text-right"
-                >
-                  {SIDE_HEADERS[column]}
-                </th>
-              ))}
-              {matrix.months.map((monthKey) => (
-                <th
-                  key={monthKey}
-                  scope="col"
-                  title={longMonthLabel(monthKey)}
-                  className={`whitespace-nowrap border-l border-border px-2 py-3 text-right ${
-                    monthKey === currentMonth ? "text-primary" : ""
-                  }`}
-                >
-                  {sheetMonthLabel(monthKey)}
-                </th>
-              ))}
-              <th scope="col" className="px-3 py-3 text-right">
-                Toplam
-              </th>
-              <th scope="col" className="px-3 py-3 text-right">
-                Ödenen
-              </th>
-              <th scope="col" className="px-3 py-3 text-right">
-                Kalan
-              </th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-border">
-            {rows.map((row) => (
-              <tr key={row.studentId} className={row.hasPlan ? undefined : "bg-warning-soft/50"}>
-                <th
-                  scope="row"
-                  className={`sticky left-0 z-10 min-w-56 border-r border-border px-4 py-2 text-left font-normal ${
-                    row.hasPlan ? "bg-surface" : "bg-warning-soft"
-                  }`}
-                >
-                  <Link
-                    href={`/ogrenciler/${row.studentId}`}
-                    className="whitespace-nowrap font-semibold text-foreground hover:underline"
+                  </PaymentRowProvider>
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">
+                    <Money kurus={row.totalKurus} />
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right font-semibold text-accent-strong tabular-nums">
+                    {formatTRY(row.paidKurus)}
+                  </td>
+                  <td
+                    className={`whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums ${
+                      row.hasOverdue ? "text-red-700" : "text-foreground"
+                    }`}
                   >
-                    {row.fullName}
-                  </Link>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 empty:hidden">
-                    {row.hasPlan ? null : (
-                      <>
-                        <span className="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">
-                          Plan yok
-                        </span>
-                        <Link
-                          href={`/ogrenciler/${row.studentId}`}
-                          className="text-xs font-semibold text-primary hover:underline"
-                        >
-                          Plan oluştur
-                        </Link>
-                      </>
-                    )}
-                    {row.status === "aktif" ? null : (
-                      <span className={badgeClass(STUDENT_STATUS_STYLES[row.status])}>
-                        {label(STUDENT_STATUSES, row.status)}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                <td className="whitespace-nowrap px-3 py-2 text-left text-sm text-muted-foreground">
-                  {row.parentName || "—"}
-                </td>
-                <PaymentRowProvider
-                  value={paymentContextFor(
-                    row,
-                    { id: row.studentId, phone: phoneById.get(row.studentId) ?? null },
-                    traces,
-                  )}
-                >
-                {SIDE_COLUMNS.map((column) => {
-                  const cell = sideCellOf(row, column);
-                  return cell ? (
-                    <PaymentMatrixCell
+                    {formatTRY(row.remainingKurus)}
+                  </td>
+                </tr>
+              ))}
+
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={columnCount} className="px-4 py-10 text-center text-muted-foreground">
+                    Bu filtrelerle öğrenci bulunamadı.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+
+            {rows.length > 0 ? (
+              <tfoot className="border-t-2 border-border bg-muted text-sm font-semibold">
+                <tr>
+                  <th
+                    scope="row"
+                    className="sticky left-0 z-10 min-w-56 whitespace-nowrap bg-muted px-4 py-3 text-left"
+                  >
+                    Toplam · {rows.length} öğrenci
+                  </th>
+                  <td />
+                  {SIDE_COLUMNS.map((column) => (
+                    <td
                       key={column}
-                      cell={cell}
-                      studentName={row.fullName}
-                      monthLabel={SIDE_DIALOG_LABELS[column]}
-                      role={profile.role}
-                    />
-                  ) : (
-                    <td key={column} className="border-l border-border" />
-                  );
-                })}
-                {matrix.months.map((monthKey) => (
-                  <PaymentMatrixCell
-                    key={monthKey}
-                    cell={row.cells[monthKey]}
-                    studentName={row.fullName}
-                    monthLabel={longMonthLabel(monthKey)}
-                    role={profile.role}
-                  />
-                ))}
-                </PaymentRowProvider>
-                <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">
-                  <Money kurus={row.totalKurus} />
-                </td>
-                <td className="whitespace-nowrap px-3 py-2 text-right font-semibold text-accent-strong tabular-nums">
-                  {formatTRY(row.paidKurus)}
-                </td>
-                <td
-                  className={`whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums ${
-                    row.hasOverdue ? "text-red-700" : "text-foreground"
-                  }`}
-                >
-                  {formatTRY(row.remainingKurus)}
-                </td>
-              </tr>
-            ))}
-
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={columnCount} className="px-4 py-10 text-center text-muted-foreground">
-                  Bu filtrelerle öğrenci bulunamadı.
-                </td>
-              </tr>
+                      className="whitespace-nowrap border-l border-border px-2 py-3 text-right"
+                    >
+                      {sideTotals[column].expectedKurus > 0 ? (
+                        <>
+                          <span className="block tabular-nums text-foreground">
+                            {formatTRY(sideTotals[column].expectedKurus)}
+                          </span>
+                          <span className="block text-xs font-medium tabular-nums text-accent-strong">
+                            {formatTRY(sideTotals[column].paidKurus)} tahsil
+                          </span>
+                        </>
+                      ) : null}
+                    </td>
+                  ))}
+                  {columnTotals.map((column) => (
+                    <td
+                      key={column.monthKey}
+                      className="whitespace-nowrap border-l border-border px-2 py-3 text-right"
+                    >
+                      <span className="block tabular-nums text-foreground">
+                        {formatTRY(column.expectedKurus)}
+                      </span>
+                      <span className="block text-xs font-medium tabular-nums text-accent-strong">
+                        {formatTRY(column.paidKurus)} tahsil
+                      </span>
+                    </td>
+                  ))}
+                  <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
+                    {formatTRY(grandTotal.totalKurus)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-accent-strong">
+                    {formatTRY(grandTotal.paidKurus)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
+                    {formatTRY(grandTotal.remainingKurus)}
+                  </td>
+                </tr>
+              </tfoot>
             ) : null}
-          </tbody>
-
-          {rows.length > 0 ? (
-            <tfoot className="border-t-2 border-border bg-muted text-sm font-semibold">
-              <tr>
-                <th
-                  scope="row"
-                  className="sticky left-0 z-10 min-w-56 whitespace-nowrap bg-muted px-4 py-3 text-left"
-                >
-                  Toplam · {rows.length} öğrenci
-                </th>
-                <td />
-                {SIDE_COLUMNS.map((column) => (
-                  <td
-                    key={column}
-                    className="whitespace-nowrap border-l border-border px-2 py-3 text-right"
-                  >
-                    {sideTotals[column].expectedKurus > 0 ? (
-                      <>
-                        <span className="block tabular-nums text-foreground">
-                          {formatTRY(sideTotals[column].expectedKurus)}
-                        </span>
-                        <span className="block text-xs font-medium tabular-nums text-accent-strong">
-                          {formatTRY(sideTotals[column].paidKurus)} tahsil
-                        </span>
-                      </>
-                    ) : null}
-                  </td>
-                ))}
-                {columnTotals.map((column) => (
-                  <td
-                    key={column.monthKey}
-                    className="whitespace-nowrap border-l border-border px-2 py-3 text-right"
-                  >
-                    <span className="block tabular-nums text-foreground">
-                      {formatTRY(column.expectedKurus)}
-                    </span>
-                    <span className="block text-xs font-medium tabular-nums text-accent-strong">
-                      {formatTRY(column.paidKurus)} tahsil
-                    </span>
-                  </td>
-                ))}
-                <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
-                  {formatTRY(grandTotal.totalKurus)}
-                </td>
-                <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-accent-strong">
-                  {formatTRY(grandTotal.paidKurus)}
-                </td>
-                <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
-                  {formatTRY(grandTotal.remainingKurus)}
-                </td>
-              </tr>
-            </tfoot>
-          ) : null}
-        </table>
-      </div>
+          </table>
+        </div>
+      )}
 
       {matrix.months.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
