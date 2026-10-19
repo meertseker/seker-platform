@@ -1,18 +1,20 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Check, Phone } from "lucide-react";
-import { recordCall } from "@/actions/lead-flow";
+import { claimLead, recordCall } from "@/actions/lead-flow";
+import { formatDayTime } from "@/lib/lead-flow/business-hours";
 import type { FollowupTimeline as Timeline, TimelineStep } from "@/lib/lead-flow/timeline";
 
 interface FollowupTimelineProps {
   leadId: string;
   timeline: Timeline;
-  /** Velide kayıtlı nitelik işaretleri (boşsa false); "Açmadı" bunları değiştirmeden yazar. */
-  quals: { age: boolean; area: boolean; timing: boolean };
+  /** Sunucunun saati (ms); "Açmadı"nın ilk çiziminde istemciyle aynı karar verilsin diye. */
+  nowMs: number;
 }
+
+const TICK_MS = 30_000;
 
 function StepRow({ step }: { step: TimelineStep }) {
   const dot =
@@ -47,11 +49,21 @@ function StepRow({ step }: { step: TimelineStep }) {
 }
 
 /** Takip sırası: yapıldı / şimdi / sırada; "Ara · açtı" arama ekranına, "Açmadı" sırayı ilerletir. */
-export function FollowupTimeline({ leadId, timeline, quals }: FollowupTimelineProps) {
+export function FollowupTimeline({ leadId, timeline, nowMs }: FollowupTimelineProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string[] | null>(null);
+  const [now, setNow] = useState(nowMs);
+
+  // Sıradaki denemenin saati gelince "Açmadı" sayfa yenilenmeden açılır.
+  const nextAttemptAt = timeline.state === "active" ? timeline.nextAttemptAt : null;
+  const waiting = nextAttemptAt !== null && Date.parse(nextAttemptAt) > now;
+  useEffect(() => {
+    if (!waiting) return;
+    const id = setInterval(() => setNow(Date.now()), TICK_MS);
+    return () => clearInterval(id);
+  }, [waiting]);
 
   if (timeline.state === "hidden") return null;
 
@@ -67,13 +79,28 @@ export function FollowupTimeline({ leadId, timeline, quals }: FollowupTimelinePr
     );
   }
 
+  /** CallQueueCard.onCall gibi: önce üstlenir, başkası arıyorsa arama ekranına gitmez. */
+  function call() {
+    setError(null);
+    startTransition(async () => {
+      const res = await claimLead(leadId);
+      if (!res.ok) {
+        setError(`${res.claimedBy} bu veliyi arıyor`);
+        router.refresh();
+        return;
+      }
+      router.push(`/leads/${leadId}/ara`);
+    });
+  }
+
   function noAnswer() {
     setError(null);
     startTransition(async () => {
+      // Nitelikler doğrulama için gönderilir; recordCall ulaşılamadıda bunları yazmaz (R20).
       const res = await recordCall({
         leadId,
         result: "ulasilamadi",
-        quals: { ...quals, reached: false },
+        quals: { age: false, area: false, timing: false, reached: false },
       });
       if ("error" in res) {
         setError(res.error);
@@ -118,22 +145,30 @@ export function FollowupTimeline({ leadId, timeline, quals }: FollowupTimelinePr
             </p>
           ) : null}
           <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
-            <Link
-              href={`/leads/${leadId}/ara`}
-              className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-[1.0625rem] font-bold text-on-primary hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            <button
+              type="button"
+              onClick={call}
+              disabled={pending}
+              className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-[1.0625rem] font-bold text-on-primary hover:bg-primary-strong disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <Phone aria-hidden className="size-5" />
               Ara · açtı
-            </Link>
+            </button>
             <button
               type="button"
               onClick={noAnswer}
-              disabled={pending}
-              className="min-h-14 rounded-2xl border border-input bg-surface px-5 text-base font-semibold text-foreground hover:bg-muted disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              disabled={pending || waiting}
+              aria-describedby={waiting ? "siradaki-deneme" : undefined}
+              className="min-h-14 rounded-2xl border border-input bg-surface px-5 text-base font-semibold text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {pending ? "Kaydediliyor…" : "Açmadı"}
             </button>
           </div>
+          {waiting && nextAttemptAt ? (
+            <p id="siradaki-deneme" className="mt-2 text-right text-sm text-muted-foreground">
+              Sıradaki deneme: {formatDayTime(new Date(nextAttemptAt))}
+            </p>
+          ) : null}
         </>
       ) : (
         <p className="mt-3 rounded-xl bg-muted px-3 py-2.5 text-sm text-foreground">

@@ -231,12 +231,15 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
       result === "randevu" || result === "geri_ara" ? true : result === "ulasilamadi" ? false : input.quals.reached;
     const patch: Record<string, unknown> = {
       assigned_to: profile.id,
-      q_age_ok: input.quals.age,
-      q_area_ok: input.quals.area,
-      q_timing_ok: input.quals.timing,
       q_reached: reached,
       last_activity_at: now.toISOString(),
     };
+    // R20: ulaşılamadıda nitelik soruları sorulmadı; kayıtlı cevaplar ezilmez.
+    if (result !== "ulasilamadi") {
+      patch.q_age_ok = input.quals.age;
+      patch.q_area_ok = input.quals.area;
+      patch.q_timing_ok = input.quals.timing;
+    }
     if (!lead.first_contact_at) patch.first_contact_at = now.toISOString();
     const userNote = input.note?.trim();
     if (userNote) patch.contact_note = userNote;
@@ -294,6 +297,8 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
     // Bu arama yapıldı: bekleyen geri arama ve takip görevleri karşılandı.
     await closeTasksByPrefix(supabase, `geri:${leadId}`);
     await closeTasksByPrefix(supabase, `takip:${leadId}:`);
+    // Ulaşıldı: kayıp sonrası "1 ay sonra kontenjan" denemesine gerek kalmadı.
+    if (result === "randevu" || result === "geri_ara") await closeTasksByPrefix(supabase, `kontenjan:${leadId}`);
 
     let done: string[];
     let closed = false;
@@ -326,13 +331,13 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
         break;
       case "ulasilamadi": {
         if (!next) {
-          await upsertPlannedTasks(supabase, leadId, profile.id, [
-            kontenjanTask(leadId, lead.parent_name, now, settings.hours),
-          ]);
-          done = [
-            "7 günde ulaşılamadı · veli Kaybedildi (Ulaşılamadı) olarak kapandı",
-            "1 ay sonra kontenjan mesajı görevi kuruldu",
-          ];
+          const kontenjan = kontenjanTask(leadId, lead.parent_name, now, settings.hours);
+          const open = await upsertPlannedTasks(supabase, leadId, profile.id, [kontenjan]);
+          done = ["7 günde ulaşılamadı · veli Kaybedildi (Ulaşılamadı) olarak kapandı"];
+          // Yeni yazıldı ya da zaten açık: her iki durumda görev açıktır.
+          if ([...open.inserted, ...open.alreadyOpen].includes(kontenjan.ruleKey)) {
+            done.push("1 ay sonra kontenjan mesajı görevi kuruldu");
+          }
           closed = true;
           break;
         }

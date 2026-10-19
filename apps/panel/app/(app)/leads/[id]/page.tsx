@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronDown, ChevronLeft } from "lucide-react";
+import { ChevronDown, ChevronLeft, Phone } from "lucide-react";
 import { ActivityFeed, type ActivityFeedItem } from "@/components/activity-feed";
 import {
   AppointmentList,
@@ -33,6 +33,7 @@ import { formatTRY, tlToKurus } from "@/lib/money";
 import { attributionLines, originLines, type LeadAttribution } from "@/lib/lead-attribution";
 import { formatDayTime } from "@/lib/lead-flow/business-hours";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
+import { cardTemplates, suppressCallStep } from "@/lib/lead-flow/card";
 import { fillTemplate } from "@/lib/lead-flow/template";
 import { buildFollowupTimeline, type TimelineTask } from "@/lib/lead-flow/timeline";
 import { waMeUrl } from "@/lib/whatsapp";
@@ -76,9 +77,6 @@ interface LeadRow extends LeadAttribution {
   start_window: string | null;
   wants_whatsapp: boolean | null;
   first_contact_at: string | null;
-  q_age_ok: boolean | null;
-  q_area_ok: boolean | null;
-  q_timing_ok: boolean | null;
   source: LeadSource;
   source_detail: string | null;
   status: LeadStatus;
@@ -266,7 +264,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
     supabase
       .from("leads")
       .select(
-        "id, parent_name, phone, child_name, child_birth_month, child_birth_year, channel, content_code, district, start_window, wants_whatsapp, first_contact_at, q_age_ok, q_area_ok, q_timing_ok, source, source_detail, gclid, utm_source, utm_medium, utm_campaign, landing_path, status, lost_reason, ingilizce_gerekli, ozel_durum, ozel_durum_note, wants_summer, assigned_to, converted_student_id, last_activity_at, created_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
+        "id, parent_name, phone, child_name, child_birth_month, child_birth_year, channel, content_code, district, start_window, wants_whatsapp, first_contact_at, source, source_detail, gclid, utm_source, utm_medium, utm_campaign, landing_path, status, lost_reason, ingilizce_gerekli, ozel_durum, ozel_durum_note, wants_summer, assigned_to, converted_student_id, last_activity_at, created_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -386,7 +384,13 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
         ),
       });
   const danisman = profile.full_name?.split(" ")[0] || profile.full_name || "";
-  const messageItems: MessageTemplateLink[] = settings.templates.map((template) => {
+  const timelineActive = timeline?.state === "active";
+  // R19: takip sırası etkinken tek arama yolu onun üstlenen "Ara · açtı" düğmesidir.
+  const leadStep = suppressCallStep(step, timelineActive);
+  const messageItems: MessageTemplateLink[] = cardTemplates(settings.templates, {
+    status: lead.status,
+    hasPendingAppointment: appointments.some((item) => item.outcome === "bekliyor"),
+  }).map((template) => {
     const text = fillTemplate(template.text, { veli: lead.parent_name, danisman });
     return { key: template.key, label: template.label, text, href: waMeUrl(lead.phone, text) };
   });
@@ -414,7 +418,18 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <CallButton leadId={lead.id} phone={lead.phone} leadName={lead.parent_name} />
+            {timelineActive ? (
+              // Takip sırası etkinken yalnız numarayı açar; arama kaydı "Ara · açtı" yolundan yapılır.
+              <a
+                href={`tel:${lead.phone}`}
+                className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Phone aria-hidden className="size-4" />
+                Telefonu aç
+              </a>
+            ) : (
+              <CallButton leadId={lead.id} phone={lead.phone} leadName={lead.parent_name} />
+            )}
             <WhatsAppButton phone={lead.phone} />
           </div>
         </div>
@@ -434,11 +449,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
           <FollowupTimeline
             leadId={lead.id}
             timeline={timeline}
-            quals={{
-              age: lead.q_age_ok ?? false,
-              area: lead.q_area_ok ?? false,
-              timing: lead.q_timing_ok ?? false,
-            }}
+            nowMs={Date.parse(nowIso)}
           />
         ) : (
           <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive-strong">
@@ -466,7 +477,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
         status={lead.status}
         convertedStudentId={lead.converted_student_id}
         role={profile.role}
-        step={step}
+        step={leadStep}
         initialSheet={initialSheet}
         priceItems={priceItems}
         resultAppointments={resultAppointments}

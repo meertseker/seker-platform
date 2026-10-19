@@ -85,6 +85,13 @@ describe("buildFollowupTimeline", () => {
     expect(t.steps[0].sub).toBe(`${formatDayTime(new Date(first))} · açmadı`);
     expect(t.steps[1].title).toBe("2. deneme · şimdi");
     expect(t.steps[1].sub).toBe(formatDayTime(new Date(due)));
+    expect(t.nextAttemptAt).toBe(due);
+  });
+
+  it("ilk aramada sıradaki deneme saati yoktur (Açmadı hep açık)", () => {
+    const t = buildFollowupTimeline(input({}));
+    if (t.state !== "active") throw new Error(t.state);
+    expect(t.nextAttemptAt).toBeNull();
   });
 
   it("kapanan görevler yapıldı sayılır, açık olan şimdi", () => {
@@ -105,11 +112,12 @@ describe("buildFollowupTimeline", () => {
     const a = buildFollowupTimeline(closed);
     expect(a).toMatchObject({ state: "closed", kontenjanPlanned: false });
     if (a.state === "closed") expect(a.steps.every((s) => s.state === "done")).toBe(true);
-    const b = buildFollowupTimeline({
-      ...closed,
-      tasks: [...tasks, { ruleKey: "kontenjan:L1", status: "acik", dueAt: "2026-12-03T07:00:00Z", createdAt: "2026-11-03T07:00:00Z" }],
-    });
+    const kontenjan = { ruleKey: "kontenjan:L1", status: "acik", dueAt: "2026-12-03T07:00:00Z", createdAt: "2026-11-03T07:00:00Z" };
+    const b = buildFollowupTimeline({ ...closed, tasks: [...tasks, kontenjan] });
     expect(b).toMatchObject({ state: "closed", kontenjanPlanned: true });
+    // Gönderilmiş (kapanmış) kontenjan görevi için gelecek zaman cümlesi yazılmaz.
+    const c = buildFollowupTimeline({ ...closed, tasks: [...tasks, { ...kontenjan, status: "tamamlandi" }] });
+    expect(c).toMatchObject({ state: "closed", kontenjanPlanned: false });
   });
 
   it("başka nedenle kaybedilen ya da bekleyen velide gizlenir", () => {

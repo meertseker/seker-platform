@@ -16,6 +16,7 @@ import {
   type CallOutcome,
 } from "@/lib/call-outcome";
 import { istanbulDateString } from "@/lib/cron-rules";
+import { closeTasksByPrefix } from "@/lib/lead-flow/tasks-store";
 
 export interface CreateLeadInput {
   parentName: string; phone: string; source: LeadSource; sourceDetail?: string;
@@ -78,6 +79,11 @@ export async function updateLeadStatus(leadId: string, to: LeadStatus, lostReaso
     last_activity_at: new Date().toISOString(),
   }).eq("id", leadId);
   if (error) return { error: "Durum güncellenemedi" };
+  // Kaybedildi'den çıkan (yeniden açılan) velide "1 ay sonra kontenjan" görevi artık geçersizdir.
+  // Tüm durum değişiklikleri buradan geçtiği için yeniden açmanın her yolu kapsanır.
+  if (lead.status === "kaybedildi" && to !== "kaybedildi") {
+    await closeTasksByPrefix(supabase, `kontenjan:${leadId}`);
+  }
   await logEvent(supabase, {
     entityType: "lead", entityId: leadId, eventType: "durum_degisti",
     actorId: profile.id, payload: { from: lead.status, to, lostReason: lostReason ?? null },

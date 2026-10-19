@@ -9,13 +9,18 @@ function likePrefix(prefix: string): string {
   return `${prefix.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 }
 
-/** Planlanan görevleri açar; aynı rule_key ile açık görev varsa (23505) atlanır. */
+/**
+ * Planlanan görevleri açar; aynı rule_key ile açık görev varsa (23505) atlanır.
+ * Dönüş: şimdi açık olan rule_key'ler (yeni yazılan ya da zaten açık olan). Diğer hatalar fırlatılır.
+ */
 export async function upsertPlannedTasks(
   supabase: SupabaseClient,
   leadId: string | null,
   assignedTo: string,
   tasks: PlannedTask[],
-): Promise<void> {
+): Promise<{ inserted: string[]; alreadyOpen: string[] }> {
+  const inserted: string[] = [];
+  const alreadyOpen: string[] = [];
   // Tek tek yazılır: toplu insert'te bir çakışma diğerlerini de düşürürdü.
   for (const t of tasks) {
     const { error } = await supabase.from("tasks").insert({
@@ -28,7 +33,10 @@ export async function upsertPlannedTasks(
       rule_key: t.ruleKey,
     });
     if (error && error.code !== "23505") throw new Error(`Görev açılamadı: ${error.message}`);
+    // 23505 yalnız açık görevlerdeki tekil indeksten gelir: aynı kural zaten açıktır.
+    (error ? alreadyOpen : inserted).push(t.ruleKey);
   }
+  return { inserted, alreadyOpen };
 }
 
 /** rule_key'i `prefix` ile başlayan açık görevleri tamamlar. */

@@ -18,7 +18,12 @@ export type TimelineInput = {
 export type TimelineStep = { n: number; title: string; sub: string; state: "done" | "now" | "next" };
 
 export type FollowupTimeline =
-  | { state: "active"; steps: TimelineStep[] }
+  | {
+      state: "active";
+      steps: TimelineStep[];
+      /** Şimdiki takip görevinin saati; gelmeden "Açmadı" kapalıdır. İlk aramada null. */
+      nextAttemptAt: string | null;
+    }
   | { state: "closed"; steps: TimelineStep[]; kontenjanPlanned: boolean }
   | { state: "stopped" }
   | { state: "hidden" };
@@ -75,13 +80,19 @@ export function buildFollowupTimeline(input: TimelineInput): FollowupTimeline {
     return {
       state: "closed",
       steps: build(DEFS.length + 1),
-      kontenjanPlanned: input.tasks.some((t) => t.ruleKey === `kontenjan:${input.leadId}`),
+      // Gelecek zaman cümlesi yalnız görev hâlâ açıkken doğrudur.
+      kontenjanPlanned: input.tasks.some(
+        (t) => t.ruleKey === `kontenjan:${input.leadId}` && t.status === "acik",
+      ),
     };
   }
   if (input.status === "beklemede") return { state: "hidden" };
   if (REACHED_STATUSES.includes(input.status)) return { state: "stopped" };
-  if (maxStep > 0) return { state: "active", steps: build(maxStep) };
+  if (maxStep > 0) {
+    const current = tasks.findLast((t) => stepOf(t.ruleKey) === maxStep);
+    return { state: "active", steps: build(maxStep), nextAttemptAt: current?.dueAt ?? null };
+  }
   if (input.lastReachAt || input.status === "ulasildi") return { state: "stopped" };
-  if (!input.firstContactAt) return { state: "active", steps: build(1) };
+  if (!input.firstContactAt) return { state: "active", steps: build(1), nextAttemptAt: null };
   return { state: "hidden" };
 }

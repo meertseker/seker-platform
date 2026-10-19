@@ -109,7 +109,11 @@ describe("recordCall", () => {
     });
     // Ortak alanlar: ilk temas, sahiplik, nitelik, not ve olay
     const leadPatch = leadPatches()[0].payload as Record<string, unknown>;
-    expect(leadPatch).toMatchObject({ assigned_to: ME, q_age_ok: true, q_reached: false });
+    expect(leadPatch).toMatchObject({ assigned_to: ME, q_reached: false });
+    // R20: ulaşılamadıda nitelik soruları sorulmadı; kayıtlı değerler ezilmez.
+    expect(leadPatch).not.toHaveProperty("q_age_ok");
+    expect(leadPatch).not.toHaveProperty("q_area_ok");
+    expect(leadPatch).not.toHaveProperty("q_timing_ok");
     expect(leadPatch.first_contact_at).toBe(new Date().toISOString());
     expect(inserts("lead_notes")).toHaveLength(1);
     expect(inserts("events")[0]).toMatchObject({ event_type: "arama_kaydi", entity_id: "L1" });
@@ -143,8 +147,10 @@ describe("recordCall", () => {
       ],
     });
     expect((leadPatches()[0].payload as Record<string, unknown>).q_reached).toBe(true);
+    expect(leadPatches()[0].payload).toMatchObject({ q_age_ok: true, q_area_ok: true, q_timing_ok: true });
     const closed = updates("tasks").flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
     expect(closed).toContain("takip:L1:%");
+    expect(closed).toContain("kontenjan:L1%");
     // Hatırlatmaları createAppointment kurar; recordCall yeni randevuda tekrar yazmaz.
     expect(inserts("tasks")).toEqual([]);
   });
@@ -191,6 +197,29 @@ describe("recordCall", () => {
         due_date: "2026-12-03",
       }),
     ]);
+  });
+
+  it("kontenjan görevi zaten açıksa (23505) satır yine yazılır", async () => {
+    lead.first_contact_at = "2026-10-27T07:00:00Z";
+    lead.status = "ulasildi";
+    openTakip = ["takip:L1:6"];
+    respond = (o) =>
+      o.table === "tasks" && o.op === "insert" ? { error: { code: "23505", message: "dup" } } : defaultRespond(o);
+    const r = await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
+    if (!("done" in r)) throw new Error("done bekleniyordu");
+    expect(r.done).toContain("1 ay sonra kontenjan mesajı görevi kuruldu");
+  });
+
+  it("geri ara kontenjan görevini kapatır", async () => {
+    await recordCall({ leadId: "L1", result: "geri_ara", quals, callbackAt: "2026-11-04T15:00" });
+    const closed = updates("tasks").flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
+    expect(closed).toContain("kontenjan:L1%");
+  });
+
+  it("ulaşılamadı kontenjan görevini kapatmaz", async () => {
+    await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
+    const closed = updates("tasks").flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
+    expect(closed).not.toContain("kontenjan:L1%");
   });
 
   it("geri ara tek görev kurar ve yeni veliyi ulaşıldıya alır", async () => {
