@@ -109,7 +109,7 @@ function CallQueueCard({
       </div>
 
       {late ? (
-        <p className="text-[13px] text-destructive-strong">15 dakikayı geçti. Yöneticiye bildirim gitti.</p>
+        <p className="text-[13px] text-destructive-strong">15 dakikayı geçti. Yöneticiye bildirim gidiyor.</p>
       ) : null}
 
       <div className="flex gap-2">

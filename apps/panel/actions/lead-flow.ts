@@ -73,10 +73,14 @@ function conversionQueued(lead: LeadRow, statusAfter: string | null, now: Date):
 }
 
 const PAST_TIME = "Geçmiş bir saat seçilemez";
+const NOTE_MAX = 2000;
 
 function validate(input: RecordCallInput, now: Date): string | null {
   if (!input?.leadId) return "Veli bulunamadı";
   if (!CALL_RESULTS.includes(input.result)) return "Arama sonucunu seçin";
+  if (typeof input.note === "string" && input.note.trim().length > NOTE_MAX) {
+    return `Not en fazla ${NOTE_MAX} karakter olabilir`;
+  }
   const q = input.quals;
   if (!q || ![q.age, q.area, q.timing, q.reached].every((v) => typeof v === "boolean")) {
     return "Nitelik sorularını yanıtlayın";

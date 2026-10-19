@@ -339,6 +339,7 @@ export function CallScreen({
           id="not"
           type="text"
           autoComplete="off"
+          maxLength={2000}
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="ör. bahçe, servis, yemek"

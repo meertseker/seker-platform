@@ -198,6 +198,7 @@ export function MessageLeadForm({ codes }: { codes: { code: string; count: numbe
           id="ad"
           type="text"
           autoComplete="off"
+          maxLength={80}
           value={name}
           onChange={(e) => setName(e.target.value)}
           className={fieldClass}

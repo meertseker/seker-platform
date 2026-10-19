@@ -122,6 +122,24 @@ describe("formatGroup", () => {
     );
   });
 
+  it("aynı grupta görüşme notu varsa arama_kaydi ve mesaj_tekrar ayrı satır üretmez (R25)", () => {
+    const c = ctx();
+    const [group] = groupItems(
+      [
+        item({ eventType: "not_eklendi", entityType: "lead", entityId: "L1", noteBody: "Arandı, ulaşılamadı (1. deneme)" }),
+        item({ eventType: "arama_kaydi", entityType: "lead", entityId: "L1", payload: { result: "ulasilamadi" } }),
+        item({ eventType: "mesaj_tekrar", entityType: "lead", entityId: "L1", payload: { channel: "ig_dm" } }),
+      ],
+      c,
+    );
+    expect(formatGroup(group, c)).toBe(
+      ["*Ayşe Yılmaz* · Can", "📝 Görüşme notu", "> Arandı, ulaşılamadı (1. deneme)", "— Merve Hanım"].join("\n"),
+    );
+    // Not yoksa olay kendi satırıyla görünür.
+    const [alone] = groupItems([item({ eventType: "arama_kaydi", entityType: "lead", entityId: "L1" })], c);
+    expect(formatGroup(alone, c)).toContain("Arama kaydedildi");
+  });
+
   it("ödeme mesajı öğrenci adıyla", () => {
     const c = ctx();
     const [group] = groupItems(

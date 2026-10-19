@@ -113,7 +113,12 @@ export function appointmentTasks(
       dueAt: istanbulAt(day, "09:00"),
     },
   ];
-  return tasks.filter((t) => t.dueAt.getTime() >= now.getTime());
+  // Sabah hatırlatması ziyaretten önce olmalı (09:00 ve öncesindeki ziyarette kurulmaz).
+  return tasks.filter(
+    (t) =>
+      t.dueAt.getTime() >= now.getTime() &&
+      (!t.ruleKey.endsWith(":sabah") || t.dueAt.getTime() < scheduledAt.getTime()),
+  );
 }
 
 /** "Geldi" sonrası: +1 gün teşekkür, +2 gün arama, +7 gün son arama. */

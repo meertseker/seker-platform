@@ -392,6 +392,12 @@ describe("recordCall", () => {
     expect(u.done.some((l) => l.includes("WhatsApp"))).toBe(false);
   });
 
+  it("2000 karakterden uzun notu reddeder (R25)", async () => {
+    const res = await recordCall({ leadId: "L1", result: "ulasilamadi", quals, note: "a".repeat(2001) });
+    expect(res).toEqual({ error: "Not en fazla 2000 karakter olabilir" });
+    expect(ops.filter((o) => o.op !== "select")).toHaveLength(0);
+  });
+
   it("eksik girdiyi reddeder", async () => {
     expect(await recordCall({ leadId: "L1", result: "randevu", quals })).toHaveProperty("error");
     expect(await recordCall({ leadId: "L1", result: "geri_ara", quals })).toHaveProperty("error");

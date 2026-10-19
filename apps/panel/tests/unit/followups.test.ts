@@ -78,6 +78,14 @@ describe("appointmentTasks", () => {
     const l = appointmentTasks("A1", "A", appt, at("2026-11-04", "11:00"));
     expect(l.map((t) => t.ruleKey)).toEqual(["hatirlat:A1:sabah"]);
   });
+  it("sabah 09:00 hatırlatması yalnız ziyaretten önceyse kurulur (R25)", () => {
+    const early = appointmentTasks("A1", "A", at("2026-11-05", "08:45"), at("2026-11-03", "09:00"));
+    expect(early.map((t) => t.ruleKey)).toEqual(["hatirlat:A1:once"]);
+    const atNine = appointmentTasks("A1", "A", at("2026-11-05", "09:00"), at("2026-11-03", "09:00"));
+    expect(atNine.map((t) => t.ruleKey)).toEqual(["hatirlat:A1:once"]);
+    const later = appointmentTasks("A1", "A", at("2026-11-05", "09:30"), at("2026-11-03", "09:00"));
+    expect(later.map((t) => t.ruleKey)).toEqual(["hatirlat:A1:once", "hatirlat:A1:sabah"]);
+  });
   it("pazartesi randevusunun önceki gün hatırlatması cumaya çekilir", () => {
     const l = appointmentTasks("A1", "A", at("2026-11-09", "11:00"), at("2026-11-02", "09:00"));
     expect(l[0].dueAt).toEqual(at("2026-11-06", "10:00"));

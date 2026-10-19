@@ -55,6 +55,9 @@ export const GROUP_GAP_MS = 90_000;
 /** Toplu işlemler öğrenci başına olay yazar; grupta tek özet mesaj olarak görünür. */
 const BATCH_EVENTS = new Set(["zam_uygulandi", "tutar_kesinlesti"]);
 
+/** Bu olayları her zaman bir görüşme notu izler; not grupta varsa ayrı satır yazılmaz. */
+const NOTE_COVERED_EVENTS = new Set(["arama_kaydi", "mesaj_tekrar"]);
+
 function str(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
@@ -395,7 +398,12 @@ export function formatGroup(group: WaGroup, ctx: WaContext): string | null {
 
   if (group.key.startsWith("toplu:")) return [...batchMessage(group), footer].join("\n");
 
-  const described = group.items.map((item) => describe(item, ctx)).filter((d): d is Line => d !== null);
+  // Görüşme notu aynı mesajdaysa arama/mesaj olayı aynı şeyi ikinci kez söylemesin.
+  const hasNote = group.items.some((i) => i.eventType === "not_eklendi" && !!i.noteBody);
+  const described = group.items
+    .filter((item) => !(hasNote && NOTE_COVERED_EVENTS.has(item.eventType)))
+    .map((item) => describe(item, ctx))
+    .filter((d): d is Line => d !== null);
   if (described.length === 0) return null;
 
   const out: string[] = [];
