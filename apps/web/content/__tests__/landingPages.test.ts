@@ -146,7 +146,7 @@ describe('LANDING_PAGES — rakamlar tek kaynaktan, aşırı iddia yok', () => {
   it('az-mevcutlu-anaokulu rakamı açıkça verir ve yönetmelik sınırıyla karşılaştırır', () => {
     const page = getLandingPage('az-mevcutlu-anaokulu')!;
     const text = JSON.stringify(page).toLowerCase();
-    expect(page.h1).toContain(String(ROSTER_STATUS.childCount));
+    expect(text).toContain(String(ROSTER_STATUS.childCount));
     expect(text).toContain(String(ROSTER_STATUS.limit));
     // Sayfa hâlâ ziyarete davet eder; iddia yerine sayılabilir kanıt sunar.
     expect(text).toMatch(/kendiniz say/);

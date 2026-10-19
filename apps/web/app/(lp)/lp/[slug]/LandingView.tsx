@@ -45,7 +45,7 @@ export default function LandingView({ slug, data }: { slug: string; data: Reader
           eylemi mobilde uzun bir kaydırma gerektirmez. */}
       <section className="mx-auto max-w-5xl px-6 pt-10 pb-8">
         <Editable c={c} k={k('h1')} as="h1" className="text-4xl text-ink md:text-5xl" />
-        <Editable c={c} k={k('subhead')} as="p" className="mt-6 max-w-2xl text-lg text-ink-soft" />
+        <Editable c={c} k={k('subhead')} as="p" className="mt-6 max-w-2xl whitespace-pre-line text-lg text-ink-soft" />
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <a href="#form" className="rounded-full bg-ink px-8 py-4 text-center font-medium text-paper" {...c.attrs('lp.common.ctaPrimary')}>
             {c.text('lp.common.ctaPrimary')}
