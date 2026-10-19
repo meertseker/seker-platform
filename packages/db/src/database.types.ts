@@ -233,14 +233,14 @@ isOneToOne: false
                   ]
                 },"leads": {
                   Row: {
-                    "ad_consent_revoked_at": string | null,"assigned_to": string | null,"beklemede_sezon": string | null,"child_birth_month": number | null,"child_birth_year": number | null,"child_name": string | null,"consent_at": string | null,"converted_student_id": string | null,"created_at": string,"family_id": string | null,"gclid": string | null,"id": string,"ingilizce_gerekli": boolean,"landing_path": string | null,"last_activity_at": string,"lost_reason": string | null,"ozel_durum": boolean,"ozel_durum_note": string | null,"parent_name": string,"phone": string,"source": string,"source_detail": string | null,"status": string,"updated_at": string,"utm_campaign": string | null,"utm_content": string | null,"utm_medium": string | null,"utm_source": string | null,"utm_term": string | null,"wants_summer": boolean,"web_payload": Json | null
+                    "ad_consent_revoked_at": string | null,"assigned_to": string | null,"beklemede_sezon": string | null,"channel": string | null,"child_birth_month": number | null,"child_birth_year": number | null,"child_name": string | null,"claimed_at": string | null,"consent_at": string | null,"contact_note": string | null,"content_code": string | null,"converted_student_id": string | null,"created_at": string,"district": string | null,"family_id": string | null,"first_contact_at": string | null,"gclid": string | null,"id": string,"ingilizce_gerekli": boolean,"is_qualified": boolean | null,"landing_path": string | null,"last_activity_at": string,"lost_reason": string | null,"ozel_durum": boolean,"ozel_durum_note": string | null,"parent_name": string,"phone": string,"q_age_ok": boolean | null,"q_area_ok": boolean | null,"q_reached": boolean | null,"q_timing_ok": boolean | null,"source": string,"source_detail": string | null,"start_window": string | null,"status": string,"updated_at": string,"utm_campaign": string | null,"utm_content": string | null,"utm_medium": string | null,"utm_source": string | null,"utm_term": string | null,"wants_summer": boolean,"wants_whatsapp": boolean | null,"web_payload": Json | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "ad_consent_revoked_at"?: string | null,"assigned_to"?: string | null,"beklemede_sezon"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"consent_at"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"family_id"?: string | null,"gclid"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"landing_path"?: string | null,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name": string,"phone": string,"source": string,"source_detail"?: string | null,"status"?: string,"updated_at"?: string,"utm_campaign"?: string | null,"utm_content"?: string | null,"utm_medium"?: string | null,"utm_source"?: string | null,"utm_term"?: string | null,"wants_summer"?: boolean,"web_payload"?: Json | null
+                    "ad_consent_revoked_at"?: string | null,"assigned_to"?: string | null,"beklemede_sezon"?: string | null,"channel"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"claimed_at"?: string | null,"consent_at"?: string | null,"contact_note"?: string | null,"content_code"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"district"?: string | null,"family_id"?: string | null,"first_contact_at"?: string | null,"gclid"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"is_qualified"?: never,"landing_path"?: string | null,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name": string,"phone": string,"q_age_ok"?: boolean | null,"q_area_ok"?: boolean | null,"q_reached"?: boolean | null,"q_timing_ok"?: boolean | null,"source": string,"source_detail"?: string | null,"start_window"?: string | null,"status"?: string,"updated_at"?: string,"utm_campaign"?: string | null,"utm_content"?: string | null,"utm_medium"?: string | null,"utm_source"?: string | null,"utm_term"?: string | null,"wants_summer"?: boolean,"wants_whatsapp"?: boolean | null,"web_payload"?: Json | null
                   }
                   Update: {
-                    "ad_consent_revoked_at"?: string | null,"assigned_to"?: string | null,"beklemede_sezon"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"consent_at"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"family_id"?: string | null,"gclid"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"landing_path"?: string | null,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name"?: string,"phone"?: string,"source"?: string,"source_detail"?: string | null,"status"?: string,"updated_at"?: string,"utm_campaign"?: string | null,"utm_content"?: string | null,"utm_medium"?: string | null,"utm_source"?: string | null,"utm_term"?: string | null,"wants_summer"?: boolean,"web_payload"?: Json | null
+                    "ad_consent_revoked_at"?: string | null,"assigned_to"?: string | null,"beklemede_sezon"?: string | null,"channel"?: string | null,"child_birth_month"?: number | null,"child_birth_year"?: number | null,"child_name"?: string | null,"claimed_at"?: string | null,"consent_at"?: string | null,"contact_note"?: string | null,"content_code"?: string | null,"converted_student_id"?: string | null,"created_at"?: string,"district"?: string | null,"family_id"?: string | null,"first_contact_at"?: string | null,"gclid"?: string | null,"id"?: string,"ingilizce_gerekli"?: boolean,"is_qualified"?: never,"landing_path"?: string | null,"last_activity_at"?: string,"lost_reason"?: string | null,"ozel_durum"?: boolean,"ozel_durum_note"?: string | null,"parent_name"?: string,"phone"?: string,"q_age_ok"?: boolean | null,"q_area_ok"?: boolean | null,"q_reached"?: boolean | null,"q_timing_ok"?: boolean | null,"source"?: string,"source_detail"?: string | null,"start_window"?: string | null,"status"?: string,"updated_at"?: string,"utm_campaign"?: string | null,"utm_content"?: string | null,"utm_medium"?: string | null,"utm_source"?: string | null,"utm_term"?: string | null,"wants_summer"?: boolean,"wants_whatsapp"?: boolean | null,"web_payload"?: Json | null
                   }
                   Relationships: [
                     {
@@ -515,14 +515,14 @@ isOneToOne: false
                   ]
                 },"tasks": {
                   Row: {
-                    "assigned_to": string,"auto_generated": boolean,"created_at": string,"due_date": string,"id": string,"lead_id": string | null,"rule_key": string | null,"status": string,"title": string,"updated_at": string
+                    "assigned_to": string,"auto_generated": boolean,"created_at": string,"due_at": string | null,"due_date": string,"id": string,"lead_id": string | null,"rule_key": string | null,"status": string,"title": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "assigned_to": string,"auto_generated"?: boolean,"created_at"?: string,"due_date": string,"id"?: string,"lead_id"?: string | null,"rule_key"?: string | null,"status"?: string,"title": string,"updated_at"?: string
+                    "assigned_to": string,"auto_generated"?: boolean,"created_at"?: string,"due_at"?: string | null,"due_date": string,"id"?: string,"lead_id"?: string | null,"rule_key"?: string | null,"status"?: string,"title": string,"updated_at"?: string
                   }
                   Update: {
-                    "assigned_to"?: string,"auto_generated"?: boolean,"created_at"?: string,"due_date"?: string,"id"?: string,"lead_id"?: string | null,"rule_key"?: string | null,"status"?: string,"title"?: string,"updated_at"?: string
+                    "assigned_to"?: string,"auto_generated"?: boolean,"created_at"?: string,"due_at"?: string | null,"due_date"?: string,"id"?: string,"lead_id"?: string | null,"rule_key"?: string | null,"status"?: string,"title"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -628,6 +628,9 @@ isOneToOne: false
                            },
 "set_can_edit_site":
 { Args: { "p_user": string,"p_value": boolean }; Returns: undefined
+                           },
+"wa_bildirim_acik":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            }
           }
           Enums: {

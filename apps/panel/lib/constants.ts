@@ -9,13 +9,14 @@ export type LeadStatus = keyof typeof LEAD_STATUSES;
 export const LEAD_SOURCES = {
   referans: "Referans", instagram: "Instagram", reklam: "Reklam",
   tabela_gecerken: "Tabela / Geçerken", telefon: "Telefon",
-  etkinlik: "Etkinlik", web_sitesi: "Web Sitesi", diger: "Diğer",
+  etkinlik: "Etkinlik", web_sitesi: "Web Sitesi", whatsapp: "WhatsApp", diger: "Diğer",
 } as const;
 export type LeadSource = keyof typeof LEAD_SOURCES;
 
 export const LOST_REASONS = {
   fiyat: "Fiyat", uzaklik: "Uzaklık", baska_okul: "Başka okul",
-  ulasilamadi: "Ulaşılamadı", vazgecti: "Vazgeçti", diger: "Diğer",
+  ulasilamadi: "Ulaşılamadı", vazgecti: "Vazgeçti",
+  yas_uymuyor: "Yaş uymuyor", gelecek_yil: "Gelecek yıl", diger: "Diğer",
 } as const;
 export type LostReason = keyof typeof LOST_REASONS;
 
