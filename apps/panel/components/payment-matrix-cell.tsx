@@ -146,10 +146,22 @@ export function PaymentMatrixCell({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={`${studentName}, ${monthLabel}, ${display}, ${stateLabel}`}
+        aria-label={`${studentName}, ${monthLabel}, ${display}${cell.tentative ? " (Kesinleşmedi)" : ""}, ${stateLabel}`}
         className={`flex min-h-12 w-full cursor-pointer flex-col items-end justify-center gap-0.5 px-2 py-1.5 text-right text-sm font-semibold tabular-nums transition-[filter] hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${fillOf(cell)}`}
       >
-        <span className="whitespace-nowrap">{display}</span>
+        <span className="whitespace-nowrap">
+          {cell.tentative ? (
+            <span
+              role="img"
+              title="Kesinleşmedi"
+              aria-label="Kesinleşmedi"
+              className="mr-1 font-medium opacity-70"
+            >
+              ~
+            </span>
+          ) : null}
+          {display}
+        </span>
         {hint || cell.cancelledCount > 0 ? (
           <span className="whitespace-nowrap text-xs font-medium opacity-90">
             {hint}
@@ -289,6 +301,14 @@ function CellSheet({
                   ))}
                 </div>
                 <p className="font-semibold tabular-nums text-foreground">
+                  {item.tentative ? (
+                    <span
+                      title="Kesinleşmedi"
+                      className="mr-2 rounded-full bg-muted px-2 py-0.5 align-middle text-xs font-medium text-muted-foreground"
+                    >
+                      Kesinleşmedi
+                    </span>
+                  ) : null}
                   {formatTRY(item.paidAmountKurus ?? item.amountKurus)}
                 </p>
               </div>

@@ -27,6 +27,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { formatTRY, tlToKurus } from "@/lib/money";
 import { seasonLastMonth } from "@/lib/enrollment-plan";
 import { inferPaymentDay } from "@/lib/payment-day";
+import { isTentative } from "@/lib/price-increase";
 import { openItemsOf, paymentContextFor } from "@/lib/payment-context";
 import { buildPaymentMatrix, SIDE_COLUMNS, sideCellOf, type SideColumn } from "@/lib/payment-matrix";
 import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
@@ -59,6 +60,7 @@ interface PlanRow {
   item_type: ItemType;
   total_amount: number;
   installment_count: number;
+  tentative_from: string | null;
   source_offer_id: string | null;
   created_at: string;
   installments?: InstallmentRow[] | null;
@@ -143,7 +145,10 @@ function paidSummary(installments: InstallmentRow[] | null | undefined) {
   }, 0);
 }
 
-function toInstallmentItems(rows: InstallmentRow[] | null | undefined): InstallmentTableItem[] {
+function toInstallmentItems(
+  rows: InstallmentRow[] | null | undefined,
+  tentativeFrom: string | null,
+): InstallmentTableItem[] {
   return (rows ?? []).map((row) => ({
     id: row.id,
     due_date: row.due_date,
@@ -152,6 +157,7 @@ function toInstallmentItems(rows: InstallmentRow[] | null | undefined): Installm
     paid_at: row.paid_at,
     paid_amount: row.paid_amount === null ? null : Number(row.paid_amount),
     payment_method: row.payment_method,
+    tentative: isTentative(tentativeFrom, row.due_date, row.status),
   }));
 }
 
@@ -195,7 +201,7 @@ export default async function StudentDetailPage({
   const { data, error } = await supabase
     .from("students")
     .select(
-      "id, created_at, full_name, birth_month, birth_year, parent_name, phone, season, program, start_date, status, left_date, leave_reason, payment_plans(id, season, item_type, total_amount, installment_count, source_offer_id, created_at, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method))",
+      "id, created_at, full_name, birth_month, birth_year, parent_name, phone, season, program, start_date, status, left_date, leave_reason, payment_plans(id, season, item_type, total_amount, installment_count, tentative_from, source_offer_id, created_at, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -234,7 +240,7 @@ export default async function StudentDetailPage({
 
   // Tüm planların taksitlerini TEK takvimde topla (kalem etiketiyle) — aya göre gruplanır.
   const scheduleItems = plans.flatMap((plan) =>
-    toInstallmentItems(plan.installments).map((item) => ({
+    toInstallmentItems(plan.installments, plan.tentative_from).map((item) => ({
       ...item,
       itemLabel: label(ITEM_TYPES, plan.item_type),
     })),

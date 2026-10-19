@@ -6,7 +6,7 @@ import type { MatrixRow, MatrixStudentInput } from "@/lib/payment-matrix";
 import { hasUnpaidThisMonth } from "@/lib/payments-summary";
 
 export const PAYMENT_STUDENTS_SELECT =
-  "id, full_name, parent_name, phone, season, status, created_at, payment_plans(id, item_type, season, total_amount, installment_count, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method))";
+  "id, full_name, parent_name, phone, season, status, created_at, payment_plans(id, item_type, season, total_amount, installment_count, tentative_from, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method))";
 
 export type PaymentStudent = MatrixStudentInput & { phone: string | null };
 

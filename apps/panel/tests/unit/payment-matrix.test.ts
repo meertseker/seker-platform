@@ -637,3 +637,21 @@ describe("buildPaymentMatrix — toplamlar", () => {
     expect(matrix.rows[0].totalKurus).toBe(2500000);
   });
 });
+
+describe("buildPaymentMatrix — kesinleşmemiş (tentative) hücreler", () => {
+  it("tentative_from sonrası bekleyen hücre tentative, ödenmiş ve öncesi değil", () => {
+    const p = {
+      ...plan("aidat", 69000, 3, [
+        bekliyor("2026-12-05", 23000),
+        bekliyor("2027-01-05", 23000),
+        odendi("2027-02-05", 23000),
+      ]),
+      tentative_from: "2027-01-01",
+    };
+    const matrix = buildPaymentMatrix([student("Ali", [p])], TODAY, SEASON);
+
+    expect(cellOf(matrix, 0, "2027-01").tentative).toBe(true);
+    expect(cellOf(matrix, 0, "2026-12").tentative).toBe(false);
+    expect(cellOf(matrix, 0, "2027-02").tentative).toBe(false);
+  });
+});

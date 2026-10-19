@@ -209,12 +209,22 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           Renkler defterdeki gibi. Bir hücreye dokunarak ayrıntısını ve notunu görebilir, ödeme
           alabilir ya da WhatsApp ile hatırlatabilirsiniz.
         </p>
-        <Link
-          href="/odemeler/gecikenler"
-          className="mt-3 inline-flex min-h-11 items-center rounded-xl border border-red-200 bg-destructive-soft px-3 text-sm font-semibold text-red-700 hover:border-red-300"
-        >
-          Gecikenler ve hatırlatma →
-        </Link>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link
+            href="/odemeler/gecikenler"
+            className="inline-flex min-h-11 items-center rounded-xl border border-red-200 bg-destructive-soft px-3 text-sm font-semibold text-red-700 hover:border-red-300"
+          >
+            Gecikenler ve hatırlatma →
+          </Link>
+          {profile.role === "yonetici" ? (
+            <Link
+              href="/odemeler/zam"
+              className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-3 text-sm font-semibold text-foreground hover:bg-muted"
+            >
+              Toplu zam
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       {studentsResult.error || paidResult.error ? (

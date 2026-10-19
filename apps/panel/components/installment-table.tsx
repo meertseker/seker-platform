@@ -27,6 +27,8 @@ export interface InstallmentTableItem {
   payment_method: PaymentMethod | null;
   /** Kalem etiketi (Aidat / Kitap-Kırtasiye / Servis) — birden çok plan tek takvimde toplandığında gösterilir. */
   itemLabel?: string;
+  /** Tutar henüz kesinleşmedi (bekleyen zamlı taksit). */
+  tentative?: boolean;
 }
 
 interface InstallmentTableProps {
@@ -246,6 +248,14 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                     </td>
                   ) : null}
                   <td className="px-4 py-3 text-right font-semibold text-foreground tabular-nums">
+                    {installment.tentative ? (
+                      <span
+                        title="Kesinleşmedi"
+                        className="mr-2 rounded-full bg-muted px-2 py-0.5 align-middle text-xs font-medium text-muted-foreground"
+                      >
+                        Kesinleşmedi
+                      </span>
+                    ) : null}
                     {formatTRY(tlToKurus(installment.amount))}
                   </td>
                   <td className="px-4 py-3">
@@ -339,6 +349,14 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                   </div>
                   <div className="text-right">
                     <p className="font-semibold tabular-nums text-foreground">
+                      {installment.tentative ? (
+                        <span
+                        title="Kesinleşmedi"
+                        className="mr-2 rounded-full bg-muted px-2 py-0.5 align-middle text-xs font-medium text-muted-foreground"
+                      >
+                        Kesinleşmedi
+                      </span>
+                      ) : null}
                       {formatTRY(tlToKurus(installment.amount))}
                     </p>
                     <span className={`mt-1 inline-block ${badgeClass(INSTALLMENT_STATUS_STYLES[installment.status])}`}>

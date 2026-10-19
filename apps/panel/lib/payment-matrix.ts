@@ -10,6 +10,7 @@
  */
 import type { InstallmentStatus, ItemType, PaymentMethod } from "@/lib/constants";
 import { tlToKurus } from "@/lib/money";
+import { isTentative } from "@/lib/price-increase";
 
 export interface MatrixInstallmentInput {
   id: string;
@@ -27,6 +28,8 @@ export interface MatrixPlanInput {
   season: string;
   total_amount: number;
   installment_count: number;
+  /** Bu tarihten sonraki bekleyen taksitlerin tutarı henüz kesinleşmedi. */
+  tentative_from?: string | null;
   installments?: MatrixInstallmentInput[] | null;
 }
 
@@ -56,12 +59,15 @@ export interface MatrixCellItem {
   paymentMethod: PaymentMethod | null;
   paidAt: string | null;
   overdue: boolean;
+  tentative: boolean;
 }
 
 export interface MatrixCell {
   monthKey: string;
   state: CellState;
   overdue: boolean;
+  /** Bekleyen kalemlerden biri kesinleşmemiş tutarlı. */
+  tentative: boolean;
   /** Ödendi ve tamamı nakit — Excel'de mor boya. */
   cash: boolean;
   totalKurus: number;
@@ -131,6 +137,7 @@ function toCellItem(
     paymentMethod: installment.payment_method,
     paidAt: installment.paid_at,
     overdue: installment.status === "bekliyor" && installment.due_date < today,
+    tentative: isTentative(plan.tentative_from ?? null, installment.due_date, installment.status),
   };
 }
 
@@ -144,6 +151,7 @@ function buildCell(monthKeyValue: string, items: MatrixCellItem[], cancelledCoun
   const totalKurus = items.reduce((sum, item) => sum + item.amountKurus, 0);
   const paidKurus = items.reduce((sum, item) => sum + paidKurusOf(item), 0);
   const overdue = items.some((item) => item.overdue);
+  const tentative = items.some((item) => item.tentative);
 
   let state: CellState;
   if (items.length === 0) {
@@ -159,7 +167,7 @@ function buildCell(monthKeyValue: string, items: MatrixCellItem[], cancelledCoun
   const cash =
     state === "odendi" && items.every((item) => item.paymentMethod === "nakit");
 
-  return { monthKey: monthKeyValue, state, overdue, cash, totalKurus, paidKurus, items, cancelledCount };
+  return { monthKey: monthKeyValue, state, overdue, tentative, cash, totalKurus, paidKurus, items, cancelledCount };
 }
 
 /**
