@@ -48,7 +48,7 @@ const mainItems = [
 // Takvim kenar çubuğunda ana menüde; telefonda alt çubuk dolu olduğundan Menü'nün başında.
 const calendarItem = { href: "/takvim", label: "Takvim", icon: CalendarDays } as const;
 
-const NEW_LEAD_HREF = "/leads/new";
+const NEW_LEAD_HREF = "/leads/mesaj";
 
 const profileLinks = [
   { href: "/ayarlar", label: "Ayarlar", icon: Settings, roles: ["yonetici"] },

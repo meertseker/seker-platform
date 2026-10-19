@@ -91,6 +91,7 @@ export const EVENT_LABELS = {
   web_tekrar_basvuru: "Web sitesinden tekrar başvurdu",
   taksit_guncellendi: "Taksit güncellendi",
   arama_kaydi: "Arama kaydedildi",
+  mesaj_tekrar: "Mesajla tekrar yazdı",
 } as const;
 
 export const CONVERSION_ACTIONS = {

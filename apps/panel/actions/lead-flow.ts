@@ -12,6 +12,7 @@ import { appointmentTasks, followupAfterAttempt, type PlannedTask } from "@/lib/
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { closeTasksByPrefix, tasksByPrefix, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
 import { claimLeadAs, type ClaimResult } from "@/lib/lead-flow/claim";
+import { normalizeTurkishPhone } from "@/lib/phone";
 
 export type CallResult = "randevu" | "geri_ara" | "ulasilamadi" | "uygun_degil";
 export type NotFitReason = "yas_uymuyor" | "uzaklik" | "gelecek_yil" | "baska_okul";
@@ -333,4 +334,117 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
     console.error("recordCall:", e);
     return fail();
   }
+}
+
+export type MessageChannel = "ig_dm" | "ig_yorum" | "whatsapp" | "telefon";
+
+const MESSAGE_CHANNELS: Record<MessageChannel, { label: string; source: "instagram" | "whatsapp" | "telefon"; fallbackName: string }> = {
+  ig_dm: { label: "Instagram mesajı", source: "instagram", fallbackName: "Instagram velisi" },
+  ig_yorum: { label: "Instagram yorumu", source: "instagram", fallbackName: "Instagram velisi" },
+  whatsapp: { label: "WhatsApp", source: "whatsapp", fallbackName: "WhatsApp velisi" },
+  telefon: { label: "Telefon", source: "telefon", fallbackName: "Telefon velisi" },
+};
+const CONTENT_CODE = /^[RS]-\d{4}-[A-Z]$/;
+const MESSAGE_FAILURE = "Veli kaydedilemedi, lütfen tekrar deneyin";
+
+export interface MessageLeadInput {
+  channel: MessageChannel;
+  phone: string;
+  parentName?: string;
+  contentCode?: string;
+  messageAt?: string;
+}
+
+/** Mesajdan gelen veliyi ortak listeye açar. Aynı telefonla açık veli varsa yenisi açılmaz. */
+export async function createMessageLead(
+  input: MessageLeadInput,
+): Promise<{ id: string; duplicate: boolean } | { error: string }> {
+  const channel = Object.hasOwn(MESSAGE_CHANNELS, input?.channel) ? MESSAGE_CHANNELS[input.channel] : null;
+  if (!channel) return { error: "Kanalı seçin" };
+  const phone = normalizeTurkishPhone(input.phone ?? "");
+  if (!phone) return { error: "Geçerli bir cep telefonu girin (05XX XXX XX XX)" };
+  const code = input.contentCode && CONTENT_CODE.test(input.contentCode) ? input.contentCode : null;
+  const now = new Date();
+  let messageAt = now;
+  if (input.messageAt) {
+    const parsed = parseIstanbulDateTime(input.messageAt);
+    if (!parsed) return { error: "Mesaj saati geçersiz" };
+    messageAt = parsed;
+  }
+
+  const profile = await getSessionProfile();
+  const supabase = await createServerSupabase();
+
+  try {
+    const { data: existing, error: findError } = await supabase
+      .from("leads")
+      .select("id, content_code")
+      .eq("phone", phone)
+      .not("status", "in", "(kazanildi,kaybedildi)")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (findError) return { error: MESSAGE_FAILURE };
+    const open = existing as { id: string; content_code: string | null } | null;
+
+    if (open) {
+      const patch: Record<string, unknown> = { last_activity_at: now.toISOString() };
+      if (code && !open.content_code) patch.content_code = code;
+      const { error: updateError } = await supabase.from("leads").update(patch).eq("id", open.id);
+      if (updateError) return { error: MESSAGE_FAILURE };
+      const body = `Mesajla tekrar yazdı · ${channel.label}${code ? ` · ${code}` : ""}`;
+      const { error: noteError } = await supabase.from("lead_notes").insert({
+        lead_id: open.id, author_id: profile.id, body,
+      });
+      if (noteError) return { error: MESSAGE_FAILURE };
+      await logEvent(supabase, {
+        entityType: "lead", entityId: open.id, eventType: "mesaj_tekrar", actorId: profile.id,
+        payload: { channel: input.channel, contentCode: code },
+      });
+      revalidatePath("/bugun");
+      revalidatePath("/pipeline");
+      revalidatePath(`/leads/${open.id}`);
+      return { id: open.id, duplicate: true };
+    }
+
+    const { data, error } = await supabase.from("leads").insert({
+      parent_name: input.parentName?.trim() || channel.fallbackName,
+      phone,
+      source: channel.source,
+      channel: input.channel,
+      content_code: code,
+      assigned_to: null,
+      created_at: messageAt.toISOString(),
+      last_activity_at: now.toISOString(),
+    }).select("id").single();
+    const row = data as { id: string } | null;
+    if (error || !row) return { error: MESSAGE_FAILURE };
+    await logEvent(supabase, {
+      entityType: "lead", entityId: row.id, eventType: "lead_olusturuldu", actorId: profile.id,
+      payload: { source: channel.source, channel: input.channel, contentCode: code },
+    });
+    revalidatePath("/bugun");
+    revalidatePath("/pipeline");
+    return { id: row.id, duplicate: false };
+  } catch (e) {
+    console.error("createMessageLead:", e);
+    return { error: MESSAGE_FAILURE };
+  }
+}
+
+/** Son 28 günde açılan velilerin içerik kodları, çoktan aza. */
+export async function recentContentCodes(): Promise<{ code: string; count: number }[]> {
+  await getSessionProfile();
+  const supabase = await createServerSupabase();
+  const since = new Date(Date.now() - 28 * 86_400_000).toISOString();
+  const { data } = await supabase
+    .from("leads")
+    .select("content_code")
+    .not("content_code", "is", null)
+    .gte("created_at", since);
+  const counts = new Map<string, number>();
+  for (const r of (data ?? []) as { content_code: string | null }[]) {
+    if (r.content_code) counts.set(r.content_code, (counts.get(r.content_code) ?? 0) + 1);
+  }
+  return [...counts].map(([code, count]) => ({ code, count })).sort((a, b) => b.count - a.count);
 }
