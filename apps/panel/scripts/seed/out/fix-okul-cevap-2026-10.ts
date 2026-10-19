@@ -11,6 +11,7 @@ import path from "node:path";
 import ws from "ws";
 import { createClient } from "@supabase/supabase-js";
 import { applyPaymentDay, inferPaymentDay } from "../../../lib/payment-day";
+import { tlToKurus, kurusToTl } from "../../../lib/money";
 (globalThis as any).WebSocket = ws;
 
 const [envFile] = process.argv.slice(2);
@@ -54,53 +55,82 @@ const EXPECTED_DIFF: Record<string, number> = {
 const key = (s: string) => s.trim().toLocaleLowerCase("tr");
 const backupFile = () => path.join(path.dirname(process.argv[1]), `backup-okul-cevap-${STEP}-${Date.now()}.json`);
 
-async function kitap() {
-  const { data: students, error } = await db
-    .from("students")
-    .select("id, full_name, payment_plans(id, item_type, season, total_amount, installment_count, installments(id, plan_id, due_date, amount, status, updated_at))");
+const K = (v: unknown) => tlToKurus(Number(v));
+const sumK = (rows: any[]) => rows.reduce((a, i) => a + K(i.amount), 0);
+const SELECT = "id, full_name, payment_plans(id, item_type, season, total_amount, installment_count, installments(id, plan_id, due_date, amount, status, updated_at))";
+
+/** Yazma adımı: hata olursa ne yapıldığını yazdırıp tüm koşuyu durdurur. */
+async function step(done: string[], label: string, p: PromiseLike<{ error: any }>) {
+  const r = await p;
+  if (r.error) {
+    console.error(`\nHATA (${label}): ${r.error.message}\nBu koşuda tamamlanan adımlar:\n  ${done.join("\n  ") || "(yok)"}\nYedek diskte; koşu durduruldu.`);
+    process.exit(1);
+  }
+  done.push(label);
+}
+
+async function readPlan(planId: string) {
+  const { data, error } = await db.from("payment_plans").select("id, total_amount, installment_count, installments(id, due_date, amount, status)").eq("id", planId).single();
   if (error) throw error;
-  const backup: unknown[] = [];
-  let changed = 0;
+  return data as any;
+}
+
+async function kitap() {
+  const { data: students, error } = await db.from("students").select(SELECT);
+  if (error) throw error;
+  type Job = { name: string; plan: any; pending: any[]; rows: { plan_id: string; due_date: string; amount: number }[]; newTotalK: number; newCount: number };
+  const jobs: Job[] = [];
   for (const [name, schedule] of Object.entries(SCHEDULE)) {
     const s = (students as any[]).find((x) => key(x.full_name) === key(name));
     if (!s) { console.log(`ATLA (öğrenci yok) ${name}`); continue; }
     const plan = s.payment_plans.find((p: any) => p.item_type === "kitap" && p.season === SEASON);
     const aidat = s.payment_plans.find((p: any) => p.item_type === "aidat" && p.season === SEASON);
     if (!plan) { console.log(`ATLA (kitap planı yok) ${name}`); continue; }
+    const live = plan.installments.filter((i: any) => i.status !== "iptal");
     const pending = plan.installments.filter((i: any) => i.status === "bekliyor");
     if (!pending.length) { console.log(`ATLA (bekleyen yok) ${name}`); continue; }
     if (pending.some((i: any) => i.updated_at > STAFF_SINCE)) { console.log(`ATLA (personel dokunmuş) ${name}`); continue; }
-    const pendingTl = pending.reduce((a: number, i: any) => a + Number(i.amount), 0);
-    const newTl = schedule.reduce((a, [, tl]) => a + tl, 0);
-    const diff = newTl - pendingTl;
-    const allowed = EXPECTED_DIFF[name] ?? 0;
-    if (Math.abs(diff - allowed) > 0.001) { console.log(`ATLA (fark ${diff} ≠ beklenen ${allowed}; bekleyen ${pendingTl}, yeni ${newTl}) ${name}`); continue; }
+    if (K(plan.total_amount) !== sumK(live)) { console.log(`ATLA (plan toplamı ${plan.total_amount} ≠ taksit toplamı ${kurusToTl(sumK(live))}) ${name}`); continue; }
+    const pendingK = sumK(pending);
+    const newK = schedule.reduce((a, [, tl]) => a + tlToKurus(tl), 0);
+    const diffK = newK - pendingK;
+    const allowedK = tlToKurus(EXPECTED_DIFF[name] ?? 0);
+    if (diffK !== allowedK) { console.log(`ATLA (fark ${kurusToTl(diffK)} ≠ beklenen ${kurusToTl(allowedK)}; bekleyen ${kurusToTl(pendingK)}, yeni ${kurusToTl(newK)}) ${name}`); continue; }
 
     const aidatDues = (aidat?.installments ?? []).filter((i: any) => i.status === "bekliyor").map((i: any) => i.due_date as string);
     const day = inferPaymentDay(aidatDues);
-    const needsDay = schedule.some(([ay]) => ay !== "2026-10");
-    if (needsDay && day === null) { console.log(`ATLA (ödeme günü bulunamadı) ${name}`); continue; }
+    if (schedule.some(([ay]) => ay !== "2026-10") && day === null) { console.log(`ATLA (ödeme günü bulunamadı) ${name}`); continue; }
     const rows = schedule.map(([ay, amount]) => ({
       plan_id: plan.id as string,
       due_date: ay === "2026-10" ? "2026-10-31" : applyPaymentDay(`${ay}-01`, day!),
       amount,
     }));
-    const planNote = diff !== 0 ? `  [plan ${plan.total_amount} → ${Number(plan.total_amount) + diff}]` : "";
+    const newTotalK = sumK(live) - pendingK + newK;
+    const planNote = newTotalK !== K(plan.total_amount) ? `  [plan ${plan.total_amount} → ${kurusToTl(newTotalK)}]` : "";
     console.log(`${name}: ${pending.map((i: any) => `${i.due_date}=${i.amount}`).join(", ")} → ${rows.map((r) => `${r.due_date}=${r.amount}`).join(", ")}${planNote}`);
-    backup.push({ name, plan: { id: plan.id, total_amount: plan.total_amount, installment_count: plan.installment_count }, pending });
-    changed++;
-    if (APPLY) {
-      const ins = await db.from("installments").insert(rows);
-      if (ins.error) throw ins.error;
-      const del = await db.from("installments").delete().in("id", pending.map((i: any) => i.id));
-      if (del.error) throw del.error;
-      const count = plan.installments.length - pending.length + rows.length;
-      const upd = await db.from("payment_plans").update({ total_amount: Number(plan.total_amount) + diff, installment_count: count }).eq("id", plan.id);
-      if (upd.error) throw upd.error;
+    jobs.push({ name, plan, pending, rows, newTotalK, newCount: live.length - pending.length + rows.length });
+  }
+
+  if (APPLY && jobs.length) {
+    // Yedek: değişiklikten ÖNCE, hedef her planın tam görüntüsü.
+    const file = backupFile();
+    fs.writeFileSync(file, JSON.stringify(jobs.map((j) => ({ name: j.name, plan: j.plan })), null, 1));
+    console.log(`Yedek yazıldı: ${file}`);
+    const done: string[] = [];
+    for (const j of jobs) {
+      await step(done, `${j.name}: taksitler eklendi`, db.from("installments").insert(j.rows));
+      await step(done, `${j.name}: eski bekleyenler silindi`, db.from("installments").delete().in("id", j.pending.map((i: any) => i.id)));
+      await step(done, `${j.name}: plan güncellendi`, db.from("payment_plans").update({ total_amount: kurusToTl(j.newTotalK), installment_count: j.newCount }).eq("id", j.plan.id));
+      const after = await readPlan(j.plan.id);
+      const liveAfter = after.installments.filter((i: any) => i.status !== "iptal");
+      if (K(after.total_amount) !== sumK(liveAfter) || K(after.total_amount) !== j.newTotalK) {
+        console.error(`DOĞRULAMA HATASI ${j.name}: plan ${after.total_amount}, taksit toplamı ${kurusToTl(sumK(liveAfter))}. Durduruldu.\n  ${done.join("\n  ")}`);
+        process.exit(1);
+      }
+      console.log(`  doğrulandı: ${j.name} (${after.total_amount})`);
     }
   }
-  if (APPLY) fs.writeFileSync(backupFile(), JSON.stringify(backup, null, 1));
-  console.log(`\n${changed} öğrenci ${APPLY ? "güncellendi" : "(dry-run)"}`);
+  console.log(`\n${jobs.length} öğrenci ${APPLY ? "güncellendi" : "(dry-run)"}`);
 }
 
 const KIVANC_NEW: [string, number][] = [
@@ -110,34 +140,37 @@ const KIVANC_NEW: [string, number][] = [
 ];
 
 async function kivanc() {
-  const { data: students, error } = await db
-    .from("students")
-    .select("id, full_name, payment_plans(id, item_type, season, total_amount, installment_count, installments(id, due_date, amount, status, updated_at))");
+  const { data: students, error } = await db.from("students").select(SELECT);
   if (error) throw error;
   const s = (students as any[]).find((x) => key(x.full_name) === key("KIVANÇ GÖK"));
   if (!s) throw new Error("KIVANÇ GÖK bulunamadı");
   const plan = s.payment_plans.find((p: any) => p.item_type === "aidat" && p.season === SEASON);
   if (!plan) throw new Error("Aidat planı yok");
   const all = (plan.installments as any[]).sort((a, b) => a.due_date.localeCompare(b.due_date));
+  const live = all.filter((i) => i.status !== "iptal");
   const pending = all.filter((i) => i.status === "bekliyor");
+  if (K(plan.total_amount) !== sumK(live)) throw new Error(`Plan toplamı ${plan.total_amount} ≠ taksit toplamı ${kurusToTl(sumK(live))} — dur`);
   if (pending.length !== 9) throw new Error(`9 bekleyen taksit bekleniyordu, ${pending.length} var — dur`);
-  if (Number(pending[0].amount) !== 8000 || pending[0].due_date !== "2026-10-31") throw new Error(`Ekim taksiti 8000 / 2026-10-31 değil (${pending[0].due_date}=${pending[0].amount}) — dur`);
+  if (K(pending[0].amount) !== tlToKurus(8000) || pending[0].due_date !== "2026-10-31") throw new Error(`Ekim taksiti 8000 / 2026-10-31 değil (${pending[0].due_date}=${pending[0].amount}) — dur`);
   const rest = pending.slice(1);
-  if (rest.some((i) => Number(i.amount) !== 22000)) throw new Error("Kasım–Haziran taksitleri 22000 değil — dur");
+  if (rest.some((i) => K(i.amount) !== tlToKurus(22000))) throw new Error("Kasım–Haziran taksitleri 22000 değil — dur");
   if (rest.some((r, k) => r.due_date !== KIVANC_NEW[k][0])) throw new Error(`Vadeler beklenenle uyuşmuyor: ${rest.map((r) => r.due_date).join(", ")} — dur`);
   if (pending.some((i) => i.updated_at > STAFF_SINCE)) throw new Error("Personel dokunmuş satır var — dur");
-  const newTotal = 8000 + KIVANC_NEW.reduce((a, [, t]) => a + t, 0);
-  if (newTotal !== 148000) throw new Error(`Yeni toplam ${newTotal} ≠ 148000`);
-  console.log(`KIVANÇ GÖK: ${plan.total_amount} → ${newTotal}  (${plan.installment_count} taksit, değişmez)`);
+  const newTotalK = sumK(live) - sumK(rest) + KIVANC_NEW.reduce((a, [, t]) => a + tlToKurus(t), 0);
+  if (newTotalK !== tlToKurus(148000)) throw new Error(`Yeni toplam ${kurusToTl(newTotalK)} ≠ 148000 — dur`);
+  console.log(`KIVANÇ GÖK: ${plan.total_amount} → ${kurusToTl(newTotalK)}  (${plan.installment_count} taksit, değişmez; hesaplanan toplam 148000 ile eşleşti)`);
   rest.forEach((r, k) => console.log(`  ${r.due_date}: ${r.amount} → ${KIVANC_NEW[k][1]}`));
   if (APPLY) {
-    fs.writeFileSync(backupFile(), JSON.stringify(plan, null, 1));
+    const file = backupFile();
+    fs.writeFileSync(file, JSON.stringify(plan, null, 1));
+    console.log(`Yedek yazıldı: ${file}`);
+    const done: string[] = [];
     for (let k = 0; k < rest.length; k++) {
-      const u = await db.from("installments").update({ amount: KIVANC_NEW[k][1] }).eq("id", rest[k].id);
-      if (u.error) throw u.error;
+      await step(done, `${rest[k].due_date} → ${KIVANC_NEW[k][1]}`, db.from("installments").update({ amount: KIVANC_NEW[k][1] }).eq("id", rest[k].id));
     }
-    const upd = await db.from("payment_plans").update({ total_amount: newTotal }).eq("id", plan.id);
-    if (upd.error) throw upd.error;
+    await step(done, "plan toplamı güncellendi", db.from("payment_plans").update({ total_amount: kurusToTl(newTotalK) }).eq("id", plan.id));
+    const after = await readPlan(plan.id);
+    if (K(after.total_amount) !== sumK(after.installments.filter((i: any) => i.status !== "iptal"))) { console.error("DOĞRULAMA HATASI: toplam ≠ taksit toplamı"); process.exit(1); }
   }
   console.log(`\n${APPLY ? "Uygulandı." : "(dry-run)"}`);
 }
