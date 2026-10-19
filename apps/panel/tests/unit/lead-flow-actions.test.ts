@@ -145,7 +145,8 @@ describe("recordCall", () => {
     expect((leadPatches()[0].payload as Record<string, unknown>).q_reached).toBe(true);
     const closed = updates("tasks").flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
     expect(closed).toContain("takip:L1:%");
-    expect(inserts("tasks").map((t) => t.rule_key)).toEqual(["hatirlat:A1:once", "hatirlat:A1:sabah"]);
+    // Hatırlatmaları createAppointment kurar; recordCall yeni randevuda tekrar yazmaz.
+    expect(inserts("tasks")).toEqual([]);
   });
 
   it("randevu gclid'li ve yeni durumdaki velide dönüşüm satırını ekler", async () => {
@@ -236,10 +237,18 @@ describe("recordCall", () => {
     expect(inserts("tasks").map((t) => t.rule_key)).toContain("hatirlat:A1:sabah");
   });
 
-  it("randevu sonrası görev hatasında randevu yazıldı mesajı döner", async () => {
+  it("yeniden kullanılan randevuda görev hatası randevu yazıldı mesajı döner", async () => {
+    existingAppt = { id: "A1", scheduled_at: "2026-11-05T07:00:00+00:00" };
     respond = (o) => (o.table === "tasks" && o.op === "insert" ? { error: { code: "XX000", message: "x" } } : defaultRespond(o));
     expect(await recordCall({ leadId: "L1", result: "randevu", quals, appointmentAt: "2026-11-05T10:00" })).toEqual({
       error: "Ziyaret takvime yazıldı ancak arama kaydı tamamlanamadı; sayfayı yenileyin",
+    });
+  });
+
+  it("createAppointment hata dönerse (hatırlatma kurulamadı) hata aynen iletilir", async () => {
+    createAppointment.mockResolvedValue({ error: "Randevu kaydedildi, hatırlatma görevleri kurulamadı." });
+    expect(await recordCall({ leadId: "L1", result: "randevu", quals, appointmentAt: "2026-11-05T10:00" })).toEqual({
+      error: "Randevu kaydedildi, hatırlatma görevleri kurulamadı.",
     });
   });
 
@@ -261,7 +270,7 @@ describe("recordCall", () => {
     vi.setSystemTime(new Date("2026-11-03T11:00:00+03:00"));
     // Yarın 16:00: bir gün önceki (bugün 10:00) geçti, yalnız sabah kalır.
     expect((await run("2026-11-04T16:00"))[2]).toBe("Ziyaret sabahı hatırlatma kuruldu");
-    expect(inserts("tasks").map((t) => t.rule_key)).toEqual(["hatirlat:A1:sabah"]);
+    expect(inserts("tasks")).toEqual([]);
     // Bugün 16:00: ikisi de geçti, satır yok.
     const today = await run("2026-11-03T16:00");
     expect(today).toEqual(["Ziyaret takvime yazıldı: Salı 3 Kasım 16:00", "WhatsApp onay mesajı hazır · veli kartından gönder"]);

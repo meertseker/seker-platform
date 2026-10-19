@@ -12,6 +12,14 @@ import {
 import { logEvent } from "@/lib/events";
 import { getSessionProfile } from "@/lib/auth";
 import { parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
+import {
+  afterVisitTasks,
+  appointmentTasks,
+  noShowTask,
+  type PlannedTask,
+} from "@/lib/lead-flow/followups";
+import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
+import { closeTasksByPrefix, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 interface ConflictLead {
@@ -27,6 +35,8 @@ interface AppointmentMutationResult {
   error?: string;
   conflict?: { leadName: string; at: string };
   id?: string;
+  /** Kurulan hatırlatma görevleri (yalnızca createAppointment başarısında). */
+  reminders?: PlannedTask[];
 }
 
 const appointmentTypes = Object.keys(APPOINTMENT_TYPES) as AppointmentType[];
@@ -42,27 +52,6 @@ function isoAround(center: Date, minutes: number) {
     from: new Date(center.getTime() - windowMs).toISOString(),
     to: new Date(center.getTime() + windowMs).toISOString(),
   };
-}
-
-function istanbulDateParts(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Istanbul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-
-  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
-  return { year: get("year"), month: get("month"), day: get("day") };
-}
-
-function tomorrowInIstanbul() {
-  const { year, month, day } = istanbulDateParts();
-  const tomorrow = new Date(Date.UTC(year, month - 1, day + 1));
-  const y = tomorrow.getUTCFullYear();
-  const m = String(tomorrow.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(tomorrow.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
 }
 
 async function conflictWindowMinutes() {
@@ -99,7 +88,7 @@ export async function createAppointment(
 
   const { data: lead } = await supabase
     .from("leads")
-    .select("id, status")
+    .select("id, status, parent_name, assigned_to")
     .eq("id", leadId)
     .maybeSingle();
 
@@ -162,10 +151,22 @@ export async function createAppointment(
     await updateLeadStatus(leadId, "randevu");
   }
 
+  // Hatırlatmalar tek yerden kurulur: panelin her yerinden açılan randevu aynı görevleri alar.
+  let reminders: PlannedTask[];
+  try {
+    const settings = await getLeadFlowSettings(supabase);
+    const leadRow = lead as { parent_name: string; assigned_to: string | null };
+    reminders = appointmentTasks(appointment.id, leadRow.parent_name, scheduledAt, new Date(), settings.hours);
+    await upsertPlannedTasks(supabase, leadId, leadRow.assigned_to ?? profile.id, reminders);
+  } catch {
+    revalidateAppointmentViews(leadId);
+    return { error: "Randevu kaydedildi, hatırlatma görevleri kurulamadı." };
+  }
+
   revalidateAppointmentViews(leadId);
   revalidatePath("/pipeline");
 
-  return { id: appointment.id };
+  return { id: appointment.id, reminders };
 }
 
 export async function setAppointmentOutcome(
@@ -187,7 +188,7 @@ export async function setAppointmentOutcome(
     })
     .eq("id", id)
     .eq("outcome", "bekliyor")
-    .select("id, lead_id, created_by")
+    .select("id, lead_id, created_by, lead:leads(parent_name, assigned_to)")
     .single();
 
   if (error?.code === "PGRST116" || !appointment) {
@@ -211,19 +212,28 @@ export async function setAppointmentOutcome(
     .update({ last_activity_at: new Date().toISOString() })
     .eq("id", appointment.lead_id);
 
-  if (outcome === "gelmedi") {
-    const { error: taskError } = await supabase.from("tasks").insert({
-      lead_id: appointment.lead_id,
-      assigned_to: appointment.created_by,
-      due_date: tomorrowInIstanbul(),
-      title: "Yeniden ara / randevu ver",
-      auto_generated: true,
-      rule_key: `noshow:${appointment.id}`,
-    });
+  try {
+    // Sonuç ne olursa olsun eski hatırlatmalar kapanır: gelmeyen veliye ertesi gün hatırlatma gitmesin.
+    await closeTasksByPrefix(supabase, `hatirlat:${appointment.id}:`);
 
-    if (taskError && taskError.code !== "23505") {
-      return { error: "Randevu sonucu kaydedildi, takip görevi oluşturulamadı." };
+    if (outcome === "geldi" || outcome === "gelmedi") {
+      const row = appointment as unknown as {
+        created_by: string | null;
+        lead?: { parent_name: string; assigned_to: string | null } | { parent_name: string; assigned_to: string | null }[] | null;
+      };
+      const lead = one(row.lead);
+      const leadName = lead?.parent_name ?? "Veli";
+      const assignee = lead?.assigned_to ?? row.created_by ?? profile.id;
+      const settings = await getLeadFlowSettings(supabase);
+      const now = new Date();
+      const planned =
+        outcome === "geldi"
+          ? afterVisitTasks(appointment.id, leadName, now, settings.hours)
+          : [noShowTask(appointment.id, leadName, now, settings.hours)];
+      await upsertPlannedTasks(supabase, appointment.lead_id, assignee, planned);
     }
+  } catch {
+    return { error: "Randevu sonucu kaydedildi, takip görevleri güncellenemedi." };
   }
 
   revalidateAppointmentViews(appointment.lead_id);

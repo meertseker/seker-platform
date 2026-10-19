@@ -166,7 +166,9 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
     }
   }
 
-  let appointment: { id: string; at: Date } | null = null;
+  // reused: mevcut randevu yeniden kullanıldı; hatırlatmalar bu çağrıda tamamlanır.
+  let createdReminders: PlannedTask[] | undefined;
+  let appointment: { id: string; at: Date; reused: boolean } | null = null;
   const fail = () => ({ error: appointment ? APPOINTMENT_PARTIAL : GENERIC_FAILURE });
 
   try {
@@ -185,7 +187,7 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
       if (existingError) return fail();
       const found = existing as { id: string; scheduled_at: string } | null;
       if (found) {
-        appointment = { id: found.id, at: new Date(found.scheduled_at) };
+        appointment = { id: found.id, at: new Date(found.scheduled_at), reused: true };
       } else {
         const res = await createAppointment(leadId, input.appointmentAt!, "okul_ziyareti");
         if (res.conflict) {
@@ -194,7 +196,8 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
           };
         }
         if (res.error || !res.id) return { error: res.error ?? "Randevu kaydedilemedi, lütfen tekrar deneyin." };
-        appointment = { id: res.id, at };
+        appointment = { id: res.id, at, reused: false };
+        createdReminders = res.reminders;
       }
     }
 
@@ -276,8 +279,12 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
     let done: string[];
     switch (result) {
       case "randevu": {
-        const reminders = appointmentTasks(appointment!.id, lead.parent_name, appointment!.at, now, settings.hours);
-        await upsertPlannedTasks(supabase, leadId, profile.id, reminders);
+        // Yeni randevuda hatırlatmaları createAppointment kurmuştur. Yeniden kullanılan randevuda
+        // (önceki deneme yarıda kalmış olabilir) burada tamamlanır; 23505 olanlar atlanır.
+        const reminders =
+          createdReminders ??
+          appointmentTasks(appointment!.id, lead.parent_name, appointment!.at, now, settings.hours);
+        if (appointment!.reused) await upsertPlannedTasks(supabase, leadId, profile.id, reminders);
         done = [
           `Ziyaret takvime yazıldı: ${formatDayTime(appointment!.at)}`,
           "WhatsApp onay mesajı hazır · veli kartından gönder",
