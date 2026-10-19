@@ -11,7 +11,8 @@ import type { QueueBannerSummary } from "@/lib/queries/call-queue";
  */
 export function PendingApplicationsBanner({ summary }: { summary: QueueBannerSummary | null }) {
   const pathname = usePathname();
-  if (!summary || pathname === "/bugun") return null;
+  // Arama ekranında danışman zaten bir veliyle konuşuyor; bant dikkat dağıtır.
+  if (!summary || pathname === "/bugun" || /^\/leads\/[^/]+\/ara$/.test(pathname)) return null;
 
   return (
     <div

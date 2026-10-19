@@ -290,7 +290,7 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
         if (appointment!.reused) await upsertPlannedTasks(supabase, leadId, profile.id, reminders);
         done = [
           `Ziyaret takvime yazıldı: ${formatDayTime(appointment!.at)}`,
-          "WhatsApp onay mesajı hazır · veli kartından gönder",
+          "WhatsApp onay mesajı hazır",
         ];
         const line = reminderLine(reminders);
         if (line) done.push(line);
@@ -317,7 +317,7 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
           inThreeHours
             ? "3 saat sonra tekrar arama görevi açıldı"
             : `Sonraki arama görevi açıldı: ${formatDayTime(next.dueAt)}`,
-          "Hazır WhatsApp mesajı var · veli kartından gönder",
+          "Hazır WhatsApp mesajı var",
         ];
         break;
       }

@@ -61,6 +61,11 @@ export function elapsedMinutes(start: Date, now: Date): number {
  * Aday sayacı bununla sayar: 17:55'te gelen veli 18:00'de durur, ertesi sabah kaldığı yerden devam eder.
  */
 export function businessMinutesBetween(start: Date, now: Date, hours: BusinessHours): number {
+  return Math.floor(businessMsBetween(start, now, hours) / 60000);
+}
+
+/** İki an arasındaki mesai içi süre (ms); ters sıradaysa 0. Saniyeli sayaç için. */
+export function businessMsBetween(start: Date, now: Date, hours: BusinessHours): number {
   if (now.getTime() <= start.getTime()) return 0;
   const last = istanbulDateString(now);
   let totalMs = 0;
@@ -72,7 +77,7 @@ export function businessMinutesBetween(start: Date, now: Date, hours: BusinessHo
     const to = Math.min(istanbulAt(day, hours.end).getTime(), now.getTime());
     if (to > from) totalMs += to - from;
   }
-  return Math.floor(totalMs / 60000);
+  return totalMs;
 }
 
 export function timerTone(minutes: number): "ok" | "warn" | "late" {

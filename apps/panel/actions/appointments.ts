@@ -18,6 +18,7 @@ import {
   noShowTask,
   type PlannedTask,
 } from "@/lib/lead-flow/followups";
+import { readConflictWindowMinutes } from "@/lib/lead-flow/conflict-window";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { closeTasksByPrefix, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -59,18 +60,6 @@ function isoAround(center: Date, minutes: number) {
   };
 }
 
-async function conflictWindowMinutes() {
-  const supabase = await createServerSupabase();
-  const { data } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "cakisma_dakika")
-    .maybeSingle();
-
-  const minutes = Number(data?.value ?? 45);
-  return Number.isFinite(minutes) && minutes > 0 ? minutes : 45;
-}
-
 function revalidateAppointmentViews(leadId: string) {
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/takvim");
@@ -99,7 +88,7 @@ export async function createAppointment(
 
   if (!lead) return { error: "Veli bulunamadı." };
 
-  const windowMinutes = await conflictWindowMinutes();
+  const windowMinutes = await readConflictWindowMinutes(supabase);
   const { from, to } = isoAround(scheduledAt, windowMinutes);
 
   if (!force) {

@@ -101,7 +101,7 @@ describe("recordCall", () => {
     expect("done" in r).toBe(true);
     if (!("done" in r)) return;
     expect(r.done[0]).toContain("3 saat sonra");
-    expect(r.done[1]).toBe("Hazır WhatsApp mesajı var · veli kartından gönder");
+    expect(r.done[1]).toBe("Hazır WhatsApp mesajı var");
     const task = inserts("tasks").find((t) => t.rule_key === "takip:L1:2");
     expect(task).toMatchObject({
       lead_id: "L1", assigned_to: ME, auto_generated: true,
@@ -138,7 +138,7 @@ describe("recordCall", () => {
     expect(r).toEqual({
       done: [
         "Ziyaret takvime yazıldı: Perşembe 5 Kasım 10:00",
-        "WhatsApp onay mesajı hazır · veli kartından gönder",
+        "WhatsApp onay mesajı hazır",
         "1 gün önce ve aynı sabah hatırlatma kuruldu",
       ],
     });
@@ -280,7 +280,7 @@ describe("recordCall", () => {
     expect(inserts("tasks")).toEqual([]);
     // Bugün 16:00: ikisi de geçti, satır yok.
     const today = await run("2026-11-03T16:00");
-    expect(today).toEqual(["Ziyaret takvime yazıldı: Salı 3 Kasım 16:00", "WhatsApp onay mesajı hazır · veli kartından gönder"]);
+    expect(today).toEqual(["Ziyaret takvime yazıldı: Salı 3 Kasım 16:00", "WhatsApp onay mesajı hazır"]);
     expect(inserts("tasks")).toHaveLength(0);
   });
 

@@ -44,6 +44,24 @@ export type QueueLead = {
   claimUntil: string | null;
 };
 
+/**
+ * claimLeadAs ile aynı kural: başkası son `claimMinutes` içinde "Ara"ya bastıysa veli onundur.
+ * claimed_at boşsa (yalnız otomatik atama) herkes alabilir.
+ */
+export function heldByOther(
+  r: { claimed_at: string | null; assigned_to: string | null },
+  me: string,
+  now: Date,
+  claimMinutes: number,
+): boolean {
+  return (
+    !!r.claimed_at &&
+    !!r.assigned_to &&
+    r.assigned_to !== me &&
+    Date.parse(r.claimed_at) >= now.getTime() - claimMinutes * 60_000
+  );
+}
+
 /** Saf: satırları etiketler ve en eski sayaç üstte olacak şekilde sıralar. */
 export function labelQueue(
   rows: QueueRow[],
@@ -52,7 +70,6 @@ export function labelQueue(
   claimMinutes: number,
   hours: BusinessHours,
 ): QueueLead[] {
-  const cutoff = now.getTime() - claimMinutes * 60_000;
   // En eski sayaç üstte; aynı anda başlayanlar geliş sırasıyla.
   const sorted = [...rows].sort(
     (a, b) =>
@@ -60,9 +77,7 @@ export function labelQueue(
       Date.parse(a.created_at) - Date.parse(b.created_at),
   );
   return sorted.map((r) => {
-    // claimLeadAs ile aynı kural: claimed_at boşsa (yalnız otomatik atama) herkes alabilir.
-    const heldByOther =
-      !!r.claimed_at && !!r.assigned_to && r.assigned_to !== me && Date.parse(r.claimed_at) >= cutoff;
+    const held = heldByOther(r, me, now, claimMinutes);
     return {
       id: r.id,
       parentName: r.parent_name,
@@ -74,8 +89,8 @@ export function labelQueue(
       district: r.district,
       startWindow: r.start_window,
       startedAt: clockStart(new Date(r.created_at), hours).toISOString(),
-      claimedByName: heldByOther ? r.claimer_name || UNKNOWN_CLAIMER : null,
-      claimUntil: heldByOther ? new Date(Date.parse(r.claimed_at!) + claimMinutes * 60_000).toISOString() : null,
+      claimedByName: held ? r.claimer_name || UNKNOWN_CLAIMER : null,
+      claimUntil: held ? new Date(Date.parse(r.claimed_at!) + claimMinutes * 60_000).toISOString() : null,
     };
   });
 }
