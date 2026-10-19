@@ -63,4 +63,24 @@ describe('LeadForm qualify', () => {
     await waitFor(() => expect(trackLead).toHaveBeenCalled());
     expect(JSON.stringify(trackLead.mock.calls)).not.toMatch(/Beykent|2023|childBirth|district/);
   });
+
+  it('qualify açıkken alanlar required, kapalıyken yok', () => {
+    const { unmount } = render(<LeadForm qualify currentYear={2026} />);
+    expect(screen.getByLabelText('Doğum ayı')).toBeRequired();
+    expect(screen.getByLabelText('Doğum yılı')).toBeRequired();
+    expect(screen.getByLabelText('Oturduğunuz semt')).toBeRequired();
+    expect(screen.getByLabelText('Hemen')).toBeRequired();
+    unmount();
+    const { container } = render(<LeadForm />);
+    expect(container.querySelector('select, input[type="radio"]')).toBeNull();
+  });
+
+  it('qualify eksikken istemcide durur, fetch çağrılmaz', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    render(<LeadForm qualify currentYear={2026} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Beni Arayın' }));
+    expect(await screen.findByText('Semtinizi seçin')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

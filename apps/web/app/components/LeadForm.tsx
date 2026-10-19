@@ -68,6 +68,21 @@ export default function LeadForm({
         : {}),
     };
 
+    // Form noValidate olduğundan (ana sayfa davranışı korunur) qualify alanlarının eksiği istemcide yakalanır; sunucuya 400 gitmez.
+    if (qualify) {
+      const missing: FieldErrors = {};
+      if (!payload.childBirthMonth) missing.childBirthMonth = ['Doğum ayını seçin'];
+      if (!payload.childBirthYear) missing.childBirthYear = ['Doğum yılını seçin'];
+      if (!payload.district) missing.district = ['Semtinizi seçin'];
+      if (!payload.startWindow) missing.startWindow = ['Başlangıç zamanını seçin'];
+      if (Object.keys(missing).length) {
+        setErrors(missing);
+        setFormError(t('form.invalid'));
+        setSubmitting(false);
+        return;
+      }
+    }
+
     try {
       const response = await fetch('/api/lead', {
         method: 'POST',
@@ -134,7 +149,7 @@ export default function LeadForm({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="childBirthMonth" className="sr-only" {...ign}>Doğum ayı</label>
-                <select id="childBirthMonth" name="childBirthMonth" defaultValue="" className={`${field} min-h-[44px]`} {...ign}>
+                <select id="childBirthMonth" name="childBirthMonth" defaultValue="" required className={`${field} min-h-[44px]`} {...ign}>
                   <option value="">Ay</option>
                   {MONTHS.map((m, i) => (
                     <option key={m} value={i + 1}>{m}</option>
@@ -144,7 +159,7 @@ export default function LeadForm({
               </div>
               <div>
                 <label htmlFor="childBirthYear" className="sr-only" {...ign}>Doğum yılı</label>
-                <select id="childBirthYear" name="childBirthYear" defaultValue="" className={`${field} min-h-[44px]`} {...ign}>
+                <select id="childBirthYear" name="childBirthYear" defaultValue="" required className={`${field} min-h-[44px]`} {...ign}>
                   <option value="">Yıl</option>
                   {Array.from({ length: 8 }, (_, i) => thisYear - i).map((y) => (
                     <option key={y} value={y}>{y}</option>
@@ -157,7 +172,7 @@ export default function LeadForm({
 
           <div>
             <label htmlFor="district" className={label} {...attrs('form.district.label')}>{t('form.district.label')}</label>
-            <select id="district" name="district" defaultValue="" className={`${field} min-h-[44px]`} {...ign}>
+            <select id="district" name="district" defaultValue="" required className={`${field} min-h-[44px]`} {...ign}>
               <option value="">Seçin</option>
               {DISTRICTS.map((d) => (
                 <option key={d} value={d}>{d}</option>
@@ -171,7 +186,7 @@ export default function LeadForm({
             <div className="grid gap-2 sm:grid-cols-2">
               {START_WINDOWS.map((w) => (
                 <label key={w} className="flex min-h-[44px] items-center gap-3 rounded-xl border-2 border-rule bg-white px-4 py-2 text-ink">
-                  <input type="radio" name="startWindow" value={w} className="h-5 w-5" />
+                  <input type="radio" name="startWindow" value={w} required className="h-5 w-5" />
                   <span {...attrs(`form.start.${w}`)}>{t(`form.start.${w}`)}</span>
                 </label>
               ))}

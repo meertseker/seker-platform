@@ -54,6 +54,7 @@ const base = z.object({
 });
 
 export const leadSchema = base.superRefine((lead, ctx) => {
+  // qualify istemcinin gönderdiği bayraktır; atlatılırsa sonuç yalnız nitelik verisi olmayan bir lead olur.
   if (!lead.qualify) return;
   const need = (field: string, message: string) => ctx.addIssue({ code: 'custom', path: [field], message });
   if (lead.childBirthMonth === undefined) need('childBirthMonth', 'Doğum ayını seçin');
