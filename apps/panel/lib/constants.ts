@@ -88,6 +88,7 @@ export const EVENT_LABELS = {
   aileye_baglandi: "Aileye bağlandı",
   web_basvuru: "Web sitesinden başvurdu",
   web_tekrar_basvuru: "Web sitesinden tekrar başvurdu",
+  taksit_guncellendi: "Taksit güncellendi",
 } as const;
 
 export const CONVERSION_ACTIONS = {

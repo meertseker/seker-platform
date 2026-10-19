@@ -11,4 +11,12 @@ export async function logEvent(supabase: SupabaseClient, e: {
   // Mutasyon zaten commit edildi; kayıp bir audit satırı 500'e ve tekrar
   // denemeye yol açmamalı, yalnızca loglanır.
   if (error) console.error(`Event yazılamadı: ${error.message}`);
+  else kickWaFlush();
+}
+
+/** Yazılan olay WhatsApp kuyruğuna düştüyse kısa süre sonra gruba gönderilsin.
+ *  WAHA yapılandırılmamışsa (yerel, test) hiçbir şey yüklenmez. */
+export function kickWaFlush(): void {
+  if (!process.env.WAHA_URL) return;
+  void import("@/lib/wa/run").then((m) => m.scheduleWaFlush()).catch(() => {});
 }

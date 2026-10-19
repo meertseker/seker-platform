@@ -59,7 +59,27 @@ services:
       GOOGLE_ADS_CONVERSION_ACTION_RANDEVU: ${GOOGLE_ADS_CONVERSION_ACTION_RANDEVU:-}
       GOOGLE_ADS_CONVERSION_ACTION_KAYIT: ${GOOGLE_ADS_CONVERSION_ACTION_KAYIT:-}
       GA4_PROPERTY_ID: ${GA4_PROPERTY_ID:-}
+      WAHA_URL: ${WAHA_URL:-}
+      WAHA_API_KEY: ${WAHA_API_KEY:-}
     mem_limit: 700m
+
+  # WhatsApp HTTP API: okulun numarası "bağlı cihaz" olarak buradan bağlanır.
+  # Yalnızca iç ağda; dışarıya port açılmaz, QR panelin Ayarlar ekranından okutulur.
+  waha:
+    image: devlikeapro/waha:gows-2026.9.2
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Istanbul
+      WAHA_API_KEY: ${WAHA_API_KEY:-}
+      WHATSAPP_DEFAULT_ENGINE: GOWS
+      WAHA_DASHBOARD_ENABLED: "False"
+      WHATSAPP_SWAGGER_ENABLED: "False"
+      WAHA_PRINT_QR: "False"
+      WAHA_CLIENT_DEVICE_NAME: "Seker Panel"
+      WAHA_LOG_LEVEL: warn
+    volumes:
+      - waha_sessions:/app/.sessions
+    mem_limit: 300m
 
   cron:
     build: ./cron
@@ -82,3 +102,4 @@ volumes:
   caddy_data:
   caddy_config:
   web_cache:
+  waha_sessions:

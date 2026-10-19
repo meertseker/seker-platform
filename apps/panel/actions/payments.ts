@@ -12,7 +12,7 @@ import { generateInstallments, remainderInstallment } from "@/lib/installments";
 import { allocatePayment } from "@/lib/payment-allocation";
 import { applyPaymentDay, type PaymentDay } from "@/lib/payment-day";
 import { buildEnrollmentPlans, seasonLastMonth } from "@/lib/enrollment-plan";
-import { logEvent } from "@/lib/events";
+import { kickWaFlush, logEvent } from "@/lib/events";
 import { shouldStartTentative, tentativeStart } from "@/lib/price-increase";
 import { formatTRY, kurusToTl, tlToKurus } from "@/lib/money";
 import { createAdminSupabase } from "@/lib/supabase/admin";
@@ -356,6 +356,19 @@ export async function updateInstallment(
 
   if (error) return { error: "Taksit güncellenemedi" };
 
+  await logEvent(supabase, {
+    entityType: "installment",
+    entityId: installmentId,
+    eventType: "taksit_guncellendi",
+    actorId: profile.id,
+    payload: {
+      fromTl: Number(installment.amount),
+      toTl: kurusToTl(nextAmountKurus),
+      fromDueDate: installment.due_date,
+      toDueDate: (patch.due_date as string | undefined) ?? installment.due_date,
+    },
+  });
+
   const studentPath = await studentPathForPlan(supabase, installment.plan_id);
   revalidatePath("/ogrenciler");
   revalidatePath("/odemeler");
@@ -526,6 +539,7 @@ export async function takePayment(input: TakePaymentInput) {
     })
     .select("id")
     .single();
+  kickWaFlush();
 
   revalidatePath("/ogrenciler");
   revalidatePath("/odemeler");

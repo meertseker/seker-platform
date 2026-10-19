@@ -13,6 +13,7 @@ export type NotificationType =
   | "teklif_reddedildi"
   | "web_basvuru"
   | "ads_senkron_hata"
+  | "wa_baglanti_koptu"
   | "geri_bildirim";
 
 export async function notify(

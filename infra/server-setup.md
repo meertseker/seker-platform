@@ -54,3 +54,15 @@ GitHub → Settings → Developer settings → Personal access tokens (classic) 
 `CRON_SECRET`: `openssl rand -hex 32`.
 `IMAGE_TAG`: ilk dağıtımda boş bırak; deploy.sh doldurur.
 `.env` değerlerinde `$` varsa değeri tek tırnak içine al (`KEY='değer'`); değer `'` içeremez.
+
+## 7. WhatsApp grubu (WAHA)
+Panel işlemleri okulun WhatsApp grubuna `waha` konteyneri üzerinden gider. Konteyner yalnızca iç ağdadır, dışarıya port açılmaz.
+    cd /opt/seker
+    echo "WAHA_URL=http://waha:3000" >> .env
+    echo "WAHA_API_KEY=$(openssl rand -hex 32)" >> .env
+    docker compose up -d waha panel
+Sonra panelde **Ayarlar › WhatsApp grubu**:
+1. "Bağlan (QR göster)" → telefonda WhatsApp Business › Bağlı cihazlar › Cihaz bağla → QR'ı okut.
+2. "Grupları getir" → grubu seç → Kaydet → "Test mesajı gönder".
+3. "Panel işlemlerini gruba gönder" kutusunu işaretle.
+Oturum `waha_sessions` volume'unda kalır; konteyner yeniden başlasa da QR tekrar istenmez. Telefon ~14 gün hiç internete çıkmazsa bağlı cihaz düşer; panel yöneticiye bildirim gönderir, QR yeniden okutulur.

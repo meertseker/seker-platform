@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { PriceItemsEditor, type PriceItemRow } from "@/components/price-items-editor";
 import { SiteEditorToggle } from "@/components/site-editor-toggle";
 import { SeasonManager, type SeasonItem } from "@/components/season-manager";
+import { WhatsappSettings, type WaOutboxView } from "@/components/whatsapp-settings";
 import { getSessionProfile } from "@/lib/auth";
 import type { Program } from "@/lib/constants";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -39,6 +40,32 @@ export default async function AyarlarPage() {
     .eq("is_active", true)
     .order("full_name");
   const staff = (staffRows ?? []).map((s) => ({ id: s.id, fullName: s.full_name, canEditSite: s.can_edit_site }));
+
+  const { data: waSettingRows } = await supabase
+    .from("app_settings")
+    .select("key, value")
+    .in("key", ["wa_enabled", "wa_group_id", "wa_group_name"]);
+  const waSetting = new Map((waSettingRows ?? []).map((r) => [r.key, r.value as unknown]));
+  const { data: outboxRows } = await supabase
+    .from("wa_outbox")
+    .select("id, status, created_at, sent_at, error, message")
+    .in("status", ["gonderildi", "hata"])
+    .order("created_at", { ascending: false })
+    .limit(60);
+  // Birleştirilen işlemler aynı mesajı paylaşır; ekranda bir kez görünsün.
+  const seenMessages = new Set<string>();
+  const waRecent: WaOutboxView[] = [];
+  for (const r of outboxRows ?? []) {
+    const key = r.status === "gonderildi" ? `${r.sent_at}|${r.message}` : r.id;
+    if (seenMessages.has(key)) continue;
+    seenMessages.add(key);
+    waRecent.push({ id: r.id, status: r.status, createdAt: r.created_at, sentAt: r.sent_at, error: r.error, message: r.message });
+    if (waRecent.length >= 10) break;
+  }
+  const { count: waFailed } = await supabase
+    .from("wa_outbox")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "hata");
 
   const rows = (priceLists ?? []) as PriceListRow[];
   const seasons: SeasonItem[] = rows.map((row) => ({
@@ -83,6 +110,14 @@ export default async function AyarlarPage() {
       )}
 
       <SiteEditorToggle staff={staff} />
+
+      <WhatsappSettings
+        enabled={waSetting.get("wa_enabled") === true}
+        groupId={typeof waSetting.get("wa_group_id") === "string" ? (waSetting.get("wa_group_id") as string) : ""}
+        groupName={typeof waSetting.get("wa_group_name") === "string" ? (waSetting.get("wa_group_name") as string) : ""}
+        recent={waRecent}
+        failedCount={waFailed ?? 0}
+      />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
 import { normalizeTurkishPhone } from "@/lib/phone";
 import { canTransition, requiresLostReason, reopenTarget } from "@/lib/lead-state";
-import { logEvent } from "@/lib/events";
+import { kickWaFlush, logEvent } from "@/lib/events";
 import type { LeadStatus, LeadSource, LostReason } from "@/lib/constants";
 import {
   addDaysToDateString,
@@ -100,6 +100,8 @@ export async function deleteLead(leadId: string) {
 
   const admin = createAdminSupabase();
   const db = admin ?? (await createServerSupabase());
+  // Silinen kaydın adı olay geçmişinde ve WhatsApp mesajında görünsün diye önce okunur.
+  const { data: snapshot } = await db.from("leads").select("parent_name, child_name").eq("id", leadId).maybeSingle();
   // lead_notes / appointments / offers / tasks ON DELETE CASCADE ile otomatik silinir.
   const { error } = await db.from("leads").delete().eq("id", leadId);
   if (error) return { error: "Veli silinemedi" };
@@ -110,7 +112,7 @@ export async function deleteLead(leadId: string) {
     entityId: leadId,
     eventType: "lead_silindi",
     actorId: profile.id,
-    payload: {},
+    payload: { parentName: snapshot?.parent_name ?? null, childName: snapshot?.child_name ?? null },
   });
 
   revalidatePath("/pipeline");
@@ -216,6 +218,7 @@ export async function logCallOutcome(
     body: plan.note,
   });
   if (noteError) return { error: "Görüşme notu kaydedilemedi" };
+  kickWaFlush();
 
   if (plan.status && !lead.converted_student_id) {
     const result = await updateLeadStatus(

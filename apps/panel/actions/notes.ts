@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSessionProfile } from "@/lib/auth";
+import { kickWaFlush } from "@/lib/events";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export async function addNote(leadId: string, body: string) {
@@ -22,6 +23,7 @@ export async function addNote(leadId: string, body: string) {
   }).eq("id", leadId);
   if (leadError) return { error: "Veli güncellenemedi" };
 
+  kickWaFlush();
   revalidatePath(`/leads/${leadId}`);
   return {};
 }

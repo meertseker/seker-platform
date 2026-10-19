@@ -29,6 +29,8 @@ export function notificationText(notification: {
         : "Teklif karşı rakamla onaylandı.";
     case "ads_senkron_hata":
       return "Google Ads senkronu bu sabah başarısız oldu. Pazarlama ekranına bakın.";
+    case "wa_baglanti_koptu":
+      return "WhatsApp bağlantısı koptu, gruba bildirim gitmiyor. Ayarlar'dan yeniden bağlayın.";
     case "teklif_reddedildi":
       return "Teklifiniz reddedildi.";
     case "web_basvuru": {

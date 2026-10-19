@@ -42,6 +42,7 @@ function relativeTime(value: string) {
 
 function notificationHref(notification: NotificationItem) {
   if (notification.type === "ads_senkron_hata") return "/pazarlama";
+  if (notification.type === "wa_baglanti_koptu") return "/ayarlar#whatsapp";
   if (notification.type === "geri_bildirim") return "/geri-bildirim";
   const leadId = notification.payload.leadId;
 

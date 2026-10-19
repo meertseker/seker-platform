@@ -310,6 +310,7 @@ export async function deleteStudent(studentId: string) {
   const admin = createAdminSupabase();
   const db = admin ?? (await createServerSupabase());
 
+  const { data: snapshot } = await db.from("students").select("full_name").eq("id", studentId).maybeSingle();
   // FK temizliği: iade kayıtları + bu öğrenciye bağlı lead referansı.
   await db.from("refunds").delete().eq("student_id", studentId);
   await db.from("leads").update({ converted_student_id: null }).eq("converted_student_id", studentId);
@@ -323,7 +324,7 @@ export async function deleteStudent(studentId: string) {
     entityId: studentId,
     eventType: "ogrenci_silindi",
     actorId: profile.id,
-    payload: {},
+    payload: { fullName: snapshot?.full_name ?? null },
   });
 
   revalidatePath("/ogrenciler");

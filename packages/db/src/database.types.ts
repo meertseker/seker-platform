@@ -539,6 +539,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"wa_outbox": {
+                  Row: {
+                    "attempts": number,"available_at": string,"created_at": string,"error": string | null,"event_id": string | null,"id": string,"locked_at": string | null,"message": string | null,"note_id": string | null,"sent_at": string | null,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"available_at"?: string,"created_at"?: string,"error"?: string | null,"event_id"?: string | null,"id"?: string,"locked_at"?: string | null,"message"?: string | null,"note_id"?: string | null,"sent_at"?: string | null,"status"?: string
+                  }
+                  Update: {
+                    "attempts"?: number,"available_at"?: string,"created_at"?: string,"error"?: string | null,"event_id"?: string | null,"id"?: string,"locked_at"?: string | null,"message"?: string | null,"note_id"?: string | null,"sent_at"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "wa_outbox_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: true
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "wa_outbox_note_id_fkey"
+      columns: ["note_id"]
+isOneToOne: true
+      referencedRelation: "lead_notes"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
