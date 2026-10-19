@@ -349,14 +349,14 @@ isOneToOne: false
                   ]
                 },"payment_plans": {
                   Row: {
-                    "created_at": string,"id": string,"installment_count": number,"item_type": string,"season": string,"source_offer_id": string | null,"student_id": string,"total_amount": number,"updated_at": string
+                    "created_at": string,"id": string,"installment_count": number,"item_type": string,"season": string,"source_offer_id": string | null,"student_id": string,"tentative_from": string | null,"total_amount": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"installment_count": number,"item_type": string,"season": string,"source_offer_id"?: string | null,"student_id": string,"total_amount": number,"updated_at"?: string
+                    "created_at"?: string,"id"?: string,"installment_count": number,"item_type": string,"season": string,"source_offer_id"?: string | null,"student_id": string,"tentative_from"?: string | null,"total_amount": number,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"installment_count"?: number,"item_type"?: string,"season"?: string,"source_offer_id"?: string | null,"student_id"?: string,"total_amount"?: number,"updated_at"?: string
+                    "created_at"?: string,"id"?: string,"installment_count"?: number,"item_type"?: string,"season"?: string,"source_offer_id"?: string | null,"student_id"?: string,"tentative_from"?: string | null,"total_amount"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -575,6 +575,9 @@ isOneToOne: false
           Functions: {
             "accept_counter_offer":
 { Args: { "source_offer_id": string }; Returns: string
+                           },
+"apply_plan_amounts":
+{ Args: { "p_changes": Json,"p_clear_tentative": boolean,"p_plan_id": string }; Returns: undefined
                            },
 "can_edit_site":
 { Args: Record<PropertyKey, never>; Returns: boolean
