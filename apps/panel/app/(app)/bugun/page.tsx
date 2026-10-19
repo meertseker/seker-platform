@@ -491,7 +491,7 @@ export default async function Home({
         ) : queue.length === 0 ? (
           <EmptyState text="Şu an aranacak yeni veli yok." />
         ) : (
-          <CallQueueList leads={queue} serverNow={now.getTime()} waMessages={waMessages} />
+          <CallQueueList leads={queue} serverNow={now.getTime()} hours={flowSettings.hours} waMessages={waMessages} />
         )}
       </TodaySection>
 

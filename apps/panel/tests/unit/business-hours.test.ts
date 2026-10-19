@@ -68,3 +68,32 @@ describe("parseIstanbulDateTime / formatDayTime", () => {
     expect(formatDayTime(new Date("2026-11-04T07:00:00Z"))).toBe("Çarşamba 4 Kasım 10:00");
   });
 });
+
+import { businessMinutesBetween } from "@/lib/lead-flow/business-hours";
+
+describe("businessMinutesBetween (R14)", () => {
+  const H = { days: [1, 2, 3, 4, 5], start: "08:30", end: "18:00" };
+  const at = (s: string) => new Date(`${s}+03:00`);
+
+  it("Salı 17:55 → 18:30 = 5, Çarşamba 08:40 = 15", () => {
+    expect(businessMinutesBetween(at("2026-10-20T17:55:00"), at("2026-10-20T18:30:00"), H)).toBe(5);
+    expect(businessMinutesBetween(at("2026-10-20T17:55:00"), at("2026-10-21T08:40:00"), H)).toBe(15);
+  });
+
+  it("Cuma 17:50 → Pazartesi 08:35 = 15", () => {
+    expect(businessMinutesBetween(at("2026-10-23T17:50:00"), at("2026-10-26T08:35:00"), H)).toBe(15);
+  });
+
+  it("mesai içinde düz fark", () => {
+    expect(businessMinutesBetween(at("2026-10-20T10:03:00"), at("2026-10-20T10:20:30"), H)).toBe(17);
+  });
+
+  it("22:40 gelen form ertesi gün 08:30'da hâlâ 0", () => {
+    expect(businessMinutesBetween(at("2026-10-19T22:40:00"), at("2026-10-20T08:30:00"), H)).toBe(0);
+    expect(businessMinutesBetween(at("2026-10-19T22:40:00"), at("2026-10-20T08:31:00"), H)).toBe(1);
+  });
+
+  it("ters sırada 0", () => {
+    expect(businessMinutesBetween(at("2026-10-20T11:00:00"), at("2026-10-20T10:00:00"), H)).toBe(0);
+  });
+});

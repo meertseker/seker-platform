@@ -1,50 +1,33 @@
+"use client";
+
 import Link from "next/link";
-import { CallButton } from "@/components/call-outcome";
-import { elapsedText } from "@/lib/next-step";
+import { usePathname } from "next/navigation";
+import { ArrowRight } from "lucide-react";
+import type { QueueBannerSummary } from "@/lib/queries/call-queue";
 
-export interface PendingApplication {
-  id: string;
-  parent_name: string;
-  phone: string;
-  created_at: string;
-}
-
-/** Son 24 saatte gelen, hâlâ aranmamış web/reklam başvuruları — her sayfanın üstünde. */
-export function PendingApplicationsBanner({
-  applications,
-  now,
-}: {
-  applications: PendingApplication[];
-  now: string;
-}) {
-  if (applications.length === 0) return null;
-  const oldest = applications[0];
+/**
+ * Ortak arama listesinde bekleyen veliler — Bugün dışındaki her sayfanın üstünde yön işareti.
+ * Doğrudan aramaz: arama yalnız Bugün ekranındaki "Ara" (üstlenme) ile başlar.
+ */
+export function PendingApplicationsBanner({ summary }: { summary: QueueBannerSummary | null }) {
+  const pathname = usePathname();
+  if (!summary || pathname === "/bugun") return null;
 
   return (
     <div
       role="status"
-      className="mb-4 flex flex-col gap-3 rounded-2xl border border-red-200 bg-destructive-soft p-4 sm:flex-row sm:items-center sm:justify-between"
+      className="mb-4 flex flex-col gap-3 rounded-2xl border border-destructive/30 bg-destructive-soft p-4 sm:flex-row sm:items-center sm:justify-between"
     >
-      <p className="text-base font-semibold text-red-800">
-        {applications.length} başvuru aranmayı bekliyor · {oldest.parent_name} ·{" "}
-        {elapsedText(oldest.created_at, now)}
+      <p className="text-base font-semibold text-destructive-strong">
+        {summary.count} yeni veli aranmayı bekliyor · {summary.oldestName} · {summary.oldestMinutes} dk
       </p>
-      <div className="flex flex-wrap gap-2">
-        <CallButton
-          leadId={oldest.id}
-          phone={oldest.phone}
-          leadName={oldest.parent_name}
-          label={`${oldest.parent_name.split(" ")[0]} ara`}
-          variant="primary"
-          className="min-h-12!"
-        />
-        <Link
-          href="/pipeline?filtre=basvuru"
-          className="inline-flex min-h-12 items-center rounded-xl border border-red-200 bg-surface px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:border-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Hepsini gör
-        </Link>
-      </div>
+      <Link
+        href="/bugun"
+        className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        Bugün&apos;e git
+        <ArrowRight aria-hidden className="size-4" />
+      </Link>
     </div>
   );
 }

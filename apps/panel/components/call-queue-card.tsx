@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { MessageCircle, Phone } from "lucide-react";
 import { claimLead } from "@/actions/lead-flow";
 import { LEAD_SOURCES, START_WINDOWS, label } from "@/lib/constants";
-import { elapsedMinutes, timerTone } from "@/lib/lead-flow/business-hours";
+import { type BusinessHours, businessMinutesBetween, timerTone } from "@/lib/lead-flow/business-hours";
 import type { QueueLead } from "@/lib/queries/call-queue";
 import { waMeUrl } from "@/lib/whatsapp";
 
@@ -35,24 +35,34 @@ function firstName(name: string) {
 function CallQueueCard({
   lead,
   now,
+  hours,
   waMessage,
 }: {
   lead: QueueLead;
   now: number;
+  hours: BusinessHours;
   waMessage?: string;
 }) {
   const router = useRouter();
-  const [claimError, setClaimError] = useState<string | null>(null);
+  // Hata, o anki üstlenme bilgisine bağlanır; yenilenen props (heldBy/claimUntil) kararı devralır.
+  const [claimError, setClaimError] = useState<{ message: string; claimUntil: string | null; at: number } | null>(
+    null,
+  );
   const [isPending, startTransition] = useTransition();
 
   const started = new Date(lead.startedAt);
   const notStarted = started.getTime() > now;
-  const minutes = elapsedMinutes(started, new Date(now));
+  // R14: yalnız mesai içindeki dakikalar sayılır (18:00'de durur, ertesi sabah devam eder).
+  const minutes = businessMinutesBetween(started, new Date(now), hours);
   const tone = timerTone(minutes);
   const late = tone === "late";
   // Üstlenme 15 dk içinde ilk temasa dönmezse sayfa yenilenmeden de "Ara" yeniden açılır.
   const heldBy = lead.claimUntil && Date.parse(lead.claimUntil) > now ? lead.claimedByName : null;
-  const disabled = isPending || !!heldBy || !!claimError;
+  // Yenileme gelene kadar (en çok 1 dk) hata durur; sonra üstlenen kişi varsa onun süresi kadar.
+  const errorActive =
+    !!claimError &&
+    (claimError.claimUntil === lead.claimUntil ? now - claimError.at < 2 * TICK_MS : !!heldBy);
+  const disabled = isPending || !!heldBy || errorActive;
   const waHref = waMeUrl(lead.phone, waMessage);
 
   const sourceChip = [queueSourceLabel(lead.source, lead.channel), lead.contentCode].filter(Boolean).join(" · ");
@@ -66,7 +76,7 @@ function CallQueueCard({
     startTransition(async () => {
       const res = await claimLead(lead.id);
       if (!res.ok) {
-        setClaimError(`${res.claimedBy} bu veliyi arıyor`);
+        setClaimError({ message: `${res.claimedBy} bu veliyi arıyor`, claimUntil: lead.claimUntil, at: Date.now() });
         router.refresh();
         return;
       }
@@ -126,9 +136,9 @@ function CallQueueCard({
         ) : null}
       </div>
 
-      {claimError ? (
+      {errorActive ? (
         <p role="alert" className="text-[13px] font-medium text-destructive-strong">
-          {claimError}
+          {claimError.message}
         </p>
       ) : null}
     </li>
@@ -139,23 +149,31 @@ function CallQueueCard({
 export function CallQueueList({
   leads,
   serverNow,
+  hours,
   waMessages,
 }: {
   leads: QueueLead[];
   serverNow: number;
+  hours: BusinessHours;
   waMessages: Record<string, string | undefined>;
 }) {
+  const router = useRouter();
   const [now, setNow] = useState(serverNow);
 
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), TICK_MS);
+    const id = window.setInterval(() => {
+      setNow(Date.now());
+      // Yeni gelen veliler ve başkasının üstlenmesi listeye düşsün; arka plandaki sekme sunucuyu yormasın.
+      // Kartlar lead.id ile anahtarlı olduğundan kart içi durum (hata, bekleyen işlem) korunur.
+      if (document.visibilityState === "visible") router.refresh();
+    }, TICK_MS);
     return () => window.clearInterval(id);
-  }, []);
+  }, [router]);
 
   return (
     <ul className="flex flex-col gap-2.5">
       {leads.map((lead) => (
-        <CallQueueCard key={lead.id} lead={lead} now={now} waMessage={waMessages[lead.id]} />
+        <CallQueueCard key={lead.id} lead={lead} now={now} hours={hours} waMessage={waMessages[lead.id]} />
       ))}
     </ul>
   );

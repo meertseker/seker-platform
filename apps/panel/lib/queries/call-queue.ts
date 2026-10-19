@@ -1,7 +1,7 @@
 // Bugün ekranı: ortak arama listesi ("Şimdi ara") ve bugünkü takip görevleri.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ageFromBirth } from "@/lib/lead-flow/age";
-import { type BusinessHours, clockStart } from "@/lib/lead-flow/business-hours";
+import { type BusinessHours, businessMinutesBetween, clockStart } from "@/lib/lead-flow/business-hours";
 import { FOLLOWUP_STEPS } from "@/lib/lead-flow/followups";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 
@@ -101,13 +101,26 @@ export async function loadCallQueue(
     .eq("status", "yeni")
     .or(`source.in.(${QUEUE_SOURCES.join(",")}),channel.not.is.null`)
     .order("created_at", { ascending: true })
-    .limit(50);
+    .limit(200);
   if (error) throw new Error(`Arama listesi okunamadı: ${error.message}`);
   const rows = ((data ?? []) as unknown as QueueDbRow[]).map(({ claimer, ...r }) => {
     const c = Array.isArray(claimer) ? claimer[0] : claimer;
     return { ...r, claimer_name: c?.full_name ?? null };
   });
   return labelQueue(rows, me, now, claimMinutes, hours);
+}
+
+export type QueueBannerSummary = { count: number; oldestName: string; oldestMinutes: number };
+
+/** Saf: diğer sayfalardaki bant için özet; sayı ortak listeyle aynıdır. */
+export function queueBannerSummary(leads: QueueLead[], now: Date, hours: BusinessHours): QueueBannerSummary | null {
+  const oldest = leads[0];
+  if (!oldest) return null;
+  return {
+    count: leads.length,
+    oldestName: oldest.parentName,
+    oldestMinutes: businessMinutesBetween(new Date(oldest.startedAt), now, hours),
+  };
 }
 
 type LeadJoin = { id: string; parent_name: string; phone: string };

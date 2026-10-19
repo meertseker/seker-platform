@@ -4,11 +4,9 @@ import { Nav } from "@/components/nav";
 import { ToastProvider } from "@/components/toast";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { NotificationItem } from "@/components/notification-bell";
-import {
-  PendingApplicationsBanner,
-  type PendingApplication,
-} from "@/components/pending-applications-banner";
-import { WEB_APPLICATION_SOURCES } from "@/lib/next-step";
+import { PendingApplicationsBanner } from "@/components/pending-applications-banner";
+import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
+import { loadCallQueue, queueBannerSummary } from "@/lib/queries/call-queue";
 
 export default async function AppLayout({
   children,
@@ -18,8 +16,7 @@ export default async function AppLayout({
   const profile = await getSessionProfile();
   const supabase = await createServerSupabase();
   const now = new Date();
-  const dayAgo = new Date(now.getTime() - 86400000).toISOString();
-  const [notificationsResult, unreadResult, applicationsResult] = await Promise.all([
+  const [notificationsResult, unreadResult, bannerSummary] = await Promise.all([
     supabase
       .from("notifications")
       .select("id, type, payload, read_at, created_at")
@@ -31,16 +28,16 @@ export default async function AppLayout({
       .select("id", { count: "exact", head: true })
       .eq("user_id", profile.id)
       .is("read_at", null),
-    supabase
-      .from("leads")
-      .select("id, parent_name, phone, created_at")
-      .eq("status", "yeni")
-      .in("source", WEB_APPLICATION_SOURCES)
-      .gte("created_at", dayAgo)
-      .order("created_at", { ascending: true })
-      .limit(50),
+    // Bant, Bugün'deki "Şimdi ara" listesiyle aynı kuralı sayar.
+    getLeadFlowSettings(supabase)
+      .then(async (settings) =>
+        queueBannerSummary(await loadCallQueue(supabase, profile.id, now, settings), now, settings.hours),
+      )
+      .catch((e: unknown) => {
+        console.error("layout call queue banner:", e);
+        return null;
+      }),
   ]);
-  const applications = (applicationsResult.data ?? []) as PendingApplication[];
   const notifications = (notificationsResult.data ?? []).map((notification) => ({
     id: notification.id,
     type: notification.type,
@@ -73,7 +70,7 @@ export default async function AppLayout({
       />
       <div className="md:pl-64">
         <main id="main" tabIndex={-1} className="mx-auto outline-none flex min-h-screen w-full max-w-7xl flex-col px-4 pb-28 pt-4 sm:px-6 md:pb-8 md:pt-6 lg:px-8">
-          <PendingApplicationsBanner applications={applications} now={now.toISOString()} />
+          <PendingApplicationsBanner summary={bannerSummary} />
           {children}
         </main>
       </div>

@@ -43,7 +43,7 @@ export function TaskCompleteButton({ id, compact = false }: TaskCompleteButtonPr
         >
           <Check aria-hidden className="size-5" />
         </button>
-        {error ? <p role="alert" className="text-xs font-medium text-red-700">{error}</p> : null}
+        {error ? <p role="alert" className="text-xs font-medium text-destructive-strong">{error}</p> : null}
       </div>
     );
   }
@@ -58,7 +58,7 @@ export function TaskCompleteButton({ id, compact = false }: TaskCompleteButtonPr
       >
         {isPending ? "Tamamlanıyor..." : "Tamamla"}
       </button>
-      {error ? <p role="alert" className="text-xs font-medium text-red-700">{error}</p> : null}
+      {error ? <p role="alert" className="text-xs font-medium text-destructive-strong">{error}</p> : null}
     </div>
   );
 }
