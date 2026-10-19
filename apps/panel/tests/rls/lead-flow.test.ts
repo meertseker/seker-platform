@@ -15,6 +15,8 @@ vi.mock("@/lib/auth", () => ({
 
 import { claimLeadAs } from "@/lib/lead-flow/claim";
 import { recordCall } from "@/actions/lead-flow";
+import { loadCallQueue } from "@/lib/queries/call-queue";
+import { DEFAULT_BUSINESS_HOURS } from "@/lib/lead-flow/business-hours";
 
 const PREFIX = "+90500666"; // web-leads.test.ts +90500777 kullanır; paralel silmeler çakışmasın
 let seq = 0;
@@ -115,5 +117,30 @@ describe("arama kaydı", () => {
     expect(ev).toHaveLength(1);
     const { data: notes } = await admin.from("lead_notes").select("body").eq("lead_id", id);
     expect(notes).toHaveLength(1);
+  });
+});
+
+describe("aday hattı açılışı (R23)", () => {
+  it("açılıştan 20 gün önce gelen kanıtsız veli listede yok, 10 gün önce gelen var", async () => {
+    const launchAt = new Date();
+    const before = (d: number) => new Date(launchAt.getTime() - d * 86_400_000).toISOString();
+    const old = await newLead({ created_at: before(20) });
+    const recent = await newLead({ created_at: before(10) });
+    const queue = await loadCallQueue(danA, DAN_ID, new Date(), {
+      claimMinutes: 15, hours: DEFAULT_BUSINESS_HOURS, launchAt,
+    });
+    const ids = queue.map((l) => l.id);
+    expect(ids).toContain(recent);
+    expect(ids).not.toContain(old);
+    // Açılış ayarı yoksa sınır uygulanmaz.
+    const all = await loadCallQueue(danA, DAN_ID, new Date(), {
+      claimMinutes: 15, hours: DEFAULT_BUSINESS_HOURS, launchAt: null,
+    });
+    expect(all.map((l) => l.id)).toEqual(expect.arrayContaining([old, recent]));
+  });
+
+  it("0014 açılış anını tohumlar", async () => {
+    const { data } = await admin.from("app_settings").select("value").eq("key", "aday_hatti_acilis").single();
+    expect(Number.isFinite(Date.parse(data!.value as string))).toBe(true);
   });
 });

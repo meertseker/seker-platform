@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { labelQueue, labelFollowups, type QueueRow, type FollowupRow } from "@/lib/queries/call-queue";
+import {
+  applyQueueFilter,
+  inQueueWindow,
+  labelFollowups,
+  labelQueue,
+  queueCutoff,
+  type FollowupRow,
+  type QueueRow,
+} from "@/lib/queries/call-queue";
 import { ageFromBirth } from "@/lib/lead-flow/age";
 import { fillTemplate } from "@/lib/lead-flow/template";
 import { DEFAULT_BUSINESS_HOURS } from "@/lib/lead-flow/business-hours";
@@ -185,5 +193,36 @@ describe("fillTemplate", () => {
     expect(fillTemplate("Merhaba {veli}, ben {danisman}. {x}", { veli: "Ayşe Hanım", danisman: "Zehra" })).toBe(
       "Merhaba Ayşe Hanım, ben Zehra. {x}",
     );
+  });
+});
+
+describe("aday hattı açılışı (R23: son 14 gün listede)", () => {
+  const launch = new Date("2026-10-20T07:00:00Z");
+  const daysBefore = (d: number) => new Date(launch.getTime() - d * 86_400_000).toISOString();
+
+  it("sınır açılıştan 14 gün öncesidir; açılış yoksa sınır yok", () => {
+    expect(queueCutoff(launch)?.toISOString()).toBe(daysBefore(14));
+    expect(queueCutoff(null)).toBeNull();
+  });
+
+  it("açılıştan 20 gün önce gelen kanıtsız veli listeye girmez, 10 gün önce gelen girer", () => {
+    expect(inQueueWindow(daysBefore(20), launch)).toBe(false);
+    expect(inQueueWindow(daysBefore(10), launch)).toBe(true);
+    expect(inQueueWindow(daysBefore(400), null)).toBe(true);
+  });
+
+  it("ortak süzgeç sınırı created_at >= olarak ekler", () => {
+    const calls: unknown[][] = [];
+    const q = {
+      is: (...a: unknown[]) => (calls.push(["is", ...a]), q),
+      eq: (...a: unknown[]) => (calls.push(["eq", ...a]), q),
+      or: (...a: unknown[]) => (calls.push(["or", ...a]), q),
+      gte: (...a: unknown[]) => (calls.push(["gte", ...a]), q),
+    };
+    applyQueueFilter(q, queueCutoff(launch));
+    expect(calls).toContainEqual(["gte", "created_at", daysBefore(14)]);
+    calls.length = 0;
+    applyQueueFilter(q, null);
+    expect(calls.some((c) => c[0] === "gte")).toBe(false);
   });
 });

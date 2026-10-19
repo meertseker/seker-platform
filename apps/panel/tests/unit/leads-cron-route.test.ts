@@ -7,6 +7,7 @@ let yoneticiler: Array<{ id: string }> = [];
 const filtersSeen: string[] = [];
 let insertError: { message: string } | null = null;
 let leadsError: { message: string } | null = null;
+let settingsRows: Array<{ key: string; value: unknown }> = [];
 
 /** Zincirlenebilir, await edilebilir sahte sorgu. */
 function query(table: string) {
@@ -30,6 +31,10 @@ function query(table: string) {
       filtersSeen.push(`${table}.or`);
       return q;
     },
+    gte: (column: string, value: unknown) => {
+      filtersSeen.push(`${table}.gte.${column}=${String(value)}`);
+      return q;
+    },
     order: () => q,
     limit: () => q,
     insert: (row: Record<string, unknown> | Record<string, unknown>[]) => {
@@ -40,7 +45,7 @@ function query(table: string) {
     then: (resolve: (value: unknown) => void) => {
       if (table === "profiles") return resolve({ data: yoneticiler, error: null });
       if (table === "leads") return resolve({ data: leadsError ? null : leads, error: leadsError });
-      if (table === "app_settings") return resolve({ data: [], error: null });
+      if (table === "app_settings") return resolve({ data: settingsRows, error: null });
       const ids = (filters["payload->>leadId"] as string[]) ?? [];
       return resolve({ data: ids.filter((id) => notified.has(id)).map((leadId) => ({ payload: { leadId } })), error: null });
     },
@@ -67,6 +72,7 @@ beforeEach(() => {
   leadsError = null;
   yoneticiler = [{ id: "y1" }, { id: "y2" }];
   leads = [];
+  settingsRows = [];
   vi.stubEnv("CRON_SECRET", "s3cret");
   vi.useFakeTimers();
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -159,6 +165,19 @@ describe("GET /api/cron/leads", () => {
     const second = await (await GET(request("Bearer s3cret"))).json();
     expect(second.notified).toBe(1);
     expect(inserts).toHaveLength(2);
+  });
+
+  it("aday hattı açılmadan önce gelen veli için uyarı gitmez; listedeki 14 gün sınırı sorguya eklenir", async () => {
+    vi.setSystemTime(at("10:30"));
+    settingsRows = [{ key: "aday_hatti_acilis", value: at("10:05").toISOString() }];
+    leads = [
+      { id: "eski", parent_name: "Eski Veli", created_at: at("09:00").toISOString() },
+      { id: "yeni", parent_name: "Yeni Veli", created_at: at("10:10").toISOString() },
+    ];
+    await GET(request("Bearer s3cret"));
+    expect(inserts.map((i) => (i.payload as { leadId: string }).leadId)).toEqual(["yeni", "yeni"]);
+    const cutoff = new Date(at("10:05").getTime() - 14 * 86_400_000).toISOString();
+    expect(filtersSeen).toContain(`leads.gte.created_at=${cutoff}`);
   });
 
   it("veli sorgusu hata verirse 500", async () => {

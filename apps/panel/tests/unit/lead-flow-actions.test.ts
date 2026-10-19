@@ -432,4 +432,13 @@ describe("getLeadFlowSettings", () => {
     settingsRows = [{ key: "mesai", value: { days: [6], start: "09:00", end: "13:00" } }];
     expect((await getLeadFlowSettings(db())).hours).toEqual({ days: [6], start: "09:00", end: "13:00" });
   });
+
+  it("aday hattı açılışını okur; yoksa ya da bozuksa null", async () => {
+    settingsRows = [];
+    expect((await getLeadFlowSettings(db())).launchAt).toBeNull();
+    settingsRows = [{ key: "aday_hatti_acilis", value: "bozuk" }];
+    expect((await getLeadFlowSettings(db())).launchAt).toBeNull();
+    settingsRows = [{ key: "aday_hatti_acilis", value: "2026-10-20T07:15:00Z" }];
+    expect((await getLeadFlowSettings(db())).launchAt?.toISOString()).toBe("2026-10-20T07:15:00.000Z");
+  });
 });

@@ -49,8 +49,31 @@ insert into public.app_settings (key, value) values
     {"key":"ziyaret_tesekkur","label":"Ziyaret teşekkürü","text":"Merhaba {veli}, bugün okulumuzu ziyaret ettiğiniz için teşekkür ederiz. Aklınıza takılan her şeyi bana yazabilirsiniz. - {danisman}, Şeker Anaokulu"},
     {"key":"kontenjan","label":"Kontenjan","text":"Merhaba {veli}, Şeker Anaokulu'ndan {danisman}. Kontenjanlarımız sınırlıdır; yer ayırtmak isterseniz size yardımcı olabilirim."}
   ]$j$::jsonb),
-  ('ustlenme_dk', '15'::jsonb)
+  ('ustlenme_dk', '15'::jsonb),
+  -- R23: aday hattının açıldığı an. "Şimdi ara" listesi bundan en çok 14 gün önce gelen velileri alır;
+  -- 15 dakika uyarısı yalnız bundan sonra gelenler için gider.
+  ('aday_hatti_acilis', to_jsonb(to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')))
 on conflict (key) do nothing;
+
+-- === İlk temas geri doldurma (R23) ===
+-- Eski panelde aranan velinin izi görüşme notudur (logCallOutcome not yazar, ayrı olay yazmaz).
+-- Yeni arama ekranının olayı (arama_kaydi) da sayılır. Kanıtı olmayan velide first_contact_at boş kalır.
+-- first-contact-backfill:start
+update public.leads l
+   set first_contact_at = ev.first_at
+  from (
+    select x.lead_id, min(x.at) as first_at
+    from (
+      select n.lead_id, n.created_at as at from public.lead_notes n
+      union all
+      select e.entity_id, e.created_at from public.events e
+       where e.entity_type = 'lead' and e.event_type = 'arama_kaydi'
+    ) x
+    group by x.lead_id
+  ) ev
+ where ev.lead_id = l.id
+   and l.first_contact_at is null;
+-- first-contact-backfill:end
 
 -- === create_web_lead: 0006 gövdesi korunur; yalnız yeni alanlar eklenir ===
 create or replace function public.create_web_lead(

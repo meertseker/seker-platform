@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminSupabase } from "@seker/auth/admin";
 import { businessMinutesBetween, clockStart, nextBusinessMoment } from "@/lib/lead-flow/business-hours";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
-import { applyQueueFilter } from "@/lib/queries/call-queue";
+import { applyQueueFilter, queueCutoff } from "@/lib/queries/call-queue";
 
 export const dynamic = "force-dynamic";
 
@@ -17,20 +17,25 @@ export async function GET(req: NextRequest) {
 
   const db = createAdminSupabase();
   const now = new Date();
-  const { hours } = await getLeadFlowSettings(db);
+  const { hours, launchAt } = await getLeadFlowSettings(db);
 
   // Mesai dışında hiçbir şey gönderilmez.
   if (nextBusinessMoment(now, hours).getTime() !== now.getTime()) {
     return NextResponse.json({ ok: true, skipped: "mesai_disi" });
   }
 
-  const { data: leads, error } = await applyQueueFilter(db.from("leads").select("id, parent_name, created_at"))
+  const { data: leads, error } = await applyQueueFilter(
+    db.from("leads").select("id, parent_name, created_at"),
+    queueCutoff(launchAt),
+  )
     .order("created_at", { ascending: true })
     .limit(200);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const due: { id: string; parentName: string; minutes: number }[] = [];
   for (const l of leads ?? []) {
+    // R23: açılıştan önce gelen veliler listede görünür ama yöneticiye uyarı üretmez.
+    if (launchAt && Date.parse(l.created_at) < launchAt.getTime()) continue;
     const minutes = businessMinutesBetween(clockStart(new Date(l.created_at), hours), now, hours);
     if (minutes > ALERT_AFTER_MINUTES) due.push({ id: l.id, parentName: l.parent_name, minutes });
   }

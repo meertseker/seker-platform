@@ -12,6 +12,8 @@ export type LeadFlowSettings = {
   priceAnswer: string;
   templates: WaTemplate[];
   claimMinutes: number;
+  /** Aday hattının açıldığı an (0014 tohumu). Yoksa liste/uyarı için tarih sınırı uygulanmaz. */
+  launchAt: Date | null;
 };
 
 export const DEFAULT_DISTRICTS: string[] = ["Beykent", "Beylikdüzü", "Büyükçekmece", "Esenyurt", "Gürpınar", "Yakuplu"];
@@ -36,7 +38,9 @@ export const DEFAULT_TEMPLATES: WaTemplate[] = [
 
 export const DEFAULT_CLAIM_MINUTES = 15;
 
-const KEYS = ["mesai", "servis_semtleri", "arama_metni", "fiyat_cevabi", "wa_sablonlari", "ustlenme_dk"] as const;
+const KEYS = [
+  "mesai", "servis_semtleri", "arama_metni", "fiyat_cevabi", "wa_sablonlari", "ustlenme_dk", "aday_hatti_acilis",
+] as const;
 
 export function hhmmToMinutes(value: unknown): number | null {
   if (typeof value !== "string") return null;
@@ -79,6 +83,13 @@ function parseClaimMinutes(value: unknown): number {
   return typeof n === "number" && Number.isFinite(n) && n > 0 ? n : DEFAULT_CLAIM_MINUTES;
 }
 
+/** ISO tarih metni → Date; boş ya da bozuksa null. */
+export function parseLaunchAt(value: unknown): Date | null {
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const t = Date.parse(value);
+  return Number.isFinite(t) ? new Date(t) : null;
+}
+
 /** Ayarları okur; eksik ya da bozuk her anahtar için varsayılan kullanılır. */
 export async function getLeadFlowSettings(supabase: SupabaseClient): Promise<LeadFlowSettings> {
   const { data } = await supabase.from("app_settings").select("key, value").in("key", [...KEYS]);
@@ -93,5 +104,6 @@ export async function getLeadFlowSettings(supabase: SupabaseClient): Promise<Lea
     priceAnswer: typeof price === "string" && price.trim() !== "" ? price : DEFAULT_PRICE_ANSWER,
     templates: parseTemplates(map.get("wa_sablonlari")),
     claimMinutes: parseClaimMinutes(map.get("ustlenme_dk")),
+    launchAt: parseLaunchAt(map.get("aday_hatti_acilis")),
   };
 }

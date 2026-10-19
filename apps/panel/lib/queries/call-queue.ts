@@ -99,18 +99,37 @@ interface QueueDbRow extends Omit<QueueRow, "claimer_name"> {
   claimer?: { full_name: string } | { full_name: string }[] | null;
 }
 
-/** "Şimdi ara" listesinin süzgeci; 15 dakika uyarısı (cron) da bunu kullanır, ikisi hiç ayrışmaz. */
-export function applyQueueFilter<Q>(query: Q): Q {
+/** R23: aday hattı açılmadan en çok bu kadar gün önce gelen ve hiç aranmamış veliler listeye girer. */
+export const QUEUE_LOOKBACK_DAYS = 14;
+
+/** Listeye girmenin en erken geliş zamanı; açılış ayarı yoksa sınır yok. */
+export function queueCutoff(launchAt: Date | null): Date | null {
+  return launchAt ? new Date(launchAt.getTime() - QUEUE_LOOKBACK_DAYS * 86_400_000) : null;
+}
+
+/** Saf: veli, geliş zamanına göre listeye girebilir mi (durum/ilk temas ayrıca bakılır). */
+export function inQueueWindow(createdAt: string, launchAt: Date | null): boolean {
+  const cutoff = queueCutoff(launchAt);
+  return !cutoff || Date.parse(createdAt) >= cutoff.getTime();
+}
+
+/**
+ * "Şimdi ara" listesinin süzgeci; bant ve 15 dakika uyarısı (cron) da bunu kullanır, hiçbiri ayrışmaz.
+ * `cutoff`: queueCutoff(launchAt); bundan önce gelen veliler listeye girmez.
+ */
+export function applyQueueFilter<Q>(query: Q, cutoff: Date | null): Q {
   // Postgrest oluşturucusunun genel tipi burada sonsuz derinliğe kaçtığı için yapısal tip dar tutuldu.
   const q = query as unknown as {
     is(column: string, value: null): typeof q;
     eq(column: string, value: string): typeof q;
     or(filters: string): typeof q;
+    gte(column: string, value: string): typeof q;
   };
-  return q
+  const base = q
     .is("first_contact_at", null)
     .eq("status", "yeni")
-    .or(`source.in.(${QUEUE_SOURCES.join(",")}),channel.not.is.null`) as unknown as Q;
+    .or(`source.in.(${QUEUE_SOURCES.join(",")}),channel.not.is.null`);
+  return (cutoff ? base.gte("created_at", cutoff.toISOString()) : base) as unknown as Q;
 }
 
 /** İlk teması yapılmamış yeni veliler (ortak liste). */
@@ -118,15 +137,16 @@ export async function loadCallQueue(
   supabase: SupabaseClient,
   me: string,
   now: Date,
-  settings?: { claimMinutes: number; hours: BusinessHours },
+  settings?: { claimMinutes: number; hours: BusinessHours; launchAt: Date | null },
 ): Promise<QueueLead[]> {
-  const { claimMinutes, hours } = settings ?? (await getLeadFlowSettings(supabase));
+  const { claimMinutes, hours, launchAt } = settings ?? (await getLeadFlowSettings(supabase));
   const { data, error } = await applyQueueFilter(
     supabase
       .from("leads")
       .select(
         "id, parent_name, phone, source, channel, content_code, district, start_window, child_birth_month, child_birth_year, created_at, claimed_at, assigned_to, claimer:profiles!leads_assigned_to_fkey(full_name)",
       ),
+    queueCutoff(launchAt),
   )
     .order("created_at", { ascending: true })
     .limit(200);
