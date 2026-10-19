@@ -52,3 +52,19 @@ describe("business-hours", () => {
     expect(elapsedMinutes(s, new Date(s.getTime() + 7 * 60000 + 59000))).toBe(7);
   });
 });
+
+import { formatDayTime, parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
+
+describe("parseIstanbulDateTime / formatDayTime", () => {
+  it("yerel saati İstanbul (+03:00) olarak okur", () => {
+    expect(parseIstanbulDateTime("2026-11-05T10:00")?.toISOString()).toBe("2026-11-05T07:00:00.000Z");
+    expect(parseIstanbulDateTime("2026-11-05T10:00:30")?.toISOString()).toBe("2026-11-05T07:00:30.000Z");
+  });
+  it("saat dilimli ISO'yu olduğu gibi çözer, geçersizde null", () => {
+    expect(parseIstanbulDateTime("2026-11-05T07:00:00Z")?.toISOString()).toBe("2026-11-05T07:00:00.000Z");
+    expect(parseIstanbulDateTime("yarın")).toBeNull();
+  });
+  it("gün saat biçimi", () => {
+    expect(formatDayTime(new Date("2026-11-04T07:00:00Z"))).toBe("Çarşamba 4 Kasım 10:00");
+  });
+});

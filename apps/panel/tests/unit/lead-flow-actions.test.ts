@@ -46,19 +46,32 @@ const quals = { age: true, area: true, timing: true, reached: false };
 
 let lead: Record<string, unknown>;
 let openTakip: string[];
+let takipRows: { rule_key: string; created_at: string }[];
+let reachEvents: { created_at: string }[];
+let existingAppt: { id: string; scheduled_at: string } | null;
+let claimRows: { id: string }[];
 let settingsRows: { key: string; value: unknown }[];
+
+const isClaim = (o: Op) => o.filters.some((f) => f[0] === "is" && f[1] === "first_contact_at");
 
 function defaultRespond(o: Op) {
   if (o.table === "app_settings") return { data: settingsRows };
   if (o.table === "leads" && o.op === "select") return { data: lead };
-  if (o.table === "leads" && o.op === "update") return { data: { status: lead.status } };
-  if (o.table === "tasks" && o.op === "select") return { data: openTakip.map((rule_key) => ({ rule_key })) };
-  if (o.table === "appointments") return { data: { scheduled_at: "2026-11-05T07:00:00+00:00" } };
+  if (o.table === "leads" && o.op === "update") return isClaim(o) ? { data: claimRows } : { data: { status: lead.status } };
+  if (o.table === "profiles") return { data: { full_name: "Zehra Hanım" } };
+  if (o.table === "events" && o.op === "select") return { data: reachEvents };
+  if (o.table === "tasks" && o.op === "select") {
+    // Açık görevler deneme saatinden bir gün önce açılmış sayılır.
+    return { data: [...takipRows, ...openTakip.map((rule_key) => ({ rule_key, created_at: "2026-11-02T07:00:00+00:00" }))] };
+  }
+  if (o.table === "appointments") return { data: existingAppt };
   return { data: null };
 }
 
 const inserts = (table: string) => ops.filter((o) => o.table === table && o.op === "insert").map((o) => o.payload as Record<string, unknown>);
 const updates = (table: string) => ops.filter((o) => o.table === table && o.op === "update");
+/** Üstlenme dışındaki ortak lead güncellemeleri. */
+const leadPatches = () => updates("leads").filter((o) => !isClaim(o));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -67,6 +80,10 @@ beforeEach(() => {
   ops = [];
   respond = defaultRespond;
   openTakip = [];
+  takipRows = [];
+  reachEvents = [];
+  existingAppt = null;
+  claimRows = [{ id: "L1" }];
   settingsRows = [];
   lead = {
     id: "L1", parent_name: "Ayşe Yılmaz", status: "yeni", converted_student_id: null,
@@ -91,7 +108,7 @@ describe("recordCall", () => {
       due_at: new Date("2026-11-03T13:00:00+03:00").toISOString(), due_date: "2026-11-03",
     });
     // Ortak alanlar: ilk temas, sahiplik, nitelik, not ve olay
-    const leadPatch = updates("leads")[0].payload as Record<string, unknown>;
+    const leadPatch = leadPatches()[0].payload as Record<string, unknown>;
     expect(leadPatch).toMatchObject({ assigned_to: ME, q_age_ok: true, q_reached: false });
     expect(leadPatch.first_contact_at).toBe(new Date().toISOString());
     expect(inserts("lead_notes")).toHaveLength(1);
@@ -109,7 +126,7 @@ describe("recordCall", () => {
     const close = updates("tasks").find((u) => u.filters.some((f) => f[0] === "like" && f[2] === "takip:L1:%"));
     expect(close?.payload).toEqual({ status: "tamamlandi" });
     expect(close?.filters).toContainEqual(["eq", "status", "acik"]);
-    expect((updates("leads")[0].payload as Record<string, unknown>).first_contact_at).toBeUndefined();
+    expect((leadPatches()[0].payload as Record<string, unknown>).first_contact_at).toBeUndefined();
   });
 
   it("randevu takip görevlerini kapatır ve hatırlatmaları kurar", async () => {
@@ -125,7 +142,7 @@ describe("recordCall", () => {
         "1 gün önce ve aynı sabah hatırlatma kuruldu",
       ],
     });
-    expect((updates("leads")[0].payload as Record<string, unknown>).q_reached).toBe(true);
+    expect((leadPatches()[0].payload as Record<string, unknown>).q_reached).toBe(true);
     const closed = updates("tasks").flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
     expect(closed).toContain("takip:L1:%");
     expect(inserts("tasks").map((t) => t.rule_key)).toEqual(["hatirlat:A1:once", "hatirlat:A1:sabah"]);
@@ -134,7 +151,7 @@ describe("recordCall", () => {
   it("randevu gclid'li ve yeni durumdaki velide dönüşüm satırını ekler", async () => {
     lead.gclid = "abc";
     respond = (o) =>
-      o.table === "leads" && o.op === "update" ? { data: { status: "randevu" } } : defaultRespond(o);
+      o.table === "leads" && o.op === "update" && !isClaim(o) ? { data: { status: "randevu" } } : defaultRespond(o);
     const r = await recordCall({ leadId: "L1", result: "randevu", quals, appointmentAt: "2026-11-05T10:00" });
     if (!("done" in r)) throw new Error("done bekleniyordu");
     expect(r.done).toHaveLength(4);
@@ -146,7 +163,7 @@ describe("recordCall", () => {
     const r = await recordCall({ leadId: "L1", result: "randevu", quals, appointmentAt: "2026-11-05T10:00" });
     expect(r).toEqual({ error: "Bu saate yakın başka bir randevu var: Mehmet Bey · Perşembe 5 Kasım 10:15. Başka bir saat seçin." });
     expect(inserts("lead_notes")).toHaveLength(0);
-    expect(updates("leads")).toHaveLength(0);
+    expect(leadPatches()).toHaveLength(0);
   });
 
   it("5. başarısız denemeden sonra veli ulaşılamadı olarak kapanır", async () => {
@@ -168,7 +185,7 @@ describe("recordCall", () => {
     expect(inserts("tasks")).toEqual([
       expect.objectContaining({ rule_key: "geri:L1", due_at: new Date("2026-11-04T15:00:00+03:00").toISOString() }),
     ]);
-    expect(updateLeadStatus).toHaveBeenCalledWith("L1", "ulasildi");
+    expect(updateLeadStatus).toHaveBeenCalledWith("L1", "ulasildi", undefined);
   });
 
   it("uygun değil nedeni kayıp nedenine yazılır", async () => {
@@ -177,6 +194,104 @@ describe("recordCall", () => {
     expect(r).toEqual({ done: ["Kayıt kapatıldı · neden: Yaş uymuyor", "Açık takip görevleri kapandı"] });
     const closed = updates("tasks").flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
     expect(closed).toContain("takip:L1:%");
+  });
+
+  it("ilk temastan önce başkası üstlendiyse hiçbir şey yazmadan reddeder", async () => {
+    claimRows = [];
+    lead.assigned_to = "00000000-0000-0000-0000-000000000003";
+    const r = await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
+    expect(r).toEqual({ error: "Zehra Hanım bu veliyi arıyor" });
+    expect(ops.filter((o) => o.op !== "select" && !isClaim(o))).toHaveLength(0);
+    expect(updateLeadStatus).not.toHaveBeenCalled();
+  });
+
+  it("ilk temastan sonra üstlenme aranmaz", async () => {
+    lead.first_contact_at = "2026-11-02T07:00:00Z";
+    claimRows = [];
+    const r = await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
+    expect(r).toHaveProperty("done");
+    expect(ops.some(isClaim)).toBe(false);
+  });
+
+  it("randevu tekrar denemesinde aynı saatteki bekleyen randevuyu yeniden kullanır", async () => {
+    const input = { leadId: "L1", result: "randevu" as const, quals, appointmentAt: "2026-11-05T10:00" };
+    // İlk deneme: randevu yazıldı, not yazılamadı.
+    respond = (o) => (o.table === "lead_notes" ? { error: { message: "boom" } } : defaultRespond(o));
+    expect(await recordCall(input)).toEqual({
+      error: "Ziyaret takvime yazıldı ancak arama kaydı tamamlanamadı; sayfayı yenileyin",
+    });
+    expect(createAppointment).toHaveBeenCalledTimes(1);
+
+    // İkinci deneme: randevu artık var, yeniden oluşturulmaz.
+    respond = defaultRespond;
+    existingAppt = { id: "A1", scheduled_at: "2026-11-05T07:00:00+00:00" };
+    const r = await recordCall(input);
+    expect(createAppointment).toHaveBeenCalledTimes(1);
+    if (!("done" in r)) throw new Error("done bekleniyordu");
+    expect(r.done[0]).toBe("Ziyaret takvime yazıldı: Perşembe 5 Kasım 10:00");
+    const lookup = ops.filter((o) => o.table === "appointments").pop()!;
+    expect(lookup.filters).toEqual(expect.arrayContaining([
+      ["eq", "lead_id", "L1"], ["eq", "outcome", "bekliyor"], ["eq", "scheduled_at", "2026-11-05T07:00:00.000Z"],
+    ]));
+    expect(inserts("tasks").map((t) => t.rule_key)).toContain("hatirlat:A1:sabah");
+  });
+
+  it("randevu sonrası görev hatasında randevu yazıldı mesajı döner", async () => {
+    respond = (o) => (o.table === "tasks" && o.op === "insert" ? { error: { code: "XX000", message: "x" } } : defaultRespond(o));
+    expect(await recordCall({ leadId: "L1", result: "randevu", quals, appointmentAt: "2026-11-05T10:00" })).toEqual({
+      error: "Ziyaret takvime yazıldı ancak arama kaydı tamamlanamadı; sayfayı yenileyin",
+    });
+  });
+
+  it("durum hatasında not ve olay yazılmaz", async () => {
+    updateLeadStatus.mockResolvedValue({ error: "Durum güncellenemedi" });
+    const r = await recordCall({ leadId: "L1", result: "uygun_degil", quals, notFitReason: "uzaklik" });
+    expect(r).toEqual({ error: "Durum güncellenemedi" });
+    expect(inserts("lead_notes")).toHaveLength(0);
+    expect(inserts("events")).toHaveLength(0);
+  });
+
+  it("hatırlatma satırı kurulan görevlere göre yazılır", async () => {
+    const run = async (appointmentAt: string) => {
+      ops = [];
+      const r = await recordCall({ leadId: "L1", result: "randevu", quals, appointmentAt });
+      if (!("done" in r)) throw new Error("done bekleniyordu");
+      return r.done;
+    };
+    vi.setSystemTime(new Date("2026-11-03T11:00:00+03:00"));
+    // Yarın 16:00: bir gün önceki (bugün 10:00) geçti, yalnız sabah kalır.
+    expect((await run("2026-11-04T16:00"))[2]).toBe("Ziyaret sabahı hatırlatma kuruldu");
+    expect(inserts("tasks").map((t) => t.rule_key)).toEqual(["hatirlat:A1:sabah"]);
+    // Bugün 16:00: ikisi de geçti, satır yok.
+    const today = await run("2026-11-03T16:00");
+    expect(today).toEqual(["Ziyaret takvime yazıldı: Salı 3 Kasım 16:00", "WhatsApp onay mesajı hazır · veli kartından gönder"]);
+    expect(inserts("tasks")).toHaveLength(0);
+  });
+
+  it("elle kapatılmış takip görevi sırayı 1'e döndürmez", async () => {
+    lead.first_contact_at = "2026-11-02T07:00:00Z";
+    lead.status = "ulasildi";
+    takipRows = [
+      { rule_key: "takip:L1:2", created_at: "2026-11-02T07:00:00+00:00" },
+      { rule_key: "takip:L1:3", created_at: "2026-11-02T10:00:00+00:00" },
+    ]; // ikisi de kapalı, açık takip yok
+    const r = await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
+    if (!("done" in r)) throw new Error("done bekleniyordu");
+    expect(inserts("tasks")[0]).toMatchObject({ rule_key: "takip:L1:4" });
+    expect(inserts("lead_notes")[0].body).toContain("3. deneme");
+  });
+
+  it("başarılı ulaşmadan sonra yeni ulaşılamadı sırayı baştan başlatır", async () => {
+    lead.first_contact_at = "2026-10-27T07:00:00Z";
+    lead.status = "ulasildi";
+    takipRows = [{ rule_key: "takip:L1:4", created_at: "2026-10-28T07:00:00+00:00" }];
+    reachEvents = [{ created_at: "2026-10-30T07:00:00+00:00" }];
+    const r = await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
+    if (!("done" in r)) throw new Error("done bekleniyordu");
+    expect(r.done[0]).toBe("3 saat sonra tekrar arama görevi açıldı");
+    expect(inserts("tasks")[0]).toMatchObject({ rule_key: "takip:L1:2" });
+    const reachQuery = ops.find((o) => o.table === "events" && o.op === "select")!;
+    expect(reachQuery.filters).toContainEqual(["in", "payload->>result", ["randevu", "geri_ara"]]);
   });
 
   it("eksik girdiyi reddeder", async () => {

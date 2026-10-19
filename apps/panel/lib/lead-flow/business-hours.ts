@@ -95,9 +95,29 @@ export function formatDayTime(at: Date): string {
   return `${get("weekday")} ${get("day")} ${get("month")} ${get("hour")}:${get("minute")}`;
 }
 
-/** "YYYY-MM-DDTHH:MM[:SS]" İstanbul yerel saati olarak; diğer biçimler Date ile çözülür. */
+/**
+ * "YYYY-MM-DDTHH:MM[:SS]" İstanbul yerel saati (sabit +03:00) olarak okunur;
+ * diğer biçimler Date ile çözülür. Geçersizse null.
+ */
 export function parseIstanbulDateTime(value: string): Date | null {
-  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::(\d{2}))?$/.exec(value);
-  const d = m ? new Date(`${m[1]}T${m[2]}:${m[3] ?? "00"}+03:00`) : new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/,
+  );
+
+  if (match) {
+    const [, year, month, day, hour, minute, second = "0"] = match;
+    return new Date(
+      Date.UTC(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hour) - 3,
+        Number(minute),
+        Number(second),
+      ),
+    );
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }

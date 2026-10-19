@@ -1,15 +1,16 @@
 "use server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
 import { createAppointment } from "@/actions/appointments";
 import { updateLeadStatus } from "@/actions/leads";
-import { LOST_REASONS, type LeadStatus } from "@/lib/constants";
+import { LOST_REASONS, type LeadStatus, type LostReason } from "@/lib/constants";
 import { formatDayTime, parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
-import { appointmentTasks, followupAfterAttempt } from "@/lib/lead-flow/followups";
+import { appointmentTasks, followupAfterAttempt, type PlannedTask } from "@/lib/lead-flow/followups";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
-import { closeTasksByPrefix, openRuleKeys, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
+import { closeTasksByPrefix, tasksByPrefix, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
 import { claimLeadAs, type ClaimResult } from "@/lib/lead-flow/claim";
 
 export type CallResult = "randevu" | "geri_ara" | "ulasilamadi" | "uygun_degil";
@@ -30,6 +31,8 @@ const NOT_FIT_REASONS: NotFitReason[] = ["yas_uymuyor", "uzaklik", "gelecek_yil"
 // enqueue_conversion_upload (0008) yalnız durum değişip randevu/görüşme/teklif'e geçince çalışır.
 const CONVERSION_STATUSES: LeadStatus[] = ["randevu", "gorusme_yapildi", "teklif"];
 const CONVERSION_MAX_DAYS = 89;
+const APPOINTMENT_PARTIAL = "Ziyaret takvime yazıldı ancak arama kaydı tamamlanamadı; sayfayı yenileyin";
+const GENERIC_FAILURE = "Arama kaydı tamamlanamadı, sayfayı yenileyip kontrol edin";
 
 interface LeadRow {
   id: string;
@@ -88,6 +91,49 @@ function noteBody(input: RecordCallInput, detail: string): string {
   return userNote ? `${detail}\n${userNote}` : detail;
 }
 
+/** Hatırlatma satırı, appointmentTasks'ın gerçekten döndürdüğü görevlere göre. */
+function reminderLine(tasks: PlannedTask[]): string | null {
+  const once = tasks.some((t) => t.ruleKey.endsWith(":once"));
+  const sabah = tasks.some((t) => t.ruleKey.endsWith(":sabah"));
+  if (once && sabah) return "1 gün önce ve aynı sabah hatırlatma kuruldu";
+  if (sabah) return "Ziyaret sabahı hatırlatma kuruldu";
+  if (once) return "1 gün önce hatırlatma kuruldu";
+  return null;
+}
+
+/**
+ * Ulaşılamadı deneme sırası: son başarılı ulaşmadan (randevu / geri ara kaydı) bu yana
+ * açılmış tüm takip:<id>:n görevlerinin (elle kapatılanlar dahil) en büyük n'i; yoksa 1.
+ * firstAttemptAt bu sıranın ilk denemesinin zamanıdır.
+ */
+async function attemptState(
+  supabase: SupabaseClient,
+  lead: LeadRow,
+  now: Date,
+): Promise<{ attempt: number; firstAttemptAt: Date }> {
+  const { data: reachRows, error } = await supabase
+    .from("events")
+    .select("created_at")
+    .eq("entity_type", "lead")
+    .eq("entity_id", lead.id)
+    .eq("event_type", "arama_kaydi")
+    .in("payload->>result", ["randevu", "geri_ara"])
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`Arama geçmişi okunamadı: ${error.message}`);
+  const lastReach = ((reachRows ?? []) as { created_at: string }[])[0]?.created_at ?? null;
+  const since = lastReach ? Date.parse(lastReach) : -Infinity;
+
+  const tasks = (await tasksByPrefix(supabase, `takip:${lead.id}:`))
+    .filter((t) => Date.parse(t.createdAt) > since);
+  const steps = tasks.map((t) => Number(t.ruleKey.split(":").pop())).filter((n) => Number.isInteger(n) && n > 0);
+  if (steps.length === 0) return { attempt: 1, firstAttemptAt: now };
+  // takip:<id>:2 ilk deneme kaydedilirken açılır; sıranın ilk denemesi o andır.
+  const earliest = new Date(tasks[0].createdAt);
+  const firstAttemptAt = !lastReach && lead.first_contact_at ? new Date(lead.first_contact_at) : earliest;
+  return { attempt: Math.max(...steps), firstAttemptAt };
+}
+
 /** Arama ekranının kaydı: nitelik, not, olay, durum ve takip görevleri. */
 export async function recordCall(input: RecordCallInput): Promise<{ done: string[] } | { error: string }> {
   const invalid = validate(input);
@@ -108,34 +154,59 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
   if (lead.converted_student_id) return { error: "Öğrenciye dönüştürülmüş veli için arama kaydedilemez" };
 
   const settings = await getLeadFlowSettings(supabase);
-  const firstAttemptAt = lead.first_contact_at ? new Date(lead.first_contact_at) : now;
+
+  // İlk temas yapılmadıysa veli önce üstlenilir; başkası arıyorsa hiçbir şey yazılmaz.
+  if (!lead.first_contact_at) {
+    try {
+      const claim = await claimLeadAs(supabase, leadId, profile.id, settings.claimMinutes, now);
+      if (!claim.ok) return { error: `${claim.claimedBy} bu veliyi arıyor` };
+    } catch (e) {
+      console.error("recordCall claim:", e);
+      return { error: GENERIC_FAILURE };
+    }
+  }
+
+  let appointment: { id: string; at: Date } | null = null;
+  const fail = () => ({ error: appointment ? APPOINTMENT_PARTIAL : GENERIC_FAILURE });
 
   try {
     // Randevu önce yazılır: çakışma varsa başka hiçbir şey değişmeden kullanıcı saat değiştirir.
-    let appointment: { id: string; at: Date } | null = null;
+    // Tekrar denemede aynı velinin aynı saatteki bekleyen randevusu yeniden kullanılır.
     if (result === "randevu") {
-      const res = await createAppointment(leadId, input.appointmentAt!, "okul_ziyareti");
-      if (res.conflict) {
-        return {
-          error: `Bu saate yakın başka bir randevu var: ${res.conflict.leadName} · ${formatDayTime(new Date(res.conflict.at))}. Başka bir saat seçin.`,
-        };
+      const at = parseIstanbulDateTime(input.appointmentAt!)!;
+      const { data: existing, error: existingError } = await supabase
+        .from("appointments")
+        .select("id, scheduled_at")
+        .eq("lead_id", leadId)
+        .eq("outcome", "bekliyor")
+        .eq("scheduled_at", at.toISOString())
+        .limit(1)
+        .maybeSingle();
+      if (existingError) return fail();
+      const found = existing as { id: string; scheduled_at: string } | null;
+      if (found) {
+        appointment = { id: found.id, at: new Date(found.scheduled_at) };
+      } else {
+        const res = await createAppointment(leadId, input.appointmentAt!, "okul_ziyareti");
+        if (res.conflict) {
+          return {
+            error: `Bu saate yakın başka bir randevu var: ${res.conflict.leadName} · ${formatDayTime(new Date(res.conflict.at))}. Başka bir saat seçin.`,
+          };
+        }
+        if (res.error || !res.id) return { error: res.error ?? "Randevu kaydedilemedi, lütfen tekrar deneyin." };
+        appointment = { id: res.id, at };
       }
-      if (res.error || !res.id) return { error: res.error ?? "Randevu kaydedilemedi, lütfen tekrar deneyin." };
-      const { data: appt } = await supabase.from("appointments").select("scheduled_at").eq("id", res.id).single();
-      const scheduled = (appt as { scheduled_at: string } | null)?.scheduled_at;
-      appointment = { id: res.id, at: scheduled ? new Date(scheduled) : parseIstanbulDateTime(input.appointmentAt!)! };
     }
 
-    // Ulaşılamadı: deneme sırası açık takip görevinden okunur (yoksa 1).
-    let attempt = 1;
-    if (result === "ulasilamadi") {
-      const keys = await openRuleKeys(supabase, `takip:${leadId}:`);
-      const steps = keys.map((k) => Number(k.split(":").pop())).filter((n) => Number.isInteger(n) && n > 0);
-      if (steps.length > 0) attempt = Math.max(...steps);
-    }
+    const { attempt, firstAttemptAt } =
+      result === "ulasilamadi" ? await attemptState(supabase, lead, now) : { attempt: 1, firstAttemptAt: now };
+    const next = result === "ulasilamadi"
+      ? followupAfterAttempt(leadId, lead.parent_name, attempt, now, firstAttemptAt, settings.hours)
+      : null;
 
     // Ortak alanlar
-    const reached = result === "randevu" || result === "geri_ara" ? true : result === "ulasilamadi" ? false : input.quals.reached;
+    const reached =
+      result === "randevu" || result === "geri_ara" ? true : result === "ulasilamadi" ? false : input.quals.reached;
     const patch: Record<string, unknown> = {
       assigned_to: profile.id,
       q_age_ok: input.quals.age,
@@ -149,8 +220,22 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
     if (userNote) patch.contact_note = userNote;
     const { data: updated, error: updateError } = await supabase
       .from("leads").update(patch).eq("id", leadId).select("status").single();
-    if (updateError) return { error: "Arama kaydedilemedi, lütfen tekrar deneyin" };
+    if (updateError) return fail();
     const statusAfter = (updated as { status: string } | null)?.status ?? null;
+
+    // Durum değişikliği not ve olaydan önce: hata olursa tekrar denemede yinelenen not/olay kalmaz.
+    let statusChange: { to: LeadStatus; reason?: LostReason } | null = null;
+    if (result === "geri_ara" && lead.status === "yeni") statusChange = { to: "ulasildi" };
+    if (result === "ulasilamadi" && !next && lead.status !== "kaybedildi") {
+      statusChange = { to: "kaybedildi", reason: "ulasilamadi" };
+    }
+    if (result === "uygun_degil" && lead.status !== "kaybedildi") {
+      statusChange = { to: "kaybedildi", reason: input.notFitReason! };
+    }
+    if (statusChange) {
+      const res = await updateLeadStatus(leadId, statusChange.to, statusChange.reason);
+      if (res.error) return appointment ? fail() : { error: res.error };
+    }
 
     let detail: string;
     const callbackAt = result === "geri_ara" ? parseIstanbulDateTime(input.callbackAt!)! : null;
@@ -170,7 +255,7 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
     const { error: noteError } = await supabase.from("lead_notes").insert({
       lead_id: leadId, author_id: profile.id, body: noteBody(input, detail),
     });
-    if (noteError) return { error: "Görüşme notu kaydedilemedi" };
+    if (noteError) return appointment ? fail() : { error: "Görüşme notu kaydedilemedi" };
 
     await logEvent(supabase, {
       entityType: "lead", entityId: leadId, eventType: "arama_kaydi", actorId: profile.id,
@@ -184,46 +269,35 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
       },
     });
 
-    // Bu arama yapıldı: bekleyen geri arama görevi de karşılandı.
+    // Bu arama yapıldı: bekleyen geri arama ve takip görevleri karşılandı.
     await closeTasksByPrefix(supabase, `geri:${leadId}`);
+    await closeTasksByPrefix(supabase, `takip:${leadId}:`);
 
     let done: string[];
     switch (result) {
       case "randevu": {
-        await closeTasksByPrefix(supabase, `takip:${leadId}:`);
-        await upsertPlannedTasks(supabase, leadId, profile.id,
-          appointmentTasks(appointment!.id, lead.parent_name, appointment!.at, now, settings.hours));
+        const reminders = appointmentTasks(appointment!.id, lead.parent_name, appointment!.at, now, settings.hours);
+        await upsertPlannedTasks(supabase, leadId, profile.id, reminders);
         done = [
           `Ziyaret takvime yazıldı: ${formatDayTime(appointment!.at)}`,
           "WhatsApp onay mesajı hazır · veli kartından gönder",
-          "1 gün önce ve aynı sabah hatırlatma kuruldu",
         ];
+        const line = reminderLine(reminders);
+        if (line) done.push(line);
         if (conversionQueued(lead, statusAfter, now)) done.push("Google'a \"Randevu\" dönüşümü sıraya alındı");
         break;
       }
-      case "geri_ara": {
-        await closeTasksByPrefix(supabase, `takip:${leadId}:`);
+      case "geri_ara":
         await upsertPlannedTasks(supabase, leadId, profile.id, [
           { ruleKey: `geri:${leadId}`, title: `Geri ara · ${lead.parent_name}`, dueAt: callbackAt!, kind: "arama" },
         ]);
-        if (lead.status === "yeni") {
-          const res = await updateLeadStatus(leadId, "ulasildi");
-          if (res.error) return { error: res.error };
-        }
         done = [
           `Geri arama görevi açıldı: ${formatDayTime(callbackAt!)}`,
           "Bugün ekranında o saatte en üstte çıkacak",
         ];
         break;
-      }
       case "ulasilamadi": {
-        await closeTasksByPrefix(supabase, `takip:${leadId}:`);
-        const next = followupAfterAttempt(leadId, lead.parent_name, attempt, now, firstAttemptAt, settings.hours);
         if (!next) {
-          if (lead.status !== "kaybedildi") {
-            const res = await updateLeadStatus(leadId, "kaybedildi", "ulasilamadi");
-            if (res.error) return { error: res.error };
-          }
           done = ["7 günde ulaşılamadı · veli Kaybedildi (Ulaşılamadı) olarak kapandı"];
           break;
         }
@@ -237,15 +311,8 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
         ];
         break;
       }
-      default: {
-        const reason = input.notFitReason!;
-        await closeTasksByPrefix(supabase, `takip:${leadId}:`);
-        if (lead.status !== "kaybedildi") {
-          const res = await updateLeadStatus(leadId, "kaybedildi", reason);
-          if (res.error) return { error: res.error };
-        }
-        done = [`Kayıt kapatıldı · neden: ${LOST_REASONS[reason]}`, "Açık takip görevleri kapandı"];
-      }
+      default:
+        done = [`Kayıt kapatıldı · neden: ${LOST_REASONS[input.notFitReason!]}`, "Açık takip görevleri kapandı"];
     }
 
     revalidatePath("/bugun");
@@ -255,6 +322,6 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
     return { done };
   } catch (e) {
     console.error("recordCall:", e);
-    return { error: "Arama kaydı tamamlanamadı, sayfayı yenileyip kontrol edin" };
+    return fail();
   }
 }

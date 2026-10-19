@@ -1,5 +1,5 @@
-// Veli üstlenme: tek koşullu UPDATE ... RETURNING. Eşzamanlı iki istekte satır
-// kilidi ikinciyi bekletir, Postgres koşulu güncel satırda yeniden değerlendirir;
+// Veli üstlenme: tek koşullu UPDATE ... RETURNING. Ortak listede "Ara"ya ilk basan alır.
+// Eşzamanlı iki istekte satır kilidi ikinciyi bekletir, Postgres koşulu güncel satırda yeniden değerlendirir;
 // yalnız biri satır döndürür.
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -24,7 +24,8 @@ export async function claimLeadAs(
     .update({ assigned_to: userId, claimed_at: now.toISOString() })
     .eq("id", leadId)
     .is("first_contact_at", null)
-    .or(`assigned_to.is.null,assigned_to.eq.${userId},claimed_at.lt."${cutoff}"`)
+    // Henüz kimse "Ara"ya basmadıysa (claimed_at boş) otomatik atanmış veli de alınabilir.
+    .or(`claimed_at.is.null,assigned_to.eq.${userId},claimed_at.lt."${cutoff}"`)
     .select("id");
   if (error) throw new Error(`Üstlenilemedi: ${error.message}`);
   if (data && data.length > 0) return { ok: true };

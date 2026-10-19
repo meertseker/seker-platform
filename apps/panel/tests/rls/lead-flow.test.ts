@@ -16,7 +16,7 @@ vi.mock("@/lib/auth", () => ({
 import { claimLeadAs } from "@/lib/lead-flow/claim";
 import { recordCall } from "@/actions/lead-flow";
 
-const PREFIX = "+90500777";
+const PREFIX = "+90500666"; // web-leads.test.ts +90500777 kullanır; paralel silmeler çakışmasın
 let seq = 0;
 let danA: SupabaseClient, danB: SupabaseClient;
 
@@ -65,6 +65,14 @@ describe("veli üstlenme", () => {
     expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true });
     const { data: row } = await admin.from("leads").select("assigned_to").eq("id", id).single();
     expect(row!.assigned_to).toBe(DAN2_ID);
+  });
+
+  it("otomatik atanmış ama kimsenin aramadığı veliyi başkası üstlenebilir", async () => {
+    const id = await newLead({ assigned_to: DAN_ID });
+    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true });
+    const { data: row } = await admin.from("leads").select("assigned_to, claimed_at").eq("id", id).single();
+    expect(row!.assigned_to).toBe(DAN2_ID);
+    expect(row!.claimed_at).not.toBeNull();
   });
 
   it("ilk temas yapılmış veli başkasına geçmez", async () => {

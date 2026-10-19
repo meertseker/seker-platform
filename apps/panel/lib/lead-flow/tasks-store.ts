@@ -41,13 +41,18 @@ export async function closeTasksByPrefix(supabase: SupabaseClient, prefix: strin
   if (error) throw new Error(`Görevler kapatılamadı: ${error.message}`);
 }
 
-/** rule_key'i `prefix` ile başlayan açık görevlerin anahtarları. */
-export async function openRuleKeys(supabase: SupabaseClient, prefix: string): Promise<string[]> {
+/** rule_key'i `prefix` ile başlayan tüm görevler (durumdan bağımsız), oluşturulma sırasıyla. */
+export async function tasksByPrefix(
+  supabase: SupabaseClient,
+  prefix: string,
+): Promise<{ ruleKey: string; createdAt: string }[]> {
   const { data, error } = await supabase
     .from("tasks")
-    .select("rule_key")
-    .eq("status", "acik")
-    .like("rule_key", likePrefix(prefix));
+    .select("rule_key, created_at")
+    .like("rule_key", likePrefix(prefix))
+    .order("created_at", { ascending: true });
   if (error) throw new Error(`Görevler okunamadı: ${error.message}`);
-  return ((data ?? []) as { rule_key: string | null }[]).map((r) => r.rule_key).filter((k): k is string => !!k);
+  return ((data ?? []) as { rule_key: string | null; created_at: string }[])
+    .filter((r) => !!r.rule_key)
+    .map((r) => ({ ruleKey: r.rule_key!, createdAt: r.created_at }));
 }

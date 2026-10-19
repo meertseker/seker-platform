@@ -11,6 +11,7 @@ import {
 } from "@/lib/constants";
 import { logEvent } from "@/lib/events";
 import { getSessionProfile } from "@/lib/auth";
+import { parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 interface ConflictLead {
@@ -33,29 +34,6 @@ const appointmentOutcomes = Object.keys(APPOINTMENT_OUTCOMES) as AppointmentOutc
 
 function one<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
-}
-
-function parseIstanbulDateTime(value: string) {
-  const match = value.match(
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/,
-  );
-
-  if (match) {
-    const [, year, month, day, hour, minute, second = "0"] = match;
-    return new Date(
-      Date.UTC(
-        Number(year),
-        Number(month) - 1,
-        Number(day),
-        Number(hour) - 3,
-        Number(minute),
-        Number(second),
-      ),
-    );
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function isoAround(center: Date, minutes: number) {
