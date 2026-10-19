@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Banknote } from "lucide-react";
 import { rescheduleInstallments, revertInstallment, updateInstallment } from "@/actions/payments";
 import { PaymentDialog, type OpenPaymentItem } from "@/components/payment-dialog";
+import { EXCEL_FILLS } from "@/lib/payment-fills";
 import { ReminderButton } from "@/components/reminder-button";
 import { Sheet } from "@/components/sheet";
 import { ITEM_TYPES, PAYMENT_METHODS, label } from "@/lib/constants";
@@ -58,17 +59,6 @@ const STATE_LABELS: Record<CellState, string> = {
   bekliyor: "Vadesi gelmedi",
 };
 
-/**
- * Aidat defterinin boyaları: yeşil ödendi, mor nakit ödendi, kırmızı alınmadı,
- * gri kısmi, boyasız henüz vadesi gelmedi.
- */
-export const EXCEL_FILLS = {
-  odendi: "bg-[#92D050] text-zinc-900",
-  nakit: "bg-[#7030A0] text-white",
-  kismi: "bg-[#A6A6A6] text-zinc-900",
-  gecikti: "bg-[#FF0000] text-white",
-  bekliyor: "text-foreground hover:bg-muted",
-} as const;
 
 export function fillOf(cell: MatrixCell) {
   if (cell.state === "odendi") return cell.cash ? EXCEL_FILLS.nakit : EXCEL_FILLS.odendi;
@@ -272,7 +262,7 @@ function CellSheet({
   return (
     <Sheet open onClose={onClose} title={monthLabel} description={studentName}>
       {error ? (
-        <p className="mb-3 rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p>
+        <p role="alert" className="mb-3 rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p>
       ) : null}
 
       <ul className="divide-y divide-border">
@@ -321,7 +311,7 @@ function CellSheet({
                       inputMode="decimal"
                       value={amount}
                       onChange={(event) => setAmount(event.target.value)}
-                      className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 text-base tabular-nums outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                      className="mt-2 min-h-12 w-full rounded-xl border border-input bg-surface px-3 text-base tabular-nums outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
                     />
                   </label>
                   <label className="block text-sm font-semibold text-foreground">
@@ -330,7 +320,7 @@ function CellSheet({
                       type="date"
                       value={dueDate}
                       onChange={(event) => setDueDate(event.target.value)}
-                      className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                      className="mt-2 min-h-12 w-full rounded-xl border border-input bg-surface px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
                     />
                   </label>
                   <div className="flex gap-2">
@@ -483,7 +473,7 @@ function RescheduleForm({
           type="date"
           value={firstDue}
           onChange={(event) => setFirstDue(event.target.value)}
-          className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+          className="mt-2 min-h-12 w-full rounded-xl border border-input bg-surface px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
         />
       </label>
       <p className="text-sm text-muted-foreground">
@@ -491,7 +481,7 @@ function RescheduleForm({
           ? "Tutar tek seferde, yeni vadede alınır."
           : `${count} taksit, ayda bir · her biri yaklaşık ${formatTRY(Math.round(totalKurus / count))}`}
       </p>
-      {error ? <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p> : null}
+      {error ? <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p> : null}
       <div className="flex gap-2">
         <button type="button" onClick={onCancel} disabled={isPending} className={`flex-1 ${secondaryButton}`}>
           Vazgeç

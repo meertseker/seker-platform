@@ -61,12 +61,12 @@ export function NoteForm({ leadId, onSuccess, rows = 3, primary = false }: NoteF
           rows={rows}
           disabled={isPending}
           placeholder="Görüşmede ne konuştunuz?"
-          className="mt-2 block w-full resize-y rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+          className="mt-2 block w-full resize-y rounded-xl border border-input bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
         />
       </div>
 
       {error ? (
-        <p className="rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
+        <p role="alert" className="rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}

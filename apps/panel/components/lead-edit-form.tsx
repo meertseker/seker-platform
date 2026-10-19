@@ -26,7 +26,7 @@ interface LeadEditFormProps {
 const sourceKeys = Object.keys(LEAD_SOURCES) as LeadSource[];
 
 const inputClass =
-  "mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15";
+  "mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30";
 
 export function LeadEditForm({ lead, onSuccess }: LeadEditFormProps) {
   const router = useRouter();
@@ -130,7 +130,7 @@ export function LeadEditForm({ lead, onSuccess }: LeadEditFormProps) {
       ) : null}
 
       {error ? (
-        <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p>
+        <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p>
       ) : null}
 
       <button
@@ -189,7 +189,7 @@ export function DeleteLeadButton({
         {isPending ? "Siliniyor..." : "Veliyi sil"}
       </button>
       {error ? (
-        <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p>
+        <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p>
       ) : null}
     </>
   );

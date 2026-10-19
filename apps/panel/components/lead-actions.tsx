@@ -173,14 +173,14 @@ export function LeadActions({
   return (
     <>
       <section className="rounded-2xl bg-primary-soft p-5 sm:p-6" aria-labelledby="next-step-title">
-        <p className="text-sm font-semibold uppercase tracking-wide text-primary">Sıradaki adım</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-primary-strong">Sıradaki adım</p>
         <h2 id="next-step-title" className="mt-1 text-2xl font-semibold text-foreground">
           {step.title}
         </h2>
         <p className="mt-1 text-base text-slate-700">{step.hint}</p>
         {step.action ? <div className="mt-4">{primaryButton()}</div> : null}
         {actionError ? (
-          <p className="mt-3 rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
+          <p role="alert" className="mt-3 rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
             {actionError}
           </p>
         ) : null}

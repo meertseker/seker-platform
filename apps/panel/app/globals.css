@@ -17,20 +17,23 @@
   --color-primary-soft: #fff1f2; /* rose-50 seçili/rozet zemini */
   --color-on-primary: #ffffff;
 
-  --color-accent: #059669; /* emerald-600 — para/onay/kazanım */
-  --color-accent-strong: #047857;
+  /* emerald-700: beyaz yazıyla 5.5:1 (emerald-600 yalnız 3.8:1 idi). */
+  --color-accent: #047857; /* para/onay/kazanım */
+  --color-accent-strong: #065f46;
   --color-accent-soft: #ecfdf5;
 
   --color-destructive: #dc2626; /* red-600 */
   --color-destructive-strong: #b91c1c;
   --color-destructive-soft: #fef2f2;
 
-  --color-warning: #d97706; /* amber-600 — geciken/bekleyen */
+  --color-warning: #b45309; /* amber-700 — geciken/bekleyen; beyaz üzerinde 5:1 */
   --color-warning-soft: #fffbeb;
 
   --color-muted: #f2f2f5;
   --color-muted-foreground: #4b4b52; /* beyaz üzerinde 4.5:1 üstü */
-  --color-border: #e3e3e8; /* ince ayraç */
+  --color-border: #e3e3e8; /* ince ayraç (yalnız süs; form kutusu çerçevesi için değil) */
+  --color-input: #8e8e93; /* form kutusu çerçevesi: beyaz üzerinde 3:1 üstü */
+  --color-placeholder: #6e6e73; /* örnek yazı: beyaz üzerinde 4.5:1 üstü */
   --color-ring: #e11d48;
 
   /* Sistem yazı tipi: Apple'da SF Pro (optik boyutlu), Windows'ta Segoe UI Variable. */

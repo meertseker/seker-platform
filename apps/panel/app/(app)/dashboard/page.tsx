@@ -16,6 +16,9 @@ import {
   type PaymentSummary,
   type SourceConversionRow,
 } from "@/lib/queries/dashboard";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Rapor" };
 
 export const dynamic = "force-dynamic";
 
@@ -272,6 +275,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const prevMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
+  const currentMonth = istanbulCurrentMonth();
 
   return (
     <div className="space-y-6">
@@ -301,29 +305,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
       </div>
 
-      <form
-        action="/dashboard"
-        className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:flex-row sm:items-end"
-      >
-        <div>
-          <label htmlFor="ay" className="text-sm font-medium text-foreground">
-            Ay seç
-          </label>
-          <input
-            id="ay"
-            name="ay"
-            type="month"
-            defaultValue={month}
-            className="mt-2 block min-h-11 rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
-          />
-        </div>
-        <button
-          type="submit"
-          className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      {/* type="month" masaüstü Safari ve Firefox'ta çalışmıyor; önceki/sonraki ve "Bu ay" yeterli. */}
+      {month !== currentMonth ? (
+        <Link
+          href="/dashboard"
+          className="inline-flex min-h-11 items-center rounded-xl px-1 text-sm font-semibold text-primary-strong hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Ayı Göster
-        </button>
-      </form>
+          Bu aya dön
+        </Link>
+      ) : null}
 
       <FunnelSection funnel={funnel} />
 

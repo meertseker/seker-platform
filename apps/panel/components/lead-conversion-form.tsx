@@ -55,12 +55,12 @@ export function LeadConversionForm({ leadId }: LeadConversionFormProps) {
           type="date"
           value={startDate}
           onChange={(event) => setStartDate(event.target.value)}
-          className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+          className="mt-2 min-h-12 w-full rounded-xl border border-input bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
         />
       </div>
 
       {error ? (
-        <p className="rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
+        <p role="alert" className="rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}

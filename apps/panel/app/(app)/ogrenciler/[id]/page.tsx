@@ -33,6 +33,9 @@ import { buildPaymentMatrix, SIDE_COLUMNS, sideCellOf, type SideColumn } from "@
 import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
 import { badgeClass, STUDENT_STATUS_STYLES } from "@/lib/status-styles";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Öğrenci" };
 
 export const dynamic = "force-dynamic";
 
@@ -408,7 +411,7 @@ export default async function StudentDetailPage({
                       key={monthKey}
                       scope="col"
                       className={`whitespace-nowrap border-l border-border px-2 py-3 text-right ${
-                        monthKey === currentMonthPrefix ? "text-primary" : ""
+                        monthKey === currentMonthPrefix ? "text-primary-strong" : ""
                       }`}
                     >
                       {sheetMonthLabel(monthKey)}

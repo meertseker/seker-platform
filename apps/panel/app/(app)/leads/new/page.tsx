@@ -129,7 +129,7 @@ export default function NewLeadPage() {
             name="parentName"
             required
             autoComplete="name"
-            className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
+            className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-placeholder focus:border-primary focus:ring-2 focus:ring-primary/30"
             placeholder="Ayşe Yılmaz"
           />
         </div>
@@ -148,7 +148,7 @@ export default function NewLeadPage() {
             required
             autoComplete="tel"
             onBlur={(event) => checkPhone(event.currentTarget.value)}
-            className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
+            className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-placeholder focus:border-primary focus:ring-2 focus:ring-primary/30"
             placeholder="05XX XXX XX XX"
           />
           {checkingPhone ? (
@@ -220,7 +220,7 @@ export default function NewLeadPage() {
               <input
                 id="sourceDetail"
                 name="sourceDetail"
-                className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-placeholder focus:border-primary focus:ring-2 focus:ring-primary/30"
                 placeholder="Örn. veli referansı"
               />
             </div>
@@ -235,7 +235,7 @@ export default function NewLeadPage() {
               <input
                 id="childName"
                 name="childName"
-                className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-placeholder focus:border-primary focus:ring-2 focus:ring-primary/30"
                 placeholder="Deniz"
               />
             </div>
@@ -252,7 +252,7 @@ export default function NewLeadPage() {
                   id="childBirthMonth"
                   name="childBirthMonth"
                   defaultValue=""
-                  className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-4 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
                 >
                   <option value="">Ay seçin</option>
                   {Array.from({ length: 12 }, (_, index) => index + 1).map(
@@ -276,7 +276,7 @@ export default function NewLeadPage() {
                   id="childBirthYear"
                   name="childBirthYear"
                   defaultValue=""
-                  className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-4 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
                 >
                   <option value="">Yıl seçin</option>
                   {birthYears.map((year) => (
@@ -293,7 +293,7 @@ export default function NewLeadPage() {
                 <input
                   type="checkbox"
                   name="ingilizceGerekli"
-                  className="size-5 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="size-5 rounded border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
                 İngilizce gerekli
               </label>
@@ -302,7 +302,7 @@ export default function NewLeadPage() {
                 <input
                   type="checkbox"
                   name="wantsSummer"
-                  className="size-5 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="size-5 rounded border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
                 Yaz okulu ile ilgileniyor
               </label>
@@ -314,7 +314,7 @@ export default function NewLeadPage() {
                     name="ozelDurum"
                     checked={ozelDurumChecked}
                     onChange={(event) => setOzelDurumChecked(event.currentTarget.checked)}
-                    className="size-5 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="size-5 rounded border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                   Özel durum
                 </label>
@@ -322,7 +322,7 @@ export default function NewLeadPage() {
                   <input
                     id="ozelDurumNote"
                     name="ozelDurumNote"
-                    className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
+                    className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-placeholder focus:border-primary focus:ring-2 focus:ring-primary/30"
                     placeholder="Özel durum notu"
                   />
                 ) : null}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 interface SheetProps {
@@ -12,6 +13,19 @@ interface SheetProps {
 }
 
 const SPRING = "var(--ease-spring)";
+
+// Açık paneller yığını: Escape ve Tab yalnız en üstteki panele gider (iç içe açılışta da).
+const openStack: symbol[] = [];
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+const noopSubscribe = () => () => {};
+
+/** Sunucuda ve hidrasyonda false, sonra true: portal yalnız tarayıcıda kurulur. */
+function useIsClient() {
+  return useSyncExternalStore(noopSubscribe, () => true, () => false);
+}
 
 // Apple'ın momentum izdüşümü (Designing Fluid Interfaces): bırakılan hızla nereye varacağı.
 function project(velocity: number, decelerationRate = 0.998) {
@@ -40,30 +54,63 @@ export function Sheet({ open, onClose, title, description, children }: SheetProp
   const requestCloseRef = useRef<() => void>(() => {});
   const titleId = useId();
   const descriptionId = useId();
+  const isClient = useIsClient();
 
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !isClient) return;
     closingRef.current = false;
+    const token = Symbol("sheet");
+    openStack.push(token);
     const previous = document.activeElement as HTMLElement | null;
     panelRef.current?.focus();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") requestCloseRef.current();
+      if (openStack[openStack.length - 1] !== token) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        requestCloseRef.current();
+        return;
+      }
+      // Odak tuzağı: Tab arkadaki sayfaya kaçmasın, panelin içinde dönsün.
+      if (event.key === "Tab" && panelRef.current) {
+        const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+          (el) => el.offsetParent !== null,
+        );
+        if (items.length === 0) {
+          event.preventDefault();
+          return;
+        }
+        const first = items[0];
+        const last = items[items.length - 1];
+        const active = document.activeElement;
+        const inside = panelRef.current.contains(active);
+        if (event.shiftKey && (active === first || active === panelRef.current || !inside)) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (active === last || !inside)) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     }
     document.addEventListener("keydown", onKeyDown);
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
+      const index = openStack.indexOf(token);
+      if (index !== -1) openStack.splice(index, 1);
       document.body.style.overflow = previousOverflow;
-      previous?.focus?.();
+      // Açan düğme yenilemede değiştiyse odak sayfanın ana bölümüne düşer, kaybolmaz.
+      if (previous && previous.isConnected) previous.focus?.();
+      else document.getElementById("main")?.focus();
     };
-  }, [open]);
+  }, [open, isClient]);
 
   /** Geldiği yoldan çıkar: telefonda aşağı kayar, geniş ekranda küçülerek söner. */
   function requestClose(velocity = 0) {
@@ -163,9 +210,10 @@ export function Sheet({ open, onClose, title, description, children }: SheetProp
     handle.addEventListener("pointercancel", onUp);
   }
 
-  if (!open) return null;
+  if (!open || !isClient) return null;
 
-  return (
+  // Portal: üst öğedeki backdrop-filter/transform, fixed katmanı içine hapsetmesin.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <div
         ref={scrimRef}
@@ -210,6 +258,7 @@ export function Sheet({ open, onClose, title, description, children }: SheetProp
         </div>
         <div className="mt-4">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

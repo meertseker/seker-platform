@@ -12,6 +12,9 @@ import {
 } from "@/lib/overdue";
 import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Gecikenler" };
 
 export const dynamic = "force-dynamic";
 

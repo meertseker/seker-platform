@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { OfferApprovalList } from "@/components/offer-approval-list";
 import { getSessionProfile } from "@/lib/auth";
 import { loadPendingOffers } from "@/lib/queries/pending-offers";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Teklifler" };
 
 export const dynamic = "force-dynamic";
 

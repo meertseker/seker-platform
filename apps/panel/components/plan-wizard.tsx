@@ -108,7 +108,7 @@ export function PlanWizard({
               <select
                 value={itemType}
                 onChange={(event) => setItemType(event.target.value as ItemType)}
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
               >
                 {itemTypes.map((type) => (
                   <option key={type} value={type}>
@@ -124,7 +124,7 @@ export function PlanWizard({
                 inputMode="decimal"
                 value={total}
                 onChange={(event) => setTotal(event.target.value)}
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/30"
                 placeholder="180000"
               />
             </label>
@@ -137,7 +137,7 @@ export function PlanWizard({
                 max={12}
                 value={count}
                 onChange={(event) => setCount(Number(event.target.value))}
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
             </label>
 
@@ -147,7 +147,7 @@ export function PlanWizard({
                 type="date"
                 value={firstDueDate}
                 onChange={(event) => setFirstDueDate(event.target.value)}
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
             </label>
           </div>
@@ -189,7 +189,7 @@ export function PlanWizard({
           )}
 
           {error ? (
-            <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
+            <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
               {error}
             </p>
           ) : null}

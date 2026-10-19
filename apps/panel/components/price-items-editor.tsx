@@ -82,7 +82,7 @@ export function PriceItemsEditor({ priceListId, items }: PriceItemsEditorProps) 
       </p>
 
       {error ? (
-        <p className="mt-4 rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
+        <p role="alert" className="mt-4 rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}
@@ -109,7 +109,7 @@ export function PriceItemsEditor({ priceListId, items }: PriceItemsEditorProps) 
                   value={draft.monthly}
                   disabled={isPending}
                   onChange={(event) => updateDraft(program, "monthly", event.target.value)}
-                  className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+                  className="mt-1 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-2 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
                 />
               </label>
 
@@ -121,7 +121,7 @@ export function PriceItemsEditor({ priceListId, items }: PriceItemsEditorProps) 
                   value={draft.registration}
                   disabled={isPending}
                   onChange={(event) => updateDraft(program, "registration", event.target.value)}
-                  className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+                  className="mt-1 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-2 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
                 />
               </label>
 

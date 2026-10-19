@@ -103,7 +103,7 @@ export function StudentEditForm({ student, role }: StudentEditFormProps) {
               <input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
             </label>
             <label className="block text-sm font-medium text-foreground">
@@ -112,7 +112,7 @@ export function StudentEditForm({ student, role }: StudentEditFormProps) {
                 value={parentName}
                 onChange={(e) => setParentName(e.target.value)}
                 placeholder="Anne & Baba"
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
             </label>
             <label className="block text-sm font-medium text-foreground">
@@ -122,7 +122,7 @@ export function StudentEditForm({ student, role }: StudentEditFormProps) {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="05XX XXX XX XX"
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
             </label>
             <label className="block text-sm font-medium text-foreground">
@@ -130,7 +130,7 @@ export function StudentEditForm({ student, role }: StudentEditFormProps) {
               <select
                 value={program}
                 onChange={(e) => setProgram(e.target.value)}
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
               >
                 <option value="">— Belirtilmedi —</option>
                 {programKeys.map((key) => (
@@ -147,7 +147,7 @@ export function StudentEditForm({ student, role }: StudentEditFormProps) {
                 value={birthMonth}
                 onChange={(e) => setBirthMonth(e.target.value)}
                 placeholder="1-12"
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
             </label>
             <label className="block text-sm font-medium text-foreground">
@@ -157,7 +157,7 @@ export function StudentEditForm({ student, role }: StudentEditFormProps) {
                 value={birthYear}
                 onChange={(e) => setBirthYear(e.target.value)}
                 placeholder="Örn. 2021"
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
             </label>
             <label className="block text-sm font-medium text-foreground">
@@ -166,7 +166,7 @@ export function StudentEditForm({ student, role }: StudentEditFormProps) {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
             </label>
             <label className="block text-sm font-medium text-foreground">
@@ -175,13 +175,13 @@ export function StudentEditForm({ student, role }: StudentEditFormProps) {
                 value={season}
                 onChange={(e) => setSeason(e.target.value)}
                 placeholder="2026-2027"
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
             </label>
           </div>
 
           {error ? (
-            <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
+            <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
               {error}
             </p>
           ) : null}
