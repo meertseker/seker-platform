@@ -99,6 +99,20 @@ interface QueueDbRow extends Omit<QueueRow, "claimer_name"> {
   claimer?: { full_name: string } | { full_name: string }[] | null;
 }
 
+/** "Şimdi ara" listesinin süzgeci; 15 dakika uyarısı (cron) da bunu kullanır, ikisi hiç ayrışmaz. */
+export function applyQueueFilter<Q>(query: Q): Q {
+  // Postgrest oluşturucusunun genel tipi burada sonsuz derinliğe kaçtığı için yapısal tip dar tutuldu.
+  const q = query as unknown as {
+    is(column: string, value: null): typeof q;
+    eq(column: string, value: string): typeof q;
+    or(filters: string): typeof q;
+  };
+  return q
+    .is("first_contact_at", null)
+    .eq("status", "yeni")
+    .or(`source.in.(${QUEUE_SOURCES.join(",")}),channel.not.is.null`) as unknown as Q;
+}
+
 /** İlk teması yapılmamış yeni veliler (ortak liste). */
 export async function loadCallQueue(
   supabase: SupabaseClient,
@@ -107,14 +121,13 @@ export async function loadCallQueue(
   settings?: { claimMinutes: number; hours: BusinessHours },
 ): Promise<QueueLead[]> {
   const { claimMinutes, hours } = settings ?? (await getLeadFlowSettings(supabase));
-  const { data, error } = await supabase
-    .from("leads")
-    .select(
-      "id, parent_name, phone, source, channel, content_code, district, start_window, child_birth_month, child_birth_year, created_at, claimed_at, assigned_to, claimer:profiles!leads_assigned_to_fkey(full_name)",
-    )
-    .is("first_contact_at", null)
-    .eq("status", "yeni")
-    .or(`source.in.(${QUEUE_SOURCES.join(",")}),channel.not.is.null`)
+  const { data, error } = await applyQueueFilter(
+    supabase
+      .from("leads")
+      .select(
+        "id, parent_name, phone, source, channel, content_code, district, start_window, child_birth_month, child_birth_year, created_at, claimed_at, assigned_to, claimer:profiles!leads_assigned_to_fkey(full_name)",
+      ),
+  )
     .order("created_at", { ascending: true })
     .limit(200);
   if (error) throw new Error(`Arama listesi okunamadı: ${error.message}`);

@@ -14,7 +14,8 @@ export type NotificationType =
   | "web_basvuru"
   | "ads_senkron_hata"
   | "wa_baglanti_koptu"
-  | "geri_bildirim";
+  | "geri_bildirim"
+  | "veli_bekliyor";
 
 export async function notify(
   supabase: SupabaseClient,

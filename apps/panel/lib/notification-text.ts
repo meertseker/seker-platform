@@ -46,6 +46,10 @@ export function notificationText(notification: {
         ? `${by} hata bildirdi${title}`
         : `${by} öneri gönderdi${title}`;
     }
+    case "veli_bekliyor": {
+      const name = typeof payload.parentName === "string" && payload.parentName ? payload.parentName : "Bir veli";
+      return `${name} 15 dakikadır aranmadı`;
+    }
     default:
       return "Yeni bildirim var.";
   }
