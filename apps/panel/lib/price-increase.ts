@@ -71,16 +71,16 @@ export function computeIncrease(plan: IncreasePlanInput, percent: number, fromMo
     byMonth.set(month, list);
   }
 
+  const basisPoints = Math.round(percent * 100);
+  let firstProcessed: { from: number; to: number } | null = null;
   let delta = 0;
   for (const month of [...byMonth.keys()].sort()) {
     const rows = byMonth.get(month)!;
     const monthTotal = rows.reduce((sum, r) => sum + r.amountKurus, 0);
-    const target = Math.round((monthTotal * (1 + percent / 100)) / ROUND_STEP_KURUS) * ROUND_STEP_KURUS;
+    // Tam sayı aritmetiği: yüzde baz puana çevrilir, pay tam sayı kalır (.5 sınırlarında kayma olmaz).
+    const target = Math.round((monthTotal * (10_000 + basisPoints)) / 1e8) * ROUND_STEP_KURUS;
 
-    if (result.monthlyFromKurus === null) {
-      result.monthlyFromKurus = monthTotal;
-      result.monthlyToKurus = target;
-    }
+    if (firstProcessed === null) firstProcessed = { from: monthTotal, to: target };
 
     const pending = rows.filter((r) => r.status === "bekliyor");
     if (pending.length === 0) {
@@ -96,6 +96,15 @@ export function computeIncrease(plan: IncreasePlanInput, percent: number, fromMo
       toKurus: last.amountKurus + diff,
     });
     delta += diff;
+    if (result.monthlyFromKurus === null) {
+      result.monthlyFromKurus = monthTotal;
+      result.monthlyToKurus = target;
+    }
+  }
+
+  if (result.monthlyFromKurus === null && firstProcessed !== null) {
+    result.monthlyFromKurus = firstProcessed.from;
+    result.monthlyToKurus = firstProcessed.to;
   }
 
   result.newTotalKurus = plan.totalKurus + delta;

@@ -112,4 +112,26 @@ describe("computeIncrease", () => {
     expect(r.changes[0].installmentId).toBe("a");
     expect(r.changes[0].toKurus).toBe(2_750_000);
   });
+
+  it("tam .5 sınırında (22.500 %10 → 24.750) 24.800'e yuvarlar", () => {
+    const r = computeIncrease(plan([row("a", "2027-01-16", 22_500)]), 10, "2027-01");
+    expect(r.changes[0].toKurus).toBe(2_480_000);
+  });
+
+  it("monthlyFrom/To değişiklik olan ilk aydan gelir (ödenmiş Ocak atlanır)", () => {
+    const r = computeIncrease(
+      plan([row("o", "2027-01-16", 20_000, "odendi"), row("s", "2027-02-16", 22_000)]),
+      25,
+      "2027-01",
+    );
+    expect(r.monthlyFromKurus).toBe(2_200_000);
+    expect(r.monthlyToKurus).toBe(2_750_000);
+  });
+
+  it("hiç değişiklik yoksa monthly ilk işlenen aydan gelir", () => {
+    const r = computeIncrease(plan([row("o", "2027-01-16", 20_000, "odendi")]), 25, "2027-01");
+    expect(r.changes).toEqual([]);
+    expect(r.monthlyFromKurus).toBe(2_000_000);
+    expect(r.monthlyToKurus).toBe(2_500_000);
+  });
 });
