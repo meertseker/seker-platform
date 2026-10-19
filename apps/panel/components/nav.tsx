@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BadgePercent,
   Banknote,
   BarChart3,
+  CalendarDays,
   GraduationCap,
   LogOut,
   Megaphone,
@@ -44,6 +45,9 @@ const mainItems = [
   { href: "/odemeler", label: "Ödemeler", icon: Banknote },
 ] as const;
 
+// Takvim kenar çubuğunda ana menüde; telefonda alt çubuk dolu olduğundan Menü'nün başında.
+const calendarItem = { href: "/takvim", label: "Takvim", icon: CalendarDays } as const;
+
 const NEW_LEAD_HREF = "/leads/new";
 
 const profileLinks = [
@@ -61,18 +65,6 @@ function canSee(item: (typeof profileLinks)[number], role: Role) {
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function subscribeClientReady() {
-  return () => {};
-}
-
-function clientSnapshot() {
-  return true;
-}
-
-function serverSnapshot() {
-  return false;
 }
 
 function NavLink({
@@ -179,16 +171,31 @@ function ProfileMenuContents({
 }
 
 export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }: NavProps) {
-  const currentPathname = usePathname();
-  const mounted = useSyncExternalStore(
-    subscribeClientReady,
-    clientSnapshot,
-    serverSnapshot,
-  );
-  const pathname = mounted ? currentPathname : "";
+  const pathname = usePathname();
   const [openMenuPathname, setOpenMenuPathname] = useState<string | null>(null);
   const profileMenuOpen = openMenuPathname === pathname;
   const visibleProfileLinks = profileLinks.filter((item) => canSee(item, role));
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Menü Escape ile ya da dışına dokununca kapanır; Escape'te odak düğmeye döner.
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setOpenMenuPathname(null);
+      menuButtonRef.current?.focus();
+    }
+    function onPointerDown(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) setOpenMenuPathname(null);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [profileMenuOpen]);
   const roleLabel = role === "yonetici" ? "Yönetici" : "Danışman";
 
   return (
@@ -205,7 +212,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
           </span>
         </Link>
         <nav aria-label="Ana navigasyon" className="mt-6 flex flex-1 flex-col gap-1">
-          {mainItems.map((item) => (
+          {[...mainItems, calendarItem].map((item) => (
             <NavLink
               key={item.href}
               href={item.href}
@@ -257,27 +264,31 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
               notifications={notifications}
               unreadCount={unreadCount}
             />
-            <div className="relative md:hidden">
+            <div ref={menuRef} className="relative md:hidden">
               <button
+                ref={menuButtonRef}
                 type="button"
-                aria-label="Profil ve menü"
                 aria-expanded={profileMenuOpen}
+                aria-controls="mobil-menu"
                 onClick={() =>
                   setOpenMenuPathname(profileMenuOpen ? null : pathname)
                 }
                 className="glass flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-1.5 py-1.5 pr-2.5 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary-strong">
                   <User aria-hidden className="size-4" />
                 </span>
-                <span className="hidden max-w-28 truncate sm:inline">{fullName}</span>
+                <span>Menü</span>
               </button>
               {profileMenuOpen ? (
-                <div className="glass-thick absolute right-0 top-14 z-50 min-w-60 origin-top-right animate-pop-in rounded-3xl p-2">
+                <div
+                  id="mobil-menu"
+                  className="glass-thick absolute right-0 top-14 z-50 min-w-60 origin-top-right animate-pop-in rounded-3xl p-2"
+                >
                   <ProfileMenuContents
                     fullName={fullName}
                     roleLabel={roleLabel}
-                    links={visibleProfileLinks}
+                    links={[calendarItem, ...visibleProfileLinks]}
                     pathname={pathname}
                     onNavigate={() => setOpenMenuPathname(null)}
                     siteEditUrl={siteEditUrl}

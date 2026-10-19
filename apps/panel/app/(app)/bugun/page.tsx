@@ -40,6 +40,9 @@ import {
 } from "@/lib/next-step";
 import { badgeClass, LEAD_STATUS_STYLES } from "@/lib/status-styles";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Bugün" };
 
 export const dynamic = "force-dynamic";
 
@@ -171,7 +174,7 @@ function NextJobCard({ job }: { job: NextJob | null }) {
       aria-labelledby="next-job-title"
       className="rounded-2xl bg-primary-soft p-5 sm:p-6"
     >
-      <p className="text-sm font-semibold uppercase tracking-wide text-primary">Sıradaki iş</p>
+      <p className="text-sm font-semibold uppercase tracking-wide text-primary-strong">Sıradaki iş</p>
       <h2 id="next-job-title" className="mt-1 text-2xl font-semibold text-foreground">
         {job.title}
       </h2>
@@ -190,6 +193,7 @@ function SectionBlock({
   count,
   seeAllHref,
   seeAllLabel = "Tümünü gör",
+  id,
   children,
 }: {
   title: string;
@@ -197,10 +201,11 @@ function SectionBlock({
   count?: number;
   seeAllHref?: string;
   seeAllLabel?: string;
+  id?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
+    <section id={id} className="scroll-mt-20 space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-foreground">{title}</h2>
@@ -209,7 +214,7 @@ function SectionBlock({
           ) : null}
         </div>
         {typeof count === "number" && count > 0 ? (
-          <span className="shrink-0 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary tabular-nums">
+          <span className="shrink-0 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary-strong tabular-nums">
             {count}
           </span>
         ) : null}
@@ -268,7 +273,13 @@ function SummaryStat({
   );
 }
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ takip?: string }>;
+}) {
+  // ?takip=tumu: takip listesinin tamamı (ilk 5 ile sınırlı değil).
+  const showAllFollowups = (await searchParams).takip === "tumu";
   const profile = await getSessionProfile();
   const isYonetici = profile.role === "yonetici";
   const supabase = await createServerSupabase();
@@ -356,6 +367,18 @@ export default async function Home() {
   const staleDays = Number(settingsResult.data?.value ?? 3);
   const cutoff = staleCutoffIso(now, staleDays);
 
+  let staleLeadsQuery = supabase
+    .from("leads")
+    .select("id, parent_name, phone, status, last_activity_at")
+    .in("status", STALE_LEAD_STATUSES)
+    .lt("last_activity_at", cutoff)
+    .not("assigned_to", "is", null)
+    .order("last_activity_at", { ascending: true });
+  // Danışman yalnız kendi velilerini görür; görevlerdeki kuralla aynı.
+  if (!isYonetici) {
+    staleLeadsQuery = staleLeadsQuery.eq("assigned_to", profile.id);
+  }
+
   const [
     staleLeadsResult,
     dueInstallmentsResult,
@@ -363,13 +386,7 @@ export default async function Home() {
     funnel,
     paymentSummary,
   ] = await Promise.all([
-    supabase
-      .from("leads")
-      .select("id, parent_name, phone, status, last_activity_at")
-      .in("status", STALE_LEAD_STATUSES)
-      .lt("last_activity_at", cutoff)
-      .not("assigned_to", "is", null)
-      .order("last_activity_at", { ascending: true }),
+    staleLeadsQuery,
     supabase
       .from("installments")
       .select(
@@ -420,12 +437,18 @@ export default async function Home() {
   const overdueOnlyKurus = overdueTotalKurus(overdueOnly.map((row) => ({ amount: row.amount })));
   const dueInstallmentsToShow = dueInstallments.slice(0, DISPLAY_LIMIT);
 
+  // Gelecek tarihli görev listede görünür ama "bugünkü iş" sayılmaz.
+  const dueTaskCount = tasks.filter((task) => task.due_date <= today).length;
   const followupCount = tasks.length + staleLeads.length;
+  const followupLimit = showAllFollowups ? Number.POSITIVE_INFINITY : DISPLAY_LIMIT;
   const onayCount = isYonetici ? pendingOffersCount : 0;
   const totalJobs =
-    pendingAppointmentCount + followupCount + dueInstallments.length + onayCount;
+    pendingAppointmentCount + dueTaskCount + staleLeads.length + dueInstallments.length + onayCount;
   const doneJobs = (doneTasksResult.count ?? 0) + (doneAppointmentsResult.count ?? 0);
   const nowIso = now.toISOString();
+  const loadFailed = Boolean(
+    appointmentsResult.error || tasksResult.error || staleLeadsResult.error || dueInstallmentsResult.error,
+  );
 
   // Sıradaki iş: web başvurusu → sonuçlanmamış randevu → bugünkü randevu → görev → geciken ödeme
   const application = applicationResult.data as ApplicationRow | null;
@@ -460,7 +483,8 @@ export default async function Home() {
   } else if (pastAppointment) {
     nextJob = {
       kind: "sonuc",
-      title: "Ziyaret sonucunu gir",
+      title:
+        pastAppointment.type === "telefon" ? "Görüşme sonucunu gir" : "Ziyaret sonucunu gir",
       context: `${pastAppointment.leadName ?? "Veli"} · ${formatAppointmentTime(pastAppointment.scheduled_at)}`,
       action: (
         <Link href={`/leads/${pastAppointment.leadId}?adim=sonuc`} className={PRIMARY_LINK_CLASS}>
@@ -484,7 +508,7 @@ export default async function Home() {
     nextJob = {
       kind: "gorev",
       title: urgentTask.title,
-      context: `${lead?.parent_name ?? "Genel görev"} · Vade: ${formatDate(urgentTask.due_date)}`,
+      context: `${lead?.parent_name ?? "Genel görev"} · Son gün: ${formatDate(urgentTask.due_date)}`,
       action: lead?.phone ? (
         <CallButton
           leadId={lead.id}
@@ -504,6 +528,7 @@ export default async function Home() {
     const plan = one(firstDue.plan);
     const student = one(plan?.student);
     const late = daysLate(firstDue.due_date, today);
+    const reminderPhone = student?.phone || one(student?.family)?.phone || null;
     nextJob = {
       kind: "odeme",
       title: late > 0 ? "Geciken ödemeyi hatırlat" : "Bugün vadeli ödeme",
@@ -516,6 +541,18 @@ export default async function Home() {
           Öğrenciyi aç
         </Link>
       ),
+      // Başlık "hatırlat" diyor: WhatsApp hatırlatması kartın kendisinde olsun.
+      secondary:
+        late > 0 && student && reminderPhone ? (
+          <WhatsAppButton
+            phone={reminderPhone}
+            message={reminderMessage({
+              studentName: student.full_name,
+              totalKurus: tlToKurus(Number(firstDue.amount)),
+              items: [{ dueDate: firstDue.due_date, itemType: plan?.item_type ?? "diger" }],
+            })}
+          />
+        ) : undefined,
     };
   }
 
@@ -529,9 +566,11 @@ export default async function Home() {
           {greetingByHour(istanbulHour)} {firstName}
         </h1>
         <p className="mt-2 text-base text-muted-foreground">
-          {totalJobs > 0
-            ? `Bugün ${totalJobs} işin var.`
-            : "Bugün bekleyen bir işin yok, harika gidiyorsun."}
+          {loadFailed
+            ? "Bazı listeler yüklenemedi, sayılar eksik olabilir. Sayfayı yenileyin."
+            : totalJobs > 0
+              ? `Bugün ${totalJobs} işin var.`
+              : "Bugün bekleyen bir işin yok, harika gidiyorsun."}
           {totalJobs + doneJobs > 0
             ? ` ${totalJobs + doneJobs} işten ${doneJobs} tanesi bitti.`
             : ""}
@@ -563,15 +602,23 @@ export default async function Home() {
         title="Takip bekleyenler"
         description="Açık görevler ve uzun süredir işlem görmeyen veliler."
         count={followupCount}
-        seeAllHref="/pipeline"
+        id="takip"
+        seeAllHref={
+          showAllFollowups
+            ? "/bugun#takip"
+            : followupCount > DISPLAY_LIMIT
+              ? "/bugun?takip=tumu#takip"
+              : undefined
+        }
+        seeAllLabel={showAllFollowups ? "İlk 5'i göster" : `Tümünü gör (${followupCount})`}
       >
-        {staleLeadsResult.error ? (
+        {staleLeadsResult.error || tasksResult.error ? (
           <ErrorState text="Takip listesi yüklenirken bir sorun oluştu." />
         ) : followupCount === 0 ? (
           <EmptyState text="Takip bekleyen görev veya veli görünmüyor." />
         ) : (
           <ul className="space-y-3">
-            {tasks.slice(0, DISPLAY_LIMIT).map((task) => {
+            {tasks.slice(0, followupLimit).map((task) => {
               const lead = one(task.lead);
               const isDue = task.due_date <= today;
 
@@ -596,10 +643,12 @@ export default async function Home() {
                         ) : (
                           <span>Genel görev</span>
                         )}
-                        <span>Vade: {formatDate(task.due_date)}</span>
+                        <span>Son gün: {formatDate(task.due_date)}</span>
                         {isDue ? (
                           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                            Bugün/gecikmiş
+                            {task.due_date === today
+                              ? "Bugün"
+                              : `${daysLate(task.due_date, today)} gün gecikti`}
                           </span>
                         ) : null}
                       </div>
@@ -622,7 +671,7 @@ export default async function Home() {
               );
             })}
             {staleLeads
-              .slice(0, Math.max(0, DISPLAY_LIMIT - tasks.length))
+              .slice(0, Math.max(0, followupLimit - tasks.length))
               .map((lead) => (
                 <li
                   key={`stale-${lead.id}`}
@@ -790,7 +839,7 @@ export default async function Home() {
             label="Yeni veli"
             value={String(funnel.leads)}
             icon={<Users aria-hidden className="size-4" />}
-            iconClass="bg-primary-soft text-primary"
+            iconClass="bg-primary-soft text-primary-strong"
           />
           <SummaryStat
             label="Kayıt (kazanılan)"

@@ -8,6 +8,9 @@ import {
 import { badgeClass, STUDENT_STATUS_STYLES } from "@/lib/status-styles";
 import { formatTRY, tlToKurus } from "@/lib/money";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Öğrenciler" };
 
 export const dynamic = "force-dynamic";
 
@@ -146,7 +149,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
             name="q"
             defaultValue={q}
             placeholder="Öğrenci, veli veya telefon"
-            className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+            className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
           />
         </label>
         <label className="block text-sm font-medium text-foreground">
@@ -154,7 +157,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           <select
             name="durum"
             defaultValue={durum}
-            className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+            className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
           >
             <option value="">Tüm durumlar</option>
             {statusKeys.map((status) => (

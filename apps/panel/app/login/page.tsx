@@ -35,7 +35,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               required
-              className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="mt-2 block min-h-11 w-full rounded-xl border border-input bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-placeholder focus:border-primary focus:ring-2 focus:ring-primary/30"
               placeholder="yonetici@test.local"
             />
           </div>
@@ -53,7 +53,7 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
-              className="mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="mt-2 block min-h-11 w-full rounded-xl border border-input bg-surface px-4 py-3 text-base outline-none transition-colors placeholder:text-placeholder focus:border-primary focus:ring-2 focus:ring-primary/30"
               placeholder="Şifreniz"
             />
           </div>

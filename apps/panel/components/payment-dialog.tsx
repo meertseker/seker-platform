@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote, Check } from "lucide-react";
 import { takePayment, undoPayment } from "@/actions/payments";
 import { Sheet } from "@/components/sheet";
+import { useToast } from "@/components/toast";
 import type { PaymentMethod } from "@/lib/constants";
 import { formatTRY, kurusToTl, tlToKurus } from "@/lib/money";
 import { nextMonthFifth } from "@/lib/payment-labels";
@@ -56,7 +57,7 @@ const chip = (active: boolean) =>
   }`;
 
 const inputClass =
-  "min-h-12 w-full rounded-xl border border-border bg-surface px-3 text-base tabular-nums outline-none focus:border-primary focus:ring-2 focus:ring-primary/15";
+  "min-h-12 w-full rounded-xl border border-border bg-surface px-3 text-base tabular-nums outline-none focus:border-primary focus:ring-2 focus:ring-primary/30";
 
 function defaultSelection(items: OpenPaymentItem[], preselect?: string[]) {
   const valid = (preselect ?? []).filter((id) => items.some((item) => item.id === id));
@@ -67,64 +68,42 @@ function defaultSelection(items: OpenPaymentItem[], preselect?: string[]) {
 /** Excel'deki en sık ödeme biçimlerine göre: tek ya da çok ay, tek ya da iki yöntem. */
 export function PaymentDialog({ open, onClose, studentId, studentName, items, preselect }: PaymentDialogProps) {
   const router = useRouter();
-  const [toast, setToast] = useState<{ text: string; eventId: string | null } | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const showToast = useToast();
 
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 8000);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
-
-  function undo() {
-    if (!toast?.eventId) return;
-    const eventId = toast.eventId;
-    startTransition(async () => {
-      const result = await undoPayment(eventId);
-      setToast(result.error ? { text: result.error, eventId: null } : { text: "Ödeme geri alındı", eventId: null });
-      router.refresh();
+  // Bildirim düzen katmanında yaşar: bu pencere (ve onu açan hücre) kapansa da "Geri al" kalır.
+  function announce(text: string, eventId: string | null) {
+    showToast({
+      text,
+      action: eventId
+        ? {
+            label: "Geri al",
+            onClick: () => {
+              void undoPayment(eventId).then((result) => {
+                showToast({ text: result.error ?? "Ödeme geri alındı" });
+                router.refresh();
+              });
+            },
+          }
+        : undefined,
     });
   }
 
   return (
-    <>
-      <Sheet open={open} onClose={onClose} title={`Ödeme al · ${studentName}`}>
-        {open ? (
-          <PaymentForm
-            studentId={studentId}
-            studentName={studentName}
-            items={items}
-            preselect={preselect}
-            onDone={(text, eventId) => {
-              setToast({ text, eventId });
-              onClose();
-              router.refresh();
-            }}
-          />
-        ) : null}
-      </Sheet>
-
-      {toast ? (
-        <div
-          role="status"
-          className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-6"
-        >
-          <div className="flex w-full max-w-lg animate-pop-in flex-wrap items-center justify-between gap-3 rounded-full bg-foreground/85 px-5 py-2.5 text-base text-background shadow-xl backdrop-blur-2xl backdrop-saturate-150">
-            <span>{toast.text}</span>
-            {toast.eventId ? (
-              <button
-                type="button"
-                onClick={undo}
-                disabled={isPending}
-                className="min-h-11 cursor-pointer rounded-xl px-3 font-semibold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background"
-              >
-                Geri al
-              </button>
-            ) : null}
-          </div>
-        </div>
+    <Sheet open={open} onClose={onClose} title={`Ödeme al · ${studentName}`}>
+      {open ? (
+        <PaymentForm
+          studentId={studentId}
+          studentName={studentName}
+          items={items}
+          preselect={preselect}
+          onDone={(text, eventId) => {
+            announce(text, eventId);
+            onClose();
+            router.refresh();
+          }}
+        />
       ) : null}
-    </>
+    </Sheet>
   );
 }
 
@@ -386,7 +365,7 @@ function PaymentForm({ studentId, studentName, items, preselect, onDone }: Payme
       </div>
 
       {error ? (
-        <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p>
+        <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p>
       ) : null}
 
       <div className="flex items-center justify-between border-t border-border pt-4 text-lg font-semibold">

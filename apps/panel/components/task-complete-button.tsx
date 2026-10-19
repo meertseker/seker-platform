@@ -37,7 +37,7 @@ export function TaskCompleteButton({ id }: TaskCompleteButtonProps) {
       >
         {isPending ? "Tamamlanıyor..." : "Tamamla"}
       </button>
-      {error ? <p className="text-xs font-medium text-red-700">{error}</p> : null}
+      {error ? <p role="alert" className="text-xs font-medium text-red-700">{error}</p> : null}
     </div>
   );
 }

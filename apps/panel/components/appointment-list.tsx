@@ -131,7 +131,7 @@ export function AppointmentList({
   return (
     <div className="space-y-3">
       {error ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}
@@ -277,7 +277,7 @@ export function AppointmentList({
                             note: event.target.value,
                           })
                         }
-                        className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+                        className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
                         placeholder="Örn. veli tekrar aranacak"
                       />
                       <div className="mt-3 flex flex-wrap gap-2">

@@ -60,6 +60,8 @@ export function RefundPanel({ studentId, canManage, refunds }: RefundPanelProps)
       setError("Geçerli bir tutar girin");
       return;
     }
+    // İade düzenlenemez ve silinemez: kaydetmeden önce tutarı açıkça onaylat.
+    if (!window.confirm(`${formatTRY(tlToKurus(amountTl))} iade kaydedilsin mi? Kayıttan sonra değiştirilemez.`)) return;
     setError(null);
     startTransition(async () => {
       const result = await recordRefund(studentId, amountTl, method, refundDate, note);
@@ -104,7 +106,7 @@ export function RefundPanel({ studentId, canManage, refunds }: RefundPanelProps)
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
                 placeholder="5000"
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
             </label>
             <label className="block text-sm font-medium text-foreground">
@@ -112,7 +114,7 @@ export function RefundPanel({ studentId, canManage, refunds }: RefundPanelProps)
               <select
                 value={method}
                 onChange={(event) => setMethod(event.target.value as PaymentMethod)}
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
               >
                 {paymentMethods.map((value) => (
                   <option key={value} value={value}>
@@ -127,7 +129,7 @@ export function RefundPanel({ studentId, canManage, refunds }: RefundPanelProps)
                 type="date"
                 value={refundDate}
                 onChange={(event) => setRefundDate(event.target.value)}
-                className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
             </label>
           </div>
@@ -138,12 +140,12 @@ export function RefundPanel({ studentId, canManage, refunds }: RefundPanelProps)
               value={note}
               onChange={(event) => setNote(event.target.value)}
               placeholder="İade ile ilgili not..."
-              className="mt-2 block w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="mt-2 block w-full resize-y rounded-2xl border border-input bg-surface px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30"
             />
           </label>
 
           {error ? (
-            <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
+            <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
               {error}
             </p>
           ) : null}

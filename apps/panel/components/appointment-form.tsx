@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useState, useTransition } from "react";
+import { FormEvent, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createAppointment } from "@/actions/appointments";
+import { useToast } from "@/components/toast";
 import {
   APPOINTMENT_TYPES,
   label,
@@ -42,6 +43,8 @@ export function AppointmentForm({ leadId, onSuccess }: AppointmentFormProps) {
   const [pendingAppointment, setPendingAppointment] =
     useState<PendingAppointment | null>(null);
   const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
+  const showToast = useToast();
 
   function submitAppointment(next: PendingAppointment, force = false) {
     setError(null);
@@ -66,6 +69,9 @@ export function AppointmentForm({ leadId, onSuccess }: AppointmentFormProps) {
 
       setConflict(null);
       setPendingAppointment(null);
+      // Form yalnız kayıt başarılıysa temizlenir; hata olursa yazılanlar kalır.
+      formRef.current?.reset();
+      showToast({ text: "Randevu kaydedildi" });
       router.refresh();
       onSuccess?.();
     });
@@ -89,7 +95,6 @@ export function AppointmentForm({ leadId, onSuccess }: AppointmentFormProps) {
     }
 
     submitAppointment({ scheduledAt, type });
-    form.reset();
   }
 
   function confirmConflict() {
@@ -98,7 +103,7 @@ export function AppointmentForm({ leadId, onSuccess }: AppointmentFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label
@@ -112,7 +117,7 @@ export function AppointmentForm({ leadId, onSuccess }: AppointmentFormProps) {
             name="scheduledAt"
             type="datetime-local"
             disabled={isPending}
-            className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+            className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
           />
         </div>
 
@@ -128,7 +133,7 @@ export function AppointmentForm({ leadId, onSuccess }: AppointmentFormProps) {
             name="type"
             defaultValue="okul_ziyareti"
             disabled={isPending}
-            className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+            className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
           >
             {typeKeys.map((type) => (
               <option key={type} value={type}>
@@ -179,7 +184,7 @@ export function AppointmentForm({ leadId, onSuccess }: AppointmentFormProps) {
       ) : null}
 
       {error ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}

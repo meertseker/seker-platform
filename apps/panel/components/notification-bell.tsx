@@ -65,7 +65,10 @@ export function NotificationBell({
   const displayUnreadCount = readUnreadKey === unreadKey ? 0 : unreadCount;
 
   useEffect(() => {
-    const interval = window.setInterval(() => router.refresh(), 30_000);
+    // Sekme arkadayken yenileme yapılmaz: her yenileme sayfanın tüm sorgularını yeniden çalıştırır.
+    const interval = window.setInterval(() => {
+      if (!document.hidden) router.refresh();
+    }, 60_000);
     return () => window.clearInterval(interval);
   }, [router]);
 
@@ -93,7 +96,7 @@ export function NotificationBell({
     <div className="relative">
       <button
         type="button"
-        aria-label="Bildirimler"
+        aria-label={displayUnreadCount > 0 ? `Bildirimler, ${displayUnreadCount} okunmamış` : "Bildirimler"}
         aria-expanded={open}
         onClick={toggleOpen}
         className="glass relative flex size-11 cursor-pointer items-center justify-center rounded-full text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

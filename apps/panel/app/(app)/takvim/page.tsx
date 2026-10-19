@@ -9,6 +9,9 @@ import {
 } from "@/lib/constants";
 import { APPOINTMENT_OUTCOME_STYLES, badgeClass } from "@/lib/status-styles";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Takvim" };
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +34,12 @@ interface CalendarAppointment {
   outcome: AppointmentOutcome;
   lead?: LeadJoin | LeadJoin[] | null;
 }
+
+const rangeFormatter = new Intl.DateTimeFormat("tr-TR", {
+  day: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
 
 const dayFormatter = new Intl.DateTimeFormat("tr-TR", {
   weekday: "long",
@@ -172,9 +181,9 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         : "grid gap-4 lg:grid-cols-5";
 
   const todayYmd = ymd(istanbulTodayAsUtcDate());
-  const currentWeek = weekKey(selectedMonday);
   const prevWeek = weekKey(addDays(selectedMonday, -7));
   const nextWeek = weekKey(addDays(selectedMonday, 7));
+  const isThisWeek = weekDays.some((day) => ymd(day) === todayYmd);
 
   return (
     <div className="space-y-6">
@@ -205,29 +214,22 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         </div>
       </div>
 
-      <form
-        action="/takvim"
-        className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:flex-row sm:items-end"
-      >
-        <div>
-          <label htmlFor="hafta" className="text-sm font-medium text-foreground">
-            Hafta seç
-          </label>
-          <input
-            id="hafta"
-            name="hafta"
-            type="week"
-            defaultValue={currentWeek}
-            className="mt-2 block min-h-11 rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
-          />
-        </div>
-        <button
-          type="submit"
-          className="min-h-11 cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          Haftayı Göster
-        </button>
-      </form>
+      {/* type="week" Safari ve Firefox'ta çalışmıyor; önceki/sonraki ve "Bu hafta" yeterli. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3 shadow-sm">
+        <p className="text-base font-semibold text-foreground">
+          {rangeFormatter.format(selectedMonday)} – {rangeFormatter.format(addDays(selectedMonday, 6))}
+        </p>
+        {isThisWeek ? (
+          <span className="text-sm font-medium text-muted-foreground">Bu hafta</span>
+        ) : (
+          <Link
+            href="/takvim"
+            className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-primary-strong hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Bu haftaya dön
+          </Link>
+        )}
+      </div>
 
       {error ? (
         <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
@@ -242,16 +244,22 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
           return (
             <div
               key={ymd(day)}
-              className={`min-h-48 rounded-2xl border border-border bg-surface p-4 shadow-sm ${
-                ymd(day) === todayYmd ? "ring-2 ring-primary/30" : ""
+              aria-current={ymd(day) === todayYmd ? "date" : undefined}
+              className={`rounded-2xl border border-border bg-surface p-4 shadow-sm lg:min-h-48 ${
+                ymd(day) === todayYmd ? "ring-2 ring-primary/40" : ""
               }`}
             >
               <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="font-semibold capitalize text-foreground">
                   {dayFormatter.format(day)}
+                  {ymd(day) === todayYmd ? (
+                    <span className="ml-2 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold normal-case text-primary-strong">
+                      Bugün
+                    </span>
+                  ) : null}
                 </h2>
                 <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold tabular-nums text-muted-foreground">
-                  {dayAppointments.length}
+                  {dayAppointments.length} randevu
                 </span>
               </div>
 

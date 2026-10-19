@@ -11,6 +11,9 @@ import { SpendCsvForm } from "@/components/spend-csv-form";
 import { SiteTrafficSection } from "@/components/site-traffic";
 import { getSiteVisits, type VisitSummary } from "@/lib/queries/site-visits";
 import { describeGa4Error, fetchSiteTraffic, readGa4Config, type SiteTraffic } from "@/lib/analytics/ga4";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Pazarlama" };
 
 export const dynamic = "force-dynamic";
 
@@ -67,11 +70,11 @@ export default async function PazarlamaPage({ searchParams }: { searchParams: Se
         <form className="flex flex-wrap items-end gap-2" method="get">
           <label className="text-sm">
             <span className="block text-muted-foreground">Başlangıç</span>
-            <input type="date" name="bas" defaultValue={from} className="min-h-11 rounded-xl border border-border px-3" />
+            <input type="date" name="bas" defaultValue={from} className="min-h-11 rounded-xl border border-input px-3" />
           </label>
           <label className="text-sm">
             <span className="block text-muted-foreground">Bitiş</span>
-            <input type="date" name="bit" defaultValue={to} className="min-h-11 rounded-xl border border-border px-3" />
+            <input type="date" name="bit" defaultValue={to} className="min-h-11 rounded-xl border border-input px-3" />
           </label>
           <button type="submit" className="min-h-11 cursor-pointer rounded-xl border border-border px-4 text-sm font-semibold hover:bg-muted">Göster</button>
         </form>

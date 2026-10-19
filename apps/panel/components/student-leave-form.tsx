@@ -64,7 +64,7 @@ export function StudentLeaveForm({ studentId }: StudentLeaveFormProps) {
               type="date"
               value={leftDate}
               onChange={(event) => setLeftDate(event.target.value)}
-              className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
             />
           </label>
           <label className="block text-sm font-medium text-foreground">
@@ -74,12 +74,12 @@ export function StudentLeaveForm({ studentId }: StudentLeaveFormProps) {
               value={leaveReason}
               onChange={(event) => setLeaveReason(event.target.value)}
               placeholder="Ayrılış nedenini yazın..."
-              className="mt-2 block w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="mt-2 block w-full resize-y rounded-2xl border border-input bg-surface px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30"
             />
           </label>
 
           {error ? (
-            <p className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
+            <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
               {error}
             </p>
           ) : null}

@@ -29,6 +29,9 @@ import { getSessionProfile } from "@/lib/auth";
 import { formatTRY, tlToKurus } from "@/lib/money";
 import { attributionLines, type LeadAttribution } from "@/lib/lead-attribution";
 import { nextStep } from "@/lib/next-step";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Veli" };
 
 export const dynamic = "force-dynamic";
 

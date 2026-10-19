@@ -1,7 +1,8 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { AlertTriangle, Banknote, Clock, Download, PiggyBank } from "lucide-react";
-import { EXCEL_FILLS, PaymentMatrixCell, PaymentRowProvider } from "@/components/payment-matrix-cell";
+import { PaymentMatrixCell, PaymentRowProvider } from "@/components/payment-matrix-cell";
+import { EXCEL_FILLS } from "@/lib/payment-fills";
 import { paymentContextFor } from "@/lib/payment-context";
 import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
 import { STUDENT_STATUSES, label } from "@/lib/constants";
@@ -33,6 +34,9 @@ import {
   seasonSummaryOf,
 } from "@/lib/payments-summary";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Ödemeler" };
 
 export const dynamic = "force-dynamic";
 
@@ -229,7 +233,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           className="rounded-2xl border border-border bg-surface p-5 shadow-sm"
         >
           <div className="flex flex-wrap items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary-strong">
               <PiggyBank aria-hidden className="size-5" />
             </span>
             <p className="text-sm font-medium text-muted-foreground">
@@ -291,7 +295,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           value={formatTRY(dueThisMonthKurus)}
           helper="Bu ay vadesi gelen, henüz tahsil edilmemiş tutar"
           icon={<Clock aria-hidden className="size-5" />}
-          chipClass="bg-primary-soft text-primary"
+          chipClass="bg-primary-soft text-primary-strong"
         />
         <SummaryCard
           label="Bu ay tahsil edilen"
@@ -320,7 +324,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
             name="q"
             defaultValue={query}
             placeholder="Öğrenci, veli veya telefon"
-            className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+            className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
           />
         </label>
         <label className="block text-sm font-medium text-foreground">
@@ -328,7 +332,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           <select
             name="sezon"
             defaultValue={season}
-            className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+            className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
           >
             {seasons.map((value) => (
               <option key={value} value={value}>
@@ -357,7 +361,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
               aria-current={active ? "true" : undefined}
               className={`inline-flex min-h-11 items-center rounded-xl border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 active
-                  ? "border-primary bg-primary-soft text-primary"
+                  ? "border-primary bg-primary-soft text-primary-strong"
                   : "border-border bg-surface text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -369,7 +373,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           href={hrefWith(currentParams, { gecmis: includePast ? undefined : "1" })}
           className={`inline-flex min-h-11 items-center rounded-xl border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             includePast
-              ? "border-primary bg-primary-soft text-primary"
+              ? "border-primary bg-primary-soft text-primary-strong"
               : "border-border bg-surface text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -469,12 +473,13 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           ) : null}
         </ul>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+        <div className="max-h-[calc(100dvh-8rem)] overflow-auto rounded-2xl border border-border bg-surface shadow-sm">
+          {/* Tablo kendi içinde kayar: ay başlıkları ve öğrenci sütunu hep görünür, yanlış aya ödeme işlenmez. */}
           <table className="min-w-full text-sm">
             <caption className="sr-only">
               {season} sezonu öğrenci bazlı aylık ödeme tablosu
             </caption>
-            <thead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <thead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground [&_th]:sticky [&_th]:top-0 [&_th]:z-[15] [&_th]:bg-muted [&_th:first-child]:z-20">
               <tr>
                 <th scope="col" className="sticky left-0 z-10 min-w-56 bg-muted px-4 py-3 text-left">
                   Öğrenci Adı ve Soyadı
@@ -497,7 +502,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                     scope="col"
                     title={longMonthLabel(monthKey)}
                     className={`whitespace-nowrap border-l border-border px-2 py-3 text-right ${
-                      monthKey === currentMonth ? "text-primary" : ""
+                      monthKey === currentMonth ? "text-primary-strong" : ""
                     }`}
                   >
                     {sheetMonthLabel(monthKey)}
@@ -538,7 +543,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                           </span>
                           <Link
                             href={`/ogrenciler/${row.studentId}`}
-                            className="text-xs font-semibold text-primary hover:underline"
+                            className="text-xs font-semibold text-primary-strong hover:underline"
                           >
                             Plan oluştur
                           </Link>

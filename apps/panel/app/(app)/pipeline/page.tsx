@@ -19,6 +19,9 @@ import {
   type NextStepOffer,
 } from "@/lib/next-step";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Veliler" };
 
 export const dynamic = "force-dynamic";
 
@@ -325,7 +328,7 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
               id="danisman"
               name="danisman"
               defaultValue={danisman}
-              className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="mt-2 min-h-12 w-full rounded-xl border border-input bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
             >
               <option value="">Tüm danışmanlar</option>
               {(profiles ?? []).map((option: ProfileOption) => (
@@ -343,7 +346,7 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
               id="kaynak"
               name="kaynak"
               defaultValue={kaynak}
-              className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="mt-2 min-h-12 w-full rounded-xl border border-input bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
             >
               <option value="">Tüm kaynaklar</option>
               {sourceKeys.map((source) => (

@@ -69,7 +69,7 @@ export function OfferList({ offers }: OfferListProps) {
   return (
     <div className="space-y-3">
       {error ? (
-        <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
+        <p role="alert" className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}

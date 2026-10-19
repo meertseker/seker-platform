@@ -62,7 +62,7 @@ export function SeasonManager({ seasons }: SeasonManagerProps) {
       </p>
 
       {error ? (
-        <p className="mt-4 rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
+        <p role="alert" className="mt-4 rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}
@@ -103,7 +103,7 @@ export function SeasonManager({ seasons }: SeasonManagerProps) {
           disabled={isPending}
           onChange={(event) => setNewSeason(event.target.value)}
           placeholder="2027-2028"
-          className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+          className="min-h-11 min-w-0 flex-1 rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
         />
         <button
           type="button"

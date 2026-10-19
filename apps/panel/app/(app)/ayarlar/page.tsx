@@ -5,6 +5,9 @@ import { SeasonManager, type SeasonItem } from "@/components/season-manager";
 import { getSessionProfile } from "@/lib/auth";
 import type { Program } from "@/lib/constants";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Ayarlar" };
 
 export const dynamic = "force-dynamic";
 

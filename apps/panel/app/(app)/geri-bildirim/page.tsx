@@ -8,11 +8,14 @@ import {
   type FeedbackStatus,
 } from "@/lib/constants";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Geri bildirim" };
 
 export const dynamic = "force-dynamic";
 
 const STATUS_CHIP: Record<FeedbackStatus, string> = {
-  yeni: "bg-primary-soft text-primary",
+  yeni: "bg-primary-soft text-primary-strong",
   inceleniyor: "bg-amber-100 text-amber-900",
   tamamlandi: "bg-emerald-100 text-emerald-900",
   yapilmayacak: "bg-muted text-muted-foreground",

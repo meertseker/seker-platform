@@ -99,7 +99,7 @@ export function OfferForm({ leadId, priceItems, onSuccess }: OfferFormProps) {
             value={selectedProgram}
             disabled={isPending || priceItems.length === 0}
             onChange={(event) => setSelectedProgram(event.target.value as Program)}
-            className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+            className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
           >
             {priceItems.map((item) => (
               <option key={item.program} value={item.program}>
@@ -124,7 +124,7 @@ export function OfferForm({ leadId, priceItems, onSuccess }: OfferFormProps) {
             name="installmentCount"
             defaultValue="10"
             disabled={isPending || priceItems.length === 0}
-            className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+            className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
           >
             {installmentOptions.map((count) => (
               <option key={count} value={count}>
@@ -149,7 +149,7 @@ export function OfferForm({ leadId, priceItems, onSuccess }: OfferFormProps) {
           inputMode="decimal"
           placeholder="Örn. 20000"
           disabled={isPending || priceItems.length === 0}
-          className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+          className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-3 py-3 text-base outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
         />
       </div>
 
@@ -162,13 +162,13 @@ export function OfferForm({ leadId, priceItems, onSuccess }: OfferFormProps) {
           name="note"
           rows={2}
           disabled={isPending || priceItems.length === 0}
-          className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+          className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-3 py-3 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
           placeholder="Örn. kardeş indirimi talebi"
         />
       </div>
 
       {error ? (
-        <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
+        <p role="alert" className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}

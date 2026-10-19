@@ -1,6 +1,7 @@
 import { getSessionProfile } from "@/lib/auth";
 import { siteEditUrl } from "@/lib/site-edit-url";
 import { Nav } from "@/components/nav";
+import { ToastProvider } from "@/components/toast";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { NotificationItem } from "@/components/notification-bell";
 import {
@@ -55,7 +56,14 @@ export default async function AppLayout({
   const unreadCount = unreadResult.count ?? 0;
 
   return (
+    <ToastProvider>
     <div className="min-h-screen bg-background text-foreground">
+      <a
+        href="#main"
+        className="sr-only z-[80] rounded-xl bg-surface px-4 py-3 font-semibold text-foreground shadow-lg focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        İçeriğe geç
+      </a>
       <Nav
         fullName={profile.full_name}
         role={profile.role}
@@ -64,11 +72,12 @@ export default async function AppLayout({
         siteEditUrl={profile.can_edit_site ? siteEditUrl(process.env.SITE_URL) : null}
       />
       <div className="md:pl-64">
-        <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-28 pt-4 sm:px-6 md:pb-8 md:pt-6 lg:px-8">
+        <main id="main" tabIndex={-1} className="mx-auto outline-none flex min-h-screen w-full max-w-7xl flex-col px-4 pb-28 pt-4 sm:px-6 md:pb-8 md:pt-6 lg:px-8">
           <PendingApplicationsBanner applications={applications} now={now.toISOString()} />
           {children}
         </main>
       </div>
     </div>
+    </ToastProvider>
   );
 }

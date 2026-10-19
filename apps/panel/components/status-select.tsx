@@ -22,14 +22,18 @@ interface StatusSelectProps {
   onChanged?: () => void;
 }
 
+/**
+ * Seçim hemen kaydedilmez: klavyede ok tuşlarıyla gezinirken her adım kaydolmasın diye
+ * değişiklik "Kaydet" ile onaylanır. Kayıp seçilince neden listesi aynı yerde açılır.
+ */
 export function StatusSelect({ leadId, status, converted, onChanged }: StatusSelectProps) {
   const router = useRouter();
-  const [optimisticStatus, setOptimisticStatus] = useState<LeadStatus | null>(null);
-  const [pendingStatus, setPendingStatus] = useState<LeadStatus | null>(null);
+  const [draft, setDraft] = useState<LeadStatus>(status);
   const [lostReason, setLostReason] = useState<LostReason | "">("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const selected = optimisticStatus ?? status;
+  const changed = draft !== status;
+  const needsReason = changed && requiresLostReason(draft);
 
   const options = useMemo(
     () =>
@@ -39,55 +43,45 @@ export function StatusSelect({ leadId, status, converted, onChanged }: StatusSel
     [converted, status],
   );
 
-  function submitStatus(to: LeadStatus, reason?: LostReason) {
+  function submit() {
+    if (!changed) return;
+    if (needsReason && !lostReason) {
+      setError("Kayıp nedeni seçin.");
+      return;
+    }
     setError(null);
     startTransition(async () => {
-      const result = await updateLeadStatus(leadId, to, reason);
+      const result = await updateLeadStatus(leadId, draft, needsReason ? (lostReason as LostReason) : undefined);
       if (result.error) {
-        setOptimisticStatus(null);
         setError(result.error);
         return;
       }
-
-      setOptimisticStatus(to);
-      setPendingStatus(null);
       setLostReason("");
       router.refresh();
       onChanged?.();
     });
   }
 
-  function handleChange(to: LeadStatus) {
-    setOptimisticStatus(to === status ? null : to);
-    setError(null);
-
-    if (to === status) return;
-    if (requiresLostReason(to)) {
-      setPendingStatus(to);
-      return;
-    }
-
-    submitStatus(to);
-  }
-
-  function closeModal() {
-    if (isPending) return;
-    setPendingStatus(null);
+  function cancel() {
+    setDraft(status);
     setLostReason("");
-    setOptimisticStatus(null);
+    setError(null);
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <label className="sr-only" htmlFor={`status-${leadId}`}>
         Durum
       </label>
       <select
         id={`status-${leadId}`}
-        value={selected}
+        value={draft}
         disabled={isPending || converted || options.length <= 1}
-        onChange={(event) => handleChange(event.target.value as LeadStatus)}
-        className="min-h-12 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+        onChange={(event) => {
+          setDraft(event.target.value as LeadStatus);
+          setError(null);
+        }}
+        className="min-h-12 w-full rounded-xl border border-input bg-surface px-3 py-2 text-base font-medium text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -96,84 +90,59 @@ export function StatusSelect({ leadId, status, converted, onChanged }: StatusSel
         ))}
       </select>
 
-      {isPending ? (
-        <p className="text-sm font-medium text-muted-foreground">Kaydediliyor...</p>
-      ) : null}
       {converted ? (
         <p className="text-sm text-muted-foreground">Öğrenciye dönüştürüldü.</p>
       ) : null}
+
+      {needsReason ? (
+        <fieldset className="space-y-2">
+          <legend className="text-base font-semibold text-foreground">Kayıp nedeni</legend>
+          {lostReasonKeys.map((reason) => (
+            <label
+              key={reason}
+              className="flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border border-border px-3 py-2 text-base font-medium text-foreground has-[:checked]:border-primary has-[:checked]:bg-primary-soft has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+            >
+              <input
+                type="radio"
+                name={`lost-reason-${leadId}`}
+                value={reason}
+                checked={lostReason === reason}
+                onChange={() => {
+                  setLostReason(reason);
+                  setError(null);
+                }}
+                className="size-5 accent-primary"
+              />
+              {label(LOST_REASONS, reason)}
+            </label>
+          ))}
+        </fieldset>
+      ) : null}
+
       {error ? (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+        <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-destructive-strong">
           {error}
         </p>
       ) : null}
 
-      {pendingStatus ? (
-        <div
-          className="scrim fixed inset-0 z-50 flex animate-scrim-in items-end p-4 sm:items-center sm:justify-center"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={`lost-title-${leadId}`}
-        >
-          <div className="glass-thick w-full animate-materialize rounded-[1.75rem] p-5 sm:max-w-md">
-            <h2
-              id={`lost-title-${leadId}`}
-              className="text-lg font-semibold text-foreground"
-            >
-              Kayıp nedeni seçin
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Veliyi kaybedildi olarak işaretlemeden önce bir neden seçin.
-            </p>
-
-            <div className="mt-4 space-y-2">
-              {lostReasonKeys.map((reason) => (
-                <label
-                  key={reason}
-                  className="flex items-center gap-3 rounded-2xl border border-border px-3 py-2 text-sm font-medium text-foreground"
-                >
-                  <input
-                    type="radio"
-                    name={`lost-reason-${leadId}`}
-                    value={reason}
-                    checked={lostReason === reason}
-                    onChange={() => setLostReason(reason)}
-                    className="h-4 w-4"
-                  />
-                  {label(LOST_REASONS, reason)}
-                </label>
-              ))}
-            </div>
-
-            {error ? (
-              <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-                {error}
-              </p>
-            ) : null}
-
-            <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                onClick={closeModal}
-                disabled={isPending}
-                className="min-h-12 flex-1 cursor-pointer rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Vazgeç
-              </button>
-              <button
-                type="button"
-                disabled={isPending || !lostReason}
-                onClick={() =>
-                  lostReason
-                    ? submitStatus(pendingStatus, lostReason)
-                    : setError("Kayıp nedeni zorunludur")
-                }
-                className="min-h-12 flex-1 cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isPending ? "Kaydediliyor..." : "Kaydet"}
-              </button>
-            </div>
-          </div>
+      {changed ? (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={cancel}
+            disabled={isPending}
+            className="min-h-12 flex-1 cursor-pointer rounded-xl border border-border bg-surface px-4 py-3 text-base font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Vazgeç
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={isPending || (needsReason && !lostReason)}
+            className="min-h-12 flex-1 cursor-pointer rounded-xl bg-primary px-4 py-3 text-base font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isPending ? "Kaydediliyor..." : `${label(LEAD_STATUSES, draft)} olarak kaydet`}
+          </button>
         </div>
       ) : null}
     </div>

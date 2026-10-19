@@ -46,7 +46,7 @@ export function StageStepper({ status, lostReason }: StageStepperProps) {
               current
                 ? "bg-primary text-on-primary"
                 : done
-                  ? "bg-primary-soft text-primary"
+                  ? "bg-primary-soft text-primary-strong"
                   : "bg-muted text-muted-foreground"
             }`}
           >

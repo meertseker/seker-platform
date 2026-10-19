@@ -83,7 +83,7 @@ export function OfferApprovalCard({ offer }: { offer: PendingOfferItem }) {
         </div>
         <div className="rounded-xl bg-primary-soft px-3 py-2">
           <dt className="text-sm text-muted-foreground">Teklif</dt>
-          <dd className="text-base font-semibold tabular-nums text-primary">{offer.offeredPriceText}</dd>
+          <dd className="text-base font-semibold tabular-nums text-primary-strong">{offer.offeredPriceText}</dd>
         </div>
         <div className="rounded-xl bg-muted px-3 py-2">
           <dt className="text-sm text-muted-foreground">İndirim</dt>
@@ -107,7 +107,7 @@ export function OfferApprovalCard({ offer }: { offer: PendingOfferItem }) {
       ) : null}
 
       {error ? (
-        <p className="mt-3 rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
+        <p role="alert" className="mt-3 rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </p>
       ) : null}
@@ -136,7 +136,12 @@ export function OfferApprovalCard({ offer }: { offer: PendingOfferItem }) {
         <button
           type="button"
           disabled={isPending}
-          onClick={() => decide("reddedildi")}
+          onClick={() => {
+            // Reddetmenin geri alma yolu yok: tek dokunuşla yanlışlıkla olmasın.
+            if (window.confirm(`${offer.parentName} için ${offer.offeredPriceText} teklif reddedilsin mi? Bu işlem geri alınamaz.`)) {
+              decide("reddedildi");
+            }
+          }}
           className={`${BUTTON_BASE} min-h-14 border border-red-200 bg-surface px-5 text-base text-red-700 hover:bg-destructive-soft focus-visible:ring-destructive`}
         >
           <X aria-hidden className="size-5" />
@@ -165,14 +170,14 @@ export function OfferApprovalCard({ offer }: { offer: PendingOfferItem }) {
               disabled={isPending}
               onChange={(event) => setCounterDraft(event.target.value)}
               placeholder="Örn. 19000"
-              className="mt-2 block min-h-12 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base tabular-nums outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-muted"
+              className="mt-2 block min-h-12 w-full rounded-xl border border-input bg-surface px-4 py-3 text-base tabular-nums outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted"
             />
             <p className="mt-2 text-sm text-muted-foreground">
               Bu tutarla onaylı teklif açılır ve danışmana bildirim gider.
             </p>
           </div>
           {counterError ? (
-            <p className="rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
+            <p role="alert" className="rounded-xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
               {counterError}
             </p>
           ) : null}
