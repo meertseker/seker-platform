@@ -79,7 +79,8 @@ services:
       WAHA_LOG_LEVEL: warn
     volumes:
       - waha_sessions:/app/.sessions
-    mem_limit: 300m
+    # Boşta ~330-450 MB (Node + Go); 350m sınırında da çalışıyor ama dar.
+    mem_limit: 450m
 
   cron:
     build: ./cron
