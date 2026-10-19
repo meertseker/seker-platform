@@ -37,22 +37,33 @@ export async function GET(req: NextRequest) {
   if (due.length === 0) return NextResponse.json({ ok: true, notified: 0 });
 
   const { data: yoneticiler } = await db.from("profiles").select("id").eq("role", "yonetici").eq("is_active", true);
+  if (!yoneticiler?.length) return NextResponse.json({ ok: true, notified: 0 });
+
+  // Tek sorguda bu veliler için daha önce gönderilmiş uyarılar.
+  const { data: sent, error: sentError } = await db
+    .from("notifications")
+    .select("payload")
+    .eq("type", "veli_bekliyor")
+    .in("payload->>leadId", due.map((l) => l.id));
+  if (sentError) return NextResponse.json({ error: sentError.message }, { status: 500 });
+  const alreadyNotified = new Set(
+    ((sent ?? []) as { payload: { leadId?: string } | null }[]).map((n) => n.payload?.leadId),
+  );
+
   let notified = 0;
   for (const lead of due) {
-    const { data: existing } = await db
-      .from("notifications")
-      .select("id")
-      .eq("type", "veli_bekliyor")
-      .eq("payload->>leadId", lead.id)
-      .limit(1);
-    if (existing?.length) continue;
-    for (const y of yoneticiler ?? []) {
-      const { error: insertError } = await db.from("notifications").insert({
+    if (alreadyNotified.has(lead.id)) continue;
+    // Tek insert = tek ifade (atomik): kısmi başarı olmaz, hata olursa sonraki koşu yeniden dener.
+    const { error: insertError } = await db.from("notifications").insert(
+      yoneticiler.map((y) => ({
         user_id: y.id,
         type: "veli_bekliyor",
         payload: { leadId: lead.id, parentName: lead.parentName, minutes: lead.minutes },
-      });
-      if (insertError) console.error(`Bildirim yazılamadı: ${insertError.message}`);
+      })),
+    );
+    if (insertError) {
+      console.error(`Bildirim yazılamadı: ${insertError.message}`);
+      continue;
     }
     notified++;
   }

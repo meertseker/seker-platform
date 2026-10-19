@@ -5,6 +5,8 @@ const notified = new Set<string>(); // leadId
 let leads: Array<{ id: string; parent_name: string; created_at: string }> = [];
 let yoneticiler: Array<{ id: string }> = [];
 const filtersSeen: string[] = [];
+let insertError: { message: string } | null = null;
+let leadsError: { message: string } | null = null;
 
 /** Zincirlenebilir, await edilebilir sahte sorgu. */
 function query(table: string) {
@@ -13,30 +15,34 @@ function query(table: string) {
     select: () => q,
     eq: (column: string, value: unknown) => {
       filters[column] = value;
-      filtersSeen.push(`${table}.eq.${column}`);
+      filtersSeen.push(`${table}.eq.${column}=${String(value)}`);
       return q;
     },
     is: (column: string) => {
       filtersSeen.push(`${table}.is.${column}`);
       return q;
     },
-    in: () => q,
+    in: (column: string, values: unknown[]) => {
+      filters[column] = values;
+      return q;
+    },
     or: () => {
       filtersSeen.push(`${table}.or`);
       return q;
     },
     order: () => q,
     limit: () => q,
-    insert: (row: Record<string, unknown>) => {
-      inserts.push(row);
+    insert: (row: Record<string, unknown> | Record<string, unknown>[]) => {
+      if (insertError) return Promise.resolve({ error: insertError });
+      inserts.push(...(Array.isArray(row) ? row : [row]));
       return Promise.resolve({ error: null });
     },
     then: (resolve: (value: unknown) => void) => {
       if (table === "profiles") return resolve({ data: yoneticiler, error: null });
-      if (table === "leads") return resolve({ data: leads, error: null });
+      if (table === "leads") return resolve({ data: leadsError ? null : leads, error: leadsError });
       if (table === "app_settings") return resolve({ data: [], error: null });
-      const id = filters["payload->>leadId"] as string;
-      return resolve({ data: notified.has(id) ? [{ id: "n" }] : [], error: null });
+      const ids = (filters["payload->>leadId"] as string[]) ?? [];
+      return resolve({ data: ids.filter((id) => notified.has(id)).map((leadId) => ({ payload: { leadId } })), error: null });
     },
   };
   return q;
@@ -57,6 +63,8 @@ beforeEach(() => {
   inserts.length = 0;
   notified.clear();
   filtersSeen.length = 0;
+  insertError = null;
+  leadsError = null;
   yoneticiler = [{ id: "y1" }, { id: "y2" }];
   leads = [];
   vi.stubEnv("CRON_SECRET", "s3cret");
@@ -88,8 +96,11 @@ describe("GET /api/cron/leads", () => {
     ]);
     // Bugün listesiyle aynı süzgeç kullanılır.
     expect(filtersSeen).toContain("leads.is.first_contact_at");
-    expect(filtersSeen).toContain("leads.eq.status");
+    expect(filtersSeen).toContain("leads.eq.status=yeni");
     expect(filtersSeen).toContain("leads.or");
+    // Alıcılar: yalnız aktif yöneticiler.
+    expect(filtersSeen).toContain("profiles.eq.role=yonetici");
+    expect(filtersSeen).toContain("profiles.eq.is_active=true");
   });
 
   it("15 dakikayı geçmeyen veli bildirilmez", async () => {
@@ -135,5 +146,26 @@ describe("GET /api/cron/leads", () => {
     await GET(request("Bearer s3cret"));
     expect(inserts).toHaveLength(2);
     expect((inserts[0].payload as { minutes: number }).minutes).toBe(25);
+  });
+
+  it("insert hata verirse sayılmaz ve sonraki koşu yeniden dener", async () => {
+    vi.setSystemTime(at("10:16"));
+    leads = [{ id: "l1", parent_name: "A", created_at: at("10:00").toISOString() }];
+    insertError = { message: "boom" };
+    const first = await (await GET(request("Bearer s3cret"))).json();
+    expect(first.notified).toBe(0);
+    expect(inserts).toHaveLength(0);
+    insertError = null;
+    const second = await (await GET(request("Bearer s3cret"))).json();
+    expect(second.notified).toBe(1);
+    expect(inserts).toHaveLength(2);
+  });
+
+  it("veli sorgusu hata verirse 500", async () => {
+    vi.setSystemTime(at("10:16"));
+    leadsError = { message: "db down" };
+    const res = await GET(request("Bearer s3cret"));
+    expect(res.status).toBe(500);
+    expect(inserts).toHaveLength(0);
   });
 });
