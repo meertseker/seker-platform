@@ -80,11 +80,20 @@ describe("previewPriceIncrease", () => {
     expect(not).toHaveBeenCalledWith("tentative_from", "is", null);
   });
 
-  it("adla sıralar, değişimi olmayanı çıkarır", async () => {
-    planRows = [plan("p1", "VELİ", [10000]), plan("p2", "ALİ", [10000]), plan("p3", "CEM", [])];
+  it("adla sıralar", async () => {
+    planRows = [plan("p1", "VELİ", [10000]), plan("p2", "ALİ", [10000])];
     const r = await previewPriceIncrease(req);
     if ("error" in r) throw new Error(r.error);
     expect(r.plans.map((p) => p.fullName)).toEqual(["ALİ", "VELİ"]);
+  });
+
+  it("değişikliği olmayan plan önizlemede görünür", async () => {
+    planRows = [plan("p3", "CEM", [10000], { installments: [] })];
+    const r = await previewPriceIncrease(req);
+    if ("error" in r) throw new Error(r.error);
+    expect(r.plans).toHaveLength(1);
+    expect(r.plans[0].fullName).toBe("CEM");
+    expect(r.plans[0].changes).toEqual([]);
   });
 });
 
@@ -106,6 +115,14 @@ describe("applyPriceIncrease", () => {
       expect.objectContaining({ entityType: "student", entityId: "s-p1", eventType: "zam_uygulandi", actorId: "y1" }),
     );
     expect(revalidatePath).toHaveBeenCalledWith("/odemeler/zam");
+  });
+
+  it("değişikliği olmayan plan uygulanınca RPC boş liste ve clear=true ile çağrılır", async () => {
+    planRows = [plan("p3", "CEM", [10000], { installments: [] })];
+    const r = await applyPriceIncrease({ ...req, planIds: ["p3"] });
+    expect(r).toEqual({ applied: 1, failed: [] });
+    expect(rpc).toHaveBeenCalledWith("apply_plan_amounts", { p_plan_id: "p3", p_changes: [], p_clear_tentative: true });
+    expect(logEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ eventType: "zam_uygulandi" }));
   });
 
   it("tentative_from null olan plan uygulanmaz", async () => {

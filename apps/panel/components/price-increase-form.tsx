@@ -45,6 +45,7 @@ export function PriceIncreaseForm({ season, months, defaultMonth }: Props) {
 
   const chosen = (plans ?? []).filter((p) => selected.has(p.planId));
   const installmentCount = chosen.reduce((sum, p) => sum + p.changes.length, 0);
+  const unchangedCount = chosen.filter((p) => p.changes.length === 0).length;
   const totalDiff = chosen.reduce((sum, p) => sum + diffOf(p), 0);
 
   function diffOf(p: PlanIncrease) {
@@ -74,7 +75,7 @@ export function PriceIncreaseForm({ season, months, defaultMonth }: Props) {
 
   function apply() {
     if (!previewKey || chosen.length === 0) return;
-    if (!window.confirm(`${chosen.length} öğrencinin ${installmentCount} taksiti değişecek. Bu işlem geri alınamaz.`)) {
+    if (!window.confirm(`${chosen.length} öğrenci seçili, ${installmentCount} taksit değişecek${unchangedCount > 0 ? ` (${unchangedCount} öğrencinin tutarı değişmeden kesinleşecek)` : ""}. Bu işlem geri alınamaz.`)) {
       return;
     }
     setError(null);
@@ -221,9 +222,15 @@ export function PriceIncreaseForm({ season, months, defaultMonth }: Props) {
                       {p.monthlyFromKurus === null ? "—" : formatTRY(p.monthlyFromKurus)}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums">
-                      {p.monthlyToKurus === null ? "—" : formatTRY(p.monthlyToKurus)}
+                      {p.changes.length === 0
+                        ? "Değişiklik yok"
+                        : p.monthlyToKurus === null
+                          ? "—"
+                          : formatTRY(p.monthlyToKurus)}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{p.changes.length}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
+                      {p.changes.length === 0 ? "Değişiklik yok" : p.changes.length}
+                    </td>
                     <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{formatTRY(diffOf(p))}</td>
                   </tr>
                 ))}

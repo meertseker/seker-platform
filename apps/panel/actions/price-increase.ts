@@ -94,7 +94,6 @@ export async function previewPriceIncrease(req: IncreaseRequest): Promise<{ erro
   if (!rows) return { error: "Planlar okunamadı" };
   const plans = rows
     .map((row) => computeIncrease(toInput(row), req.percent, req.fromMonth))
-    .filter((p) => p.changes.length > 0)
     .sort((a, b) => a.fullName.localeCompare(b.fullName, "tr"));
   return { plans };
 }
@@ -117,7 +116,7 @@ export async function applyPriceIncrease(
   const failed: string[] = [];
   for (const row of rows) {
     const result = computeIncrease(toInput(row), req.percent, req.fromMonth);
-    if (result.changes.length === 0) continue;
+    // Değişikliği olmayan plan da (ör. Ocak sonrası hepsi ödenmiş) boş listeyle kesinleştirilir.
     const { error } = await admin.rpc("apply_plan_amounts", {
       p_plan_id: row.id,
       p_changes: result.changes.map((c) => ({ id: c.installmentId, amount: kurusToTl(c.toKurus) })),
