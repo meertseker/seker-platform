@@ -60,6 +60,17 @@ describe("apply_plan_amounts", () => {
     expect(inst!.map((r) => Number(r.amount))).toEqual([22000, 22000, 22000]);
   });
 
+  it("iptal taksitin tutarı da yeniden hesaplanan toplama dahildir", async () => {
+    const { planId, ids } = await setup(null);
+    await admin.from("installments").update({ status: "iptal" }).eq("id", ids[0]);
+    const { error } = await admin.rpc("apply_plan_amounts", {
+      p_plan_id: planId, p_changes: [{ id: ids[1], amount: 27500 }], p_clear_tentative: false,
+    });
+    expect(error).toBeNull();
+    const { data: plan } = await admin.from("payment_plans").select("total_amount").eq("id", planId).single();
+    expect(Number(plan!.total_amount)).toBe(22000 + 27500 + 22000);
+  });
+
   it("danışman ve yönetici oturumu RPC'yi çağıramaz", async () => {
     const { planId, ids } = await setup(null);
     for (const email of ["danisman@test.local", "yonetici@test.local"]) {

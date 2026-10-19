@@ -15,6 +15,7 @@ declare
   v_ids uuid[];
   v_found int;
   v_bad int;
+  v_updated int;
 begin
   if p_changes is null or jsonb_typeof(p_changes) <> 'array' then
     raise exception 'p_changes bir dizi olmalı' using errcode = '22023';
@@ -34,10 +35,14 @@ begin
     raise exception 'Geçersiz tutar' using errcode = '22023';
   end if;
 
-  select count(*), count(*) filter (where i.status <> 'bekliyor')
+  -- Hedef taksit satırlarını kilitle (eşzamanlı ödeme işaretlemeyle yarışı önler).
+  select count(*), count(*) filter (where t.status <> 'bekliyor')
     into v_found, v_bad
-  from public.installments i
-  where i.id = any(coalesce(v_ids, '{}')) and i.plan_id = p_plan_id;
+  from (
+    select i.status from public.installments i
+    where i.id = any(coalesce(v_ids, '{}')) and i.plan_id = p_plan_id
+    for update
+  ) t;
 
   if v_found <> coalesce(array_length((select array_agg(distinct x) from unnest(v_ids) x), 1), 0) then
     raise exception 'Taksit bu plana ait değil' using errcode = 'P0001';
@@ -49,11 +54,15 @@ begin
   update public.installments i
      set amount = (c->>'amount')::numeric
     from jsonb_array_elements(p_changes) c
-   where i.id = (c->>'id')::uuid and i.plan_id = p_plan_id;
+   where i.id = (c->>'id')::uuid and i.plan_id = p_plan_id and i.status = 'bekliyor';
+  get diagnostics v_updated = row_count;
+  if v_updated < v_found then
+    raise exception 'Taksit güncellenemedi' using errcode = 'P0001';
+  end if;
 
   update public.payment_plans p
      set total_amount = (select coalesce(sum(i.amount), 0) from public.installments i
-                         where i.plan_id = p.id and i.status <> 'iptal'),
+                         where i.plan_id = p.id),
          tentative_from = case when p_clear_tentative then null else p.tentative_from end
    where p.id = p_plan_id;
 end;
