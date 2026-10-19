@@ -42,6 +42,7 @@ interface LeadRow {
   phone: string;
   status: LeadStatus;
   converted_student_id: string | null;
+  assigned_to: string | null;
   first_contact_at: string | null;
   gclid: string | null;
   created_at: string;
@@ -163,7 +164,7 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
 
   const { data: leadData } = await supabase
     .from("leads")
-    .select("id, parent_name, phone, status, converted_student_id, first_contact_at, gclid, created_at, web_payload")
+    .select("id, parent_name, phone, status, converted_student_id, assigned_to, first_contact_at, gclid, created_at, web_payload")
     .eq("id", leadId)
     .maybeSingle();
   const lead = leadData as LeadRow | null;
@@ -230,7 +231,6 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
     const reached =
       result === "randevu" || result === "geri_ara" ? true : result === "ulasilamadi" ? false : input.quals.reached;
     const patch: Record<string, unknown> = {
-      assigned_to: profile.id,
       q_reached: reached,
       last_activity_at: now.toISOString(),
     };
@@ -240,6 +240,9 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
       patch.q_area_ok = input.quals.area;
       patch.q_timing_ok = input.quals.timing;
     }
+    // R24: veli yalnız üstlenilince (ilk temas) ya da sahipsizse arayana geçer; takibi arayan meslektaş devralmaz.
+    const owner = !lead.first_contact_at || !lead.assigned_to ? profile.id : lead.assigned_to;
+    if (owner !== lead.assigned_to) patch.assigned_to = owner;
     if (!lead.first_contact_at) patch.first_contact_at = now.toISOString();
     const userNote = input.note?.trim();
     if (userNote) patch.contact_note = userNote;
@@ -312,7 +315,7 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
         const reminders =
           createdReminders ??
           appointmentTasks(appointment!.id, lead.parent_name, appointment!.at, now, settings.hours);
-        if (appointment!.reused) await upsertPlannedTasks(supabase, leadId, profile.id, reminders);
+        if (appointment!.reused) await upsertPlannedTasks(supabase, leadId, owner, reminders);
         done = [`Ziyaret takvime yazıldı: ${formatDayTime(appointment!.at)}`];
         if (hasWa) done.push("WhatsApp onay mesajı hazır");
         const line = reminderLine(reminders);
@@ -321,7 +324,7 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
         break;
       }
       case "geri_ara":
-        await upsertPlannedTasks(supabase, leadId, profile.id, [
+        await upsertPlannedTasks(supabase, leadId, owner, [
           { ruleKey: `geri:${leadId}`, title: `Geri ara · ${lead.parent_name}`, dueAt: callbackAt!, kind: "arama" },
         ]);
         done = [
@@ -332,7 +335,7 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
       case "ulasilamadi": {
         if (!next) {
           const kontenjan = kontenjanTask(leadId, lead.parent_name, now, settings.hours);
-          const open = await upsertPlannedTasks(supabase, leadId, profile.id, [kontenjan]);
+          const open = await upsertPlannedTasks(supabase, leadId, owner, [kontenjan]);
           done = ["7 günde ulaşılamadı · veli Kaybedildi (Ulaşılamadı) olarak kapandı"];
           // Yeni yazıldı ya da zaten açık: her iki durumda görev açıktır.
           if ([...open.inserted, ...open.alreadyOpen].includes(kontenjan.ruleKey)) {
@@ -341,7 +344,7 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
           closed = true;
           break;
         }
-        await upsertPlannedTasks(supabase, leadId, profile.id, [next]);
+        await upsertPlannedTasks(supabase, leadId, owner, [next]);
         const inThreeHours = next.dueAt.getTime() === now.getTime() + 3 * 3_600_000;
         done = [
           inThreeHours

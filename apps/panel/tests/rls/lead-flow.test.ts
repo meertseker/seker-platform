@@ -77,11 +77,15 @@ describe("veli üstlenme", () => {
     expect(row!.claimed_at).not.toBeNull();
   });
 
-  it("ilk temas yapılmış veli başkasına geçmez", async () => {
+  it("R24: üstlenme yalnız ilk teması yönetir; ilk temastan sonra takibi başkası da arar, veli sahibinde kalır", async () => {
+    const claimedAt = new Date(Date.now() - 60_000).toISOString();
     const id = await newLead({ assigned_to: DAN_ID, first_contact_at: new Date(Date.now() - 3_600_000).toISOString(),
-      claimed_at: new Date(Date.now() - 3_600_000).toISOString() });
-    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: false, claimedBy: "Danışman (Test)" });
+      claimed_at: claimedAt });
+    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true });
     expect(await claimLeadAs(danA, id, DAN_ID, 15)).toEqual({ ok: true });
+    const { data: row } = await admin.from("leads").select("assigned_to, claimed_at").eq("id", id).single();
+    expect(row!.assigned_to).toBe(DAN_ID);
+    expect(new Date(row!.claimed_at).toISOString()).toBe(claimedAt);
   });
 });
 
@@ -117,6 +121,40 @@ describe("arama kaydı", () => {
     expect(ev).toHaveLength(1);
     const { data: notes } = await admin.from("lead_notes").select("body").eq("lead_id", id);
     expect(notes).toHaveLength(1);
+  });
+});
+
+describe("takibi başka danışman arar (R24)", () => {
+  it("ilk teması yapılmış veliyi arayan meslektaş veliyi devralmaz", async () => {
+    current = danA; // oturum: DAN_ID; veli DAN2'nin
+    const id = await newLead({ assigned_to: DAN2_ID, status: "ulasildi",
+      first_contact_at: new Date(Date.now() - 86_400_000).toISOString() });
+    await admin.from("tasks").insert({
+      lead_id: id, title: "2. deneme", rule_key: `takip:${id}:2`, due_date: "2026-11-03",
+      due_at: "2026-11-03T10:00:00Z", auto_generated: true, assigned_to: DAN2_ID,
+    });
+    const r = await recordCall({
+      leadId: id, result: "geri_ara", quals: { age: true, area: true, timing: true, reached: true },
+      callbackAt: "2026-11-05T11:00",
+    });
+    expect(r).toHaveProperty("done");
+    const { data: lead } = await admin.from("leads").select("assigned_to").eq("id", id).single();
+    expect(lead!.assigned_to).toBe(DAN2_ID);
+    const { data: geri } = await admin.from("tasks").select("assigned_to").eq("rule_key", `geri:${id}`).single();
+    expect(geri!.assigned_to).toBe(DAN2_ID);
+  });
+
+  it("sahibi olmayan veliyi arayan danışman sahibi olur", async () => {
+    current = danA;
+    const id = await newLead({ assigned_to: null, status: "ulasildi",
+      first_contact_at: new Date(Date.now() - 86_400_000).toISOString() });
+    const r = await recordCall({
+      leadId: id, result: "geri_ara", quals: { age: true, area: true, timing: true, reached: true },
+      callbackAt: "2026-11-05T11:00",
+    });
+    expect(r).toHaveProperty("done");
+    const { data: lead } = await admin.from("leads").select("assigned_to").eq("id", id).single();
+    expect(lead!.assigned_to).toBe(DAN_ID);
   });
 });
 

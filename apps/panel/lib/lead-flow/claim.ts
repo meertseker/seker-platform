@@ -1,4 +1,6 @@
 // Veli üstlenme: tek koşullu UPDATE ... RETURNING. Ortak listede "Ara"ya ilk basan alır.
+// R24: üstlenme yalnız İLK teması yönetir. İlk temas yapılmışsa herkes arayabilir (takibi meslektaş
+// da yapabilir); bu durumda hiçbir şey yazılmaz, veli sahibinde kalır.
 // Eşzamanlı iki istekte satır kilidi ikinciyi bekletir, Postgres koşulu güncel satırda yeniden değerlendirir;
 // yalnız biri satır döndürür.
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -30,14 +32,15 @@ export async function claimLeadAs(
   if (error) throw new Error(`Üstlenilemedi: ${error.message}`);
   if (data && data.length > 0) return { ok: true };
 
-  // Kazanamadık: sahibi kim? (yalnızca okuma; karar yukarıdaki güncellemede verildi)
+  // Kazanamadık: ilk temas mı yapılmış, yoksa başkası mı arıyor? (yalnızca okuma)
   const { data: lead } = await supabase
     .from("leads")
-    .select("assigned_to")
+    .select("assigned_to, first_contact_at")
     .eq("id", leadId)
     .maybeSingle();
-  const owner = (lead as { assigned_to: string | null } | null)?.assigned_to ?? null;
-  // İlk teması zaten bu kullanıcı yaptıysa veli onundur.
+  const row = lead as { assigned_to: string | null; first_contact_at: string | null } | null;
+  if (row?.first_contact_at) return { ok: true };
+  const owner = row?.assigned_to ?? null;
   if (owner === userId) return { ok: true };
   if (!owner) return { ok: false, claimedBy: UNKNOWN_OWNER };
   const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", owner).maybeSingle();
