@@ -106,4 +106,16 @@ describe('POST /api/lead', () => {
     await POST(makeRequest(JSON.stringify(valid)));
     expect(send.mock.calls[0][0].subject).toContain('Tekrar başvuru');
   });
+
+  it('qualify alanlarını createWebLead e geçirir, eksikse 400 döner', async () => {
+    const year = new Date().getFullYear();
+    const q = { ...valid, qualify: true, childBirthMonth: 5, childBirthYear: year - 3, district: 'Diğer', startWindow: 'hemen', wantsWhatsapp: true };
+    const ok = await POST(makeRequest(JSON.stringify(q)));
+    expect(ok.status).toBe(200);
+    expect(vi.mocked(createWebLead).mock.calls[0][0]).toMatchObject({ district: 'Diğer', startWindow: 'hemen', childBirthMonth: 5 });
+    const missing: Partial<typeof q> = { ...q };
+    delete missing.district;
+    const bad = await POST(makeRequest(JSON.stringify(missing)));
+    expect(bad.status).toBe(400);
+  });
 });

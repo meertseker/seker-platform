@@ -8,6 +8,10 @@ import { KVKK_CONSENT_LABEL } from '@/content/kvkk';
 import { makeReader } from '@/lib/content/reader';
 import type { ReaderData } from '@/lib/content/types';
 import { FORM_DEFAULTS } from '@/lib/content/slots/form';
+import { DISTRICTS } from '@/content/districts';
+import { START_WINDOWS } from '@/lib/leadSchema';
+
+const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
 type FieldErrors = Partial<Record<string, string[]>>;
 
@@ -16,12 +20,20 @@ type FieldErrors = Partial<Record<string, string[]>>;
  * dönemi, e-posta ve mesaj alanları kaldırıldı; bunlar aramada konuşuluyor.
  * Alan sayısı düştükçe form doldurma oranı yükselir.
  */
-export default function LeadForm({ data }: { data?: ReaderData } = {}) {
+export default function LeadForm({
+  data,
+  qualify = false,
+  currentYear,
+}: { data?: ReaderData; qualify?: boolean; currentYear?: number } = {}) {
+  // Yıl aralığı sunucudan prop olarak gelebilir (hidrasyon uyumu); verilmezse istemci yılı.
+  const thisYear = currentYear ?? new Date().getFullYear();
   const router = useRouter();
   // Etiketler `form.*` slot'larından gelir; data verilmeyen sayfalarda (veya anahtar yoksa) koddaki varsayılan kullanılır.
   const reader = data ? makeReader(data) : null;
   const t = (key: string): string => (reader && data && key in data.values ? reader.text(key) : FORM_DEFAULTS[key]);
   const attrs = (key: string): Record<string, string> => (reader && data && key in data.meta ? reader.attrs(key) : {});
+  // Sabit seçenek metinleri (ay, yıl, semt) içerik alanı değildir; yalnız düzenleme modunda işaretlenir.
+  const ign: Record<string, string> = reader?.editing ? { 'data-edit-ignore': '' } : {};
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState('');
@@ -44,6 +56,16 @@ export default function LeadForm({ data }: { data?: ReaderData } = {}) {
       utm,
       website: String(data.get('website') ?? ''),
       kvkkConsent: data.get('kvkkConsent') === 'on',
+      ...(qualify
+        ? {
+            qualify: true,
+            childBirthMonth: data.get('childBirthMonth') ? Number(data.get('childBirthMonth')) : undefined,
+            childBirthYear: data.get('childBirthYear') ? Number(data.get('childBirthYear')) : undefined,
+            district: data.get('district') ? String(data.get('district')) : undefined,
+            startWindow: data.get('startWindow') ? String(data.get('startWindow')) : undefined,
+            wantsWhatsapp: data.get('wantsWhatsapp') === 'on',
+          }
+        : {}),
     };
 
     try {
@@ -104,6 +126,65 @@ export default function LeadForm({ data }: { data?: ReaderData } = {}) {
           {err('phone')}
         </div>
       </div>
+
+      {qualify && (
+        <>
+          <fieldset>
+            <legend className={label} {...attrs('form.birth.legend')}>{t('form.birth.legend')}</legend>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="childBirthMonth" className="sr-only" {...ign}>Doğum ayı</label>
+                <select id="childBirthMonth" name="childBirthMonth" defaultValue="" className={`${field} min-h-[44px]`} {...ign}>
+                  <option value="">Ay</option>
+                  {MONTHS.map((m, i) => (
+                    <option key={m} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+                {err('childBirthMonth')}
+              </div>
+              <div>
+                <label htmlFor="childBirthYear" className="sr-only" {...ign}>Doğum yılı</label>
+                <select id="childBirthYear" name="childBirthYear" defaultValue="" className={`${field} min-h-[44px]`} {...ign}>
+                  <option value="">Yıl</option>
+                  {Array.from({ length: 8 }, (_, i) => thisYear - i).map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+                {err('childBirthYear')}
+              </div>
+            </div>
+          </fieldset>
+
+          <div>
+            <label htmlFor="district" className={label} {...attrs('form.district.label')}>{t('form.district.label')}</label>
+            <select id="district" name="district" defaultValue="" className={`${field} min-h-[44px]`} {...ign}>
+              <option value="">Seçin</option>
+              {DISTRICTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            {err('district')}
+          </div>
+
+          <fieldset>
+            <legend className={label} {...attrs('form.start.legend')}>{t('form.start.legend')}</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {START_WINDOWS.map((w) => (
+                <label key={w} className="flex min-h-[44px] items-center gap-3 rounded-xl border-2 border-rule bg-white px-4 py-2 text-ink">
+                  <input type="radio" name="startWindow" value={w} className="h-5 w-5" />
+                  <span {...attrs(`form.start.${w}`)}>{t(`form.start.${w}`)}</span>
+                </label>
+              ))}
+            </div>
+            {err('startWindow')}
+          </fieldset>
+
+          <label className="flex min-h-[44px] items-center gap-3 text-ink">
+            <input type="checkbox" name="wantsWhatsapp" className="h-5 w-5" />
+            <span {...attrs('form.whatsapp.label')}>{t('form.whatsapp.label')}</span>
+          </label>
+        </>
+      )}
 
       {/* KVKK onay cümlesi hukuki metindir: düzenlenemez, kodda kalır. data-edit-ignore yalnızca düzenleme modunda basılır (ziyaretçi HTML'i değişmesin). */}
       <label {...(reader?.editing ? { 'data-edit-ignore': '' } : {})} className="flex items-start gap-3 text-sm text-ink-soft">

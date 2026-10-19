@@ -92,3 +92,46 @@ describe('leadSchema', () => {
     if (r.success) expect(r.data.website).toBe('http://spam.example');
   });
 });
+
+describe('leadSchema qualify alanları', () => {
+  const base = { parentName: 'Ayşe Yılmaz', phone: '05301018875', kvkkConsent: true as const };
+  const year = new Date().getFullYear();
+  const full = {
+    ...base,
+    qualify: true,
+    childBirthMonth: 5,
+    childBirthYear: year - 3,
+    district: 'Beykent',
+    startWindow: '1_3_ay',
+    wantsWhatsapp: true,
+  };
+
+  it('qualify açıkken semt eksikse şema reddeder', () => {
+    const rest: Partial<typeof full> = { ...full };
+    delete rest.district;
+    const r = leadSchema.safeParse(rest);
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.flatten().fieldErrors.district).toBeTruthy();
+  });
+
+  it('qualify kapalıyken eski form değişmeden geçer', () => {
+    expect(leadSchema.safeParse(base).success).toBe(true);
+  });
+
+  it('qualify açık ve tüm alanlar geçerliyse geçer', () => {
+    expect(leadSchema.safeParse(full).success).toBe(true);
+    expect(leadSchema.safeParse({ ...full, district: 'Diğer', wantsWhatsapp: false }).success).toBe(true);
+  });
+
+  it('geçersiz ay, yıl, semt ve dönemi reddeder', () => {
+    for (const bad of [
+      { childBirthMonth: 13 },
+      { childBirthYear: year - 8 },
+      { childBirthYear: year + 1 },
+      { district: 'Ankara' },
+      { startWindow: 'yarin' },
+    ]) {
+      expect(leadSchema.safeParse({ ...full, ...bad }).success).toBe(false);
+    }
+  });
+});

@@ -32,6 +32,7 @@ describe('createWebLead', () => {
       p_utm: { utm_campaign: 'kres' },
       p_landing_path: '/lp/kres-2-yas',
       p_consent_at: '2026-10-20T09:00:00.000Z',
+      p_meta: {},
     });
     expect(result).toEqual({ status: 'saved', leadId: 'L1', duplicate: false });
   });
@@ -48,5 +49,25 @@ describe('createWebLead', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     rpc.mockRejectedValue(new Error('fetch failed'));
     expect(await createWebLead(lead)).toEqual({ status: 'failed' });
+  });
+
+  it('qualify alanlarını p_meta olarak geçer', async () => {
+    rpc.mockResolvedValue({ data: { lead_id: 'L1', duplicate: false }, error: null });
+    await createWebLead({
+      ...lead,
+      qualify: true,
+      childBirthMonth: 5,
+      childBirthYear: 2023,
+      district: 'Diğer',
+      startWindow: 'hemen',
+      wantsWhatsapp: false,
+    });
+    expect(rpc.mock.calls[0][1].p_meta).toEqual({
+      child_birth_month: 5,
+      child_birth_year: 2023,
+      district: 'Diğer',
+      start_window: 'hemen',
+      wants_whatsapp: false,
+    });
   });
 });

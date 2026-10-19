@@ -67,7 +67,7 @@ export default function LandingView({ slug, data }: { slug: string; data: Reader
           <Editable c={c} k={k('formHeading')} as="h2" className="text-3xl text-paper" />
           <Editable c={c} k={k('formIntro')} as="p" className="mt-4 text-paper/80" />
           <div className="mt-8 rounded-2xl bg-paper p-6 md:p-8">
-            <LeadForm data={pickData(data, ['form.'])} />
+            <LeadForm data={pickData(data, ['form.'])} qualify currentYear={new Date().getFullYear()} />
           </div>
         </div>
       </section>

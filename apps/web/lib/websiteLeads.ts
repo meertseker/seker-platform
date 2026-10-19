@@ -5,6 +5,18 @@ export type CreateWebLeadResult =
   | { status: 'saved'; leadId: string; duplicate: boolean }
   | { status: 'failed' };
 
+/** Yalnız qualify açıkken nitelik cevapları RPC'ye gider; ana sayfa formu boş p_meta gönderir. */
+function qualifyMeta(lead: Lead): { [key: string]: string | number | boolean } {
+  if (!lead.qualify) return {};
+  const meta: { [key: string]: string | number | boolean } = {};
+  if (lead.childBirthMonth !== undefined) meta.child_birth_month = lead.childBirthMonth;
+  if (lead.childBirthYear !== undefined) meta.child_birth_year = lead.childBirthYear;
+  if (lead.district !== undefined) meta.district = lead.district;
+  if (lead.startWindow !== undefined) meta.start_window = lead.startWindow;
+  if (lead.wantsWhatsapp !== undefined) meta.wants_whatsapp = lead.wantsWhatsapp;
+  return meta;
+}
+
 export async function createWebLead(
   lead: Lead,
   consentAt: Date = new Date(),
@@ -18,6 +30,7 @@ export async function createWebLead(
       p_utm: lead.utm,
       p_landing_path: lead.landingPath,
       p_consent_at: consentAt.toISOString(),
+      p_meta: qualifyMeta(lead),
     });
     if (error || !data) {
       console.error('[lead] create_web_lead failed:', error?.code ?? 'no-data');
