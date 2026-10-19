@@ -1,0 +1,111 @@
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { clientFor, admin } from "./helpers";
+
+// Sunucu eylemi gerçek DB'ye karşı, danışmanın oturum istemcisiyle çalışır.
+let current: SupabaseClient;
+const DAN_ID = "00000000-0000-0000-0000-000000000002";
+const DAN2_ID = "00000000-0000-0000-0000-000000000003";
+vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminSupabase: () => null }));
+vi.mock("@/lib/supabase/server", () => ({ createServerSupabase: async () => current }));
+vi.mock("@/lib/auth", () => ({
+  getSessionProfile: async () => ({ id: DAN_ID, full_name: "Danışman (Test)", role: "danisman", can_edit_site: false }),
+}));
+
+import { claimLeadAs } from "@/lib/lead-flow/claim";
+import { recordCall } from "@/actions/lead-flow";
+
+const PREFIX = "+90500777";
+let seq = 0;
+let danA: SupabaseClient, danB: SupabaseClient;
+
+async function newLead(over: Record<string, unknown> = {}) {
+  const { data, error } = await admin.from("leads").insert({
+    parent_name: "Üstlenme Test Veli", phone: `${PREFIX}${String(++seq).padStart(4, "0")}`,
+    source: "web_sitesi", ...over,
+  }).select("id").single();
+  expect(error).toBeNull();
+  return data!.id as string;
+}
+
+beforeAll(async () => {
+  danA = await clientFor("danisman@test.local");
+  danB = await clientFor("danisman2@test.local");
+});
+
+afterAll(async () => {
+  await admin.from("leads").delete().like("phone", `${PREFIX}%`);
+});
+
+describe("veli üstlenme", () => {
+  it("iki danışman aynı anda üstlenirse yalnız biri kazanır", async () => {
+    const id = await newLead();
+    const results = await Promise.all([
+      claimLeadAs(danA, id, DAN_ID, 15),
+      claimLeadAs(danB, id, DAN2_ID, 15),
+    ]);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    const loser = results.find((r) => !r.ok);
+    const { data: row } = await admin.from("leads").select("assigned_to, claimed_at").eq("id", id).single();
+    expect([DAN_ID, DAN2_ID]).toContain(row!.assigned_to);
+    expect(row!.claimed_at).not.toBeNull();
+    expect(loser).toEqual({
+      ok: false,
+      claimedBy: row!.assigned_to === DAN_ID ? "Danışman (Test)" : "Danışman 2 (Test)",
+    });
+  });
+
+  it("15 dakikayı geçmiş üstlenme başkasına açılır", async () => {
+    const id = await newLead();
+    expect(await claimLeadAs(danA, id, DAN_ID, 15)).toEqual({ ok: true });
+    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: false, claimedBy: "Danışman (Test)" });
+    await admin.from("leads")
+      .update({ claimed_at: new Date(Date.now() - 16 * 60_000).toISOString() }).eq("id", id);
+    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true });
+    const { data: row } = await admin.from("leads").select("assigned_to").eq("id", id).single();
+    expect(row!.assigned_to).toBe(DAN2_ID);
+  });
+
+  it("ilk temas yapılmış veli başkasına geçmez", async () => {
+    const id = await newLead({ assigned_to: DAN_ID, first_contact_at: new Date(Date.now() - 3_600_000).toISOString(),
+      claimed_at: new Date(Date.now() - 3_600_000).toISOString() });
+    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: false, claimedBy: "Danışman (Test)" });
+    expect(await claimLeadAs(danA, id, DAN_ID, 15)).toEqual({ ok: true });
+  });
+});
+
+describe("arama kaydı", () => {
+  it("ulaşıldığında açık takip görevleri kapanır", async () => {
+    current = danA;
+    const id = await newLead({ assigned_to: DAN_ID });
+    const other = await newLead({ assigned_to: DAN_ID });
+    const due = { due_date: "2026-11-03", due_at: "2026-11-03T10:00:00Z", auto_generated: true, assigned_to: DAN_ID };
+    await admin.from("tasks").insert([
+      { ...due, lead_id: id, title: "2. deneme", rule_key: `takip:${id}:2` },
+      { ...due, lead_id: other, title: "başka veli", rule_key: `takip:${other}:2` },
+    ]);
+
+    const r = await recordCall({
+      leadId: id, result: "geri_ara", quals: { age: true, area: true, timing: false, reached: true },
+      note: "Akşam aranmak istiyor", callbackAt: "2026-11-04T17:00",
+    });
+    expect(r).toHaveProperty("done");
+
+    const { data: tasks } = await admin.from("tasks").select("rule_key, status, due_at, assigned_to").in("lead_id", [id, other]);
+    const byKey = Object.fromEntries((tasks ?? []).map((t) => [t.rule_key, t]));
+    expect(byKey[`takip:${id}:2`].status).toBe("tamamlandi");
+    expect(byKey[`takip:${other}:2`].status).toBe("acik");
+    expect(byKey[`geri:${id}`]).toMatchObject({ status: "acik", assigned_to: DAN_ID });
+    expect(new Date(byKey[`geri:${id}`].due_at).toISOString()).toBe(new Date("2026-11-04T17:00:00+03:00").toISOString());
+
+    const { data: lead } = await admin.from("leads")
+      .select("status, first_contact_at, q_reached, q_timing_ok, contact_note, assigned_to").eq("id", id).single();
+    expect(lead).toMatchObject({ status: "ulasildi", q_reached: true, q_timing_ok: false, contact_note: "Akşam aranmak istiyor", assigned_to: DAN_ID });
+    expect(lead!.first_contact_at).not.toBeNull();
+    const { data: ev } = await admin.from("events").select("event_type").eq("entity_id", id).eq("event_type", "arama_kaydi");
+    expect(ev).toHaveLength(1);
+    const { data: notes } = await admin.from("lead_notes").select("body").eq("lead_id", id);
+    expect(notes).toHaveLength(1);
+  });
+});

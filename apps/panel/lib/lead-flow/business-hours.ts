@@ -77,3 +77,27 @@ export function isBusinessDay(dateString: string, hours: BusinessHours): boolean
   const dow = new Date(`${dateString}T00:00:00Z`).getUTCDay();
   return hours.days.includes(dow === 0 ? 7 : dow);
 }
+
+const dayTimeFormatter = new Intl.DateTimeFormat("tr-TR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: "Europe/Istanbul",
+});
+
+/** İstanbul saatiyle "Salı 4 Kasım 10:00". */
+export function formatDayTime(at: Date): string {
+  const parts = dayTimeFormatter.formatToParts(at);
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("weekday")} ${get("day")} ${get("month")} ${get("hour")}:${get("minute")}`;
+}
+
+/** "YYYY-MM-DDTHH:MM[:SS]" İstanbul yerel saati olarak; diğer biçimler Date ile çözülür. */
+export function parseIstanbulDateTime(value: string): Date | null {
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::(\d{2}))?$/.exec(value);
+  const d = m ? new Date(`${m[1]}T${m[2]}:${m[3] ?? "00"}+03:00`) : new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
