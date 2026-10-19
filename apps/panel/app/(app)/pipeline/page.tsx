@@ -144,7 +144,7 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
       let query = supabase
         .from("leads")
         .select(
-          "id, parent_name, phone, child_name, child_birth_month, child_birth_year, source, source_detail, status, lost_reason, assigned_to, converted_student_id, last_activity_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
+          "id, parent_name, phone, child_name, child_birth_month, child_birth_year, source, source_detail, status, lost_reason, assigned_to, converted_student_id, last_activity_at, first_contact_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
           { count: archive ? "exact" : undefined },
         )
         .order("last_activity_at", { ascending: false });

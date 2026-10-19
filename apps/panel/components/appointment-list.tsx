@@ -21,6 +21,8 @@ export interface AppointmentListItem {
   leadId?: string;
   leadName?: string;
   leadPhone?: string;
+  /** Velinin ilk teması yapıldı mı; bilinmiyorsa arama üstlenme yolundan geçer. */
+  leadContacted?: boolean;
   scheduled_at: string;
   type: AppointmentType;
   outcome: AppointmentOutcome;
@@ -189,6 +191,7 @@ export function AppointmentList({
                             leadId={appointment.leadId}
                             phone={appointment.leadPhone}
                             leadName={appointment.leadName}
+                            contacted={appointment.leadContacted ?? false}
                             variant="icon"
                           />
                           <WhatsAppButton phone={appointment.leadPhone} compact />

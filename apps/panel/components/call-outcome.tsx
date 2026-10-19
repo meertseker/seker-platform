@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Phone } from "lucide-react";
 import { logCallOutcome } from "@/actions/leads";
+import { claimLead } from "@/actions/lead-flow";
 import { Sheet } from "@/components/sheet";
 import {
   CALL_NEXT_STEPS,
@@ -17,6 +18,11 @@ type CallButtonVariant = "primary" | "outline" | "icon";
 interface CallButtonProps {
   leadId: string;
   phone: string;
+  /**
+   * R24: ilk teması yapılmış mı (first_contact_at dolu). Yapılmamışsa ilk arama ortak listedeki gibi
+   * üstlenme + arama ekranından geçer; eski "Görüşme nasıl geçti?" paneli yalnız sonraki aramalar içindir.
+   */
+  contacted: boolean;
   leadName?: string;
   label?: string;
   variant?: CallButtonVariant;
@@ -34,8 +40,60 @@ const VARIANT_CLASS: Record<CallButtonVariant, string> = {
 const outcomeKeys = Object.keys(CALL_OUTCOMES) as CallOutcome[];
 const nextKeys = Object.keys(CALL_NEXT_STEPS) as CallNextStep[];
 
-/** Telefonla arar ve aynı anda "Görüşme nasıl geçti?" panelini açar. */
-export function CallButton({
+/** İlk temas: veliyi üstlenir ve arama ekranına geçer (ortak listedeki "Ara" ile aynı yol). */
+export function ClaimCallButton({
+  leadId,
+  leadName,
+  label = "Ara",
+  variant = "outline",
+  className = "",
+}: Omit<CallButtonProps, "contacted" | "phone">) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function onCall() {
+    setError(null);
+    startTransition(async () => {
+      const res = await claimLead(leadId);
+      if (!res.ok) {
+        setError(`${res.claimedBy} bu veliyi arıyor`);
+        router.refresh();
+        return;
+      }
+      router.push(`/leads/${leadId}/ara`);
+    });
+  }
+
+  return (
+    <span className={`inline-flex flex-col gap-1 ${variant === "icon" ? "" : className}`}>
+      <button
+        type="button"
+        onClick={onCall}
+        disabled={isPending}
+        aria-label={variant === "icon" ? `${leadName ?? "Veliyi"} ara` : undefined}
+        title={error ?? (variant === "icon" ? "Ara" : undefined)}
+        className={`inline-flex cursor-pointer items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60 ${VARIANT_CLASS[variant]} ${variant === "icon" ? className : "w-full"}`}
+      >
+        <Phone aria-hidden className={variant === "primary" ? "size-5" : "size-4"} />
+        {variant === "icon" ? null : isPending ? "Açılıyor…" : label}
+      </button>
+      {error && variant !== "icon" ? (
+        <span role="alert" className="text-[13px] font-medium text-destructive-strong">
+          {error}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** Telefonla arar ve aynı anda "Görüşme nasıl geçti?" panelini açar; ilk temas yapılmadıysa ClaimCallButton. */
+export function CallButton(props: CallButtonProps) {
+  if (!props.contacted) return <ClaimCallButton {...props} />;
+  return <LoggedCallButton {...props} />;
+}
+
+function LoggedCallButton({
   leadId,
   phone,
   leadName,

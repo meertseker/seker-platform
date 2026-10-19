@@ -428,7 +428,12 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
                 Telefonu aç
               </a>
             ) : (
-              <CallButton leadId={lead.id} phone={lead.phone} leadName={lead.parent_name} />
+              <CallButton
+                leadId={lead.id}
+                phone={lead.phone}
+                leadName={lead.parent_name}
+                contacted={!!lead.first_contact_at}
+              />
             )}
             <WhatsAppButton phone={lead.phone} />
           </div>
@@ -482,6 +487,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
         priceItems={priceItems}
         resultAppointments={resultAppointments}
         counterOfferId={counterOffer?.id ?? null}
+        contacted={!!lead.first_contact_at}
         canConvert={canConvert}
         convertBlocker={convertBlocker}
       />

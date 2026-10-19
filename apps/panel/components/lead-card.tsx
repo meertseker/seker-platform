@@ -30,6 +30,7 @@ export interface LeadCardData {
   assigned_to: string | null;
   converted_student_id: string | null;
   last_activity_at: string;
+  first_contact_at: string | null;
   assigned: { id: string; full_name: string } | null;
 }
 
@@ -70,6 +71,7 @@ function StepButton({ lead, step }: { lead: LeadCardData; step: NextStep }) {
         leadId={lead.id}
         phone={lead.phone}
         leadName={lead.parent_name}
+        contacted={!!lead.first_contact_at}
         label={step.title}
         variant="primary"
         className="min-h-12! w-full"
@@ -153,6 +155,7 @@ export function LeadCard({ lead, archived = false, step, waitingDays = 0 }: Lead
                     leadId={lead.id}
                     phone={lead.phone}
                     leadName={lead.parent_name}
+                    contacted={!!lead.first_contact_at}
                     variant="icon"
                   />
                 )}

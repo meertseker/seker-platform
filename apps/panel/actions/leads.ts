@@ -82,7 +82,12 @@ export async function updateLeadStatus(leadId: string, to: LeadStatus, lostReaso
   // Kaybedildi'den çıkan (yeniden açılan) velide "1 ay sonra kontenjan" görevi artık geçersizdir.
   // Tüm durum değişiklikleri buradan geçtiği için yeniden açmanın her yolu kapsanır.
   if (lead.status === "kaybedildi" && to !== "kaybedildi") {
-    await closeTasksByPrefix(supabase, `kontenjan:${leadId}`);
+    // Durum yazıldı: görev kapanmasa da durum olayı yazılmalı (R25). Açık kalan görev elle kapatılabilir.
+    try {
+      await closeTasksByPrefix(supabase, `kontenjan:${leadId}`);
+    } catch (e) {
+      console.error("updateLeadStatus kontenjan:", e);
+    }
   }
   await logEvent(supabase, {
     entityType: "lead", entityId: leadId, eventType: "durum_degisti",
@@ -206,10 +211,11 @@ export async function logCallOutcome(
 
   const { data: lead } = await supabase
     .from("leads")
-    .select("id, status, converted_student_id")
+    .select("id, status, converted_student_id, first_contact_at")
     .eq("id", input.leadId)
     .maybeSingle();
   if (!lead) return { error: "Veli bulunamadı" };
+  const now = new Date();
 
   const plan = planCallOutcome({
     outcome: input.outcome,
@@ -245,10 +251,18 @@ export async function logCallOutcome(
     if (taskError) return { error: "Not kaydedildi, görev oluşturulamadı" };
   }
 
-  await supabase
-    .from("leads")
-    .update({ last_activity_at: new Date().toISOString() })
-    .eq("id", input.leadId);
+  // R24: eski panelden yapılan arama da ilk temas sayılır; ulaşınca bekleyen takip ve geri arama karşılandı.
+  const patch: Record<string, string> = { last_activity_at: now.toISOString() };
+  if (!lead.first_contact_at) patch.first_contact_at = now.toISOString();
+  await supabase.from("leads").update(patch).eq("id", input.leadId);
+  if (input.outcome === "ulastim") {
+    try {
+      await closeTasksByPrefix(supabase, `takip:${input.leadId}:`);
+      await closeTasksByPrefix(supabase, `geri:${input.leadId}`);
+    } catch (e) {
+      console.error("logCallOutcome görev kapatma:", e);
+    }
+  }
 
   revalidatePath("/pipeline");
   revalidatePath(`/leads/${input.leadId}`);

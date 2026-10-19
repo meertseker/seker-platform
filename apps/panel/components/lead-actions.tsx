@@ -45,6 +45,8 @@ interface LeadActionsProps {
   priceItems: ActivePriceItem[];
   resultAppointments: AppointmentListItem[];
   counterOfferId: string | null;
+  /** first_contact_at dolu mu; boşsa "Ara" üstlenip arama ekranına gider (R24). */
+  contacted: boolean;
   canConvert: boolean;
   /** Dönüştürme mümkün değilse ne eksik olduğu (kayıt paneli bunu yazar). */
   convertBlocker: string;
@@ -75,6 +77,7 @@ export function LeadActions({
   priceItems,
   resultAppointments,
   counterOfferId,
+  contacted,
   canConvert,
   convertBlocker,
 }: LeadActionsProps) {
@@ -141,6 +144,7 @@ export function LeadActions({
             leadId={lead.id}
             phone={lead.phone}
             leadName={lead.parent_name}
+            contacted={contacted}
             variant="primary"
             className="w-full sm:w-auto"
           />
