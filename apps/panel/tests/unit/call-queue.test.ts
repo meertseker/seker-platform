@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   applyQueueFilter,
+  followupAction,
   inQueueWindow,
+  isAutoRuleKey,
   labelFollowups,
   labelQueue,
   queueCutoff,
@@ -146,6 +148,28 @@ describe("labelFollowups", () => {
       f: "Gelmedi · tekrar ara",
       g: "Teşekkür mesajı",
     });
+  });
+
+  it("R24: otomatik görevin ana işi Ara; mesaj adımları hazır WhatsApp; takip görevinde ✓ yok", () => {
+    expect(followupAction("takip:l9:2")).toEqual({ kind: "call", canComplete: false });
+    expect(followupAction("geri:l9")).toEqual({ kind: "call", canComplete: true });
+    expect(followupAction("noshow:ap1")).toEqual({ kind: "call", canComplete: true });
+    expect(followupAction("ziyaret:ap1:2")).toEqual({ kind: "call", canComplete: true });
+    expect(followupAction("ziyaret:ap1:1")).toEqual({ kind: "whatsapp", templateKey: "ziyaret_tesekkur", canComplete: true });
+    expect(followupAction("hatirlat:ap1:sabah")).toEqual({ kind: "whatsapp", templateKey: "randevu_onay", canComplete: true });
+    expect(followupAction("kontenjan:l9")).toEqual({ kind: "whatsapp", templateKey: "kontenjan", canComplete: true });
+    expect(followupAction(null)).toEqual({ kind: "manual", canComplete: true });
+    expect(followupAction("takipsiz:l9")).toEqual({ kind: "manual", canComplete: true });
+    const [t] = labelFollowups([task({ rule_key: "takip:l9:3" })], now);
+    expect(t).toMatchObject({ ruleKey: "takip:l9:3", action: { kind: "call", canComplete: false } });
+  });
+
+  it("otomatik kural anahtarlarını tanır", () => {
+    for (const k of ["takip:a:2", "geri:a", "noshow:a", "hatirlat:a:once", "ziyaret:a:1", "kontenjan:a"]) {
+      expect(isAutoRuleKey(k)).toBe(true);
+    }
+    expect(isAutoRuleKey(null)).toBe(false);
+    expect(isAutoRuleKey("takipsiz:a")).toBe(false);
   });
 
   it("elle açılmış görevde başlık alt başlık olur", () => {

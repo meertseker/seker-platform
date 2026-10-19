@@ -7,7 +7,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { CallButton } from "@/components/call-outcome";
+import { CallButton, ClaimCallButton } from "@/components/call-outcome";
 import { CallQueueList } from "@/components/call-queue-card";
 import { OfferApprovalCard } from "@/components/offer-approval-list";
 import { TaskCompleteButton } from "@/components/task-complete-button";
@@ -35,7 +35,13 @@ import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { fillTemplate } from "@/lib/lead-flow/template";
 import { reminderMessage } from "@/lib/overdue";
 import { formatTRY, tlToKurus } from "@/lib/money";
-import { loadCallQueue, loadFollowupTasks, type FollowupItem, type QueueLead } from "@/lib/queries/call-queue";
+import {
+  isAutoRuleKey,
+  loadCallQueue,
+  loadFollowupTasks,
+  type FollowupItem,
+  type QueueLead,
+} from "@/lib/queries/call-queue";
 import { getFunnel, getPaymentSummary } from "@/lib/queries/dashboard";
 import { loadPendingOffers } from "@/lib/queries/pending-offers";
 import { daysSince } from "@/lib/next-step";
@@ -51,6 +57,7 @@ interface LeadJoin {
   id: string;
   parent_name: string;
   phone: string;
+  first_contact_at: string | null;
 }
 
 interface AppointmentRow {
@@ -66,6 +73,7 @@ interface TaskRow {
   id: string;
   title: string;
   due_date: string;
+  rule_key: string | null;
   lead_id: string | null;
   lead?: LeadJoin | LeadJoin[] | null;
 }
@@ -76,6 +84,7 @@ interface StaleLeadRow {
   phone: string;
   status: LeadStatus;
   last_activity_at: string;
+  first_contact_at: string | null;
 }
 
 interface FamilyJoin {
@@ -183,7 +192,7 @@ function TodaySection({
   );
 }
 
-function FollowupRowView({ task }: { task: FollowupItem }) {
+function FollowupRowView({ task, waMessage }: { task: FollowupItem; waMessage?: string }) {
   const body = (
     <>
       <div className="flex min-w-0 flex-col gap-0.5">
@@ -212,7 +221,12 @@ function FollowupRowView({ task }: { task: FollowupItem }) {
       ) : (
         <div className={`${rowClass} min-w-0`}>{body}</div>
       )}
-      <TaskCompleteButton id={task.id} compact />
+      {/* R24: arama adımı üstlenip arama ekranına gider (sıra orada ilerler); mesaj adımı hazır metinle açılır. */}
+      {task.leadId && task.action.kind === "call" ? (
+        <ClaimCallButton leadId={task.leadId} leadName={task.leadName ?? undefined} className="shrink-0" />
+      ) : null}
+      {task.phone && task.action.kind === "whatsapp" ? <WhatsAppButton phone={task.phone} message={waMessage} /> : null}
+      {task.action.canComplete ? <TaskCompleteButton id={task.id} compact /> : null}
     </li>
   );
 }
@@ -332,7 +346,7 @@ export default async function Home({
   // İleri tarihli açık görevler: bugünküler "Takip aramaları"nda, bunlar aşağıdaki listede.
   let laterTasksQuery = supabase
     .from("tasks")
-    .select("id, title, due_date, lead_id, lead:leads(id, parent_name, phone)")
+    .select("id, title, due_date, rule_key, lead_id, lead:leads(id, parent_name, phone, first_contact_at)")
     .eq("status", "acik")
     .gt("due_date", today)
     .order("due_date", { ascending: true })
@@ -386,7 +400,7 @@ export default async function Home({
 
   let staleLeadsQuery = supabase
     .from("leads")
-    .select("id, parent_name, phone, status, last_activity_at")
+    .select("id, parent_name, phone, status, last_activity_at, first_contact_at")
     .in("status", STALE_LEAD_STATUSES)
     .lt("last_activity_at", cutoff)
     .not("assigned_to", "is", null)
@@ -434,7 +448,8 @@ export default async function Home({
     now,
   );
   const visitsLoadFailed = Boolean(appointmentsResult.error || pastAppointmentsResult.error);
-  const laterTasks = (laterTasksResult.data ?? []) as unknown as TaskRow[];
+  // Otomatik görevler vakti gelince "Takip aramaları"nda çıkar; burada ✓ ile kapatılıp sırayı durdurmasın (R24).
+  const laterTasks = ((laterTasksResult.data ?? []) as unknown as TaskRow[]).filter((t) => !isAutoRuleKey(t.rule_key));
   const staleLeads = (staleLeadsResult.data ?? []) as unknown as StaleLeadRow[];
   const dueInstallments = (dueInstallmentsResult.data ??
     []) as unknown as DueInstallmentRow[];
@@ -467,6 +482,15 @@ export default async function Home({
       lead.id,
       unreachedTemplate ? fillTemplate(unreachedTemplate, { veli: lead.parentName, danisman: firstName }) : undefined,
     ]),
+  );
+
+  // Takip satırındaki mesaj adımları: görevin şablonu veli ve danışman adıyla doldurulur.
+  const templateText = new Map(flowSettings.templates.map((t) => [t.key, t.text]));
+  const followupMessages = Object.fromEntries(
+    followups.map((task) => {
+      const text = task.action.kind === "whatsapp" ? templateText.get(task.action.templateKey) : undefined;
+      return [task.id, text ? fillTemplate(text, { veli: task.leadName ?? "", danisman: firstName }) : undefined];
+    }),
   );
 
   return (
@@ -503,7 +527,7 @@ export default async function Home({
         ) : (
           <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
             {followups.map((task) => (
-              <FollowupRowView key={task.id} task={task} />
+              <FollowupRowView key={task.id} task={task} waMessage={followupMessages[task.id]} />
             ))}
           </ul>
         )}
@@ -579,6 +603,7 @@ export default async function Home({
                             leadId={lead.id}
                             phone={lead.phone}
                             leadName={lead.parent_name}
+                            contacted={!!lead.first_contact_at}
                           />
                           <WhatsAppButton phone={lead.phone} compact />
                         </>
@@ -618,6 +643,7 @@ export default async function Home({
                         leadId={lead.id}
                         phone={lead.phone}
                         leadName={lead.parent_name}
+                        contacted={!!lead.first_contact_at}
                       />
                       <WhatsAppButton phone={lead.phone} compact />
                     </div>

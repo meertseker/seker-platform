@@ -182,8 +182,35 @@ export type FollowupRow = {
   lead?: LeadJoin | LeadJoin[] | null;
 };
 
+/** Otomatik görev kurallarının önekleri (followups.ts, recordCall). */
+const AUTO_RULE_KINDS = new Set(["takip", "geri", "noshow", "hatirlat", "ziyaret", "kontenjan"]);
+
+export function isAutoRuleKey(ruleKey: string | null): boolean {
+  return !!ruleKey && AUTO_RULE_KINDS.has(ruleKey.split(":")[0]);
+}
+
+export type FollowupAction =
+  | { kind: "call"; canComplete: boolean }
+  | { kind: "whatsapp"; templateKey: string; canComplete: boolean }
+  | { kind: "manual"; canComplete: boolean };
+
+/**
+ * Saf: Takip satırının ana düğmesi (R24). Arama adımları üstlenip arama ekranına gider; mesaj adımları
+ * hazır metinli WhatsApp açar. Takip sırasındaki görevde ✓ yoktur: elle tamamlamak sırayı sessizce durdurur.
+ */
+export function followupAction(ruleKey: string | null): FollowupAction {
+  if (!isAutoRuleKey(ruleKey)) return { kind: "manual", canComplete: true };
+  const [kind, , step] = ruleKey!.split(":");
+  if (kind === "hatirlat") return { kind: "whatsapp", templateKey: "randevu_onay", canComplete: true };
+  if (kind === "kontenjan") return { kind: "whatsapp", templateKey: "kontenjan", canComplete: true };
+  if (kind === "ziyaret" && step === "1") return { kind: "whatsapp", templateKey: "ziyaret_tesekkur", canComplete: true };
+  return { kind: "call", canComplete: kind !== "takip" };
+}
+
 export type FollowupItem = {
   id: string;
+  ruleKey: string | null;
+  action: FollowupAction;
   leadId: string | null;
   leadName: string | null;
   phone: string | null;
@@ -236,6 +263,8 @@ export function labelFollowups(rows: FollowupRow[], now: Date): FollowupItem[] {
     const lead = Array.isArray(r.lead) ? (r.lead[0] ?? null) : (r.lead ?? null);
     return {
       id: r.id,
+      ruleKey: r.rule_key,
+      action: followupAction(r.rule_key),
       leadId: lead?.id ?? null,
       leadName: lead?.parent_name ?? null,
       phone: lead?.phone ?? null,
