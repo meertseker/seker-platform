@@ -61,3 +61,19 @@ export function timerTone(minutes: number): "ok" | "warn" | "late" {
   if (minutes <= 15) return "warn";
   return "late";
 }
+
+/** Anın İstanbul takvim günü: "YYYY-MM-DD". */
+export function istanbulDateString(at: Date): string {
+  return new Date(at.getTime() + ISTANBUL_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** "YYYY-MM-DD" gününe n gün ekler (negatif olabilir). */
+export function addDaysToDateString(dateString: string, n: number): string {
+  return new Date(Date.parse(`${dateString}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
+}
+
+/** "YYYY-MM-DD" günü mesai günü mü? */
+export function isBusinessDay(dateString: string, hours: BusinessHours): boolean {
+  const dow = new Date(`${dateString}T00:00:00Z`).getUTCDay();
+  return hours.days.includes(dow === 0 ? 7 : dow);
+}
