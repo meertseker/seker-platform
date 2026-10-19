@@ -3,13 +3,16 @@ import {
   ArrowRight,
   BadgePercent,
   CalendarClock,
+  MessageCirclePlus,
   Users,
   Wallet,
 } from "lucide-react";
-import { AppointmentList, type AppointmentListItem } from "@/components/appointment-list";
 import { CallButton } from "@/components/call-outcome";
+import { CallQueueList } from "@/components/call-queue-card";
 import { OfferApprovalCard } from "@/components/offer-approval-list";
 import { TaskCompleteButton } from "@/components/task-complete-button";
+import { TodayHeader } from "@/components/today-help";
+import { TodayVisits, type TodayVisit } from "@/components/today-visits";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { getSessionProfile } from "@/lib/auth";
 import {
@@ -28,16 +31,14 @@ import {
   istanbulDateString,
   overdueTotalKurus,
 } from "@/lib/cron-rules";
+import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
+import { fillTemplate } from "@/lib/lead-flow/template";
 import { reminderMessage } from "@/lib/overdue";
 import { formatTRY, tlToKurus } from "@/lib/money";
+import { loadCallQueue, loadFollowupTasks, type FollowupItem, type QueueLead } from "@/lib/queries/call-queue";
 import { getFunnel, getPaymentSummary } from "@/lib/queries/dashboard";
 import { loadPendingOffers } from "@/lib/queries/pending-offers";
-import {
-  daysSince,
-  elapsedText,
-  formatAppointmentTime,
-  WEB_APPLICATION_SOURCES,
-} from "@/lib/next-step";
+import { daysSince } from "@/lib/next-step";
 import { badgeClass, LEAD_STATUS_STYLES } from "@/lib/status-styles";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { Metadata } from "next";
@@ -46,22 +47,18 @@ export const metadata: Metadata = { title: "Bugün" };
 
 export const dynamic = "force-dynamic";
 
-const PRIMARY_LINK_CLASS =
-  "inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-base font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto";
-
 interface LeadJoin {
   id: string;
   parent_name: string;
   phone: string;
 }
 
-interface TodayAppointmentRow {
+interface AppointmentRow {
   id: string;
   lead_id: string;
   scheduled_at: string;
   type: AppointmentType;
   outcome: AppointmentOutcome;
-  outcome_note: string | null;
   lead?: LeadJoin | LeadJoin[] | null;
 }
 
@@ -104,28 +101,26 @@ interface DueInstallmentRow {
   plan?: DuePlanJoin | DuePlanJoin[] | null;
 }
 
-interface ApplicationRow {
-  id: string;
-  parent_name: string;
-  phone: string;
-  created_at: string;
-}
-
-interface NextJob {
-  kind: string;
-  title: string;
-  context: string;
-  action: React.ReactNode;
-  secondary?: React.ReactNode;
-}
-
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
   day: "numeric",
   month: "long",
   timeZone: "Europe/Istanbul",
 });
 
+const weekdayFormatter = new Intl.DateTimeFormat("tr-TR", {
+  weekday: "long",
+  timeZone: "Europe/Istanbul",
+});
+
+const timeFormatter = new Intl.DateTimeFormat("tr-TR", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: "Europe/Istanbul",
+});
+
 const DISPLAY_LIMIT = 5;
+const PAST_APPOINTMENT_LIMIT = 5;
 
 function one<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
@@ -143,47 +138,82 @@ function daysLate(dueDate: string, today: string) {
   return Math.round(diff);
 }
 
-function greetingByHour(hour: number) {
-  if (hour < 6) return "İyi geceler";
-  if (hour < 12) return "Günaydın";
-  if (hour < 18) return "İyi günler";
-  return "İyi akşamlar";
+/** "Salı, 4 Kasım · Zehra" */
+function headerDateLine(now: Date, today: string, firstName: string) {
+  const weekday = weekdayFormatter.format(now);
+  return `${weekday.charAt(0).toLocaleUpperCase("tr-TR")}${weekday.slice(1)}, ${formatDate(today)} · ${firstName}`;
 }
 
-function normalizeAppointments(rows: TodayAppointmentRow[]): AppointmentListItem[] {
+function toVisits(rows: AppointmentRow[], today: string, now: Date): TodayVisit[] {
   return rows.map((row) => {
     const lead = one(row.lead);
-
+    const at = new Date(row.scheduled_at);
+    const time = timeFormatter.format(at);
+    const day = istanbulDateString(at);
     return {
       id: row.id,
       leadId: lead?.id ?? row.lead_id,
-      leadName: lead?.parent_name,
-      leadPhone: lead?.phone,
-      scheduled_at: row.scheduled_at,
-      type: row.type,
+      leadName: lead?.parent_name ?? "Veli",
+      when: day === today ? time : `${formatDate(day)} ${time}`,
+      typeLabel: row.type === "okul_ziyareti" ? null : label(APPOINTMENT_TYPES, row.type),
       outcome: row.outcome,
-      outcome_note: row.outcome_note,
+      overdue: row.outcome === "bekliyor" && at.getTime() < now.getTime(),
     };
   });
 }
 
-function NextJobCard({ job }: { job: NextJob | null }) {
-  if (!job) return null;
+/** Prototipteki sade bölüm başlığı: başlık solda, sayı sağda. */
+function TodaySection({
+  title,
+  countText,
+  children,
+}: {
+  title: string;
+  countText?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section
-      aria-labelledby="next-job-title"
-      className="rounded-2xl bg-primary-soft p-5 sm:p-6"
-    >
-      <p className="text-sm font-semibold uppercase tracking-wide text-primary-strong">Sıradaki iş</p>
-      <h2 id="next-job-title" className="mt-1 text-2xl font-semibold text-foreground">
-        {job.title}
-      </h2>
-      <p className="mt-1 text-base text-slate-700">{job.context}</p>
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        {job.action}
-        {job.secondary}
+    <section className="flex flex-col gap-2.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-[19px] font-bold text-foreground">{title}</h2>
+        {countText ? <span className="text-[13px] text-muted-foreground">{countText}</span> : null}
       </div>
+      {children}
     </section>
+  );
+}
+
+function FollowupRowView({ task }: { task: FollowupItem }) {
+  const body = (
+    <>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate text-[15px] font-semibold text-foreground">{task.leadName ?? task.title}</span>
+        <span className="truncate text-[13px] text-muted-foreground">
+          {task.leadName ? task.subtitle : "Genel görev"}
+        </span>
+      </div>
+      {task.dueNow ? (
+        <span className="shrink-0 rounded-full bg-warning-soft px-2.5 py-1 text-[13px] font-semibold text-warning">
+          şimdi
+        </span>
+      ) : task.time ? (
+        <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">{task.time}</span>
+      ) : null}
+    </>
+  );
+  const rowClass = "flex min-h-14 flex-1 items-center justify-between gap-2.5 py-3 pl-3.5";
+
+  return (
+    <li className="flex items-center gap-2 pr-2">
+      {task.leadId ? (
+        <Link href={`/leads/${task.leadId}`} className={`${rowClass} min-w-0 hover:text-primary-strong`}>
+          {body}
+        </Link>
+      ) : (
+        <div className={`${rowClass} min-w-0`}>{body}</div>
+      )}
+      <TaskCompleteButton id={task.id} compact />
+    </li>
   );
 }
 
@@ -273,6 +303,7 @@ function SummaryStat({
   );
 }
 
+
 export default async function Home({
   searchParams,
 }: {
@@ -288,83 +319,69 @@ export default async function Home({
   const month = today.slice(0, 7);
   const dayStart = `${today}T00:00:00+03:00`;
   const dayEnd = `${today}T23:59:59+03:00`;
-  const istanbulHour = Number(
-    new Intl.DateTimeFormat("en-GB", {
-      hour: "2-digit",
-      hour12: false,
-      timeZone: "Europe/Istanbul",
-    }).format(now),
-  );
   const firstName = profile.full_name.split(" ")[0] || profile.full_name;
 
-  const settingsPromise = supabase
+  const flowSettings = await getLeadFlowSettings(supabase);
+
+  const staleSettingPromise = supabase
     .from("app_settings")
     .select("value")
     .eq("key", "takipsizlik_gun")
     .maybeSingle();
-  const appointmentsPromise = supabase
-    .from("appointments")
-    .select("id, lead_id, scheduled_at, type, outcome, outcome_note, lead:leads(id, parent_name, phone)")
-    .gte("scheduled_at", dayStart)
-    .lte("scheduled_at", dayEnd)
-    .order("scheduled_at", { ascending: true });
-  let tasksQuery = supabase
+  const appointmentSelect = "id, lead_id, scheduled_at, type, outcome, lead:leads(id, parent_name, phone)";
+  // İleri tarihli açık görevler: bugünküler "Takip aramaları"nda, bunlar aşağıdaki listede.
+  let laterTasksQuery = supabase
     .from("tasks")
     .select("id, title, due_date, lead_id, lead:leads(id, parent_name, phone)")
     .eq("status", "acik")
+    .gt("due_date", today)
     .order("due_date", { ascending: true })
     .order("created_at", { ascending: true });
-
   if (!isYonetici) {
-    tasksQuery = tasksQuery.eq("assigned_to", profile.id);
-  }
-
-  let doneTasksQuery = supabase
-    .from("tasks")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "tamamlandi")
-    .gte("updated_at", dayStart);
-  if (!isYonetici) {
-    doneTasksQuery = doneTasksQuery.eq("assigned_to", profile.id);
+    laterTasksQuery = laterTasksQuery.eq("assigned_to", profile.id);
   }
 
   const [
-    settingsResult,
+    staleSettingResult,
     appointmentsResult,
-    tasksResult,
-    applicationResult,
-    pastAppointmentResult,
-    doneTasksResult,
-    doneAppointmentsResult,
+    pastAppointmentsResult,
+    laterTasksResult,
+    queueResult,
+    followupResult,
   ] = await Promise.all([
-    settingsPromise,
-    appointmentsPromise,
-    tasksQuery,
-    supabase
-      .from("leads")
-      .select("id, parent_name, phone, created_at")
-      .eq("status", "yeni")
-      .in("source", WEB_APPLICATION_SOURCES)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle(),
+    staleSettingPromise,
     supabase
       .from("appointments")
-      .select("id, lead_id, scheduled_at, type, outcome, outcome_note, lead:leads(id, parent_name, phone)")
+      .select(appointmentSelect)
+      .gte("scheduled_at", dayStart)
+      .lte("scheduled_at", dayEnd)
+      .order("scheduled_at", { ascending: true }),
+    // Önceki günlerden sonucu girilmemiş randevular "Bugünkü ziyaretler"in başında kalır.
+    supabase
+      .from("appointments")
+      .select(appointmentSelect)
       .eq("outcome", "bekliyor")
-      .lt("scheduled_at", now.toISOString())
+      .lt("scheduled_at", dayStart)
       .order("scheduled_at", { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-    doneTasksQuery,
-    supabase
-      .from("appointments")
-      .select("id", { count: "exact", head: true })
-      .neq("outcome", "bekliyor")
-      .gte("updated_at", dayStart),
+      .limit(PAST_APPOINTMENT_LIMIT),
+    laterTasksQuery,
+    loadCallQueue(supabase, profile.id, now, flowSettings).then(
+      (leads) => ({ leads, error: false }),
+      (e: unknown) => {
+        console.error("bugun call queue:", e);
+        return { leads: [] as QueueLead[], error: true };
+      },
+    ),
+    loadFollowupTasks(supabase, profile.id, profile.role, today, now).then(
+      (tasks) => ({ tasks, error: false }),
+      (e: unknown) => {
+        console.error("bugun followups:", e);
+        return { tasks: [] as FollowupItem[], error: true };
+      },
+    ),
   ]);
 
-  const staleDays = Number(settingsResult.data?.value ?? 3);
+  const staleDays = Number(staleSettingResult.data?.value ?? 3);
   const cutoff = staleCutoffIso(now, staleDays);
 
   let staleLeadsQuery = supabase
@@ -406,29 +423,23 @@ export default async function Home({
     getPaymentSummary(month),
   ]);
 
-  const appointments = normalizeAppointments(
-    (appointmentsResult.data ?? []) as unknown as TodayAppointmentRow[],
+  const queue = queueResult.leads;
+  const followups = followupResult.tasks;
+  const visits = toVisits(
+    [
+      ...((pastAppointmentsResult.data ?? []) as unknown as AppointmentRow[]),
+      ...((appointmentsResult.data ?? []) as unknown as AppointmentRow[]),
+    ],
+    today,
+    now,
   );
-  const tasks = (tasksResult.data ?? []) as unknown as TaskRow[];
+  const visitsLoadFailed = Boolean(appointmentsResult.error || pastAppointmentsResult.error);
+  const laterTasks = (laterTasksResult.data ?? []) as unknown as TaskRow[];
   const staleLeads = (staleLeadsResult.data ?? []) as unknown as StaleLeadRow[];
   const dueInstallments = (dueInstallmentsResult.data ??
     []) as unknown as DueInstallmentRow[];
   const pendingOfferItems = pendingOffersResult.offers;
   const pendingOffersCount = pendingOffersResult.count;
-
-  // Randevular: geçmiş-ama-bekleyen üstte, sonra saate göre.
-  const sortedAppointments = [...appointments].sort((a, b) => {
-    const aOverdue =
-      a.outcome === "bekliyor" && new Date(a.scheduled_at).getTime() < now.getTime();
-    const bOverdue =
-      b.outcome === "bekliyor" && new Date(b.scheduled_at).getTime() < now.getTime();
-    if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
-    return a.scheduled_at.localeCompare(b.scheduled_at);
-  });
-  const appointmentsToShow = sortedAppointments.slice(0, DISPLAY_LIMIT);
-  const pendingAppointmentCount = appointments.filter(
-    (appointment) => appointment.outcome === "bekliyor",
-  ).length;
 
   const tahsilatTotalKurus = overdueTotalKurus(
     dueInstallments.map((row) => ({ amount: row.amount })),
@@ -437,170 +448,88 @@ export default async function Home({
   const overdueOnlyKurus = overdueTotalKurus(overdueOnly.map((row) => ({ amount: row.amount })));
   const dueInstallmentsToShow = dueInstallments.slice(0, DISPLAY_LIMIT);
 
-  // Gelecek tarihli görev listede görünür ama "bugünkü iş" sayılmaz.
-  const dueTaskCount = tasks.filter((task) => task.due_date <= today).length;
-  const followupCount = tasks.length + staleLeads.length;
+  const followupCount = laterTasks.length + staleLeads.length;
   const followupLimit = showAllFollowups ? Number.POSITIVE_INFINITY : DISPLAY_LIMIT;
-  const onayCount = isYonetici ? pendingOffersCount : 0;
-  const totalJobs =
-    pendingAppointmentCount + dueTaskCount + staleLeads.length + dueInstallments.length + onayCount;
-  const doneJobs = (doneTasksResult.count ?? 0) + (doneAppointmentsResult.count ?? 0);
   const nowIso = now.toISOString();
   const loadFailed = Boolean(
-    appointmentsResult.error || tasksResult.error || staleLeadsResult.error || dueInstallmentsResult.error,
+    queueResult.error ||
+      followupResult.error ||
+      visitsLoadFailed ||
+      laterTasksResult.error ||
+      staleLeadsResult.error ||
+      dueInstallmentsResult.error,
   );
 
-  // Sıradaki iş: web başvurusu → sonuçlanmamış randevu → bugünkü randevu → görev → geciken ödeme
-  const application = applicationResult.data as ApplicationRow | null;
-  const pastAppointment = pastAppointmentResult.data
-    ? normalizeAppointments([pastAppointmentResult.data as unknown as TodayAppointmentRow])[0]
-    : null;
-  const nextTodayAppointment = sortedAppointments.find(
-    (appointment) =>
-      appointment.outcome === "bekliyor" &&
-      new Date(appointment.scheduled_at).getTime() >= now.getTime(),
+  // "Ulaşamadım" şablonu varsa WhatsApp düğmesi onu hazır yazar; yoksa boş sohbet açar.
+  const unreachedTemplate = flowSettings.templates.find((t) => t.key === "ulasilamadi")?.text;
+  const waMessages = Object.fromEntries(
+    queue.map((lead) => [
+      lead.id,
+      unreachedTemplate ? fillTemplate(unreachedTemplate, { veli: lead.parentName, danisman: firstName }) : undefined,
+    ]),
   );
-  const urgentTask = tasks.find((task) => task.due_date <= today);
-  const firstDue = dueInstallments[0];
-
-  let nextJob: NextJob | null = null;
-  if (application) {
-    nextJob = {
-      kind: "basvuru",
-      title: "Yeni başvuruyu ara",
-      context: `${application.parent_name} · ${elapsedText(application.created_at, nowIso)} başvurdu`,
-      action: (
-        <CallButton
-          leadId={application.id}
-          phone={application.phone}
-          leadName={application.parent_name}
-          label={`${application.parent_name.split(" ")[0]} ara`}
-          variant="primary"
-          className="w-full sm:w-auto"
-        />
-      ),
-    };
-  } else if (pastAppointment) {
-    nextJob = {
-      kind: "sonuc",
-      title:
-        pastAppointment.type === "telefon" ? "Görüşme sonucunu gir" : "Ziyaret sonucunu gir",
-      context: `${pastAppointment.leadName ?? "Veli"} · ${formatAppointmentTime(pastAppointment.scheduled_at)}`,
-      action: (
-        <Link href={`/leads/${pastAppointment.leadId}?adim=sonuc`} className={PRIMARY_LINK_CLASS}>
-          Sonucu gir
-        </Link>
-      ),
-    };
-  } else if (nextTodayAppointment) {
-    nextJob = {
-      kind: "randevu",
-      title: "Sıradaki randevu",
-      context: `${nextTodayAppointment.leadName ?? "Veli"} · ${formatAppointmentTime(nextTodayAppointment.scheduled_at)} · ${label(APPOINTMENT_TYPES, nextTodayAppointment.type)}`,
-      action: (
-        <Link href={`/leads/${nextTodayAppointment.leadId}`} className={PRIMARY_LINK_CLASS}>
-          Veli kartını aç
-        </Link>
-      ),
-    };
-  } else if (urgentTask) {
-    const lead = one(urgentTask.lead);
-    nextJob = {
-      kind: "gorev",
-      title: urgentTask.title,
-      context: `${lead?.parent_name ?? "Genel görev"} · Son gün: ${formatDate(urgentTask.due_date)}`,
-      action: lead?.phone ? (
-        <CallButton
-          leadId={lead.id}
-          phone={lead.phone}
-          leadName={lead.parent_name}
-          variant="primary"
-          className="w-full sm:w-auto"
-        />
-      ) : lead ? (
-        <Link href={`/leads/${lead.id}`} className={PRIMARY_LINK_CLASS}>
-          Veli kartını aç
-        </Link>
-      ) : null,
-      secondary: <TaskCompleteButton id={urgentTask.id} />,
-    };
-  } else if (firstDue) {
-    const plan = one(firstDue.plan);
-    const student = one(plan?.student);
-    const late = daysLate(firstDue.due_date, today);
-    const reminderPhone = student?.phone || one(student?.family)?.phone || null;
-    nextJob = {
-      kind: "odeme",
-      title: late > 0 ? "Geciken ödemeyi hatırlat" : "Bugün vadeli ödeme",
-      context: `${student?.full_name ?? "Öğrenci"} · ${formatTRY(tlToKurus(Number(firstDue.amount)))}${late > 0 ? ` · ${late} gün gecikmiş` : ""}`,
-      action: (
-        <Link
-          href={student ? `/ogrenciler/${student.id}` : "/odemeler/gecikenler"}
-          className={PRIMARY_LINK_CLASS}
-        >
-          Öğrenciyi aç
-        </Link>
-      ),
-      // Başlık "hatırlat" diyor: WhatsApp hatırlatması kartın kendisinde olsun.
-      secondary:
-        late > 0 && student && reminderPhone ? (
-          <WhatsAppButton
-            phone={reminderPhone}
-            message={reminderMessage({
-              studentName: student.full_name,
-              totalKurus: tlToKurus(Number(firstDue.amount)),
-              items: [{ dueDate: firstDue.due_date, itemType: plan?.item_type ?? "diger" }],
-            })}
-          />
-        ) : undefined,
-    };
-  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-muted-foreground">
-          {formatDate(today)}
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground sm:text-3xl">
-          {greetingByHour(istanbulHour)} {firstName}
-        </h1>
-        <p className="mt-2 text-base text-muted-foreground">
-          {loadFailed
-            ? "Bazı listeler yüklenemedi, sayılar eksik olabilir. Sayfayı yenileyin."
-            : totalJobs > 0
-              ? `Bugün ${totalJobs} işin var.`
-              : "Bugün bekleyen bir işin yok, harika gidiyorsun."}
-          {totalJobs + doneJobs > 0
-            ? ` ${totalJobs + doneJobs} işten ${doneJobs} tanesi bitti.`
-            : ""}
-        </p>
-      </div>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-[18px]">
+      <TodayHeader dateLine={headerDateLine(now, today, firstName)} />
 
-      <NextJobCard job={nextJob} />
+      {loadFailed ? (
+        <ErrorState text="Bazı listeler yüklenemedi, sayılar eksik olabilir. Sayfayı yenileyin." />
+      ) : null}
 
-      {/* 1 — Bugünkü randevular */}
-      <SectionBlock
-        title="Bugünkü randevular"
-        description="Zamanı geçmiş ama sonuçlanmamış görüşmeler en üstte."
-        count={pendingAppointmentCount}
-        seeAllHref="/takvim"
+      <Link
+        href="/leads/mesaj"
+        className="flex min-h-14 items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-input/60 bg-surface text-[15px] font-semibold text-foreground transition-colors hover:border-primary hover:text-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {appointmentsResult.error ? (
-          <ErrorState text="Randevular yüklenirken bir sorun oluştu." />
-        ) : (
-          <AppointmentList
-            appointments={appointmentsToShow}
-            emptyText="Bugün planlanmış randevu yok."
-            compactTime
-          />
-        )}
-      </SectionBlock>
+        <MessageCirclePlus aria-hidden className="size-5" />
+        Instagram / WhatsApp mesajını ekle
+      </Link>
 
-      {/* 2 — Takip bekleyenler */}
+      <TodaySection title="Şimdi ara" countText={`${queue.length} yeni veli`}>
+        {queueResult.error ? (
+          <ErrorState text="Arama listesi yüklenirken bir sorun oluştu." />
+        ) : queue.length === 0 ? (
+          <EmptyState text="Şu an aranacak yeni veli yok." />
+        ) : (
+          <CallQueueList leads={queue} serverNow={now.getTime()} waMessages={waMessages} />
+        )}
+      </TodaySection>
+
+      <TodaySection title="Takip aramaları" countText={`${followups.length} kişi`}>
+        {followupResult.error ? (
+          <ErrorState text="Takip listesi yüklenirken bir sorun oluştu." />
+        ) : followups.length === 0 ? (
+          <EmptyState text="Bugün takip araması yok." />
+        ) : (
+          <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
+            {followups.map((task) => (
+              <FollowupRowView key={task.id} task={task} />
+            ))}
+          </ul>
+        )}
+      </TodaySection>
+
+      <TodaySection title="Bugünkü ziyaretler" countText={`${visits.length} randevu`}>
+        {visitsLoadFailed ? (
+          <ErrorState text="Randevular yüklenirken bir sorun oluştu." />
+        ) : visits.length === 0 ? (
+          <EmptyState text="Bugün planlanmış randevu yok." />
+        ) : (
+          <TodayVisits visits={visits} />
+        )}
+        <Link
+          href="/takvim"
+          className="inline-flex min-h-11 items-center gap-1 self-start rounded-xl px-1 text-sm font-semibold text-primary transition-colors hover:text-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Takvimi aç
+          <ArrowRight aria-hidden className="size-4" />
+        </Link>
+      </TodaySection>
+
+      {/* Takip bekleyenler: ileri tarihli görevler ve sessiz kalan veliler */}
       <SectionBlock
         title="Takip bekleyenler"
-        description="Açık görevler ve uzun süredir işlem görmeyen veliler."
+        description="İleri tarihli görevler ve uzun süredir işlem görmeyen veliler."
         count={followupCount}
         id="takip"
         seeAllHref={
@@ -612,22 +541,19 @@ export default async function Home({
         }
         seeAllLabel={showAllFollowups ? "İlk 5'i göster" : `Tümünü gör (${followupCount})`}
       >
-        {staleLeadsResult.error || tasksResult.error ? (
+        {staleLeadsResult.error || laterTasksResult.error ? (
           <ErrorState text="Takip listesi yüklenirken bir sorun oluştu." />
         ) : followupCount === 0 ? (
           <EmptyState text="Takip bekleyen görev veya veli görünmüyor." />
         ) : (
           <ul className="space-y-3">
-            {tasks.slice(0, followupLimit).map((task) => {
+            {laterTasks.slice(0, followupLimit).map((task) => {
               const lead = one(task.lead);
-              const isDue = task.due_date <= today;
 
               return (
                 <li
                   key={`task-${task.id}`}
-                  className={`rounded-2xl border p-4 shadow-sm ${
-                    isDue ? "border-amber-200 bg-warning-soft" : "border-border bg-surface"
-                  }`}
+                  className="rounded-2xl border border-border bg-surface p-4 shadow-sm"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
@@ -644,13 +570,6 @@ export default async function Home({
                           <span>Genel görev</span>
                         )}
                         <span>Son gün: {formatDate(task.due_date)}</span>
-                        {isDue ? (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                            {task.due_date === today
-                              ? "Bugün"
-                              : `${daysLate(task.due_date, today)} gün gecikti`}
-                          </span>
-                        ) : null}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -671,7 +590,7 @@ export default async function Home({
               );
             })}
             {staleLeads
-              .slice(0, Math.max(0, followupLimit - tasks.length))
+              .slice(0, Math.max(0, followupLimit - laterTasks.length))
               .map((lead) => (
                 <li
                   key={`stale-${lead.id}`}

@@ -121,3 +121,10 @@ export const FEEDBACK_STATUSES = {
   yapilmayacak: "Yapılmayacak",
 } as const;
 export type FeedbackStatus = keyof typeof FEEDBACK_STATUSES;
+
+/** Formdaki "ne zaman başlamak istiyor" cevabı (leads.start_window). */
+export const START_WINDOWS = {
+  hemen: "hemen başlamak istiyor", "1_3_ay": "1–3 ay içinde",
+  "3_6_ay": "3–6 ay içinde", gelecek_yil: "gelecek yıl",
+} as const;
+export type StartWindow = keyof typeof START_WINDOWS;
