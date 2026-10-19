@@ -20,11 +20,7 @@ const STEP = process.argv.find((a) => a.startsWith("--step="))?.slice(7);
 const SEASON = "2026-2027";
 const STAFF_SINCE = "2026-10-19T00:00:00Z";
 
-if (STEP === "tentative") {
-  console.log("tentative: migration bekleniyor (Task 7 doldurur). Bir şey yapılmadı.");
-  process.exit(0);
-}
-if (STEP !== "kitap" && STEP !== "kivanc") {
+if (STEP !== "kitap" && STEP !== "kivanc" && STEP !== "tentative") {
   console.error("Kullanım: <env> --step=kitap|kivanc|tentative [--apply]");
   process.exit(1);
 }
@@ -175,4 +171,46 @@ async function kivanc() {
   console.log(`\n${APPLY ? "Uygulandı." : "(dry-run)"}`);
 }
 
-(STEP === "kitap" ? kitap() : kivanc()).catch((e) => { console.error(e); process.exit(1); });
+const TENTATIVE_FROM = "2027-01-01";
+
+async function tentative() {
+  const base = "id, full_name, status, payment_plans(id, item_type, season, total_amount, installments(id, due_date, status)";
+  let hasColumn = true;
+  let res = await db.from("students").select(`${base}, tentative_from)`);
+  // payment_plans.tentative_from yoksa PostgREST kolon hatası döner.
+  if (res.error) {
+    if (!/tentative_from/.test(res.error.message)) throw res.error;
+    hasColumn = false;
+    console.log("UYARI: tentative_from kolonu yok (migration 0012 bekleniyor) — tüm adaylar işaretlenecek");
+    res = await db.from("students").select(`${base})`);
+    if (res.error) throw res.error;
+  }
+  const students = (res.data as any[]).filter((s) => s.status === "aktif");
+  const targets: { name: string; plan: any }[] = [];
+  for (const s of students) {
+    for (const p of s.payment_plans) {
+      if (p.item_type !== "aidat" || p.season !== SEASON) continue;
+      if (hasColumn && p.tentative_from != null) continue;
+      if (!p.installments.some((i: any) => i.status === "bekliyor" && i.due_date >= TENTATIVE_FROM)) continue;
+      targets.push({ name: s.full_name, plan: p });
+    }
+  }
+  targets.sort((a, b) => a.name.localeCompare(b.name, "tr"));
+  for (const t of targets) console.log(`${t.name}: tentative_from → ${TENTATIVE_FROM}`);
+
+  if (APPLY) {
+    if (!hasColumn) { console.error("HATA: tentative_from kolonu yok (migration 0012 uygulanmadan --apply yapılmaz)."); process.exit(1); }
+    const file = backupFile();
+    fs.writeFileSync(file, JSON.stringify(targets.map((t) => ({ name: t.name, plan: t.plan })), null, 1));
+    console.log(`Yedek yazıldı: ${file}`);
+    const done: string[] = [];
+    for (const t of targets) await step(done, t.name, db.from("payment_plans").update({ tentative_from: TENTATIVE_FROM }).eq("id", t.plan.id).is("tentative_from", null));
+    const { data, error } = await db.from("payment_plans").select("id, tentative_from").in("id", targets.map((t) => t.plan.id));
+    if (error) throw error;
+    const bad = (data as any[]).filter((r) => r.tentative_from !== TENTATIVE_FROM);
+    if (bad.length || (data as any[]).length !== targets.length) { console.error(`DOĞRULAMA HATASI: ${bad.length} plan işaretlenmedi`); process.exit(1); }
+  }
+  console.log(`\n${targets.length} plan ${APPLY ? "işaretlendi" : "(dry-run)"}`);
+}
+
+(STEP === "kitap" ? kitap() : STEP === "kivanc" ? kivanc() : tentative()).catch((e) => { console.error(e); process.exit(1); });
