@@ -2,4 +2,4 @@
 0 3 * * * . /app/env.sh; curl -fsS -m 300 -H "Authorization: Bearer $CRON_SECRET" http://panel:3000/api/cron/daily >> /proc/1/fd/1 2>&1 && if [ -n "$HC_CRON_DAILY_URL" ]; then curl -fsS -m 10 "$HC_CRON_DAILY_URL" > /dev/null; fi
 0 6 * * * . /app/env.sh; curl -fsS -m 300 -H "Authorization: Bearer $CRON_SECRET" http://panel:3000/api/cron/ads >> /proc/1/fd/1 2>&1
 
-* * * * * . /app/env.sh; curl -fsS -m 170 -H "Authorization: Bearer $CRON_SECRET" http://panel:3000/api/wa/flush > /dev/null 2>> /proc/1/fd/1
+* * * * * . /app/env.sh; curl -fsS -m 170 -H "Authorization: Bearer $CRON_SECRET" http://panel:3000/api/cron/wa > /dev/null 2>> /proc/1/fd/1

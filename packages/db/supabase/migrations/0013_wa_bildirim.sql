@@ -1,6 +1,6 @@
 -- Panel işlemlerini okulun WhatsApp grubuna yansıtan gönderim kuyruğu.
 -- Her events satırı ve her görüşme notu (lead_notes) bir kuyruk satırı üretir;
--- /api/wa/flush kuyruğu boşaltıp WAHA üzerinden gruba yazar.
+-- /api/cron/wa kuyruğu boşaltıp WAHA üzerinden gruba yazar.
 
 create table public.wa_outbox (
   id uuid primary key default gen_random_uuid(),
