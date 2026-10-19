@@ -102,3 +102,23 @@ describe("afterVisitTasks / noShowTask", () => {
     expect(t.ruleKey).toBe("noshow:A1");
   });
 });
+
+describe("takip tabanı (deneme saatinden önceye düşmez)", () => {
+  it("Cuma ilk deneme: 3. deneme Pazartesi 18:30 ise 4. görev Salı 08:30", () => {
+    const first = at("2026-11-06", "10:00");
+    const t = followupAfterAttempt("L1", "A", 3, at("2026-11-09", "18:30"), first, H)!;
+    expect(t.dueAt).toEqual(at("2026-11-10", "08:30"));
+  });
+  it("normal Salı akışı değişmez: 4. deneme Çarşamba 18:35 -> Perşembe 10:00", () => {
+    const first = at("2026-11-03", "10:00");
+    const t = followupAfterAttempt("L1", "A", 4, at("2026-11-04", "18:35"), first, H)!;
+    expect(t.dueAt).toEqual(at("2026-11-05", "10:00"));
+  });
+  it("deneme 0 -> null", () => {
+    const a = at("2026-11-03", "10:00");
+    expect(followupAfterAttempt("L1", "A", 0, a, a, H)).toBeNull();
+  });
+  it("gelmedi görevi Cumartesi -> Pazartesi 08:30", () => {
+    expect(noShowTask("A1", "A", at("2026-11-07", "12:00"), H).dueAt).toEqual(at("2026-11-09", "08:30"));
+  });
+});

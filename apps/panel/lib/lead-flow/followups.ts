@@ -48,8 +48,12 @@ export function followupAfterAttempt(
   const day0 = istanbulDateString(firstAttemptAt);
   const ruleKey = `takip:${leadId}:${next}`;
   const title = `${next}. deneme · ${leadName}`;
-  const at = (offset: number, hhmm: string) =>
-    businessDayAt(addDaysToDateString(day0, offset), hhmm, hours, 1);
+  // Görev, denemenin kendisinden (+3 saat, mesaiye kaydırılmış) önceye düşmez.
+  const floor = nextBusinessMoment(new Date(attemptAt.getTime() + 3 * HOUR_MS), hours);
+  const at = (offset: number, hhmm: string) => {
+    const due = businessDayAt(addDaysToDateString(day0, offset), hhmm, hours, 1);
+    return due.getTime() < floor.getTime() ? floor : due;
+  };
 
   switch (attempt) {
     case 1:
