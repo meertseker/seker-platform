@@ -8,7 +8,7 @@ import { createAppointment } from "@/actions/appointments";
 import { updateLeadStatus } from "@/actions/leads";
 import { LOST_REASONS, type LeadStatus, type LostReason } from "@/lib/constants";
 import { formatDayTime, parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
-import { appointmentTasks, followupAfterAttempt, type PlannedTask } from "@/lib/lead-flow/followups";
+import { appointmentTasks, followupAfterAttempt, kontenjanTask, type PlannedTask } from "@/lib/lead-flow/followups";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { callWaLink } from "@/lib/lead-flow/call-wa";
 import { closeTasksByPrefix, tasksByPrefix, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
@@ -326,7 +326,13 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
         break;
       case "ulasilamadi": {
         if (!next) {
-          done = ["7 günde ulaşılamadı · veli Kaybedildi (Ulaşılamadı) olarak kapandı"];
+          await upsertPlannedTasks(supabase, leadId, profile.id, [
+            kontenjanTask(leadId, lead.parent_name, now, settings.hours),
+          ]);
+          done = [
+            "7 günde ulaşılamadı · veli Kaybedildi (Ulaşılamadı) olarak kapandı",
+            "1 ay sonra kontenjan mesajı görevi kuruldu",
+          ];
           closed = true;
           break;
         }

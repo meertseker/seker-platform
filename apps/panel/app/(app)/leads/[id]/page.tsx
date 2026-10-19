@@ -7,6 +7,9 @@ import {
   type AppointmentListItem,
 } from "@/components/appointment-list";
 import { CallButton } from "@/components/call-outcome";
+import { FollowupTimeline } from "@/components/followup-timeline";
+import { LeadOriginCard } from "@/components/lead-origin-card";
+import { MessageTemplates, type MessageTemplateLink } from "@/components/message-templates";
 import { LeadActions, type LeadSheet } from "@/components/lead-actions";
 import { NoteForm } from "@/components/note-form";
 import { type ActivePriceItem } from "@/components/offer-form";
@@ -27,7 +30,12 @@ import {
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { formatTRY, tlToKurus } from "@/lib/money";
-import { attributionLines, type LeadAttribution } from "@/lib/lead-attribution";
+import { attributionLines, originLines, type LeadAttribution } from "@/lib/lead-attribution";
+import { formatDayTime } from "@/lib/lead-flow/business-hours";
+import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
+import { fillTemplate } from "@/lib/lead-flow/template";
+import { buildFollowupTimeline, type TimelineTask } from "@/lib/lead-flow/timeline";
+import { waMeUrl } from "@/lib/whatsapp";
 import { nextStep } from "@/lib/next-step";
 import type { Metadata } from "next";
 
@@ -62,6 +70,15 @@ interface LeadRow extends LeadAttribution {
   child_name: string | null;
   child_birth_month: number | null;
   child_birth_year: number | null;
+  channel: string | null;
+  content_code: string | null;
+  district: string | null;
+  start_window: string | null;
+  wants_whatsapp: boolean | null;
+  first_contact_at: string | null;
+  q_age_ok: boolean | null;
+  q_area_ok: boolean | null;
+  q_timing_ok: boolean | null;
   source: LeadSource;
   source_detail: string | null;
   status: LeadStatus;
@@ -112,6 +129,13 @@ interface OfferRow {
   superseded_by_offer_id: string | null;
   created_at: string;
   creator?: ProfileJoin | ProfileJoin[] | null;
+}
+
+interface TaskRow {
+  rule_key: string;
+  status: string;
+  due_at: string | null;
+  created_at: string;
 }
 
 interface PriceItemRow {
@@ -236,11 +260,13 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
     appointmentsResult,
     offersResult,
     priceItemsResult,
+    tasksResult,
+    settings,
   ] = await Promise.all([
     supabase
       .from("leads")
       .select(
-        "id, parent_name, phone, child_name, child_birth_month, child_birth_year, source, source_detail, gclid, utm_source, utm_medium, utm_campaign, landing_path, status, lost_reason, ingilizce_gerekli, ozel_durum, ozel_durum_note, wants_summer, assigned_to, converted_student_id, last_activity_at, created_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
+        "id, parent_name, phone, child_name, child_birth_month, child_birth_year, channel, content_code, district, start_window, wants_whatsapp, first_contact_at, q_age_ok, q_area_ok, q_timing_ok, source, source_detail, gclid, utm_source, utm_medium, utm_campaign, landing_path, status, lost_reason, ingilizce_gerekli, ozel_durum, ozel_durum_note, wants_summer, assigned_to, converted_student_id, last_activity_at, created_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -272,6 +298,12 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
       .select("program, monthly_fee, price_list:price_lists!inner(is_active)")
       .eq("price_list.is_active", true)
       .order("program", { ascending: true }),
+    supabase
+      .from("tasks")
+      .select("rule_key, status, due_at, created_at")
+      .eq("lead_id", id)
+      .not("rule_key", "is", null),
+    getLeadFlowSettings(supabase),
   ]);
 
   if (leadResult.error || !leadResult.data) notFound();
@@ -326,6 +358,38 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
           : "Kayıt için onaylı bir teklif gerekiyor. Önce teklif hazırlayın.";
   const attribution = attributionLines(lead);
   const hasApplicationInfo = Boolean(lead.source_detail) || attribution.length > 0;
+  const origin = originLines(lead);
+  const originSub = [formatDayTime(new Date(lead.created_at)), origin.channelLabel.startsWith("Google") ? null : lead.landing_path]
+    .filter(Boolean)
+    .join(" · ");
+  const events = (eventsResult.data ?? []) as unknown as EventRow[];
+  const lastReachAt =
+    events.find((event) => {
+      const result = payloadObject(event.payload)?.result;
+      return event.event_type === "arama_kaydi" && (result === "randevu" || result === "geri_ara");
+    })?.created_at ?? null;
+  const timeline = tasksResult.error || eventsResult.error
+    ? null
+    : buildFollowupTimeline({
+        leadId: lead.id,
+        status: lead.status,
+        lostReason: lead.lost_reason,
+        firstContactAt: lead.first_contact_at,
+        lastReachAt,
+        tasks: ((tasksResult.data ?? []) as TaskRow[]).map(
+          (task): TimelineTask => ({
+            ruleKey: task.rule_key,
+            status: task.status,
+            dueAt: task.due_at,
+            createdAt: task.created_at,
+          }),
+        ),
+      });
+  const danisman = profile.full_name?.split(" ")[0] || profile.full_name || "";
+  const messageItems: MessageTemplateLink[] = settings.templates.map((template) => {
+    const text = fillTemplate(template.text, { veli: lead.parent_name, danisman });
+    return { key: template.key, label: template.label, text, href: waMeUrl(lead.phone, text) };
+  });
   const tags = [
     lead.ingilizce_gerekli ? "İngilizce" : null,
     lead.ozel_durum ? "Özel durum" : null,
@@ -357,6 +421,32 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
       </div>
 
       <StageStepper status={lead.status} lostReason={lead.lost_reason} />
+
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
+        <LeadOriginCard
+          channelLabel={origin.channelLabel}
+          codeLabel={origin.codeLabel}
+          sub={originSub || null}
+          answers={origin.answers}
+          fromForm={lead.channel === "form" || Boolean(lead.gclid)}
+        />
+        {timeline ? (
+          <FollowupTimeline
+            leadId={lead.id}
+            timeline={timeline}
+            quals={{
+              age: lead.q_age_ok ?? false,
+              area: lead.q_area_ok ?? false,
+              timing: lead.q_timing_ok ?? false,
+            }}
+          />
+        ) : (
+          <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-destructive-strong">
+            Takip sırası yüklenirken bir sorun oluştu.
+          </p>
+        )}
+        <MessageTemplates items={messageItems} />
+      </div>
 
       <LeadActions
         lead={{

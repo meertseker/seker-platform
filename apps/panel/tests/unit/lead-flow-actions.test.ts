@@ -173,9 +173,24 @@ describe("recordCall", () => {
     lead.status = "ulasildi";
     openTakip = ["takip:L1:6"];
     const r = await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
-    expect(r).toEqual({ done: ["7 günde ulaşılamadı · veli Kaybedildi (Ulaşılamadı) olarak kapandı"], closed: true });
+    expect(r).toEqual({
+      done: [
+        "7 günde ulaşılamadı · veli Kaybedildi (Ulaşılamadı) olarak kapandı",
+        "1 ay sonra kontenjan mesajı görevi kuruldu",
+      ],
+      closed: true,
+    });
     expect(updateLeadStatus).toHaveBeenCalledWith("L1", "kaybedildi", "ulasilamadi");
-    expect(inserts("tasks")).toHaveLength(0);
+    // Tek görev: 30 gün sonra (3 Aralık Perşembe) 10:00 kontenjan mesajı.
+    expect(inserts("tasks")).toEqual([
+      expect.objectContaining({
+        lead_id: "L1",
+        rule_key: "kontenjan:L1",
+        title: "Kontenjan mesajı · Ayşe Yılmaz",
+        due_at: "2026-12-03T07:00:00.000Z",
+        due_date: "2026-12-03",
+      }),
+    ]);
   });
 
   it("geri ara tek görev kurar ve yeni veliyi ulaşıldıya alır", async () => {

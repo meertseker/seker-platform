@@ -74,6 +74,18 @@ export function followupAfterAttempt(
   }
 }
 
+/** 7 günde ulaşılamayan veliye tek seferlik "kontenjan" mesajı: kapanıştan 30 gün sonra 10:00 (mesai gününe kayar). */
+export function kontenjanTask(leadId: string, leadName: string, closedAt: Date, hours: BusinessHours): PlannedTask {
+  const day = addDaysToDateString(istanbulDateString(closedAt), 30);
+  return {
+    ruleKey: `kontenjan:${leadId}`,
+    title: `Kontenjan mesajı · ${leadName}`,
+    kind: "whatsapp",
+    templateKey: "kontenjan",
+    dueAt: businessDayAt(day, "10:00", hours, 1),
+  };
+}
+
 /** Randevu hatırlatmaları; `now`'dan önce kalanlar atlanır. */
 export function appointmentTasks(
   apptId: string,

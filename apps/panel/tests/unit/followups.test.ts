@@ -5,6 +5,7 @@ import {
   afterVisitTasks,
   appointmentTasks,
   followupAfterAttempt,
+  kontenjanTask,
   noShowTask,
 } from "@/lib/lead-flow/followups";
 
@@ -120,5 +121,22 @@ describe("takip tabanı (deneme saatinden önceye düşmez)", () => {
   });
   it("gelmedi görevi Cumartesi -> Pazartesi 08:30", () => {
     expect(noShowTask("A1", "A", at("2026-11-07", "12:00"), H).dueAt).toEqual(at("2026-11-09", "08:30"));
+  });
+});
+
+describe("kontenjanTask", () => {
+  it("kapanıştan 30 gün sonra 10:00, WhatsApp kontenjan şablonu", () => {
+    const t = kontenjanTask("L1", "Ayşe", at("2026-11-03", "16:00"), H);
+    expect(t).toEqual({
+      ruleKey: "kontenjan:L1",
+      title: "Kontenjan mesajı · Ayşe",
+      kind: "whatsapp",
+      templateKey: "kontenjan",
+      dueAt: at("2026-12-03", "10:00"),
+    });
+  });
+  it("hafta sonuna düşerse sonraki mesai gününe kayar", () => {
+    // 2026-11-06 Cuma + 30 gün = 2026-12-06 Pazar -> Pazartesi
+    expect(kontenjanTask("L1", "A", at("2026-11-06", "10:00"), H).dueAt).toEqual(at("2026-12-07", "10:00"));
   });
 });
