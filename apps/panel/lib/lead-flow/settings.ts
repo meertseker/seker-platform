@@ -38,7 +38,7 @@ export const DEFAULT_CLAIM_MINUTES = 15;
 
 const KEYS = ["mesai", "servis_semtleri", "arama_metni", "fiyat_cevabi", "wa_sablonlari", "ustlenme_dk"] as const;
 
-function hhmmToMinutes(value: unknown): number | null {
+export function hhmmToMinutes(value: unknown): number | null {
   if (typeof value !== "string") return null;
   const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;

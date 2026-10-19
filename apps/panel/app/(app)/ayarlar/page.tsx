@@ -2,9 +2,11 @@ import { redirect } from "next/navigation";
 import { PriceItemsEditor, type PriceItemRow } from "@/components/price-items-editor";
 import { SiteEditorToggle } from "@/components/site-editor-toggle";
 import { SeasonManager, type SeasonItem } from "@/components/season-manager";
+import { LeadLineSettings } from "@/components/lead-line-settings";
 import { WhatsappSettings, type WaOutboxView } from "@/components/whatsapp-settings";
 import { getSessionProfile } from "@/lib/auth";
 import type { Program } from "@/lib/constants";
+import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 
@@ -40,6 +42,8 @@ export default async function AyarlarPage() {
     .eq("is_active", true)
     .order("full_name");
   const staff = (staffRows ?? []).map((s) => ({ id: s.id, fullName: s.full_name, canEditSite: s.can_edit_site }));
+
+  const leadSettings = await getLeadFlowSettings(supabase);
 
   const { data: waSettingRows } = await supabase
     .from("app_settings")
@@ -110,6 +114,8 @@ export default async function AyarlarPage() {
       )}
 
       <SiteEditorToggle staff={staff} />
+
+      <LeadLineSettings settings={leadSettings} />
 
       <WhatsappSettings
         enabled={waSetting.get("wa_enabled") === true}
