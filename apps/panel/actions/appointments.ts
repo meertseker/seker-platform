@@ -35,9 +35,14 @@ interface AppointmentMutationResult {
   error?: string;
   conflict?: { leadName: string; at: string };
   id?: string;
+  /** Kayıt başarılı ama yan işlem (hatırlatma) tamamlanamadı; hata değildir. */
+  warning?: string;
   /** Kurulan hatırlatma görevleri (yalnızca createAppointment başarısında). */
   reminders?: PlannedTask[];
 }
+
+const REMINDER_WARNING = "Randevu kaydedildi, hatırlatma görevleri kurulamadı";
+const TASKS_RETRY_ERROR = "Sonuç kaydedildi ama görevler kurulamadı, lütfen tekrar basın";
 
 const appointmentTypes = Object.keys(APPOINTMENT_TYPES) as AppointmentType[];
 const appointmentOutcomes = Object.keys(APPOINTMENT_OUTCOMES) as AppointmentOutcome[];
@@ -159,8 +164,10 @@ export async function createAppointment(
     reminders = appointmentTasks(appointment.id, leadRow.parent_name, scheduledAt, new Date(), settings.hours);
     await upsertPlannedTasks(supabase, leadId, leadRow.assigned_to ?? profile.id, reminders);
   } catch {
+    // Randevu yazıldı: başarısız sayılmaz, yoksa tekrar deneme kendi randevusuyla çakışıp kopya üretir.
     revalidateAppointmentViews(leadId);
-    return { error: "Randevu kaydedildi, hatırlatma görevleri kurulamadı." };
+    revalidatePath("/pipeline");
+    return { id: appointment.id, reminders: [], warning: REMINDER_WARNING };
   }
 
   revalidateAppointmentViews(leadId);
@@ -180,7 +187,8 @@ export async function setAppointmentOutcome(
   if (!id) return { error: "Randevu bulunamadı." };
   if (!appointmentOutcomes.includes(outcome)) return { error: "Geçerli bir sonuç seçin." };
 
-  const { data: appointment, error } = await supabase
+  const select = "id, lead_id, created_by, lead:leads(parent_name, assigned_to)";
+  const { data: updated, error } = await supabase
     .from("appointments")
     .update({
       outcome,
@@ -188,29 +196,39 @@ export async function setAppointmentOutcome(
     })
     .eq("id", id)
     .eq("outcome", "bekliyor")
-    .select("id, lead_id, created_by, lead:leads(parent_name, assigned_to)")
+    .select(select)
     .single();
 
+  let appointment = updated;
   if (error?.code === "PGRST116" || !appointment) {
-    return { error: "Randevu zaten sonuçlandırılmış" };
+    // Aynı sonuç zaten kayıtlıysa önceki deneme görev adımında yarıda kalmış olabilir: tekrar uzlaştırılır.
+    const { data: existing } = await supabase
+      .from("appointments")
+      .select(`outcome, ${select}`)
+      .eq("id", id)
+      .maybeSingle();
+    if (!existing || (existing as unknown as { outcome: string }).outcome !== outcome) {
+      return { error: "Randevu zaten sonuçlandırılmış" };
+    }
+    appointment = existing;
+  } else {
+    if (error) {
+      return { error: "Randevu sonucu kaydedilemedi." };
+    }
+
+    await logEvent(supabase, {
+      entityType: "appointment",
+      entityId: appointment.id,
+      eventType: "randevu_sonuclandi",
+      actorId: profile.id,
+      payload: { outcome },
+    });
+
+    await supabase
+      .from("leads")
+      .update({ last_activity_at: new Date().toISOString() })
+      .eq("id", appointment.lead_id);
   }
-
-  if (error) {
-    return { error: "Randevu sonucu kaydedilemedi." };
-  }
-
-  await logEvent(supabase, {
-    entityType: "appointment",
-    entityId: appointment.id,
-    eventType: "randevu_sonuclandi",
-    actorId: profile.id,
-    payload: { outcome },
-  });
-
-  await supabase
-    .from("leads")
-    .update({ last_activity_at: new Date().toISOString() })
-    .eq("id", appointment.lead_id);
 
   try {
     // Sonuç ne olursa olsun eski hatırlatmalar kapanır: gelmeyen veliye ertesi gün hatırlatma gitmesin.
@@ -233,7 +251,7 @@ export async function setAppointmentOutcome(
       await upsertPlannedTasks(supabase, appointment.lead_id, assignee, planned);
     }
   } catch {
-    return { error: "Randevu sonucu kaydedildi, takip görevleri güncellenemedi." };
+    return { error: TASKS_RETRY_ERROR };
   }
 
   revalidateAppointmentViews(appointment.lead_id);

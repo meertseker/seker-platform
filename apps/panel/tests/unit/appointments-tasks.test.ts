@@ -36,9 +36,16 @@ function builder(table: string) {
   };
   b.single = async () => result();
   b.maybeSingle = async () => result();
-  b.then = (res: (v: unknown) => unknown) => Promise.resolve(result()).then(res);
+  b.then = (res: (v: unknown) => unknown) => {
+    const r = result();
+    if (failTaskInsert && table === "tasks" && op.op === "insert") {
+      return Promise.resolve({ data: null, error: { code: "XX000", message: "x" } }).then(res);
+    }
+    return Promise.resolve(r).then(res);
+  };
   return b;
 }
+let failTaskInsert = false;
 const from = vi.fn((t: string) => builder(t));
 vi.mock("@/lib/supabase/server", () => ({ createServerSupabase: async () => ({ from }) }));
 
@@ -51,6 +58,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-11-02T07:00:00Z")); // Pazartesi 10:00 İstanbul
   ops = [];
+  failTaskInsert = false;
   vi.clearAllMocks();
   getSessionProfile.mockResolvedValue({ id: "caller" });
   tables = {
@@ -105,5 +113,52 @@ describe("randevu görevleri", () => {
       expect(closes().map((c) => c.likes[0])).toEqual(["hatirlat:A1:%"]);
       expect(taskInserts()).toEqual([]);
     }
+  });
+
+  it("hatırlatma kurulamazsa randevu yine başarıdır: id + warning, hata yok", async () => {
+    failTaskInsert = true;
+    const res = await createAppointment("L1", "2026-11-05T10:00", "okul_ziyareti", true);
+    expect(res.error).toBeUndefined();
+    expect(res.id).toBe("A1");
+    expect(res.warning).toBe("Randevu kaydedildi, hatırlatma görevleri kurulamadı");
+    expect(res.reminders).toEqual([]);
+  });
+
+  it("lead.assigned_to, created_by'ın önüne geçer", async () => {
+    (tables["appointments:update"] as { lead: unknown }).lead = { parent_name: "Ayşe", assigned_to: "agent" };
+    await setAppointmentOutcome("A1", "gelmedi");
+    expect(taskInserts()[0].assigned_to).toBe("agent");
+  });
+
+  it("görev adımı düşerse sonuç kaydedildi ama tekrar bas hatası döner", async () => {
+    failTaskInsert = true;
+    const res = await setAppointmentOutcome("A1", "gelmedi");
+    expect(res.error).toBe("Sonuç kaydedildi ama görevler kurulamadı, lütfen tekrar basın");
+  });
+
+  it("aynı sonuçla ikinci çağrı görevleri yeniden uzlaştırır ve başarılı döner", async () => {
+    tables["appointments:update"] = null; // zaten sonuçlanmış: koşullu update satır bulamaz
+    tables["appointments:select"] = {
+      outcome: "gelmedi",
+      id: "A1",
+      lead_id: "L1",
+      created_by: "creator",
+      lead: { parent_name: "Ayşe Hanım", assigned_to: null },
+    };
+    const res = await setAppointmentOutcome("A1", "gelmedi");
+    expect(res.error).toBeUndefined();
+    expect(res.id).toBe("A1");
+    expect(closes().map((c) => c.likes[0])).toEqual(["hatirlat:A1:%"]);
+    expect(taskInserts().map((x) => x.rule_key)).toEqual(["noshow:A1"]);
+    expect(ops.some((o) => o.table === "events")).toBe(false);
+  });
+
+  it("çözülmüş randevuda farklı sonuç hata döner", async () => {
+    tables["appointments:update"] = null;
+    tables["appointments:select"] = { outcome: "geldi", id: "A1", lead_id: "L1", created_by: "c", lead: null };
+    const res = await setAppointmentOutcome("A1", "gelmedi");
+    expect(res.error).toBe("Randevu zaten sonuçlandırılmış");
+    expect(taskInserts()).toEqual([]);
+    expect(closes()).toEqual([]);
   });
 });

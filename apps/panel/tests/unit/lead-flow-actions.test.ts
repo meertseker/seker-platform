@@ -245,6 +245,13 @@ describe("recordCall", () => {
     });
   });
 
+  it("createAppointment uyarı döndürürse recordCall hatırlatmaları kendisi onarır", async () => {
+    createAppointment.mockResolvedValue({ id: "A1", reminders: [], warning: "x" });
+    const r = await recordCall({ leadId: "L1", result: "randevu", quals, appointmentAt: "2026-11-05T10:00" });
+    expect("done" in r).toBe(true);
+    expect(inserts("tasks").map((t) => t.rule_key)).toEqual(["hatirlat:A1:once", "hatirlat:A1:sabah"]);
+  });
+
   it("createAppointment hata dönerse (hatırlatma kurulamadı) hata aynen iletilir", async () => {
     createAppointment.mockResolvedValue({ error: "Randevu kaydedildi, hatırlatma görevleri kurulamadı." });
     expect(await recordCall({ leadId: "L1", result: "randevu", quals, appointmentAt: "2026-11-05T10:00" })).toEqual({

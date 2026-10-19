@@ -71,7 +71,7 @@ export function AppointmentForm({ leadId, onSuccess }: AppointmentFormProps) {
       setPendingAppointment(null);
       // Form yalnız kayıt başarılıysa temizlenir; hata olursa yazılanlar kalır.
       formRef.current?.reset();
-      showToast({ text: "Randevu kaydedildi" });
+      showToast({ text: result.warning ?? "Randevu kaydedildi" });
       router.refresh();
       onSuccess?.();
     });

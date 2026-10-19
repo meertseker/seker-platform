@@ -196,8 +196,10 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
           };
         }
         if (res.error || !res.id) return { error: res.error ?? "Randevu kaydedilemedi, lütfen tekrar deneyin." };
-        appointment = { id: res.id, at, reused: false };
-        createdReminders = res.reminders;
+        // Hatırlatma kurulamadıysa (warning) randevu yazılıdır; aşağıda yeniden kurmayı dener,
+        // o da başarısızsa kullanıcı kısmi-hata mesajını görür, tekrar denemede reuse yolu onarır.
+        appointment = { id: res.id, at, reused: !!res.warning };
+        createdReminders = res.warning ? undefined : res.reminders;
       }
     }
 
