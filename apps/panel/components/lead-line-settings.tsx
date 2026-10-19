@@ -18,7 +18,7 @@ const field =
   "w-full rounded-xl border border-input bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-placeholder focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const hint = "mt-1 text-xs text-muted-foreground";
 
-// Uyarı sistemi (cron) Pzt–Cmt 07:00–19:59 çalışır.
+// Uyarı sistemi (cron) Pzt–Cmt 07:00–20:00 arasında çalışır.
 function outsideCron(days: number[], start: string, end: string): boolean {
   return days.includes(7) || start < "07:00" || end > "20:00";
 }

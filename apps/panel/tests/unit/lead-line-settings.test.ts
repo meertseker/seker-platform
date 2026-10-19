@@ -58,6 +58,9 @@ describe("saveLeadLineSettings", () => {
     );
     expect(upsert.mock.calls[0][1]).toEqual({ onConflict: "key" });
     expect(revalidatePath).toHaveBeenCalledWith("/ayarlar");
+    expect(revalidatePath).toHaveBeenCalledWith("/bugun");
+    expect(revalidatePath).toHaveBeenCalledWith("/leads/[id]", "page");
+    expect(revalidatePath).toHaveBeenCalledWith("/leads/[id]/ara", "page");
   });
 
   it("semtleri kırpar ve tekrarları atar", async () => {
@@ -94,6 +97,35 @@ describe("saveLeadLineSettings", () => {
     const c = valid(); c.priceAnswer = " ";
     const d = valid(); d.priceAnswer = "x".repeat(501);
     for (const i of [a, b, c, d]) expect("error" in (await saveLeadLineSettings(i))).toBe(true);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("boş ve aralık dışı günleri reddeder", async () => {
+    const a = valid(); a.hours.days = [];
+    const b = valid(); b.hours.days = [0, 1];
+    const c = valid(); c.hours.days = [1, 8];
+    for (const i of [a, b, c]) expect("error" in (await saveLeadLineSettings(i))).toBe(true);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("30'dan fazla semti reddeder", async () => {
+    const input = valid();
+    input.districts = Array.from({ length: 31 }, (_, i) => `Semt ${i}`);
+    expect("error" in (await saveLeadLineSettings(input))).toBe(true);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("1000 karakteri aşan şablon metnini reddeder", async () => {
+    const input = valid();
+    input.templates[1].text = "x".repeat(1001);
+    expect("error" in (await saveLeadLineSettings(input))).toBe(true);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("boş şablon adını reddeder", async () => {
+    const input = valid();
+    input.templates[2].label = "  ";
+    expect("error" in (await saveLeadLineSettings(input))).toBe(true);
     expect(upsert).not.toHaveBeenCalled();
   });
 });

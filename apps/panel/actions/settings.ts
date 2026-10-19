@@ -90,5 +90,8 @@ export async function saveLeadLineSettings(input: LeadLineInput): Promise<{ ok: 
     return { error: "Kaydedilemedi, tekrar deneyin." };
   }
   revalidatePath("/ayarlar");
+  revalidatePath("/bugun");
+  revalidatePath("/leads/[id]", "page");
+  revalidatePath("/leads/[id]/ara", "page");
   return { ok: true };
 }
