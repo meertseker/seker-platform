@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, MessageCircle } from "lucide-react";
@@ -137,8 +137,11 @@ export function CallScreen({
   const [callbackAt, setCallbackAt] = useState(() => defaultCallback(serverNow, hours));
   const [reason, setReason] = useState<NotFitReason | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ result: CallResult; items: string[] } | null>(null);
+  const [done, setDone] = useState<{ result: CallResult; items: string[]; closed: boolean } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const saving = useRef(false);
+  // Tarih alanlarında geçmiş saat seçilemesin (sunucu da reddeder).
+  const minInput = toLocalInput(new Date(serverNow));
 
   // Yenilemeden sonra öneri listesinden düşen saat seçili kalmaz.
   const selectedSlot = slot === OTHER_SLOT || (slot && slots.includes(slot)) ? slot : null;
@@ -160,42 +163,56 @@ export function CallScreen({
   }
 
   function save() {
+    // Çift dokunuş: isPending bir sonraki çizime kadar güncellenmeyebilir; ref anında kilitler.
+    if (isPending || saving.current) return;
     setError(null);
     if (!outcome) return setError("Arama sonucunu seçin");
     const appointmentAt = outcome === "randevu" ? (selectedSlot === OTHER_SLOT ? otherAt : selectedSlot) : null;
-    if (outcome === "randevu" && !(appointmentAt && parseIstanbulDateTime(appointmentAt))) {
-      return setError("Ziyaret için tarih ve saat seçin");
-    }
-    if (outcome === "geri_ara" && !parseIstanbulDateTime(callbackAt)) {
-      return setError("Geri arama için tarih ve saat seçin");
-    }
+    const at = outcome === "randevu" ? appointmentAt && parseIstanbulDateTime(appointmentAt) : null;
+    if (outcome === "randevu" && !at) return setError("Ziyaret için tarih ve saat seçin");
+    const callback = outcome === "geri_ara" ? parseIstanbulDateTime(callbackAt) : null;
+    if (outcome === "geri_ara" && !callback) return setError("Geri arama için tarih ve saat seçin");
+    const chosen = at || callback;
+    if (chosen && chosen.getTime() <= Date.now()) return setError("Geçmiş bir saat seçilemez");
     if (outcome === "uygun_degil" && !reason) return setError("Uygun olmama nedenini seçin");
 
+    saving.current = true;
     startTransition(async () => {
-      const res = await recordCall({
-        leadId: lead.id,
-        result: outcome,
-        quals,
-        note: note.trim() || undefined,
-        appointmentAt: appointmentAt ?? undefined,
-        callbackAt: outcome === "geri_ara" ? callbackAt : undefined,
-        notFitReason: outcome === "uygun_degil" ? reason! : undefined,
-      });
-      if ("error" in res) {
-        setError(res.error);
-        // Çakışmada öneriler yeniden hesaplansın; başkası üstlendiyse sayfa bunu gösterir.
-        router.refresh();
-        return;
+      try {
+        await submit(appointmentAt);
+      } finally {
+        saving.current = false;
       }
-      window.scrollTo({ top: 0 });
-      setDone({ result: outcome, items: res.done });
     });
   }
 
+  async function submit(appointmentAt: string | null) {
+    if (!outcome) return;
+    const res = await recordCall({
+      leadId: lead.id,
+      result: outcome,
+      quals,
+      note: note.trim() || undefined,
+      appointmentAt: appointmentAt ?? undefined,
+      callbackAt: outcome === "geri_ara" ? callbackAt : undefined,
+      notFitReason: outcome === "uygun_degil" ? reason! : undefined,
+    });
+    if ("error" in res) {
+      setError(res.error);
+      // Çakışmada öneriler yeniden hesaplansın; başkası üstlendiyse sayfa bunu gösterir.
+      router.refresh();
+      return;
+    }
+    window.scrollTo({ top: 0 });
+    setDone({ result: outcome, items: res.done, closed: !!res.closed });
+  }
+
   if (done) {
-    const closed = done.result === "ulasilamadi" && done.items[0]?.startsWith("7 günde");
-    const title = closed ? "Kayıt kapatıldı" : OUTCOMES.find((o) => o.key === done.result)!.doneTitle;
-    const waHref = closed ? undefined : waLinks[done.result];
+    // Kapanan velide (uygun değil, 7 günde ulaşılamadı) gönderilecek mesaj yoktur.
+    const title = done.closed && done.result === "ulasilamadi"
+      ? "Kayıt kapatıldı"
+      : OUTCOMES.find((o) => o.key === done.result)!.doneTitle;
+    const waHref = done.closed ? undefined : waLinks[done.result];
     return (
       <div className="mx-auto flex w-full max-w-md flex-col gap-[1.125rem] pt-6">
         <div className="flex size-16 items-center justify-center rounded-full bg-accent-soft text-accent">
@@ -235,11 +252,8 @@ export function CallScreen({
   }
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        save();
-      }}
+    // Form değil: Enter (ör. not alanında) kaydı tetiklemez; kayıt yalnız düğmeyle.
+    <div
       className="mx-auto flex w-full max-w-md flex-col gap-4"
     >
       <div className="flex items-center justify-between">
@@ -386,6 +400,7 @@ export function CallScreen({
                 <input
                   id="baska-saat"
                   type="datetime-local"
+                  min={minInput}
                   value={otherAt}
                   onChange={(e) => setOtherAt(e.target.value)}
                   className={fieldClass}
@@ -401,6 +416,7 @@ export function CallScreen({
             <input
               id="geri-saat"
               type="datetime-local"
+              min={minInput}
               value={callbackAt}
               onChange={(e) => setCallbackAt(e.target.value)}
               className={fieldClass}
@@ -437,20 +453,21 @@ export function CallScreen({
         ) : null}
       </section>
 
-      <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] z-20 -mx-4 flex flex-col gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:bottom-0 md:mx-0 md:px-0">
+      <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] z-20 -mx-4 flex flex-col gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:bottom-0 md:mx-0 md:px-0">
         {error ? (
           <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2.5 text-sm font-medium text-destructive">
             {error}
           </p>
         ) : null}
         <button
-          type="submit"
+          type="button"
+          onClick={save}
           disabled={isPending}
           className="min-h-14 w-full rounded-2xl bg-primary text-[1.0625rem] font-bold text-on-primary hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60"
         >
           {isPending ? "Kaydediliyor…" : outcome === "randevu" ? "Randevuyu kaydet" : "Kaydet"}
         </button>
       </div>
-    </form>
+    </div>
   );
 }

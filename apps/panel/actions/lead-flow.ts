@@ -10,6 +10,7 @@ import { LOST_REASONS, type LeadStatus, type LostReason } from "@/lib/constants"
 import { formatDayTime, parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
 import { appointmentTasks, followupAfterAttempt, type PlannedTask } from "@/lib/lead-flow/followups";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
+import { callWaLink } from "@/lib/lead-flow/call-wa";
 import { closeTasksByPrefix, tasksByPrefix, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
 import { claimLeadAs, type ClaimResult } from "@/lib/lead-flow/claim";
 import { normalizeTurkishPhone } from "@/lib/phone";
@@ -38,6 +39,7 @@ const GENERIC_FAILURE = "Arama kaydı tamamlanamadı, sayfayı yenileyip kontrol
 interface LeadRow {
   id: string;
   parent_name: string;
+  phone: string;
   status: LeadStatus;
   converted_student_id: string | null;
   first_contact_at: string | null;
@@ -68,18 +70,24 @@ function conversionQueued(lead: LeadRow, statusAfter: string | null, now: Date):
   return now.getTime() - Date.parse(lead.created_at) < CONVERSION_MAX_DAYS * 86_400_000;
 }
 
-function validate(input: RecordCallInput): string | null {
+const PAST_TIME = "Geçmiş bir saat seçilemez";
+
+function validate(input: RecordCallInput, now: Date): string | null {
   if (!input?.leadId) return "Veli bulunamadı";
   if (!CALL_RESULTS.includes(input.result)) return "Arama sonucunu seçin";
   const q = input.quals;
   if (!q || ![q.age, q.area, q.timing, q.reached].every((v) => typeof v === "boolean")) {
     return "Nitelik sorularını yanıtlayın";
   }
-  if (input.result === "randevu" && !(input.appointmentAt && parseIstanbulDateTime(input.appointmentAt))) {
-    return "Ziyaret için tarih ve saat seçin";
+  if (input.result === "randevu") {
+    const at = input.appointmentAt ? parseIstanbulDateTime(input.appointmentAt) : null;
+    if (!at) return "Ziyaret için tarih ve saat seçin";
+    if (at.getTime() <= now.getTime()) return PAST_TIME;
   }
-  if (input.result === "geri_ara" && !(input.callbackAt && parseIstanbulDateTime(input.callbackAt))) {
-    return "Geri arama için tarih ve saat seçin";
+  if (input.result === "geri_ara") {
+    const at = input.callbackAt ? parseIstanbulDateTime(input.callbackAt) : null;
+    if (!at) return "Geri arama için tarih ve saat seçin";
+    if (at.getTime() <= now.getTime()) return PAST_TIME;
   }
   if (input.result === "uygun_degil" && !(input.notFitReason && NOT_FIT_REASONS.includes(input.notFitReason))) {
     return "Uygun olmama nedenini seçin";
@@ -136,18 +144,26 @@ async function attemptState(
 }
 
 /** Arama ekranının kaydı: nitelik, not, olay, durum ve takip görevleri. */
-export async function recordCall(input: RecordCallInput): Promise<{ done: string[] } | { error: string }> {
-  const invalid = validate(input);
+export type RecordCallResult =
+  | {
+      done: string[];
+      /** Bu kayıtla veli kapandı (uygun değil ya da 7 günde ulaşılamadı); WhatsApp düğmesi gösterilmez. */
+      closed?: true;
+    }
+  | { error: string };
+
+export async function recordCall(input: RecordCallInput): Promise<RecordCallResult> {
+  const now = new Date();
+  const invalid = validate(input, now);
   if (invalid) return { error: invalid };
 
   const profile = await getSessionProfile();
   const supabase = await createServerSupabase();
-  const now = new Date();
   const { leadId, result } = input;
 
   const { data: leadData } = await supabase
     .from("leads")
-    .select("id, parent_name, status, converted_student_id, first_contact_at, gclid, created_at, web_payload")
+    .select("id, parent_name, phone, status, converted_student_id, first_contact_at, gclid, created_at, web_payload")
     .eq("id", leadId)
     .maybeSingle();
   const lead = leadData as LeadRow | null;
@@ -280,6 +296,10 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
     await closeTasksByPrefix(supabase, `takip:${leadId}:`);
 
     let done: string[];
+    let closed = false;
+    // Hazır mesaj satırı yalnız ekranda gönder düğmesi varken yazılır (şablon ve geçerli telefon).
+    const danisman = profile.full_name?.split(" ")[0] || profile.full_name || "";
+    const hasWa = !!callWaLink(result, lead.phone ?? "", settings.templates, { veli: lead.parent_name, danisman });
     switch (result) {
       case "randevu": {
         // Yeni randevuda hatırlatmaları createAppointment kurmuştur. Yeniden kullanılan randevuda
@@ -288,10 +308,8 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
           createdReminders ??
           appointmentTasks(appointment!.id, lead.parent_name, appointment!.at, now, settings.hours);
         if (appointment!.reused) await upsertPlannedTasks(supabase, leadId, profile.id, reminders);
-        done = [
-          `Ziyaret takvime yazıldı: ${formatDayTime(appointment!.at)}`,
-          "WhatsApp onay mesajı hazır",
-        ];
+        done = [`Ziyaret takvime yazıldı: ${formatDayTime(appointment!.at)}`];
+        if (hasWa) done.push("WhatsApp onay mesajı hazır");
         const line = reminderLine(reminders);
         if (line) done.push(line);
         if (conversionQueued(lead, statusAfter, now)) done.push("Google'a \"Randevu\" dönüşümü sıraya alındı");
@@ -309,6 +327,7 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
       case "ulasilamadi": {
         if (!next) {
           done = ["7 günde ulaşılamadı · veli Kaybedildi (Ulaşılamadı) olarak kapandı"];
+          closed = true;
           break;
         }
         await upsertPlannedTasks(supabase, leadId, profile.id, [next]);
@@ -317,19 +336,20 @@ export async function recordCall(input: RecordCallInput): Promise<{ done: string
           inThreeHours
             ? "3 saat sonra tekrar arama görevi açıldı"
             : `Sonraki arama görevi açıldı: ${formatDayTime(next.dueAt)}`,
-          "Hazır WhatsApp mesajı var",
         ];
+        if (hasWa) done.push("Hazır WhatsApp mesajı var");
         break;
       }
       default:
         done = [`Kayıt kapatıldı · neden: ${LOST_REASONS[input.notFitReason!]}`, "Açık takip görevleri kapandı"];
+        closed = true;
     }
 
     revalidatePath("/bugun");
     revalidatePath("/pipeline");
     revalidatePath(`/leads/${leadId}`);
     revalidatePath("/");
-    return { done };
+    return closed ? { done, closed: true } : { done };
   } catch (e) {
     console.error("recordCall:", e);
     return fail();

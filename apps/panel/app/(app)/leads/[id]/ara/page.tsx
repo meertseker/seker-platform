@@ -3,13 +3,12 @@ import { notFound } from "next/navigation";
 import { CallScreen, type CallScreenLead } from "@/components/call-screen";
 import { getSessionProfile } from "@/lib/auth";
 import { clockStart } from "@/lib/lead-flow/business-hours";
+import { callWaLink } from "@/lib/lead-flow/call-wa";
 import { readConflictWindowMinutes } from "@/lib/lead-flow/conflict-window";
 import { ageFromBirth, fillScript, suggestSlots } from "@/lib/lead-flow/script";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
-import { fillTemplate } from "@/lib/lead-flow/template";
 import { heldByOther } from "@/lib/queries/call-queue";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { waMeUrl } from "@/lib/whatsapp";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Arama" };
@@ -120,12 +119,10 @@ export default async function CallPage({ params }: { params: Promise<{ id: strin
     reached: true,
   };
 
+  // recordCall bitti listesindeki WhatsApp satırını aynı fonksiyonla yazar: düğme yoksa satır da yok.
   const waLinks: Partial<Record<"randevu" | "ulasilamadi", string>> = {};
-  for (const [result, key] of [["randevu", "randevu_onay"], ["ulasilamadi", "ulasilamadi"]] as const) {
-    const template = settings.templates.find((t) => t.key === key);
-    const href = template
-      ? waMeUrl(lead.phone, fillTemplate(template.text, { veli: lead.parent_name, danisman }))
-      : null;
+  for (const result of ["randevu", "ulasilamadi"] as const) {
+    const href = callWaLink(result, lead.phone, settings.templates, { veli: lead.parent_name, danisman });
     if (href) waLinks[result] = href;
   }
 

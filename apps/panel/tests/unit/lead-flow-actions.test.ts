@@ -86,7 +86,7 @@ beforeEach(() => {
   claimRows = [{ id: "L1" }];
   settingsRows = [];
   lead = {
-    id: "L1", parent_name: "Ayşe Yılmaz", status: "yeni", converted_student_id: null,
+    id: "L1", parent_name: "Ayşe Yılmaz", phone: "+905321112233", status: "yeni", converted_student_id: null,
     first_contact_at: null, gclid: null, created_at: "2026-11-03T06:00:00Z", web_payload: null,
   };
   getSessionProfile.mockResolvedValue({ id: ME, full_name: "Danışman", role: "danisman" });
@@ -173,7 +173,7 @@ describe("recordCall", () => {
     lead.status = "ulasildi";
     openTakip = ["takip:L1:6"];
     const r = await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
-    expect(r).toEqual({ done: ["7 günde ulaşılamadı · veli Kaybedildi (Ulaşılamadı) olarak kapandı"] });
+    expect(r).toEqual({ done: ["7 günde ulaşılamadı · veli Kaybedildi (Ulaşılamadı) olarak kapandı"], closed: true });
     expect(updateLeadStatus).toHaveBeenCalledWith("L1", "kaybedildi", "ulasilamadi");
     expect(inserts("tasks")).toHaveLength(0);
   });
@@ -192,7 +192,7 @@ describe("recordCall", () => {
   it("uygun değil nedeni kayıp nedenine yazılır", async () => {
     const r = await recordCall({ leadId: "L1", result: "uygun_degil", quals, notFitReason: "yas_uymuyor" });
     expect(updateLeadStatus).toHaveBeenCalledWith("L1", "kaybedildi", "yas_uymuyor");
-    expect(r).toEqual({ done: ["Kayıt kapatıldı · neden: Yaş uymuyor", "Açık takip görevleri kapandı"] });
+    expect(r).toEqual({ done: ["Kayıt kapatıldı · neden: Yaş uymuyor", "Açık takip görevleri kapandı"], closed: true });
     const closed = updates("tasks").flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
     expect(closed).toContain("takip:L1:%");
   });
@@ -308,6 +308,44 @@ describe("recordCall", () => {
     expect(inserts("tasks")[0]).toMatchObject({ rule_key: "takip:L1:2" });
     const reachQuery = ops.find((o) => o.table === "events" && o.op === "select")!;
     expect(reachQuery.filters).toContainEqual(["in", "payload->>result", ["randevu", "geri_ara"]]);
+  });
+
+  it("geçmiş randevu ve geri arama saatini hiçbir şey yazmadan reddeder", async () => {
+    // Sistem saati Salı 3 Kasım 10:00; tam şimdi de geçmiş sayılır.
+    for (const appointmentAt of ["2026-11-03T09:59", "2026-11-03T10:00", "2026-11-02T16:00"]) {
+      expect(await recordCall({ leadId: "L1", result: "randevu", quals, appointmentAt })).toEqual({
+        error: "Geçmiş bir saat seçilemez",
+      });
+    }
+    expect(await recordCall({ leadId: "L1", result: "geri_ara", quals, callbackAt: "2026-11-03T09:30" })).toEqual({
+      error: "Geçmiş bir saat seçilemez",
+    });
+    expect(ops).toHaveLength(0);
+    expect(createAppointment).not.toHaveBeenCalled();
+    const ok = await recordCall({ leadId: "L1", result: "geri_ara", quals, callbackAt: "2026-11-03T10:01" });
+    expect("done" in ok).toBe(true);
+  });
+
+  it("devam eden sonuçlarda closed bayrağı yoktur", async () => {
+    expect(await recordCall({ leadId: "L1", result: "ulasilamadi", quals })).not.toHaveProperty("closed");
+    const g = await recordCall({ leadId: "L1", result: "geri_ara", quals, callbackAt: "2026-11-04T15:00" });
+    expect(g).not.toHaveProperty("closed");
+    const a = await recordCall({ leadId: "L1", result: "randevu", quals, appointmentAt: "2026-11-05T10:00" });
+    expect(a).not.toHaveProperty("closed");
+  });
+
+  it("WhatsApp satırı yalnız şablon ve geçerli telefon varken yazılır", async () => {
+    // Şablon listesinde randevu_onay ve ulasilamadi yok.
+    settingsRows = [{ key: "wa_sablonlari", value: [{ key: "kontenjan", label: "K", text: "Merhaba {veli}" }] }];
+    const r = await recordCall({ leadId: "L1", result: "randevu", quals, appointmentAt: "2026-11-05T10:00" });
+    if (!("done" in r)) throw new Error("done bekleniyordu");
+    expect(r.done.some((l) => l.includes("WhatsApp"))).toBe(false);
+    // Varsayılan şablonlar ama geçersiz telefon.
+    settingsRows = [];
+    lead.phone = "123";
+    const u = await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
+    if (!("done" in u)) throw new Error("done bekleniyordu");
+    expect(u.done.some((l) => l.includes("WhatsApp"))).toBe(false);
   });
 
   it("eksik girdiyi reddeder", async () => {
