@@ -91,6 +91,11 @@ export function istanbulDateString(at: Date): string {
   return new Date(at.getTime() + ISTANBUL_OFFSET_MS).toISOString().slice(0, 10);
 }
 
+/** datetime-local girdisi için İstanbul yerel saati: "YYYY-MM-DDTHH:MM". */
+export function istanbulLocalInput(at: Date): string {
+  return new Date(at.getTime() + ISTANBUL_OFFSET_MS).toISOString().slice(0, 16);
+}
+
 /** "YYYY-MM-DD" gününe n gün ekler (negatif olabilir). */
 export function addDaysToDateString(dateString: string, n: number): string {
   return new Date(Date.parse(`${dateString}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);

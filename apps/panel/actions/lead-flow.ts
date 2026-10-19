@@ -14,6 +14,7 @@ import { callWaLink } from "@/lib/lead-flow/call-wa";
 import { closeTasksByPrefix, tasksByPrefix, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
 import { claimLeadAs, type ClaimResult } from "@/lib/lead-flow/claim";
 import { normalizeTurkishPhone } from "@/lib/phone";
+import { inQueueWindow } from "@/lib/queries/call-queue";
 
 export type CallResult = "randevu" | "geri_ara" | "ulasilamadi" | "uygun_degil";
 export type NotFitReason = "yas_uymuyor" | "uzaklik" | "gelecek_yil" | "baska_okul";
@@ -380,6 +381,9 @@ const MESSAGE_CHANNELS: Record<MessageChannel, { label: string; source: "instagr
 };
 const CONTENT_CODE = /^[RS]-\d{4}-[A-Z]$/;
 const MESSAGE_FAILURE = "Veli kaydedilemedi, lütfen tekrar deneyin";
+/** Telefon ve sunucu saati arasındaki küçük kaymaya izin. */
+const MESSAGE_CLOCK_SKEW_MS = 5 * 60_000;
+const PARENT_NAME_MAX = 80;
 
 export interface MessageLeadInput {
   channel: MessageChannel;
@@ -392,7 +396,7 @@ export interface MessageLeadInput {
 /** Mesajdan gelen veliyi ortak listeye açar. Aynı telefonla açık veli varsa yenisi açılmaz. */
 export async function createMessageLead(
   input: MessageLeadInput,
-): Promise<{ id: string; duplicate: boolean } | { error: string }> {
+): Promise<{ id: string; duplicate: boolean; parentName: string; inQueue: boolean } | { error: string }> {
   const channel = Object.hasOwn(MESSAGE_CHANNELS, input?.channel) ? MESSAGE_CHANNELS[input.channel] : null;
   if (!channel) return { error: "Kanalı seçin" };
   const phone = normalizeTurkishPhone(input.phone ?? "");
@@ -403,6 +407,7 @@ export async function createMessageLead(
   if (input.messageAt) {
     const parsed = parseIstanbulDateTime(input.messageAt);
     if (!parsed) return { error: "Mesaj saati geçersiz" };
+    if (parsed.getTime() > now.getTime() + MESSAGE_CLOCK_SKEW_MS) return { error: "Mesaj saati gelecekte olamaz" };
     messageAt = parsed;
   }
 
@@ -410,16 +415,24 @@ export async function createMessageLead(
   const supabase = await createServerSupabase();
 
   try {
+    const { launchAt } = await getLeadFlowSettings(supabase);
     const { data: existing, error: findError } = await supabase
       .from("leads")
-      .select("id, content_code")
+      .select("id, content_code, parent_name, status, first_contact_at, created_at")
       .eq("phone", phone)
       .not("status", "in", "(kazanildi,kaybedildi)")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (findError) return { error: MESSAGE_FAILURE };
-    const open = existing as { id: string; content_code: string | null } | null;
+    const open = existing as {
+      id: string;
+      content_code: string | null;
+      parent_name: string;
+      status: string;
+      first_contact_at: string | null;
+      created_at: string;
+    } | null;
 
     if (open) {
       const patch: Record<string, unknown> = { last_activity_at: now.toISOString() };
@@ -438,11 +451,14 @@ export async function createMessageLead(
       revalidatePath("/bugun");
       revalidatePath("/pipeline");
       revalidatePath(`/leads/${open.id}`);
-      return { id: open.id, duplicate: true };
+      // Ekran mevcut kaydı anlatır: adı ve "Şimdi ara" listesinde olup olmadığı (ortak süzgeçle aynı kural).
+      const inQueue = open.status === "yeni" && !open.first_contact_at && inQueueWindow(open.created_at, launchAt);
+      return { id: open.id, duplicate: true, parentName: open.parent_name, inQueue };
     }
 
+    const parentName = input.parentName?.trim().slice(0, PARENT_NAME_MAX).trim() || channel.fallbackName;
     const { data, error } = await supabase.from("leads").insert({
-      parent_name: input.parentName?.trim() || channel.fallbackName,
+      parent_name: parentName,
       phone,
       source: channel.source,
       channel: input.channel,
@@ -459,7 +475,7 @@ export async function createMessageLead(
     });
     revalidatePath("/bugun");
     revalidatePath("/pipeline");
-    return { id: row.id, duplicate: false };
+    return { id: row.id, duplicate: false, parentName, inQueue: inQueueWindow(messageAt.toISOString(), launchAt) };
   } catch (e) {
     console.error("createMessageLead:", e);
     return { error: MESSAGE_FAILURE };

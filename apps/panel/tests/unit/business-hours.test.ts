@@ -6,6 +6,7 @@ import {
   elapsedMinutes,
   timerTone,
   istanbulAt,
+  istanbulLocalInput,
 } from "@/lib/lead-flow/business-hours";
 
 const H = DEFAULT_BUSINESS_HOURS;
@@ -95,5 +96,11 @@ describe("businessMinutesBetween (R14)", () => {
 
   it("ters sırada 0", () => {
     expect(businessMinutesBetween(at("2026-10-20T11:00:00"), at("2026-10-20T10:00:00"), H)).toBe(0);
+  });
+});
+
+describe("istanbulLocalInput", () => {
+  it("datetime-local biçiminde İstanbul saati verir", () => {
+    expect(istanbulLocalInput(new Date("2026-11-03T07:05:30Z"))).toBe("2026-11-03T10:05");
   });
 });

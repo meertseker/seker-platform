@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Check } from "lucide-react";
 import { claimLead, createMessageLead, type MessageChannel } from "@/actions/lead-flow";
+import { istanbulLocalInput } from "@/lib/lead-flow/business-hours";
 
 const CHANNELS: { key: MessageChannel; label: string }[] = [
   { key: "ig_dm", label: "Instagram mesajı" },
@@ -24,11 +25,6 @@ function choiceClass(on: boolean) {
   }`;
 }
 
-function fallbackName(channel: MessageChannel) {
-  if (channel === "whatsapp") return "WhatsApp velisi";
-  return channel === "telefon" ? "Telefon velisi" : "Instagram velisi";
-}
-
 export function MessageLeadForm({ codes }: { codes: { code: string; count: number }[] }) {
   const router = useRouter();
   const [channel, setChannel] = useState<MessageChannel>("ig_dm");
@@ -39,7 +35,9 @@ export function MessageLeadForm({ codes }: { codes: { code: string; count: numbe
   const [editTime, setEditTime] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [done, setDone] = useState<{ id: string; duplicate: boolean; name: string } | null>(null);
+  const [done, setDone] = useState<{ id: string; duplicate: boolean; parentName: string; inQueue: boolean } | null>(
+    null,
+  );
   const [claimError, setClaimError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -73,7 +71,7 @@ export function MessageLeadForm({ codes }: { codes: { code: string; count: numbe
         setError(res.error);
         return;
       }
-      setDone({ ...res, name: name.trim() || fallbackName(channel) });
+      setDone(res);
     });
   }
 
@@ -97,7 +95,7 @@ export function MessageLeadForm({ codes }: { codes: { code: string; count: numbe
           <Check className="size-8" aria-hidden />
         </div>
         <h1 className="text-2xl font-bold">
-          {done.duplicate ? `${done.name} zaten kayıtlı` : `${done.name} eklendi`}
+          {done.duplicate ? `${done.parentName} zaten kayıtlı` : `${done.parentName} eklendi`}
         </h1>
         <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface text-[0.9375rem]">
           <li className="flex gap-2.5 px-3.5 py-3">
@@ -112,10 +110,12 @@ export function MessageLeadForm({ codes }: { codes: { code: string; count: numbe
                 : "Sayaç başladı: mesaj saatinden itibaren"}
             </span>
           </li>
-          <li className="flex gap-2.5 px-3.5 py-3">
-            <span className="font-bold text-accent" aria-hidden>✓</span>
-            <span>Bugün ekranında &quot;Şimdi ara&quot; listesinde</span>
-          </li>
+          {done.inQueue ? (
+            <li className="flex gap-2.5 px-3.5 py-3">
+              <span className="font-bold text-accent" aria-hidden>✓</span>
+              <span>Bugün ekranında &quot;Şimdi ara&quot; listesinde</span>
+            </li>
+          ) : null}
         </ul>
         {claimError ? (
           <p role="alert" className="rounded-xl bg-warning-soft px-3 py-2.5 text-sm font-medium text-warning">
@@ -219,6 +219,7 @@ export function MessageLeadForm({ codes }: { codes: { code: string; count: numbe
               <input
                 id="saat"
                 type="datetime-local"
+                max={istanbulLocalInput(new Date())}
                 value={messageAt}
                 onChange={(e) => setMessageAt(e.target.value)}
                 className={fieldClass}

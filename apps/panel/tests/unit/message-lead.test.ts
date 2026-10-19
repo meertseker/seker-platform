@@ -33,6 +33,7 @@ import { createMessageLead, recentContentCodes } from "@/actions/lead-flow";
 
 const ME = "00000000-0000-0000-0000-000000000002";
 let openLead: Record<string, unknown> | null;
+let settingsRows: { key: string; value: unknown }[];
 const inserts = (t: string) => ops.filter((o) => o.table === t && o.op === "insert").map((o) => o.payload as Record<string, unknown>);
 
 beforeEach(() => {
@@ -41,8 +42,10 @@ beforeEach(() => {
   vi.setSystemTime(new Date("2026-11-03T10:00:00+03:00"));
   ops = [];
   openLead = null;
+  settingsRows = [];
   getSessionProfile.mockResolvedValue({ id: ME, full_name: "Zehra Hanım", role: "danisman" });
   respond = (o) => {
+    if (o.table === "app_settings") return { data: settingsRows };
     if (o.table === "leads" && o.op === "select") return { data: openLead };
     if (o.table === "leads" && o.op === "insert") return { data: { id: "new-lead" } };
     return { data: null };
@@ -53,7 +56,7 @@ afterEach(() => vi.useRealTimers());
 describe("createMessageLead", () => {
   it("instagram mesajı instagram kaynağıyla ve boş sahipli açılır", async () => {
     const res = await createMessageLead({ channel: "ig_dm", phone: "0532 555 41 20", contentCode: "R-2645-A" });
-    expect(res).toEqual({ id: "new-lead", duplicate: false });
+    expect(res).toEqual({ id: "new-lead", duplicate: false, parentName: "Instagram velisi", inQueue: true });
     const lead = inserts("leads")[0];
     expect(lead).toMatchObject({
       source: "instagram", channel: "ig_dm", phone: "+905325554120",
@@ -66,9 +69,10 @@ describe("createMessageLead", () => {
   });
 
   it("aynı telefonla açık veli varsa mükerrer döner ve kod eklenir", async () => {
-    openLead = { id: "old-lead", content_code: null };
+    openLead = { id: "old-lead", content_code: null, parent_name: "Ayşe Kaya", status: "yeni", first_contact_at: null,
+      created_at: "2026-11-03T09:00:00+03:00" };
     const res = await createMessageLead({ channel: "whatsapp", phone: "05325554120", contentCode: "S-2640-B" });
-    expect(res).toEqual({ id: "old-lead", duplicate: true });
+    expect(res).toEqual({ id: "old-lead", duplicate: true, parentName: "Ayşe Kaya", inQueue: true });
     expect(inserts("leads")).toHaveLength(0);
     const open = ops.find((o) => o.table === "leads" && o.op === "select")!;
     expect(open.filters).toContainEqual(["eq", "phone", "+905325554120"]);
@@ -80,6 +84,34 @@ describe("createMessageLead", () => {
     expect(String(note.body)).toContain("WhatsApp");
     expect(String(note.body)).toContain("S-2640-B");
     expect(inserts("events")[0]).toMatchObject({ event_type: "mesaj_tekrar", entity_id: "old-lead" });
+  });
+
+  it("mükerrer veli yalnız yeni, aranmamış ve liste sınırı içindeyse listede sayılır (R25 · Imp4)", async () => {
+    const base = { id: "old-lead", content_code: null, parent_name: "Ayşe Kaya", status: "yeni", first_contact_at: null,
+      created_at: "2026-11-03T09:00:00+03:00" };
+    const inQueue = async (lead: Record<string, unknown>) => {
+      openLead = lead;
+      const res = await createMessageLead({ channel: "ig_dm", phone: "05325554120" });
+      return "inQueue" in res ? res.inQueue : undefined;
+    };
+    expect(await inQueue({ ...base, first_contact_at: "2026-11-02T10:00:00+03:00" })).toBe(false);
+    expect(await inQueue({ ...base, status: "ulasildi" })).toBe(false);
+    settingsRows = [{ key: "aday_hatti_acilis", value: "2026-11-01T07:00:00Z" }];
+    expect(await inQueue({ ...base, created_at: "2026-10-01T09:00:00+03:00" })).toBe(false);
+    expect(await inQueue(base)).toBe(true);
+  });
+
+  it("gelecekteki mesaj saati reddedilir; 5 dakikalık saat kayması kabul (R25 · Imp5)", async () => {
+    expect(await createMessageLead({ channel: "ig_dm", phone: "05325554120", messageAt: "2026-11-03T10:06" })).toEqual({
+      error: "Mesaj saati gelecekte olamaz",
+    });
+    expect(ops).toHaveLength(0);
+    expect(await createMessageLead({ channel: "ig_dm", phone: "05325554120", messageAt: "2026-11-03T10:04" })).toHaveProperty("id");
+  });
+
+  it("veli adı 80 karaktere kısaltılır", async () => {
+    await createMessageLead({ channel: "ig_dm", phone: "05325554120", parentName: ` ${"a".repeat(120)} ` });
+    expect(inserts("leads")[0].parent_name).toBe("a".repeat(80));
   });
 
   it("mevcut velinin kodu doluysa üzerine yazılmaz", async () => {
