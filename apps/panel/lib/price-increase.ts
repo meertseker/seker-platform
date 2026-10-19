@@ -110,3 +110,16 @@ export function computeIncrease(plan: IncreasePlanInput, percent: number, fromMo
   result.newTotalKurus = plan.totalKurus + delta;
   return result;
 }
+
+/** Sezonun zam başlangıcı: "2026-2027" → "2027-01-01". */
+export function tentativeStart(season: string) {
+  return `${season.split("-")[1]}-01-01`;
+}
+
+/**
+ * Yeni plan "kesinleşmedi" açılmalı mı? Yalnızca aidat; son vade zam başlangıcında ya da sonrasında;
+ * ve aynı sezonda zamı bekleyen (tentative_from dolu) başka aidat planı var.
+ */
+export function shouldStartTentative(itemType: string, lastDueDate: string, season: string, hasPendingSibling: boolean) {
+  return itemType === "aidat" && hasPendingSibling && lastDueDate >= tentativeStart(season);
+}

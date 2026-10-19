@@ -13,6 +13,7 @@ import { allocatePayment } from "@/lib/payment-allocation";
 import { applyPaymentDay, type PaymentDay } from "@/lib/payment-day";
 import { buildEnrollmentPlans, seasonLastMonth } from "@/lib/enrollment-plan";
 import { logEvent } from "@/lib/events";
+import { shouldStartTentative, tentativeStart } from "@/lib/price-increase";
 import { formatTRY, kurusToTl, tlToKurus } from "@/lib/money";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -51,6 +52,25 @@ async function activeSeason(supabase: Supabase) {
 
   if (error || !data) return null;
   return data.season as string;
+}
+
+/** Zam henüz girilmemiş sezonda açılan yeni aidat planı "kesinleşmedi" başlar. */
+async function tentativeFromForNewPlan(
+  supabase: Supabase,
+  season: string,
+  itemType: string,
+  lastDueDate: string,
+) {
+  if (itemType !== "aidat" || lastDueDate < tentativeStart(season)) return null;
+  const { data } = await supabase
+    .from("payment_plans")
+    .select("id, student:students!inner(status)")
+    .eq("item_type", "aidat")
+    .eq("season", season)
+    .not("tentative_from", "is", null)
+    .eq("student.status", "aktif")
+    .limit(1);
+  return shouldStartTentative(itemType, lastDueDate, season, (data ?? []).length > 0) ? tentativeStart(season) : null;
 }
 
 async function studentPathForPlan(supabase: Supabase, planId: string) {
@@ -94,12 +114,14 @@ export async function createPaymentPlan(
     return { error: "Taksitler oluşturulamadı" };
   }
 
+  const tentativeFrom = await tentativeFromForNewPlan(supabase, season, itemType, drafts[drafts.length - 1].dueDate);
   const { data: plan, error: planError } = await supabase
     .from("payment_plans")
     .insert({
       student_id: studentId,
       season,
       item_type: itemType,
+      tentative_from: tentativeFrom,
       total_amount: kurusToTl(totalKurus),
       installment_count: count,
       source_offer_id: sourceOfferId || null,
@@ -620,12 +642,19 @@ export async function createEnrollmentPlan(input: EnrollmentPlanInput) {
   const createdPlanIds: string[] = [];
   const cleanupClient = createAdminSupabase() ?? supabase;
   for (const draft of built.plans) {
+    const tentativeFrom = await tentativeFromForNewPlan(
+      supabase,
+      season,
+      draft.itemType,
+      draft.installments[draft.installments.length - 1].dueDate,
+    );
     const { data: plan, error: planError } = await supabase
       .from("payment_plans")
       .insert({
         student_id: input.studentId,
         season,
         item_type: draft.itemType,
+        tentative_from: tentativeFrom,
         total_amount: kurusToTl(draft.totalKurus),
         installment_count: draft.installmentCount,
         source_offer_id: draft.itemType === "aidat" ? input.sourceOfferId || null : null,
