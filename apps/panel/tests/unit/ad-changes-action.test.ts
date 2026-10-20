@@ -62,7 +62,7 @@ function qualifiedNoAppt(id: string): WeeklyLead {
   };
 }
 
-const empty = { leads: [], appts: [], openTasksByUser: new Map(), names: new Map() };
+const empty = { weekStart: "2026-10-19", leads: [], appts: [], reachLeads: [], weekAppts: [], openTasks: [], openTasksByUser: new Map(), names: new Map() };
 
 describe("applyAdChange (sunucu eylemi)", () => {
   beforeEach(() => {
@@ -100,7 +100,9 @@ describe("applyAdChange (sunucu eylemi)", () => {
 
   it("geçen haftanın kırmızı kapısı gerekçesiz artışı durdurur (istemci ne derse desin)", async () => {
     loadWeeklyData.mockImplementation(async (_db: unknown, week: string) =>
-      week === "2026-10-12" ? { ...empty, leads: [qualifiedNoAppt("a"), qualifiedNoAppt("b")] } : empty,
+      week === "2026-10-12"
+        ? { ...empty, weekStart: week, leads: [qualifiedNoAppt("a"), qualifiedNoAppt("b")] }
+        : { ...empty, weekStart: week },
     );
     const res = await applyAdChange({
       platform: "meta",
