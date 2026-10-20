@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DEFAULT_AD_SETTINGS } from "@/lib/ads/ad-settings";
 import type { Gate } from "@/lib/ads/weekly";
 import type { RecInput, RecommendationRow } from "@/lib/ads/recommendations";
@@ -147,7 +147,7 @@ describe("buildRecommendations (prototip örnekleri)", () => {
       platform: "google",
       title: "TR_K2-A_Beykent bütçesini %20 artır",
       blockedReason: "Kapı kırmızı",
-      action: { platform: "google", level: "campaign", objectId: "9001", kind: "budget", newDailyBudgetTl: 180 },
+      action: { platform: "google", level: "campaign", objectId: "9001", kind: "budget", newDailyBudgetTl: 180, expectedOldTl: 150 },
     });
     expect(d.why).toBe(
       "Veli başı maliyet hedefin altında (760 TL, hedef 1.000 TL). Günlük bütçe 150 TL → 180 TL. " +
@@ -341,6 +341,43 @@ describe("approveRecommendation / holdRecommendation", () => {
     requireRole.mockResolvedValue({ id: "yon-1", role: "yonetici" });
     store.claim.mockResolvedValue(null);
     store.hold.mockResolvedValue(true);
+    store.get.mockResolvedValue(rec({}));
+    vi.useFakeTimers();
+    // Salı 20 Ekim 2026, İstanbul: son tamamlanmış hafta 12 Ekim.
+    vi.setSystemTime(new Date("2026-10-20T09:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("geçmiş bir haftanın açık önerisi onaylanamaz ve bekletilemez", async () => {
+    given(rec({ weekStart: "2026-10-05" }));
+    expect(await approveRecommendation(REC_ID)).toEqual({ error: "Bu öneri geçmiş bir haftaya ait." });
+    expect(await holdRecommendation(REC_ID)).toEqual({ error: "Bu öneri geçmiş bir haftaya ait." });
+    expect(store.claim).not.toHaveBeenCalled();
+    expect(store.hold).not.toHaveBeenCalled();
+    expect(applyAdChange).not.toHaveBeenCalled();
+  });
+
+  it("bütçe önerisinin sonucu değişiklik kapısının kendi metnidir; beklenen eski bütçe kapıya gider", async () => {
+    given(
+      rec({
+        ruleKey: "butce_artir",
+        action: {
+          platform: "google",
+          level: "campaign",
+          objectId: "9001",
+          objectName: "TR_K2-A",
+          kind: "budget",
+          newDailyBudgetTl: 180,
+          expectedOldTl: 150,
+        },
+      }),
+    );
+    applyAdChange.mockResolvedValue({ ok: true, status: "uygulandi", message: "✓ Bütçe 150 TL → 180 TL · kayda geçti" });
+    expect(await approveRecommendation(REC_ID)).toEqual({ ok: true, result: "✓ Bütçe 150 TL → 180 TL · kayda geçti" });
+    expect(applyAdChange).toHaveBeenCalledWith(expect.objectContaining({ expectedOldTl: 150, source: "oneri" }));
+    expect(store.finish).toHaveBeenCalledWith(REC_ID, "✓ Bütçe 150 TL → 180 TL · kayda geçti");
   });
 
   it("danışman onaylayamaz ve bekletemez", async () => {
@@ -374,8 +411,8 @@ describe("approveRecommendation / holdRecommendation", () => {
 
   it("canlı yazım açıkken uygulandı sonucu", async () => {
     given(rec({}));
-    applyAdChange.mockResolvedValue({ ok: true, status: "uygulandi", message: "x" });
-    expect(await approveRecommendation(REC_ID)).toEqual({ ok: true, result: "✓ Uygulandı · kayda geçti" });
+    applyAdChange.mockResolvedValue({ ok: true, status: "uygulandi", message: "✓ R-2643-B durduruldu · kayda geçti" });
+    expect(await approveRecommendation(REC_ID)).toEqual({ ok: true, result: "✓ R-2643-B durduruldu · kayda geçti" });
   });
 
   it("kırmızı kapıda gerekçesiz bütçe önerisi: gerekçe istenir, öneri açık kalır", async () => {

@@ -145,7 +145,7 @@ export default async function BuHaftaPage({ searchParams }: { searchParams: Sear
       </header>
 
       <WeeklyGates gates={gates} topLost={funnel.lostReasons[0] ?? null} />
-      <WeeklyRecommendations recs={recs} redGates={red.labels} />
+      <WeeklyRecommendations recs={recs} redGates={red.labels} readOnly={weekStart !== latest} />
       <WeeklyFunnel funnel={funnel} />
       <WeeklyTeam rows={team} />
       <WeeklyPlan
