@@ -12,34 +12,44 @@ Menüde "Reklam" grubu var: "Bu hafta", "İçerik panosu", "Kampanyalar", "Ayarl
 - 4 kapı vardır: ilk arama süresi (ortanca 15 dakika ya da altı, yalnız mesai saatinde sayılır), 7 günde ulaşma (%80), nitelikliden randevu (%35), randevuya gelme (%70).
 - Yeşil geçti, kırmızı geçmedi demektir. Veri yoksa kapı gri görünür, kırmızı sayılmaz.
 - Ulaşma kapısı bir önceki haftayı ölçer. Çünkü velilere 7 gün süre tanınır; bu haftaki veliler henüz süresini doldurmadı.
-- Bir kapı kırmızıysa panel bütçe artışı önermez.
+- Bir kapı kırmızıysa ekran "Bu hafta bütçe artmıyor." yazar. Panelin bütçe artışı önerisi yine görünür ama bekletilir (bkz. 2 Kararlar).
 
 **2 Kararlar**
-- Panel kurallara göre öneri çıkarır (durdur, büyüt, yenile gibi). Her öneride "Onayla" ya da "Şimdilik bekle" vardır.
+- Panel kurallara göre öneri çıkarır. Altı kural vardır: durdur, büyütme kampanyasına taşı, teste al, bütçe artır, yorgunluk (yoruldu, durdurun) ve sonuçsuz (arşive al). Her öneride "Onayla" ya da "Şimdilik bekle" vardır.
 - "Şimdilik bekle" dediğiniz öneri bu hafta yeniden çıkmaz, gelecek hafta yeniden sorulur.
-- Kırmızı kapı varken bütçe artışını onaylarsanız kırmızı uyarı çıkar ve en az 10 karakterlik yazılı gerekçe gerekir. Durdurma ve bütçe azaltma için gerekçe istenmez.
+- Kırmızı kapı varken bütçe önerisinin düğmesi "Kapı kırmızı" yazar. Yine de onaylamak isterseniz en az 10 karakterlik yazılı gerekçe gerekir. Durdurma ve bütçe azaltma için gerekçe istenmez.
+- Bütçe önerisi sabahki bütçeye göre yazılır. Bütçe o zamandan beri Google'da ya da Instagram'da değiştiyse öneri uygulanmaz, "Bütçe öneriden sonra değişti; sayfayı yenileyin." yazar.
+- Oklarla geçmiş bir haftaya giderseniz öneriler yalnız okunur: karar düğmesi yoktur, karar verilmemiş öneri "Karar verilmedi · geçmiş hafta" yazar. Karar yalnız toplantı haftasının önerisine verilir.
 
 **3 Veliler nerede kaldı**
-- Reklamdan gelen velilerin hangi aşamada kaldığını ve en çok hangi nedenle kaybedildiğini gösterir.
-- Yalnız reklam kaynaklı veliler sayılır. Organik Instagram mesajı bu sayıya girmez.
+- Reklamdan ve Instagram'dan gelen velilerin hangi aşamada kaldığını ve en çok hangi nedenle kaybedildiğini gösterir.
+- Google reklamı, Instagram reklamı ve Instagram mesajı ya da yorumuyla gelen veliler sayılır; huninin altında üçü ayrı yazılır ("Instagram mesajı … veli"). Kapılar ve ekip karnesi de bu velilerle hesaplanır.
+- Organik Instagram mesajı yalnız maliyete girmez: nitelikli veli başı maliyet ücretli reklam velileriyle hesaplanır.
 
 **4 Ekip**
-- Ön büro kişilerinin karnesi: kaç veli aldı, ilk aramaya ne kadar sürdü, kaç görevi açık.
+- Ön büro kişilerinin karnesi. Sütunlar: Kişi, İlk arama (ortanca süre), Ulaşılan (7 günü dolmuş geçen haftanın velileriyle), Randevu (oran), Açık görev (gecikmiş olan ayrıca yazılır).
+- Randevu oranı kapının altındaysa kırmızı, süresi geçmiş görev varsa turuncu görünür.
 - Amaç suçlu bulmak değil, nerede tıkandığımızı görmek.
 
-**5 Bu haftanın görevleri**
-- 4 yuva vardır: Reels A, Reels B, Sayfa · Google, Sayfa · Instagram. Her yuvaya bir öğretmen seçin, gerekirse konu yazın.
+**5 Bu haftanın konusu ve görevleri**
+- Önce haftanın konusunu yazın (velinin bir sorusu ya da kaygısı). Konu zorunludur ve dört yuvanın hepsi için tektir.
+- 4 yuva vardır: Reels A, Reels B, Sayfa · Google, Sayfa · Instagram. Görev açılacak her yuvaya bir öğretmen ve teslim zamanı seçin. Öğretmen seçilmeyen yuvaya görev açılmaz.
 - "Görevleri gönder ve toplantıyı kaydet" düğmesi görevleri açar. Öğretmenler panelde bildirim alır.
 - Her öğretmenin yanındaki "WhatsApp'tan haber ver" bağlantısıyla ayrıca mesaj da atabilirsiniz.
-- Yuvası zaten açılmış öğretmene ikinci görev açılmaz.
+- Bir yuvada o hafta görev zaten açıksa yuva "… açık · öğretmen adı" yazar ve o yuvaya ikinci görev açılmaz. Koruma yuva başınadır; aynı öğretmen başka bir yuvada görev alabilir.
 
 ## Kampanyalar'da değişiklik
 
-- "Kampanyalar" tablosunda her satırda "Durdur" / "Başlat" ve "Bütçeyi artır" / "Bütçeyi azalt" vardır.
+- "Kampanyalar" tablosunda her satırda "Bütçe" ve "Durdur" (durmuş satırda "Başlat") düğmeleri vardır.
+- "Bütçe" düğmesi bir pencere açar. Yeni günlük bütçeyi yazarsınız; pencerenin düğmesi tutara göre "Bütçeyi artır" ya da "Bütçeyi azalt" olur. Pencere varsayılan olarak haftalık sınır kadar artışı yazar.
+- Günlük bütçesi o satırda durmayan satırda "Bütçe" düğmesi soluktur, basılamaz.
 - Değişiklik herhangi bir yöneticinin tek onayıyla yapılır. İkinci kişinin onayı gerekmez.
-- Kırmızı kapı varken bütçe artışında gerekçe yazmak zorunludur (en az 10 karakter). Gerekçe kayda geçer.
-- Bütçe iki kampanya arasında paylaşılıyorsa değişiklik ikisini de etkiler; ekran bunu not olarak yazar.
-- Haftalık büyütme sınırı varsayılan %20'dir. Daha fazlası önerilmez.
+- Bütçe artışında en az 10 karakterlik gerekçe şu durumlarda zorunludur; gerekçe kayda geçer:
+  - Bu hafta ya da geçen hafta bir kapı kırmızıysa (uyarı hangi kapının, hangi haftada kırmızı olduğunu yazar).
+  - Artış haftalık büyütme sınırını aşıyorsa. Kapıların hepsi yeşil olsa da gerekçe istenir. Sınır varsayılan %20'dir ve haftanın başındaki bütçeye göre sayılır (150 → 180 yapıldıysa aynı hafta 190 gerekçe ister).
+  - Canlı yazım açıkken bütçe platformdan okunamadıysa ve bu hafta önceki bir bütçe değişikliği kaydı yoksa: eski bütçe bilinmediği için artış sayılır.
+- Instagram'da günlük bütçe reklamda değil, reklam setinde ya da kampanyada durur. Bütçeyi değiştirmek o reklam setinin ya da kampanyanın bütçesini değiştirir ve aynı bütçeyi kullanan diğer reklamları da etkiler; pencere bunu not olarak yazar.
+- Google'da bir bütçe birden fazla kampanya arasında paylaşılıyorsa değişiklik hepsini etkiler; pencere bunu da yazar.
 - Panelden hiçbir zaman yeni kampanya, reklam seti ya da reklam oluşturulmaz. Bunu Mert yapar.
 
 ## "Canlı yazım kapalı" ne demek
@@ -47,7 +57,7 @@ Menüde "Reklam" grubu var: "Bu hafta", "İçerik panosu", "Kampanyalar", "Ayarl
 - Panel şimdilik Google ve Instagram'a değişiklik göndermez. Yaptığınız işlem kaydedilir ama platforma gitmez.
 - Onaydan sonra "Kaydedildi · uygulanmadı: canlı yazım kapalı" yazar. Bu bir hata değildir.
 - Kim, ne zaman, eski ve yeni değer kayıtta durur; hiçbir şey kaybolmaz.
-- Canlı yazımı Claude ya da Mert sunucuda açar (ADS_WRITE_ENABLED ayarı). Sizin yapmanız gerekmez.
+- Canlı yazımı Mert sunucuda açar (ADS_WRITE_ENABLED ayarı). Sizin yapmanız gerekmez.
 - Açıldıktan sonra sonuç "uygulandı" ya da hata metniyle görünür. Hata olursa aynı işlemi tekrar deneyin, olmazsa Mert'e haber verin.
 
 ## Ayarlar ve hedefler
