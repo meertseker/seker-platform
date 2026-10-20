@@ -9,7 +9,7 @@ const applyAdChange = vi.fn();
 const moveContentStage = vi.fn();
 const store = {
   get: vi.fn(),
-  claim: vi.fn(async () => true),
+  claim: vi.fn(async (): Promise<RecommendationRow | null> => null),
   release: vi.fn(async () => undefined),
   finish: vi.fn(async () => undefined),
   hold: vi.fn(async () => true),
@@ -143,7 +143,7 @@ describe("buildRecommendations (prototip örnekleri)", () => {
     const [d] = buildRecommendations([winner()], RED, S);
     expect(d).toMatchObject({
       ruleKey: "butce_artir",
-      objectKey: "google:9001",
+      objectKey: "google:customers/1/campaignBudgets/7",
       platform: "google",
       title: "TR_K2-A_Beykent bütçesini %20 artır",
       blockedReason: "Kapı kırmızı",
@@ -153,6 +153,49 @@ describe("buildRecommendations (prototip örnekleri)", () => {
       "Veli başı maliyet hedefin altında (760 TL, hedef 1.000 TL). Günlük bütçe 150 TL → 180 TL. " +
         "Ancak bir kapı kırmızı (Randevu verilen) olduğu için bekletiliyor.",
     );
+  });
+
+  it("bütçe artışı sınırı aşmaz: 153 TL × %20 = 183,6 → 183 TL (aşağı yuvarlanır)", () => {
+    const w = winner();
+    w.adObjects[0].dailyBudgetMicros = 153_000_000;
+    const [d] = buildRecommendations([w], GREEN, S);
+    expect(d.action).toMatchObject({ kind: "budget", newDailyBudgetTl: 183 });
+    expect(((183 - 153) / 153) * 100).toBeLessThanOrEqual(S.scaleMaxPct);
+  });
+
+  it("paylaşılan Meta bütçesi: tek öneri, reklam seti adıyla, reklam setine uygulanır", () => {
+    const owner = { level: "adset" as const, objectId: "120900", name: "Test seti" };
+    const ad = (objectId: string) => ({
+      objectId,
+      level: "ad",
+      name: `reklam ${objectId}`,
+      status: "ACTIVE",
+      dailyBudgetMicros: 150_000_000,
+      budgetResource: "120900",
+      budgetOwner: owner,
+    });
+    const perf = { spendKurus: kurus(4560), clicks: 90, platformResults: 9, leads: 8, qualified: 6, appointments: 3 };
+    const out = buildRecommendations(
+      [
+        input({ contentCode: "R-2641-A", stage: "kazanan", perf, adObjects: [ad("1")] }),
+        input({ contentCode: "R-2641-B", stage: "kazanan", perf, adObjects: [ad("2")] }),
+      ],
+      GREEN,
+      S,
+    );
+    const budget = out.filter((d) => d.ruleKey === "butce_artir");
+    expect(budget).toHaveLength(1);
+    expect(budget[0]).toMatchObject({
+      objectKey: "meta:120900",
+      title: "Test seti bütçesini %20 artır",
+      action: { platform: "meta", level: "adset", objectId: "120900", objectName: "Test seti", kind: "budget", newDailyBudgetTl: 180 },
+    });
+    expect(budget[0].why).toContain("Bu bütçe reklam seti düzeyinde; aynı bütçeyi kullanan diğer reklamlar da büyür.");
+  });
+
+  it("Meta bütçesinin sahibi bilinmiyorsa bütçe önerisi yazılmaz", () => {
+    const perf = { spendKurus: kurus(4560), clicks: 90, platformResults: 9, leads: 8, qualified: 6, appointments: 3 };
+    expect(buildRecommendations([input({ stage: "kazanan", perf })], GREEN, S).filter((d) => d.ruleKey === "butce_artir")).toEqual([]);
   });
 
   it("kapılar yeşilken bütçe önerisi engelsiz", () => {
@@ -268,6 +311,12 @@ describe("fatigueNumbers", () => {
 
 const REC_ID = "22222222-2222-4222-8222-222222222222";
 
+/** Ayırma (claim) satırı döndürür; onay o satırın eylemini uygular. */
+function given(row: RecommendationRow) {
+  store.claim.mockResolvedValue(row);
+  store.get.mockResolvedValue(row);
+}
+
 function rec(over: Partial<RecommendationRow>): RecommendationRow {
   return {
     id: REC_ID,
@@ -290,7 +339,7 @@ describe("approveRecommendation / holdRecommendation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     requireRole.mockResolvedValue({ id: "yon-1", role: "yonetici" });
-    store.claim.mockResolvedValue(true);
+    store.claim.mockResolvedValue(null);
     store.hold.mockResolvedValue(true);
   });
 
@@ -305,7 +354,7 @@ describe("approveRecommendation / holdRecommendation", () => {
   });
 
   it("platform eylemi applyAdChange'e öneri kaynağıyla gider; kapalıyken sonuç kayda geçer", async () => {
-    store.get.mockResolvedValue(rec({}));
+    given(rec({}));
     applyAdChange.mockResolvedValue({ ok: true, status: "uygulanmadi_kapali", message: "x" });
     const r = await approveRecommendation(REC_ID);
     expect(r).toEqual({ ok: true, result: "Kaydedildi · uygulanmadı: canlı yazım kapalı" });
@@ -324,13 +373,13 @@ describe("approveRecommendation / holdRecommendation", () => {
   });
 
   it("canlı yazım açıkken uygulandı sonucu", async () => {
-    store.get.mockResolvedValue(rec({}));
+    given(rec({}));
     applyAdChange.mockResolvedValue({ ok: true, status: "uygulandi", message: "x" });
     expect(await approveRecommendation(REC_ID)).toEqual({ ok: true, result: "✓ Uygulandı · kayda geçti" });
   });
 
   it("kırmızı kapıda gerekçesiz bütçe önerisi: gerekçe istenir, öneri açık kalır", async () => {
-    store.get.mockResolvedValue(
+    given(
       rec({
         ruleKey: "butce_artir",
         blockedReason: "Kapı kırmızı",
@@ -352,7 +401,7 @@ describe("approveRecommendation / holdRecommendation", () => {
   });
 
   it("aşama eylemi moveContentStage ile", async () => {
-    store.get.mockResolvedValue(
+    given(
       rec({ ruleKey: "buyut", action: { kind: "stage", contentId: "11111111-1111-4111-8111-111111111111", to: "kazanan" } }),
     );
     moveContentStage.mockResolvedValue({ ok: true });
@@ -362,19 +411,37 @@ describe("approveRecommendation / holdRecommendation", () => {
   });
 
   it("aşama geçişi başarısızsa öneri yeniden açılır", async () => {
-    store.get.mockResolvedValue(rec({ action: { kind: "stage", contentId: "11111111-1111-4111-8111-111111111111", to: "test" } }));
+    given(rec({ action: { kind: "stage", contentId: "11111111-1111-4111-8111-111111111111", to: "test" } }));
     moveContentStage.mockResolvedValue({ error: "Bu aşama geçişi yapılamaz" });
     expect(await approveRecommendation(REC_ID)).toEqual({ error: "Bu aşama geçişi yapılamaz" });
     expect(store.release).toHaveBeenCalledWith(REC_ID);
   });
 
-  it("karar verilmiş öneri yeniden onaylanamaz", async () => {
+  it("karar verilmiş öneri yeniden onaylanamaz; geçersiz öneri onaylanamaz", async () => {
+    store.claim.mockResolvedValue(null);
     store.get.mockResolvedValue(rec({ status: "bekletildi" }));
     expect(await approveRecommendation(REC_ID)).toEqual({ error: "Bu öneri için karar zaten verildi." });
-    store.get.mockResolvedValue(rec({}));
-    store.claim.mockResolvedValue(false);
+    store.get.mockResolvedValue(rec({ status: "onaylandi" }));
     expect(await approveRecommendation(REC_ID)).toEqual({ error: "Bu öneri için karar zaten verildi." });
+    store.get.mockResolvedValue(rec({ status: "gecersiz" }));
+    expect(await approveRecommendation(REC_ID)).toEqual({ error: "Bu öneri artık geçerli değil." });
+    store.get.mockResolvedValue(null);
+    expect(await approveRecommendation(REC_ID)).toEqual({ error: "Öneri bulunamadı." });
     expect(applyAdChange).not.toHaveBeenCalled();
+    expect(moveContentStage).not.toHaveBeenCalled();
+  });
+
+  it("ayırılan satırın eylemi uygulanır (okuma ile ayırma arasında tazelenen öneri)", async () => {
+    given(
+      rec({
+        ruleKey: "butce_artir",
+        action: { platform: "meta", level: "adset", objectId: "120900", objectName: "Test seti", kind: "budget", newDailyBudgetTl: 183 },
+      }),
+    );
+    store.get.mockResolvedValue(rec({})); // eski okuma: durdurma eylemi
+    applyAdChange.mockResolvedValue({ ok: true, status: "uygulanmadi_kapali", message: "x" });
+    await approveRecommendation(REC_ID);
+    expect(applyAdChange).toHaveBeenCalledWith(expect.objectContaining({ objectId: "120900", kind: "budget", newDailyBudgetTl: 183 }));
   });
 
   it("geçersiz kimlik reddedilir", async () => {

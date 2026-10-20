@@ -22,6 +22,8 @@ export type RecAdObject = {
   dailyBudgetMicros: number | null;
   /** Bütçenin durduğu kaynak; aynı kaynağı paylaşan satırlar tek bütçedir. */
   budgetResource: string | null;
+  /** Meta: bütçenin durduğu reklam seti ya da kampanya (ad_objects'te object_id = budgetResource). */
+  budgetOwner?: { level: "campaign" | "adset"; objectId: string; name: string } | null;
 };
 
 export type RecInput = {
@@ -134,16 +136,32 @@ function allStopped(input: RecInput): boolean {
   return input.adObjects.length > 0 && !input.adObjects.some(isActive);
 }
 
-/** Bütçe artışı için tek bütçe kaynağı: çalışan, bütçesi bilinen satırlar tek kaynağı paylaşıyorsa. */
-function budgetTarget(input: RecInput): RecAdObject | null {
+type BudgetTarget = { budgetResource: string; level: "campaign" | "adset"; objectId: string; name: string; tl: number };
+
+/**
+ * Bütçe artışı için tek bütçe kaynağı: çalışan, bütçesi bilinen satırlar tek kaynağı paylaşıyorsa.
+ * Eylem bütçenin sahibine uygulanır: Google'da kampanyanın kendisi, Meta'da reklam seti ya da kampanya
+ * (sahibi bilinmiyorsa öneri yazılmaz; sabah eşitlemesi doldurur).
+ */
+function budgetTarget(input: RecInput): BudgetTarget | null {
   const withBudget = input.adObjects.filter(
     (o) => isActive(o) && o.dailyBudgetMicros !== null && o.dailyBudgetMicros > 0 && !!o.budgetResource,
   );
   const resources = new Set(withBudget.map((o) => o.budgetResource));
   if (resources.size !== 1) return null;
-  // Bütçenin kendi nesnesi varsa o (kampanya/küme), yoksa aynı bütçeyi taşıyan ilk satır.
-  return withBudget.find((o) => o.objectId === o.budgetResource) ?? withBudget[0];
+  const row = withBudget[0];
+  const tl = (row.dailyBudgetMicros as number) / 1_000_000;
+  const budgetResource = row.budgetResource as string;
+  if (input.platform === "google") {
+    if (row.level !== "campaign") return null;
+    return { budgetResource, level: "campaign", objectId: row.objectId, name: row.name, tl };
+  }
+  const owner = row.budgetOwner;
+  if (!owner || owner.objectId !== budgetResource) return null;
+  return { budgetResource, level: owner.level, objectId: owner.objectId, name: owner.name, tl };
 }
+
+const LEVEL_TEXT: Record<"campaign" | "adset", string> = { campaign: "kampanya", adset: "reklam seti" };
 
 function fatigued(input: RecInput, s: AdSettings): boolean {
   const { frequency, firstWeekCtr, lastWeekCtr } = input;
@@ -163,6 +181,8 @@ export function buildRecommendations(inputs: RecInput[], gates: Gate[], s: AdSet
   const red = anyGateRed(gates);
   const out: RecDraft[] = [];
   const target = formatTl(s.targetTl);
+  // Aynı bütçeyi paylaşan iki kazanan içerik tek bütçe önerisi üretir.
+  const budgetKeys = new Set<string>();
 
   for (const input of inputs) {
     const { contentCode: code, perf, stage, platform } = input;
@@ -211,32 +231,27 @@ export function buildRecommendations(inputs: RecInput[], gates: Gate[], s: AdSet
     }
 
     if (stage === "kazanan" && win && s.scaleMaxPct > 0) {
-      const obj = budgetTarget(input);
-      if (obj) {
-        const oldTl = (obj.dailyBudgetMicros as number) / 1_000_000;
-        const newTl = Math.round(oldTl * (1 + s.scaleMaxPct / 100));
-        if (newTl > oldTl) {
-          const blocked = red.red;
-          out.push({
-            ruleKey: "butce_artir",
-            objectKey: `${platform}:${obj.objectId}`,
-            platform,
-            title: `${obj.name} bütçesini %${s.scaleMaxPct} artır`,
-            why:
-              `Veli başı maliyet hedefin altında (${formatTl(cpq ?? 0)}, hedef ${target}). ` +
-              `Günlük bütçe ${formatTl(oldTl)} → ${formatTl(newTl)}.` +
-              (blocked ? ` Ancak bir kapı kırmızı (${red.labels.join(", ")}) olduğu için bekletiliyor.` : ""),
-            action: {
-              platform,
-              level: obj.level as AdChangeAction["level"],
-              objectId: obj.objectId,
-              objectName: obj.name,
-              kind: "budget",
-              newDailyBudgetTl: newTl,
-            },
-            blockedReason: blocked ? GATE_BLOCKED : null,
-          });
-        }
+      const b = budgetTarget(input);
+      const objectKey = b ? `${platform}:${b.budgetResource}` : "";
+      // Aşağı yuvarlanır: önerinin kendisi haftalık büyütme sınırını aşıp gerekçe istemesin (153 → 183, 184 değil).
+      const newTl = b ? Math.floor(b.tl * (1 + s.scaleMaxPct / 100)) : 0;
+      if (b && newTl > b.tl && !budgetKeys.has(objectKey)) {
+        budgetKeys.add(objectKey);
+        const blocked = red.red;
+        const shared =
+          platform === "meta" ? ` Bu bütçe ${LEVEL_TEXT[b.level]} düzeyinde; aynı bütçeyi kullanan diğer reklamlar da büyür.` : "";
+        out.push({
+          ruleKey: "butce_artir",
+          objectKey,
+          platform,
+          title: `${b.name} bütçesini %${s.scaleMaxPct} artır`,
+          why:
+            `Veli başı maliyet hedefin altında (${formatTl(cpq ?? 0)}, hedef ${target}). ` +
+            `Günlük bütçe ${formatTl(b.tl)} → ${formatTl(newTl)}.${shared}` +
+            (blocked ? ` Ancak bir kapı kırmızı (${red.labels.join(", ")}) olduğu için bekletiliyor.` : ""),
+          action: { platform, level: b.level, objectId: b.objectId, objectName: b.name, kind: "budget", newDailyBudgetTl: newTl },
+          blockedReason: blocked ? GATE_BLOCKED : null,
+        });
       }
     }
 
@@ -384,8 +399,8 @@ export async function readWeekRecommendations(supabase: SupabaseClient, weekStar
 
 export interface RecommendationStore {
   get(id: string): Promise<RecommendationRow | null>;
-  /** Açık öneriyi karar sahibine ayırır (yarışta tek kazanan); ayrılamadıysa false. */
-  claim(id: string, actorId: string): Promise<boolean>;
+  /** Açık öneriyi karar sahibine ayırır (yarışta tek kazanan) ve ayrılan satırı döndürür; ayrılamadıysa null. */
+  claim(id: string, actorId: string): Promise<RecommendationRow | null>;
   /** Uygulama başarısızsa ayrılan öneriyi yeniden açar. */
   release(id: string): Promise<void>;
   finish(id: string, result: string): Promise<void>;
@@ -406,9 +421,10 @@ export function supabaseRecommendationStore(db: SupabaseClient, now: () => Date 
         .update({ status: "onaylandi", decided_by: actorId, decided_at: now().toISOString() })
         .eq("id", id)
         .eq("status", "acik")
-        .select("id");
+        .select(REC_COLUMNS);
       if (error) throw new Error("db");
-      return (data ?? []).length > 0;
+      const row = (data ?? [])[0] as DbRec | undefined;
+      return row ? toRecommendationRow(row) : null;
     },
     async release(id) {
       const { error } = await db

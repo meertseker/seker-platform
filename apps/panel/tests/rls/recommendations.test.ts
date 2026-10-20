@@ -86,8 +86,8 @@ describe("syncRecommendations", () => {
     await syncRecommendations(admin, WEEK, [draft({})]);
     const [row] = await rows();
     const store = supabaseRecommendationStore(admin);
-    expect(await store.claim(row.id, YON_ID)).toBe(true);
-    expect(await store.claim(row.id, YON_ID)).toBe(false);
+    expect(await store.claim(row.id, YON_ID)).toMatchObject({ id: row.id, status: "onaylandi", action: { kind: "pause", objectId: "990001" } });
+    expect(await store.claim(row.id, YON_ID)).toBeNull();
     await store.finish(row.id, "Kaydedildi · uygulanmadı: canlı yazım kapalı");
     await syncRecommendations(admin, WEEK, []);
     expect((await rows())[0]).toMatchObject({ status: "onaylandi", result: "Kaydedildi · uygulanmadı: canlı yazım kapalı" });
