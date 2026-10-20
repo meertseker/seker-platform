@@ -20,7 +20,7 @@ export function ConversionUploadList({ uploads }: { uploads: UploadListItem[] })
   const [message, setMessage] = useState<string | null>(null);
 
   if (uploads.length === 0) {
-    return <p className="text-sm text-muted-foreground">Henüz Google&apos;a bildirilecek bir randevu veya kayıt yok.</p>;
+    return <p className="text-sm text-muted-foreground">Henüz Google veya Instagram&apos;a bildirilecek bir başvuru, randevu ya da kayıt yok.</p>;
   }
 
   return (
@@ -32,7 +32,7 @@ export function ConversionUploadList({ uploads }: { uploads: UploadListItem[] })
             <div className="min-w-0">
               <Link href={`/leads/${u.leadId}`} className="font-semibold text-foreground hover:underline">{u.parentName}</Link>
               <p className="text-sm text-muted-foreground">
-                {label(CONVERSION_ACTIONS, u.action)} · {dateFormatter.format(new Date(u.conversionAt))}
+                {u.platform === "meta" ? "Instagram" : "Google"} · {label(CONVERSION_ACTIONS, u.action)} · {dateFormatter.format(new Date(u.conversionAt))}
                 {u.error ? <span className={`block break-words ${u.status === "gonderildi" ? "text-muted-foreground" : "text-red-700"}`}>{u.error}</span> : null}
               </p>
             </div>

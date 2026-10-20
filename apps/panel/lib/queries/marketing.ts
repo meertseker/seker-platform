@@ -1,11 +1,13 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { ConversionAction, ConversionUploadStatus } from "@/lib/constants";
+import type { AdPlatform } from "@/lib/ads/types";
 import { buildMarketingReport, type MarketingReport, type ReportLead, type ReportSpend } from "@/lib/ads/report";
 
 export interface UploadListItem {
   id: string;
   leadId: string;
   parentName: string;
+  platform: AdPlatform;
   action: ConversionAction;
   status: ConversionUploadStatus;
   error: string | null;
@@ -48,7 +50,7 @@ export async function getMarketingData(
     fetchAll<LeadRow>((f, t) =>
       supabase
         .from("leads")
-        .select("id, source, gclid, utm_campaign, status, converted_student_id, appointments(id)")
+        .select("id, source, gclid, utm_campaign, status, converted_student_id, ad_platform, appointments(id)")
         .gte("created_at", istanbulDayStartIso(from))
         .lt("created_at", istanbulDayStartIso(nextDay(to)))
         .order("created_at")
@@ -58,17 +60,18 @@ export async function getMarketingData(
     fetchAll<ReportSpend>((f, t) =>
       supabase
         .from("ad_spend_daily")
-        .select("campaign_id, campaign_name, cost_micros")
+        .select("platform, campaign_id, campaign_name, cost_micros")
         .gte("date", from)
         .lte("date", to)
         .order("date")
-        .order("campaign_id")
+        .order("platform")
+        .order("object_id")
         .range(f, t),
     ),
     // Son 50 yükleme: tek sayfa (limit < max_rows), sayfalama gerekmez.
     supabase
       .from("conversion_uploads")
-      .select("id, lead_id, conversion_action, status, error, conversion_at, lead:leads(parent_name)")
+      .select("id, lead_id, platform, conversion_action, status, error, conversion_at, lead:leads(parent_name)")
       .order("conversion_at", { ascending: false })
       .limit(50),
   ]);
@@ -82,6 +85,7 @@ export async function getMarketingData(
     utm_campaign: row.utm_campaign,
     status: row.status,
     converted_student_id: row.converted_student_id,
+    ad_platform: row.ad_platform ?? null,
   }));
 
   const report = buildMarketingReport(
@@ -91,7 +95,7 @@ export async function getMarketingData(
   );
 
   type UploadRow = {
-    id: string; lead_id: string; conversion_action: ConversionAction; status: ConversionUploadStatus;
+    id: string; lead_id: string; platform: AdPlatform; conversion_action: ConversionAction; status: ConversionUploadStatus;
     error: string | null; conversion_at: string; lead: { parent_name: string } | { parent_name: string }[] | null;
   };
   const uploads = ((uploadsResult.data ?? []) as unknown as UploadRow[]).map((row) => {
@@ -100,6 +104,7 @@ export async function getMarketingData(
       id: row.id,
       leadId: row.lead_id,
       parentName: lead?.parent_name ?? "—",
+      platform: row.platform,
       action: row.conversion_action,
       status: row.status,
       error: row.error,

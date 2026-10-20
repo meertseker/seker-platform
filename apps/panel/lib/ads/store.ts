@@ -14,7 +14,7 @@ interface PendingRow {
   id: string;
   lead_id: string;
   gclid: string | null;
-  conversion_action: ConversionAction;
+  conversion_action: Exclude<ConversionAction, "lead">; // sorgu platform=google ile süzülür
   conversion_at: string;
   value: number | string | null;
   lead: LeadRow | LeadRow[] | null;

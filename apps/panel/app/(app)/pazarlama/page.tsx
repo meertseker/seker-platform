@@ -3,6 +3,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { istanbulDateString } from "@/lib/cron-rules";
 import { normalizeRange } from "@/lib/ads/report";
 import { readAdsConfig } from "@/lib/ads/config";
+import { readMetaConfig } from "@/lib/ads/meta/config";
 import { adsStatusLines } from "@/lib/ads/status-lines";
 import { getMarketingData } from "@/lib/queries/marketing";
 import { MarketingTable } from "@/components/marketing-table";
@@ -56,7 +57,7 @@ export default async function PazarlamaPage({ searchParams }: { searchParams: Se
     console.error("[pazarlama] ziyaret sayacı:", counter.reason instanceof Error ? counter.reason.message : "bilinmeyen");
     visitsError = "Ziyaret sayacı şu an okunamadı. Daha sonra tekrar deneyin.";
   }
-  const status = adsStatusLines(readAdsConfig());
+  const status = adsStatusLines(readAdsConfig(), readMetaConfig());
 
   return (
     <div className="space-y-6">
@@ -83,6 +84,8 @@ export default async function PazarlamaPage({ searchParams }: { searchParams: Se
       <ul className="space-y-1 rounded-2xl border border-border bg-warning-soft p-4 text-sm text-foreground">
         <li><span className="font-semibold">Harcama:</span> {status.spend}</li>
         <li><span className="font-semibold">Dönüşüm bildirimi:</span> {status.conversion}</li>
+        <li><span className="font-semibold">Instagram harcaması:</span> {status.metaSpend}</li>
+        <li><span className="font-semibold">Instagram dönüşüm bildirimi:</span> {status.metaConversion}</li>
         <li><span className="font-semibold">Site ziyaretleri:</span> {ga4 ? "Google Analytics bağlı" : "Google Analytics bağlantısı yok"}</li>
       </ul>
 

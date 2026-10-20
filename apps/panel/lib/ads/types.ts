@@ -15,7 +15,7 @@ export interface PendingConversion {
   id: string;
   leadId: string;
   gclid: string;
-  action: ConversionAction;
+  action: Exclude<ConversionAction, "lead">; // Google kuyruğu yalnız randevu ve kayıt taşır
   conversionAt: string; // ISO (DB timestamptz)
   clickAt: string; // ISO; Google 90 gün sınırı tıklamadan sayılır
   value: number | null; // TL

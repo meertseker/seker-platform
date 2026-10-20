@@ -12,7 +12,7 @@ function Row({ row, strong = false }: { row: ReportRow; strong?: boolean }) {
       <th scope="row" className="px-3 py-3 text-left font-medium text-foreground">
         {row.label}
         {row.kind === "kampanya" && !strong ? (
-          <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Google Ads</span>
+          <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{row.platform === "meta" ? "Instagram" : "Google Ads"}</span>
         ) : null}
       </th>
       <td className={cell}>{row.spendKurus > 0 ? formatTRY(row.spendKurus) : "—"}</td>

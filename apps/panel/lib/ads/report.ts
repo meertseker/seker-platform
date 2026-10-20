@@ -1,3 +1,4 @@
+import type { AdPlatform } from "@/lib/ads/types";
 import { LEAD_SOURCES, label, type LeadSource, type LeadStatus } from "@/lib/constants";
 
 export interface ReportLead {
@@ -7,9 +8,12 @@ export interface ReportLead {
   utm_campaign: string | null;
   status: LeadStatus;
   converted_student_id: string | null;
+  ad_platform?: AdPlatform | null;
 }
 
 export interface ReportSpend {
+  /** Boşsa Google (eski satırlar). */
+  platform?: AdPlatform;
   campaign_id: string;
   campaign_name: string;
   cost_micros: number;
@@ -18,6 +22,8 @@ export interface ReportSpend {
 export interface ReportRow {
   key: string;
   kind: "kampanya" | "kaynak";
+  /** Yalnız Meta kampanya satırlarında "meta"; Google satırlarında boş kalır. */
+  platform?: AdPlatform;
   label: string;
   spendKurus: number;
   leads: number;
@@ -33,14 +39,15 @@ export interface MarketingReport {
 }
 
 const UNKNOWN_CAMPAIGN = "kampanya:bilinmiyor";
+const UNKNOWN_META_CAMPAIGN = "kampanya:meta:bilinmiyor";
 const REACHED_RANDEVU: LeadStatus[] = ["randevu", "gorusme_yapildi", "teklif", "kazanildi"];
 const MICROS_PER_KURUS = 10_000;
 const DAY_MS = 86400000;
 const MAX_RANGE_DAYS = 366;
 const DEFAULT_RANGE_DAYS = 29;
 
-function emptyRow(key: string, kind: ReportRow["kind"], rowLabel: string): ReportRow {
-  return { key, kind, label: rowLabel, spendKurus: 0, leads: 0, randevu: 0, kayit: 0, costPerLeadKurus: null, costPerKayitKurus: null };
+function emptyRow(key: string, kind: ReportRow["kind"], rowLabel: string, platform?: AdPlatform): ReportRow {
+  return { key, kind, ...(platform === "meta" ? { platform } : {}), label: rowLabel, spendKurus: 0, leads: 0, randevu: 0, kayit: 0, costPerLeadKurus: null, costPerKayitKurus: null };
 }
 
 function withCosts(row: ReportRow): ReportRow {
@@ -60,29 +67,39 @@ export function buildMarketingReport(
   const rows = new Map<string, ReportRow>();
   const microsByCampaign = new Map<string, number>();
 
+  // Anahtar platforma göre ayrılır: aynı kimlikli Google ve Meta kampanyası ayrı satır olur.
+  const spendKey = (s: ReportSpend) => (s.platform === "meta" ? `kampanya:meta:${s.campaign_id}` : `kampanya:${s.campaign_id}`);
   for (const s of spend) {
-    const key = `kampanya:${s.campaign_id}`;
-    microsByCampaign.set(s.campaign_id, (microsByCampaign.get(s.campaign_id) ?? 0) + Math.round(Number(s.cost_micros)));
-    if (!rows.has(key)) rows.set(key, emptyRow(key, "kampanya", s.campaign_name));
+    const key = spendKey(s);
+    microsByCampaign.set(key, (microsByCampaign.get(key) ?? 0) + Math.round(Number(s.cost_micros)));
+    if (!rows.has(key)) rows.set(key, emptyRow(key, "kampanya", s.campaign_name, s.platform));
   }
   // Mikro toplam tam sayı olarak biriktirilir, kuruşa tek seferde çevrilir.
-  for (const [campaignId, micros] of microsByCampaign) {
-    rows.get(`kampanya:${campaignId}`)!.spendKurus = Math.round(micros / MICROS_PER_KURUS);
+  for (const [key, micros] of microsByCampaign) {
+    rows.get(key)!.spendKurus = Math.round(micros / MICROS_PER_KURUS);
   }
 
   for (const lead of leads) {
-    const isAd = Boolean(lead.gclid) || lead.source === "reklam";
+    // Google kazanır: gclid ya da source=reklam varsa Meta işareti olsa da Google satırıdır.
+    const isGoogleAd = Boolean(lead.gclid) || lead.source === "reklam" || lead.ad_platform === "google";
+    const isMetaAd = !isGoogleAd && lead.ad_platform === "meta";
+    const isAd = isGoogleAd || isMetaAd;
     const campaign = isAd ? (lead.utm_campaign?.trim() ?? "") : "";
     let key: string;
-    if (isAd) key = campaign ? `kampanya:${campaign}` : UNKNOWN_CAMPAIGN;
+    if (isMetaAd) key = campaign ? `kampanya:meta:${campaign}` : UNKNOWN_META_CAMPAIGN;
+    else if (isAd) key = campaign ? `kampanya:${campaign}` : UNKNOWN_CAMPAIGN;
     else key = `kaynak:${lead.source}`;
     const row =
       rows.get(key) ??
-      (key === UNKNOWN_CAMPAIGN
-        ? emptyRow(key, "kampanya", "Google Ads · kampanya bilinmiyor")
-        : isAd
-          ? emptyRow(key, "kampanya", campaign)
-          : emptyRow(key, "kaynak", label(LEAD_SOURCES, lead.source)));
+      (key === UNKNOWN_META_CAMPAIGN
+        ? emptyRow(key, "kampanya", "Instagram · kampanya bilinmiyor", "meta")
+        : key === UNKNOWN_CAMPAIGN
+          ? emptyRow(key, "kampanya", "Google Ads · kampanya bilinmiyor")
+          : isMetaAd
+            ? emptyRow(key, "kampanya", campaign, "meta")
+            : isAd
+              ? emptyRow(key, "kampanya", campaign)
+              : emptyRow(key, "kaynak", label(LEAD_SOURCES, lead.source)));
     row.leads += 1;
     if (appointmentLeadIds.has(lead.id) || REACHED_RANDEVU.includes(lead.status)) row.randevu += 1;
     if (lead.status === "kazanildi" || lead.converted_student_id) row.kayit += 1;

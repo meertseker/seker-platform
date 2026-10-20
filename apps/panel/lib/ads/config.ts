@@ -9,7 +9,8 @@ export interface AdsConfig {
   refreshToken: string;
   customerId: string;
   loginCustomerId: string | null;
-  conversionActionIds: Record<ConversionAction, string>;
+  /** Google yalnız randevu ve kayıt bildirir; "lead" (Başvuru) Meta olayıdır, Google için kimlik yoktur. */
+  conversionActionIds: Record<Exclude<ConversionAction, "lead">, string>;
 }
 
 function digits(value: string | undefined): string {
