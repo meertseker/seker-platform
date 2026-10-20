@@ -1,0 +1,183 @@
+import { describe, expect, it } from "vitest";
+import {
+  adviceFor,
+  cardTag,
+  emptyPerf,
+  groupByStage,
+  loadContentPerf,
+  ruleBars,
+  type BoardItem,
+  type ContentPerf,
+} from "@/lib/content/board";
+import { DEFAULT_AD_RULES } from "@/lib/content/settings";
+
+const rules = DEFAULT_AD_RULES;
+const NOW = new Date("2026-11-10T09:00:00Z"); // Salı 12:00 İstanbul
+
+function item(over: Partial<BoardItem>): BoardItem {
+  return {
+    id: "00000000-0000-0000-0000-000000000001",
+    code: "R-2646-A",
+    kind: "reels",
+    platform: "instagram",
+    topic: "07:30'da kapımız açık",
+    audience: null,
+    brief: null,
+    ownerId: "o1",
+    ownerName: "Ayşe Yılmaz",
+    ownerPhone: null,
+    dueAt: "2026-11-12T14:00:00Z", // Perşembe 17:00
+    status: "taslak",
+    stage: "gorev",
+    stageChangedAt: "2026-11-09T09:00:00Z",
+    submittedAt: null,
+    caption: null,
+    pageFields: {},
+    mediaPath: null,
+    faceAnswer: null,
+    reviewNote: null,
+    learnedNote: null,
+    igPermalink: null,
+    ...over,
+  };
+}
+
+function perf(over: Partial<ContentPerf>): ContentPerf {
+  return { ...emptyPerf(), ...over };
+}
+
+const STOP = perf({ spendKurus: 315_000, clicks: 212, platformResults: 6, leads: 2, qualified: 0 });
+const WIN = perf({ spendKurus: 456_000, clicks: 388, platformResults: 15, leads: 9, qualified: 6, appointments: 3 });
+const EARLY = perf({ spendKurus: 112_000, clicks: 41, leads: 3, qualified: 2 });
+
+describe("ruleBars", () => {
+  it("3.150 TL ve 0 nitelikli: harcama çubuğu kırmızı ve dolu", () => {
+    const bars = ruleBars(STOP, rules);
+    expect(bars).toHaveLength(2);
+    expect(bars[0]).toEqual({ label: "Nitelikli veli (kazanmak için 5)", value: "0 / 5", pct: 0, tone: "bad" });
+    expect(bars[1]).toEqual({ label: "Harcama (durdurma sınırı 3.000 TL)", value: "3.150 TL", pct: 100, tone: "bad" });
+  });
+
+  it("nitelikli varsa veli başı maliyet çubuğu eklenir", () => {
+    const bars = ruleBars(perf({ spendKurus: 456_000, qualified: 6 }), rules);
+    expect(bars).toHaveLength(3);
+    expect(bars[0]).toMatchObject({ value: "6 / 5", pct: 100, tone: "ok" });
+    expect(bars[2]).toEqual({ label: "Veli başı maliyet (hedef 1.000 TL)", value: "760 TL", pct: 76, tone: "ok" });
+  });
+
+  it("erken: nötr çubuklar", () => {
+    const bars = ruleBars(EARLY, rules);
+    expect(bars[0]).toMatchObject({ value: "2 / 5", pct: 40, tone: "neutral" });
+    expect(bars[1]).toMatchObject({ value: "1.120 TL", pct: 37, tone: "neutral" });
+  });
+});
+
+describe("adviceFor", () => {
+  it("Görev: teslim günüyle bekleniyor, Hatırlat", () => {
+    expect(adviceFor(item({}), emptyPerf(), rules, NOW)).toEqual({
+      text: "Bekleniyor. Perşembe teslim.",
+      action: { kind: "remind", label: "Hatırlat" },
+    });
+  });
+
+  it("Kontrol: Onayla", () => {
+    const a = adviceFor(item({ stage: "kontrol", status: "teslim" }), emptyPerf(), rules, NOW);
+    expect(a.text).toBe("Otomatik kontrol geçti. Okuyup onaylayın.");
+    expect(a.action).toEqual({ kind: "approve", label: "Onayla" });
+  });
+
+  it("Testte, durdurma kuralı: Durdur", () => {
+    const a = adviceFor(item({ stage: "test", status: "onaylandi" }), STOP, rules, NOW);
+    expect(a.text).toBe("Hedefin 3 katı harcadı, nitelikli veli yok. Durdurun.");
+    expect(a.action).toEqual({ kind: "stop", label: "Durdur" });
+  });
+
+  it("Testte, kazanma kuralı: Büyütme kampanyasına taşı", () => {
+    const a = adviceFor(item({ stage: "test", status: "onaylandi" }), WIN, rules, NOW);
+    expect(a.text).toBe("6 nitelikli veli, veli başı 760 TL (hedef 1.000 TL). Büyütme kampanyasına taşıyın.");
+    expect(a.action).toEqual({ kind: "scale", label: "Büyütme kampanyasına taşı" });
+  });
+
+  it("Testte, erken: eylem yok", () => {
+    const a = adviceFor(item({ stage: "test", status: "onaylandi", stageChangedAt: "2026-11-04T09:00:00Z" }), EARLY, rules, NOW);
+    expect(a.text).toBe("Erken. En az 1 hafta daha bekleyin.");
+    expect(a.action).toEqual({ kind: "none", label: "Beklemeye devam" });
+  });
+
+  it("Testte, 3 hafta sonuçsuz: Arşive al", () => {
+    const a = adviceFor(
+      item({ stage: "test", status: "onaylandi", stageChangedAt: "2026-10-15T09:00:00Z" }),
+      perf({ spendKurus: 50_000 }),
+      rules,
+      NOW,
+    );
+    expect(a.text).toBe("3 haftadır nitelikli veli yok. Arşive alın.");
+    expect(a.action).toEqual({ kind: "archive", label: "Arşive al" });
+  });
+
+  it("Organik, 72 saat doldu: Teste al", () => {
+    const a = adviceFor(item({ stage: "organik", status: "onaylandi", stageChangedAt: "2026-11-06T09:00:00Z" }), emptyPerf(), rules, NOW);
+    expect(a.action).toEqual({ kind: "test", label: "Teste al" });
+  });
+});
+
+describe("cardTag", () => {
+  it("Görev: Yazılıyor", () => expect(cardTag(item({}), emptyPerf(), rules, NOW).text).toBe("Yazılıyor"));
+  it("Kontrol: Onay bekleniyor", () =>
+    expect(cardTag(item({ stage: "kontrol", status: "teslim" }), emptyPerf(), rules, NOW).text).toBe("Onay bekleniyor"));
+  it("Organik 72 saat doldu · önde", () =>
+    expect(
+      cardTag(item({ stage: "organik", status: "onaylandi", stageChangedAt: "2026-11-06T09:00:00Z" }), emptyPerf(), rules, NOW, "önde").text,
+    ).toBe("72 saat doldu · önde"));
+  it("Testte: durdurma kuralı tuttu", () =>
+    expect(cardTag(item({ stage: "test", status: "onaylandi" }), STOP, rules, NOW)).toEqual({ text: "Durdurma kuralı tuttu", tone: "bad" }));
+  it("Testte: kazandı", () =>
+    expect(cardTag(item({ stage: "test", status: "onaylandi" }), WIN, rules, NOW)).toEqual({ text: "Kazandı · büyütülmeye hazır", tone: "ok" }));
+  it("Testte: veri toplanıyor", () =>
+    expect(cardTag(item({ stage: "test", status: "onaylandi" }), EARLY, rules, NOW).text).toBe("Veri toplanıyor · 3 nitelikli daha"));
+});
+
+describe("groupByStage", () => {
+  it("altı sütun, kartlar kendi aşamasında", () => {
+    const cols = groupByStage([item({ code: "R-2646-A" }), item({ code: "S-2646-G", stage: "test" })]);
+    expect(cols.map((c) => c.key)).toEqual(["gorev", "kontrol", "organik", "test", "kazanan", "arsiv"]);
+    expect(cols[0].items.map((i) => i.code)).toEqual(["R-2646-A"]);
+    expect(cols[3].items.map((i) => i.code)).toEqual(["S-2646-G"]);
+  });
+});
+
+describe("loadContentPerf", () => {
+  function fake(tables: Record<string, unknown[]>) {
+    return {
+      from(table: string) {
+        const q = {
+          select: () => q,
+          in: () => q,
+          neq: () => q,
+          then: (resolve: (v: { data: unknown[]; error: null }) => void) => resolve({ data: tables[table] ?? [], error: null }),
+        };
+        return q;
+      },
+    };
+  }
+
+  it("harcamayı mikrodan kuruşa, velileri ve randevuları koda göre toplar", async () => {
+    const supabase = fake({
+      ad_spend_daily: [
+        { content_code: "R-2643-B", cost_micros: 2_000_000_000, clicks: 100, platform_results: 4 },
+        { content_code: "R-2643-B", cost_micros: 1_150_000_000, clicks: 112, platform_results: null },
+      ],
+      leads: [
+        { id: "l1", content_code: "R-2643-B", is_qualified: false },
+        { id: "l2", content_code: "R-2643-B", is_qualified: true },
+      ],
+      appointments: [{ lead_id: "l2" }, { lead_id: "l2" }],
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = await loadContentPerf(supabase as any, ["R-2643-B", "S-2646-G"]);
+    expect(map.get("R-2643-B")).toEqual({
+      spendKurus: 315_000, clicks: 212, platformResults: 4, leads: 2, qualified: 1, appointments: 1,
+    });
+    expect(map.get("S-2646-G")).toEqual(emptyPerf());
+  });
+});
