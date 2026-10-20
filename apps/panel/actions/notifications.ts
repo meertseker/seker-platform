@@ -4,18 +4,9 @@ import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSessionProfile } from "@/lib/auth";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { NotificationType } from "@/lib/notifications/types";
 
-export type NotificationType =
-  | "teklif_onay_bekliyor"
-  | "teklifiniz_onaylandi"
-  | "teklif_revize_edildi"
-  | "teklif_karsi_onaylandi"
-  | "teklif_reddedildi"
-  | "web_basvuru"
-  | "ads_senkron_hata"
-  | "wa_baglanti_koptu"
-  | "geri_bildirim"
-  | "veli_bekliyor";
+export type { NotificationType } from "@/lib/notifications/types";
 
 export async function notify(
   supabase: SupabaseClient,
