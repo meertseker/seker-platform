@@ -243,6 +243,16 @@ describe("recordCall", () => {
     expect(updateLeadStatus).toHaveBeenCalledWith("L1", "ulasildi", undefined);
   });
 
+  it("kaybedilmiş veli geri aranacak derse yeniden açılır (ulaşıldı) ve kontenjan görevi kapanır (B8)", async () => {
+    lead.status = "kaybedildi";
+    lead.first_contact_at = "2026-10-20T07:00:00Z";
+    const r = await recordCall({ leadId: "L1", result: "geri_ara", quals, callbackAt: "2026-11-04T15:00" });
+    expect("done" in r).toBe(true);
+    expect(updateLeadStatus).toHaveBeenCalledWith("L1", "ulasildi", undefined);
+    const all = updates("tasks").flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
+    expect(all).toContain("kontenjan:L1%");
+  });
+
   it("uygun değil nedeni kayıp nedenine yazılır", async () => {
     const r = await recordCall({ leadId: "L1", result: "uygun_degil", quals, notFitReason: "yas_uymuyor" });
     expect(updateLeadStatus).toHaveBeenCalledWith("L1", "kaybedildi", "yas_uymuyor");
