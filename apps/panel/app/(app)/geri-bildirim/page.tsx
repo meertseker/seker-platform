@@ -1,6 +1,8 @@
 import { FeedbackAdminControls } from "@/components/feedback-admin-controls";
 import { FeedbackForm } from "@/components/feedback-form";
+import { redirect } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
+import { TEACHER_HOME } from "@/lib/role-access";
 import {
   FEEDBACK_KINDS,
   FEEDBACK_STATUSES,
@@ -96,6 +98,8 @@ function FeedbackItem({
 
 export default async function GeriBildirimPage() {
   const profile = await getSessionProfile();
+  // Öğretmen geri bildirim ekleyemez (RLS); kendi ekranına döner.
+  if (profile.role === "ogretmen") redirect(TEACHER_HOME);
   const isAdmin = profile.role === "yonetici";
   const supabase = await createServerSupabase();
 

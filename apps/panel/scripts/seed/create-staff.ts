@@ -1,11 +1,11 @@
 /**
  * Personel giriş hesaplarını oluşturur (auth.users + public.profiles) — Supabase
  * Admin API ile. Yayın (prod) için: uygulama e-posta+şifre ile giriş yapar, roller
- * yönetici/danışman. VELİLER hesap ALMAZ (onlar lead'dir).
+ * yönetici/danışman/öğretmen. VELİLER hesap ALMAZ (onlar lead'dir).
  *
  * Kullanım:
  *   # 1) out/staff.csv doldur (gitignore'da; gerçek e-posta içerir):
- *   #    full_name,email,role[,password]
+ *   #    full_name,email,role[,password][,phone]
  *   #    Mehtap Şeker,mehtap@okul.com,yonetici,
  *   #    Zehra Gürsel,zehra@okul.com,danisman,
  *   # 2) Prod ortam değişkenleriyle çalıştır:
@@ -32,7 +32,7 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const envLocalPath = path.join(SCRIPT_DIR, "..", "..", ".env.local");
 if (fs.existsSync(envLocalPath)) dotenv.config({ path: envLocalPath });
 
-const ROLES = new Set(["yonetici", "danisman"]);
+const ROLES = new Set(["yonetici", "danisman", "ogretmen"]);
 
 function flag(name: string) {
   return process.argv.includes(name);
@@ -50,7 +50,9 @@ function tempPassword() {
   return `${pick()}-${pick()}-${pick()}`;
 }
 
-type StaffInput = { full_name: string; email: string; role: string; password: string };
+type StaffInput = { full_name: string; email: string; role: string; password: string; phone: string };
+
+const PHONE_RE = /^\+90\d{10}$/;
 
 function readStaff(csvPath: string): StaffInput[] {
   const rows = parseCsv(fs.readFileSync(csvPath, "utf8"));
@@ -63,8 +65,9 @@ function readStaff(csvPath: string): StaffInput[] {
     const email = (r[idx("email")] ?? "").trim().toLowerCase();
     const role = (r[idx("role")] ?? "").trim();
     const password = (r[idx("password")] ?? "").trim();
+    const phone = (r[idx("phone")] ?? "").trim();
     if (!full_name && !email) continue; // boş satır
-    out.push({ full_name, email, role, password });
+    out.push({ full_name, email, role, password, phone });
   }
   return out;
 }
@@ -87,8 +90,8 @@ async function main() {
   if (!fs.existsSync(staffPath)) {
     console.error(
       `staff CSV bulunamadı: ${staffPath}\n` +
-        `Örnek başlık:  full_name,email,role,password\n` +
-        `(role = yonetici | danisman; password boşsa üretilir)`,
+        `Örnek başlık:  full_name,email,role,password,phone\n` +
+        `(role = yonetici | danisman | ogretmen; phone isteğe bağlı +90...; password boşsa üretilir)`,
     );
     process.exit(1);
   }
@@ -99,7 +102,8 @@ async function main() {
     const line = i + 2;
     if (!s.full_name) errors.push(`satır ${line}: full_name boş`);
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.email)) errors.push(`satır ${line}: geçersiz e-posta "${s.email}"`);
-    if (!ROLES.has(s.role)) errors.push(`satır ${line}: rol yonetici|danisman olmalı ("${s.role}")`);
+    if (!ROLES.has(s.role)) errors.push(`satır ${line}: rol yonetici|danisman|ogretmen olmalı ("${s.role}")`);
+    if (s.phone && !PHONE_RE.test(s.phone)) errors.push(`satır ${line}: telefon +90XXXXXXXXXX biçiminde olmalı`);
   });
   if (errors.length) {
     console.error("Doğrulama hataları:\n  " + errors.join("\n  "));
@@ -148,7 +152,7 @@ async function main() {
     // profiles satırı (id = auth user id). Varsa ad/rol güncellenir (upsert).
     const { error: pErr } = await db
       .from("profiles")
-      .upsert({ id: userId, full_name: s.full_name, role: s.role }, { onConflict: "id" });
+      .upsert({ id: userId, full_name: s.full_name, role: s.role, ...(s.phone ? { phone: s.phone } : {}) }, { onConflict: "id" });
     if (pErr) throw new Error(`profil yazılamadı (${s.email}): ${pErr.message}`);
   }
 

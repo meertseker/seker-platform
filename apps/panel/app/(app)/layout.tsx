@@ -1,4 +1,7 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
+import { canOpen, homeFor } from "@/lib/role-access";
 import { siteEditUrl } from "@/lib/site-edit-url";
 import { Nav } from "@/components/nav";
 import { ToastProvider } from "@/components/toast";
@@ -14,13 +17,19 @@ export default async function AppLayout({
   children: React.ReactNode;
 }>) {
   const profile = await getSessionProfile();
+  // Yol bilgisini middleware ekler; öğretmen /gorevim dışına, danışman /reklam'a gidemez.
+  const pathname = (await headers()).get("x-pathname");
+  if (pathname && !canOpen(profile.role, pathname)) redirect(homeFor(profile.role));
+  const isTeacher = profile.role === "ogretmen";
   const supabase = await createServerSupabase();
   const now = new Date();
   const [notifications, unreadCount, bannerSummary] = await Promise.all([
     loadNotifications(supabase, profile.id, { limit: 20 }),
     countUnread(supabase, profile.id),
     // Bant, Bugün'deki "Şimdi ara" listesiyle aynı kuralı sayar.
-    getLeadFlowSettings(supabase)
+    isTeacher
+      ? Promise.resolve(null)
+      : getLeadFlowSettings(supabase)
       .then(async (settings) =>
         queueBannerSummary(await loadCallQueue(supabase, profile.id, now, settings), now, settings.hours),
       )

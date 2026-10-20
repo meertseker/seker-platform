@@ -1,5 +1,6 @@
 "use client";
 
+import type { Role } from "@/lib/role-access";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteStudent, updateStudent } from "@/actions/students";
@@ -17,7 +18,7 @@ interface StudentEditFormProps {
     start_date: string | null;
     season: string;
   };
-  role: "yonetici" | "danisman";
+  role: Role;
 }
 
 const programKeys = Object.keys(PROGRAMS) as Program[];

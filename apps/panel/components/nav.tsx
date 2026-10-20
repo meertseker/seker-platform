@@ -8,6 +8,8 @@ import {
   Banknote,
   BarChart3,
   CalendarDays,
+  ClipboardList,
+  FileVideo,
   GraduationCap,
   LogOut,
   Megaphone,
@@ -22,12 +24,12 @@ import {
 } from "lucide-react";
 import { signOut } from "@/actions/auth";
 import { NEW_LEAD_HREF } from "@/lib/lead-routes";
+import type { Role } from "@/lib/role-access";
 import {
   NotificationBell,
   type NotificationItem,
 } from "@/components/notification-bell";
 
-type Role = "yonetici" | "danisman";
 
 interface NavProps {
   fullName: string;
@@ -47,6 +49,11 @@ const mainItems = [
 ] as const;
 
 // Takvim kenar çubuğunda ana menüde; telefonda alt çubuk dolu olduğundan Menü'nün başında.
+const teacherItem = { href: "/gorevim", label: "Görevim", icon: ClipboardList } as const;
+
+// Yönetici için "Reklam" grubu (Aşama 4 buraya Bu hafta, Kampanyalar, Ayarlar ve hedefler ekler).
+const adItems = [{ href: "/reklam/icerik", label: "İçerik panosu", icon: FileVideo }] as const;
+
 const calendarItem = { href: "/takvim", label: "Takvim", icon: CalendarDays } as const;
 
 
@@ -174,7 +181,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
   const pathname = usePathname();
   const [openMenuPathname, setOpenMenuPathname] = useState<string | null>(null);
   const profileMenuOpen = openMenuPathname === pathname;
-  const visibleProfileLinks = profileLinks.filter((item) => canSee(item, role));
+  const visibleProfileLinks = role === "ogretmen" ? [] : profileLinks.filter((item) => canSee(item, role));
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -196,13 +203,21 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
       document.removeEventListener("pointerdown", onPointerDown);
     };
   }, [profileMenuOpen]);
-  const roleLabel = role === "yonetici" ? "Yönetici" : "Danışman";
+  const isTeacher = role === "ogretmen";
+  const roleLabel = role === "yonetici" ? "Yönetici" : isTeacher ? "Öğretmen" : "Danışman";
+  const homeHref = isTeacher ? teacherItem.href : HOME_HREF;
+  const sideItems: readonly { href: string; label: string; icon: LucideIcon }[] = isTeacher
+    ? [teacherItem]
+    : [...mainItems, calendarItem];
+  const phoneMenuLinks: readonly ProfileLink[] = isTeacher
+    ? []
+    : [calendarItem, ...(role === "yonetici" ? adItems : []), ...visibleProfileLinks];
 
   return (
     <>
       <aside className="glass fixed bottom-3 left-3 top-3 z-30 hidden w-[15.25rem] overflow-y-auto overscroll-contain rounded-[1.75rem] px-3 py-4 md:flex md:flex-col">
         <Link
-          href={HOME_HREF}
+          href={homeHref}
           className="flex items-center gap-2.5 rounded-xl px-3 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -212,7 +227,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
           </span>
         </Link>
         <nav aria-label="Ana navigasyon" className="mt-6 flex flex-1 flex-col gap-1">
-          {[...mainItems, calendarItem].map((item) => (
+          {sideItems.map((item) => (
             <NavLink
               key={item.href}
               href={item.href}
@@ -221,7 +236,15 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
               pathname={pathname}
             />
           ))}
-          {siteEditUrl ? (
+          {role === "yonetici" ? (
+            <>
+              <p className="mt-3 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reklam</p>
+              {adItems.map((item) => (
+                <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} pathname={pathname} />
+              ))}
+            </>
+          ) : null}
+          {siteEditUrl && !isTeacher ? (
             <a
               href={siteEditUrl}
               className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-black/[0.04]"
@@ -230,6 +253,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
               Siteyi düzenle
             </a>
           ) : null}
+          {isTeacher ? null : (
           <Link
             href={NEW_LEAD_HREF}
             className="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-3 py-2.5 text-sm font-semibold text-on-primary shadow-[0_4px_14px_rgb(225_29_72/0.3),inset_0_1px_0_rgb(255_255_255/0.25)] hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -237,6 +261,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
             <Plus aria-hidden className="size-5 shrink-0" />
             Yeni Veli
           </Link>
+          )}
         </nav>
         <div className="border-t border-black/[0.06] pt-3">
           <ProfileMenuContents
@@ -252,7 +277,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
       <header className="sticky top-0 z-20 px-4 py-3 before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-background/60 before:backdrop-blur-2xl before:backdrop-saturate-150 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-4 after:bg-gradient-to-b after:from-background/60 after:to-transparent md:ml-64 md:before:hidden md:after:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
           <Link
-            href={HOME_HREF}
+            href={homeHref}
             className="flex items-center gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -288,7 +313,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
                   <ProfileMenuContents
                     fullName={fullName}
                     roleLabel={roleLabel}
-                    links={[calendarItem, ...visibleProfileLinks]}
+                    links={phoneMenuLinks}
                     pathname={pathname}
                     onNavigate={() => setOpenMenuPathname(null)}
                     siteEditUrl={siteEditUrl}
@@ -300,6 +325,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
         </div>
       </header>
 
+      {isTeacher ? null : (
       <nav
         aria-label="Alt navigasyon"
         className="glass fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 rounded-[1.75rem] p-1.5 md:hidden"
@@ -325,6 +351,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
           </Link>
         </div>
       </nav>
+      )}
     </>
   );
 }

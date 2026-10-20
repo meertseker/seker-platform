@@ -1,5 +1,6 @@
 "use client";
 
+import type { Role } from "@/lib/role-access";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -39,7 +40,7 @@ interface LeadActionsProps {
   lead: LeadEditData;
   status: LeadStatus;
   convertedStudentId: string | null;
-  role: "yonetici" | "danisman";
+  role: Role;
   step: NextStep;
   initialSheet: LeadSheet | null;
   priceItems: ActivePriceItem[];

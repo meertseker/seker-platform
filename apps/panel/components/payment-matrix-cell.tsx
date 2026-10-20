@@ -1,5 +1,6 @@
 "use client";
 
+import type { Role } from "@/lib/role-access";
 import { createContext, useContext, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote } from "lucide-react";
@@ -44,7 +45,7 @@ interface PaymentMatrixCellProps {
   studentName: string;
   /** "Ekim 2026" — ekran okuyucu ve pencere başlığı için tam ad. */
   monthLabel: string;
-  role: "yonetici" | "danisman";
+  role: Role;
   /** "tile": telefondaki kart listesinde, üstte kısa başlıklı kutu olarak çizilir. */
   variant?: "td" | "tile";
   /** tile başlığı ("EKİM", "Kitap") */
@@ -209,7 +210,7 @@ function CellSheet({
   cell: MatrixCell;
   studentName: string;
   monthLabel: string;
-  role: "yonetici" | "danisman";
+  role: Role;
   payment: CellPaymentContext;
   onClose: () => void;
   onPay: () => void;
