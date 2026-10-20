@@ -122,11 +122,14 @@ afterEach(() => {
 });
 
 describe("yetki", () => {
-  it("danışman görev açamaz", async () => {
+  it("danışman görev açar (Görev ver ekranı)", async () => {
     me = DAN;
-    await expect(createContentTask(taskInput)).rejects.toThrow("NEXT_REDIRECT");
-    expect(createAdminSupabase).not.toHaveBeenCalled();
-    expect(writes()).toHaveLength(0);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-19T09:00:00+03:00"));
+    const res = await createContentTask(taskInput);
+    vi.useRealTimers();
+    expect(res).not.toHaveProperty("error");
+    expect(payloads("admin", "content_items", "insert")[0]).toMatchObject({ created_by: DAN.id, owner_id: OGR.id });
   });
 
   it("öğretmen yönetici eylemlerini çağıramaz, gizli anahtarlı istemci oluşturulmaz", async () => {
@@ -143,7 +146,11 @@ describe("yetki", () => {
       await expect(call(), name).rejects.toThrow("NEXT_REDIRECT");
     }
     expect(requireRole).toHaveBeenCalledTimes(calls.length);
-    for (const c of requireRole.mock.calls) expect(c).toEqual(["yonetici"]);
+    // Görev açmayı danışman da yapar (Görev ver); diğer yönetici eylemleri yalnız yönetici.
+    for (const c of requireRole.mock.calls) {
+      expect(c[0]).toBe("yonetici");
+      expect(c).not.toContain("ogretmen");
+    }
     expect(createAdminSupabase).not.toHaveBeenCalled();
     expect(ops).toHaveLength(0);
   });

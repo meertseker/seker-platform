@@ -7,9 +7,13 @@ function isUnder(pathname: string, base: string) {
   return pathname === base || pathname.startsWith(`${base}/`);
 }
 
-/** Rolün bu yolu açıp açamayacağı. Öğretmen yalnız /gorevim; /reklam yalnız yönetici. */
+/** Danışmanın da açtığı tek /reklam ekranı: öğretmene içerik görevi verme (para ve reklam sayısı göstermez). */
+export const TASK_ASSIGN_PATH = "/reklam/gorev-ver";
+
+/** Rolün bu yolu açıp açamayacağı. Öğretmen yalnız /gorevim; /reklam yalnız yönetici, Görev ver danışmana da açık. */
 export function canOpen(role: Role, pathname: string): boolean {
   if (role === "ogretmen") return isUnder(pathname, TEACHER_HOME);
+  if (isUnder(pathname, TASK_ASSIGN_PATH)) return true;
   if (isUnder(pathname, "/reklam")) return role === "yonetici";
   return true;
 }

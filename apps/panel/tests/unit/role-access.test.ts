@@ -22,6 +22,13 @@ describe("canOpen", () => {
       expect(canOpen("ogretmen", path)).toBe(false);
     }
   });
+  it("Görev ver ekranı yönetici ve danışmana açık, öğretmene kapalı", () => {
+    expect(canOpen("yonetici", "/reklam/gorev-ver")).toBe(true);
+    expect(canOpen("danisman", "/reklam/gorev-ver")).toBe(true);
+    expect(canOpen("ogretmen", "/reklam/gorev-ver")).toBe(false);
+    expect(canOpen("danisman", "/reklam/gorev-verx")).toBe(false);
+    expect(canOpen("danisman", "/reklam")).toBe(false);
+  });
   it("homeFor rolün ana ekranını verir", () => {
     expect(homeFor("ogretmen")).toBe(TEACHER_HOME);
     expect(homeFor("danisman")).toBe("/bugun");
