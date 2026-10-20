@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSessionProfile } from "@/lib/auth";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { insertNotifications } from "@/lib/notifications/insert";
-import type { NotificationType } from "@/lib/notifications/types";
+import { isUuid, type NotificationType } from "@/lib/notifications/types";
 
 export type { NotificationType } from "@/lib/notifications/types";
 
@@ -42,10 +42,8 @@ export async function markNotificationsRead() {
   return {};
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export async function markNotificationRead(id: string) {
-  if (typeof id !== "string" || !UUID_RE.test(id)) {
+  if (!isUuid(id)) {
     return { error: "Bildirim okundu işaretlenemedi" };
   }
 

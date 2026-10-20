@@ -1,6 +1,6 @@
 // Panel bildirimleri: zil ve sayfa için ortak yükleyici.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isNotificationType } from "@/lib/notifications/types";
+import { isNotificationType, isUuid } from "@/lib/notifications/types";
 
 export interface NotificationItem {
   id: string;
@@ -10,8 +10,6 @@ export interface NotificationItem {
   created_at: string;
   leadName: string | null;
 }
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function plainObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -58,7 +56,7 @@ export async function loadNotifications(
     ...new Set(
       rows
         .map((r) => r.payload.leadId)
-        .filter((v): v is string => typeof v === "string" && UUID_RE.test(v)),
+        .filter((v): v is string => isUuid(v)),
     ),
   ];
 
