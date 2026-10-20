@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, MessageCircle } from "lucide-react";
+import { Check, Copy, MessageCircle, Phone } from "lucide-react";
 import { recordCall, type CallResult, type NotFitReason } from "@/actions/lead-flow";
 import { queueSourceLabel } from "@/components/call-queue-card";
 import { START_WINDOWS, label } from "@/lib/constants";
+import { formatTurkishPhone, normalizeTurkishPhone, telHref } from "@/lib/phone";
 import {
   type BusinessHours,
   businessMsBetween,
@@ -19,6 +20,8 @@ import { slotLabel } from "@/lib/lead-flow/script";
 export type CallScreenLead = {
   id: string;
   parentName: string;
+  /** Aranacak numara (E.164). Ekranda büyük yazılır, "Ara" düğmesi tel: ile açar. */
+  phone: string;
   source: string;
   channel: string | null;
   /** İçerik kodu ya da kaynak ayrıntısı (ör. reklam anahtar kelimesi). */
@@ -89,6 +92,55 @@ function pickClass(on: boolean) {
   return `rounded-xl border-[1.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
     on ? "border-primary bg-primary-soft" : "border-border bg-surface"
   }`;
+}
+
+/** Numara: büyük ve seçilebilir; masaüstünde kopyala düğmesi (masa telefonuna tuşlamak için), her cihazda tel: düğmesi. */
+function PhoneBlock({ phone }: { phone: string }) {
+  const [copied, setCopied] = useState(false);
+  const href = telHref(phone);
+  const shown = formatTurkishPhone(phone);
+  const digits = normalizeTurkishPhone(phone)?.replace("+90", "0") ?? phone;
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(digits);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Pano kapalıysa numara zaten ekranda seçilebilir.
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="select-all text-[1.5rem] font-bold tabular-nums tracking-wide" aria-label="Velinin telefonu">
+          {shown}
+        </p>
+        <button
+          type="button"
+          onClick={copy}
+          className="hidden min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:inline-flex"
+        >
+          <Copy className="size-4" aria-hidden />
+          {copied ? "Kopyalandı" : "Kopyala"}
+        </button>
+      </div>
+      {href ? (
+        <a
+          href={href}
+          className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-primary text-[1.0625rem] font-bold text-on-primary hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <Phone className="size-5" aria-hidden />
+          Ara · {shown}
+        </a>
+      ) : (
+        <p className="rounded-xl bg-warning-soft px-3 py-2.5 text-sm text-warning">
+          Numara geçerli bir cep telefonu değil; veli kartından düzelt.
+        </p>
+      )}
+    </div>
+  );
 }
 
 function Timer({ startedAt, serverNow, hours }: { startedAt: string; serverNow: number; hours: BusinessHours }) {
@@ -270,6 +322,7 @@ export function CallScreen({
               : "Formdan bu yana · hedef 5 dakika"
             : "Takip araması · ilk temas yapıldı"}
         </p>
+        <PhoneBlock phone={lead.phone} />
         <div className="flex flex-wrap gap-1.5 text-[0.78125rem]">
           <span className="rounded-full bg-primary-soft px-2.5 py-0.5 font-semibold text-primary-strong">{sourceChip}</span>
           {formAnswers.length > 0 ? (
