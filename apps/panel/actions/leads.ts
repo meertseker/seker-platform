@@ -16,6 +16,7 @@ import {
   type CallOutcome,
 } from "@/lib/call-outcome";
 import { istanbulDateString } from "@/lib/cron-rules";
+import { cancelPendingAppointments } from "@/lib/lead-flow/appointments-store";
 import { LOST_LEAD_TASK_KINDS } from "@/lib/lead-flow/followups";
 import { closeCallTasks, closeLeadTasksQuietly, closeTasksByPrefix } from "@/lib/lead-flow/tasks-store";
 
@@ -92,13 +93,26 @@ export async function updateLeadStatus(leadId: string, to: LeadStatus, lostReaso
   }
   // R27: kazanılan velinin tüm otomatik görevleri biter; kaybedilende kontenjan görevi kalır.
   if (to === "kazanildi") await closeLeadTasksQuietly(supabase, leadId, "updateLeadStatus");
-  if (to === "kaybedildi") await closeLeadTasksQuietly(supabase, leadId, "updateLeadStatus", LOST_LEAD_TASK_KINDS);
+  if (to === "kaybedildi") {
+    await closeLeadTasksQuietly(supabase, leadId, "updateLeadStatus", LOST_LEAD_TASK_KINDS);
+    // H8: kaybedilen velinin randevusu takvimde ve "Bugünkü ziyaretler"de kalmasın, hatırlatma mesajı gitmesin.
+    // Durum yazıldı; iptal başarısız olsa da durum olayı yazılır (R25).
+    try {
+      await cancelPendingAppointments(supabase, leadId, profile.id, "Veli kaybedildi");
+    } catch (e) {
+      console.error("updateLeadStatus randevu iptali:", e);
+    }
+  }
   await logEvent(supabase, {
     entityType: "lead", entityId: leadId, eventType: "durum_degisti",
     actorId: profile.id, payload: { from: lead.status, to, lostReason: lostReason ?? null },
   });
   revalidatePath("/pipeline");
   revalidatePath(`/leads/${leadId}`);
+  if (to === "kaybedildi") {
+    revalidatePath("/bugun");
+    revalidatePath("/takvim");
+  }
   return {};
 }
 
