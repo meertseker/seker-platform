@@ -4,6 +4,8 @@ import { SiteEditorToggle } from "@/components/site-editor-toggle";
 import { SeasonManager, type SeasonItem } from "@/components/season-manager";
 import { LeadLineSettings } from "@/components/lead-line-settings";
 import { WhatsappSettings, type WaOutboxView } from "@/components/whatsapp-settings";
+import { SchoolInfoSettings } from "@/components/school-info-settings";
+import { parseSchoolInfo, SCHOOL_INFO_KEY } from "@/lib/ai/gorev-veri";
 import { getSessionProfile } from "@/lib/auth";
 import type { Program } from "@/lib/constants";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
@@ -49,7 +51,7 @@ export default async function AyarlarPage() {
   const { data: waSettingRows } = await supabase
     .from("app_settings")
     .select("key, value")
-    .in("key", ["wa_enabled", "wa_group_id", "wa_group_name"]);
+    .in("key", ["wa_enabled", "wa_group_id", "wa_group_name", SCHOOL_INFO_KEY]);
   const waSetting = new Map((waSettingRows ?? []).map((r) => [r.key, r.value as unknown]));
   const { data: outboxRows } = await supabase
     .from("wa_outbox")
@@ -117,6 +119,10 @@ export default async function AyarlarPage() {
       <SiteEditorToggle staff={staff} />
 
       <LeadLineSettings settings={leadSettings} />
+
+      <div id="okul-bilgileri" className="scroll-mt-20">
+        <SchoolInfoSettings initialText={parseSchoolInfo(waSetting.get(SCHOOL_INFO_KEY))} />
+      </div>
 
       <div id="whatsapp" className="scroll-mt-20">
         <WhatsappSettings

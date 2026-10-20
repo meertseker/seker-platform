@@ -1,6 +1,6 @@
 // Haftanın dört içerik yuvası (saf modül). "Bu hafta" toplantısı ve "Görev ver" ekranı aynı tanımı kullanır.
 import { weekStart, type ContentKind, type PagePlatform, type ReelsLetter } from "./codes";
-import { addDaysToDateString } from "@/lib/lead-flow/business-hours";
+import { addDaysToDateString, istanbulDateString, parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
 
 export type WeeklySlot = "reels_a" | "reels_b" | "sayfa_google" | "sayfa_instagram";
 
@@ -37,4 +37,12 @@ export function slotOfCode(code: string): WeeklySlot | null {
 export function allowedTaskWeeks(now: Date): [string, string] {
   const current = weekStart(now);
   return [current, addDaysToDateString(current, 7)];
+}
+
+/** Varsayılan teslim ("YYYY-MM-DDTHH:MM", İstanbul): haftanın Perşembesi 17:00; o an geçtiyse ertesi gün 17:00. */
+export function defaultTaskDue(week: string, now: Date): string {
+  const thursday = `${addDaysToDateString(week, 3)}T17:00`;
+  const at = parseIstanbulDateTime(thursday);
+  if (at && at.getTime() > now.getTime()) return thursday;
+  return `${addDaysToDateString(istanbulDateString(now), 1)}T17:00`;
 }

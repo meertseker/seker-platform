@@ -2,7 +2,7 @@
 
 Hedef: Pazartesi toplantısında reklam kararlarını 15 dakikada verin. Hiçbir karar rakamsız ve gerekçesiz alınmaz.
 
-Menüde "Reklam" grubu var: "Bu hafta", "İçerik panosu", "Kampanyalar", "Ayarlar ve hedefler". Yalnız yönetici görür.
+Menüde "Reklam" grubu var: "Bu hafta", "Görev ver", "İçerik panosu", "Kampanyalar", "Ayarlar ve hedefler". Yalnız yönetici görür. Danışman bunlardan yalnız "Görev ver"i görür.
 
 ## Pazartesi toplantısı adım adım
 
@@ -37,6 +37,22 @@ Menüde "Reklam" grubu var: "Bu hafta", "İçerik panosu", "Kampanyalar", "Ayarl
 - "Görevleri gönder ve toplantıyı kaydet" düğmesi görevleri açar. Öğretmenler panelde bildirim alır.
 - Her öğretmenin yanındaki "WhatsApp'tan haber ver" bağlantısıyla ayrıca mesaj da atabilirsiniz.
 - Bir yuvada o hafta görev zaten açıksa yuva "… açık · öğretmen adı" yazar ve o yuvaya ikinci görev açılmaz. Koruma yuva başınadır; aynı öğretmen başka bir yuvada görev alabilir.
+
+## Görev ver (danışman da kullanır)
+
+- Öğretmene içerik görevi vermenin ikinci yolu. Zehra Hanım (danışman) ve yöneticiler açar. Para ve reklam sayısı göstermez.
+- Üstte "Bu hafta" ya da "Gelecek hafta" seçilir. 4 yuva vardır: Reels A, Reels B, Sayfa · Google, Sayfa · Instagram.
+- Her yuvada 2–3 konu önerisi çıkar: başlık, 2–3 cümlelik açıklama ve dayandığı okul artısı. Öneri yalnız konudur; videoyu ve yazıyı öğretmen hazırlar. Öneri veliye ya da reklama gitmez.
+- Bir öneri seçilir (başlık ve not düzeltilebilir) ya da "Kendi konum" seçilip konu elle yazılır. Öğretmen ve teslim zamanı seçilip "Gönder"e basılır. Hazır yuvaların hepsi alttaki düğmeyle birden gönderilir.
+- Öneriler sayfa ilk açılınca hazırlanır; o sırada "Öneriler hazırlanıyor…" yazar, elle yazmak her an mümkündür. Beğenilmezse "Yeniden öner".
+- Öneriler "Ayarlar → Okul bilgileri"ndeki metne dayanır. Yasaklı ifade ya da para geçen öneri gösterilmez.
+- "AI önerileri kapalı (anahtar girilmedi)" yazıyorsa öneri yoktur, görev elle verilir. Anahtarı Mert sunucuda girer.
+- Görev, "Bu hafta" ekranından verilen görevle aynıdır: öğretmenin Görevim ekranına düşer, bildirim gider; bir yuvada görev açıksa ikinci görev açılmaz.
+
+## Okul bilgileri
+
+- "Ayarlar" sayfasının "Okul bilgileri" bölümüne okulun tanıtım yazıları, artıları ve broşür metinleri bir kez yapıştırılır, sonra düzenlenir (en fazla 20.000 karakter).
+- Yalnız yönetici değiştirir. Konu önerileri bu metne dayanır; metin veliye ya da reklama gitmez.
 
 ## Kampanyalar'da değişiklik
 
