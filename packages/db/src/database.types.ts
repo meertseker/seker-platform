@@ -93,6 +93,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"ai_gorev_onerileri": {
+                  Row: {
+                    "error": string | null,"generated_at": string | null,"model": string | null,"slot": string,"status": string,"suggestions": Json,"updated_at": string,"week_start": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "error"?: string | null,"generated_at"?: string | null,"model"?: string | null,"slot": string,"status"?: string,"suggestions"?: Json,"updated_at"?: string,"week_start": string
+                  }
+                  Update: {
+                    "error"?: string | null,"generated_at"?: string | null,"model"?: string | null,"slot"?: string,"status"?: string,"suggestions"?: Json,"updated_at"?: string,"week_start"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"announcements": {
                   Row: {
                     "body": string,"ends_on": string | null,"id": string,"image_id": string | null,"published": boolean,"sort": number,"starts_on": string,"title": string,"updated_at": string,"updated_by": string | null
