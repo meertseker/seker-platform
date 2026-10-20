@@ -67,8 +67,11 @@ export type AdChangeLogRow = {
 
 export interface AdChangeStore {
   loadObject(platform: string, level: string, objectId: string): Promise<AdObjectRow | null>;
-  /** Bu bütçe kaynağına bu hafta (sinceIso'dan beri) uygulanmış ilk bütçe değişikliğinin eski değeri; yoksa null. */
-  weekBudgetBaselineTl(platform: string, budgetResource: string, sinceIso: string): Promise<number | null>;
+  /**
+   * Bu bütçe kaynağına bu hafta (sinceIso'dan beri) uygulanmış ilk bütçe değişikliğinin eski değeri; yoksa null.
+   * Kaynağı kayda geçmemiş eski satırlarda (3f2ab29 öncesi) nesne kimliğine düşer.
+   */
+  weekBudgetBaselineTl(platform: string, budgetResource: string, sinceIso: string, objectId: string): Promise<number | null>;
   insertLog(row: AdChangeLogRow): Promise<string>;
   updateLog(id: string, patch: Pick<AdChangeLogRow, "status" | "error">): Promise<void>;
   updateObject(platform: string, level: string, objectId: string, patch: Record<string, unknown>): Promise<void>;
@@ -303,7 +306,10 @@ export async function executeAdChange(deps: AdChangeDeps, input: AdChangeInput):
     // aynı bütçeyi paylaşan satırlardan ayrı ayrı artış da yakalanır.
     const settings = await deps.settings();
     const since = weekRange(mondayOf(istanbulDateString(now))).from;
-    const base = (await deps.store.weekBudgetBaselineTl(input.platform, plan.target, since)) ?? plan.oldTl;
+    // Canlı okuma başarısızsa satır bayat olabilir: taban yoksa eski bütçe bilinmiyor sayılır (gerekçe ister).
+    const base =
+      (await deps.store.weekBudgetBaselineTl(input.platform, plan.target, since, input.objectId)) ??
+      (liveFailed ? null : plan.oldTl);
     const pct = base && base > 0 ? ((plan.newTl - base) / base) * 100 : Number.POSITIVE_INFINITY;
     if (pct > settings.scaleMaxPct + 1e-9 && !hasReason) {
       const detail = Number.isFinite(pct) ? ` (bu hafta +%${Math.round(pct)})` : " (eski bütçe bilinmiyor)";
@@ -376,6 +382,9 @@ export async function executeAdChange(deps: AdChangeDeps, input: AdChangeInput):
 
 // ---- Supabase deposu (yalnız gizli anahtarlı istemciyle, requireRole sonrası) ----
 
+/** Google kaynak adı (customers/1/campaignBudgets/2) ya da Meta kimliği. */
+const SAFE_FILTER_VALUE = /^[A-Za-z0-9_/]{1,200}$/;
+
 type ObjectDbRow = {
   platform: "google" | "meta";
   level: "campaign" | "adset" | "ad";
@@ -414,13 +423,17 @@ export function supabaseAdChangeStore(db: SupabaseClient): AdChangeStore & {
         budgetResource: r.budget_resource,
       };
     },
-    async weekBudgetBaselineTl(platform, budgetResource, sinceIso) {
+    async weekBudgetBaselineTl(platform, budgetResource, sinceIso, objectId) {
+      // PostgREST or() değerleri çift tırnakla verilir; tırnak, ters bölü ya da ayraç taşıyan değer sorguya girmez.
+      if (!SAFE_FILTER_VALUE.test(budgetResource) || !SAFE_FILTER_VALUE.test(objectId)) throw new Error("Geçersiz bütçe kaynağı");
       const { data, error } = await db
         .from("ad_change_log")
         .select("old_value")
         .eq("platform", platform)
         .eq("action", "budget")
-        .eq("new_value->>budget_resource", budgetResource)
+        .or(
+          `new_value->>budget_resource.eq."${budgetResource}",and(new_value->>budget_resource.is.null,object_id.eq."${objectId}")`,
+        )
         .eq("status", "uygulandi")
         .gte("created_at", sinceIso)
         .order("created_at", { ascending: true })

@@ -230,6 +230,7 @@ describe("supabaseAdChangeStore · bütçe kaynağı", () => {
           update: (arg: unknown) => ((rec.op = "update"), (rec.arg = arg), self()),
           eq: (k: string, v: unknown) => (rec.filters.push([k, v]), self()),
           gte: (k: string, v: unknown) => (rec.filters.push([`gte:${k}`, v]), self()),
+          or: (v: string) => (rec.filters.push(["or", v]), self()),
           order: self,
           limit: self,
           then: (res: (v: unknown) => unknown) => Promise.resolve(result).then(res),
@@ -240,10 +241,12 @@ describe("supabaseAdChangeStore · bütçe kaynağı", () => {
     return { db, calls };
   }
 
-  it("haftalık taban bütçe kaynağına göre aranır (nesneye göre değil)", async () => {
+  it("haftalık taban bütçe kaynağına göre aranır; kaynağı olmayan eski kayıtlarda nesneye düşer", async () => {
     const actual = await vi.importActual<typeof import("@/lib/ads/writes")>("@/lib/ads/writes");
     const { db, calls } = recordingDb({ data: [{ old_value: { daily_budget_tl: 150 } }], error: null });
-    const tl = await actual.supabaseAdChangeStore(db as never).weekBudgetBaselineTl("meta", "120000999", "2026-10-18T21:00:00.000Z");
+    const tl = await actual
+      .supabaseAdChangeStore(db as never)
+      .weekBudgetBaselineTl("meta", "120000999", "2026-10-18T21:00:00.000Z", "120000111");
     expect(tl).toBe(150);
     expect(calls[0].table).toBe("ad_change_log");
     expect(calls[0].filters).toEqual(
@@ -251,11 +254,18 @@ describe("supabaseAdChangeStore · bütçe kaynağı", () => {
         ["platform", "meta"],
         ["action", "budget"],
         ["status", "uygulandi"],
-        ["new_value->>budget_resource", "120000999"],
+        [
+          "or",
+          'new_value->>budget_resource.eq."120000999",and(new_value->>budget_resource.is.null,object_id.eq."120000111")',
+        ],
         ["gte:created_at", "2026-10-18T21:00:00.000Z"],
       ]),
     );
     expect(calls[0].filters.map((f) => f[0])).not.toContain("object_id");
+    // Tırnak ya da ayraç içeren kaynak sorguya girmez.
+    await expect(
+      actual.supabaseAdChangeStore(db as never).weekBudgetBaselineTl("meta", 'x",object_id.eq.1', "2026-10-18T21:00:00.000Z", "1"),
+    ).rejects.toThrow();
   });
 
   it("başarılı yazımdan sonra aynı bütçe kaynağındaki tüm satırlar güncellenir", async () => {
