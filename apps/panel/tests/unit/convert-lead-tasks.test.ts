@@ -46,7 +46,13 @@ vi.mock("@/actions/offers", () => ({
 import { convertLeadToStudent } from "@/actions/students";
 
 const closes = (prefix: string) =>
-  ops.filter((o) => o.table === "tasks" && o.op === "update" && o.filters.some((f) => f[0] === "like" && f[2] === `${prefix}%`));
+  ops.filter(
+    (o) =>
+      o.table === "tasks" &&
+      o.op === "update" &&
+      o.filters.some((f) => f[0] === "like" && f[2] === `${prefix}%`) &&
+      o.filters.some((f) => f[0] === "eq" && f[1] === "lead_id" && f[2] === "L1"),
+  );
 
 beforeEach(() => {
   ops = [];
@@ -54,13 +60,14 @@ beforeEach(() => {
 });
 
 describe("convertLeadToStudent · arama takibi (R27)", () => {
-  it("takip ve geri arama görevlerini kapatır, kontenjana dokunmaz", async () => {
+  it("velinin tüm açık otomatik görevlerini kapatır (takip, geri, gelmedi, hatırlatma, ziyaret, kontenjan)", async () => {
     const res = await convertLeadToStudent("L1", "2026-11-01");
     expect(res).toHaveProperty("studentId", "S1");
-    expect(closes("takip:L1:")).toHaveLength(1);
-    expect(closes("geri:L1")).toHaveLength(1);
-    expect(closes("takip:L1:")[0].payload).toEqual({ status: "tamamlandi" });
-    expect(closes("kontenjan:L1")).toHaveLength(0);
+    for (const kind of ["takip", "geri", "noshow", "hatirlat", "ziyaret", "kontenjan"]) {
+      expect(closes(`${kind}:`), kind).toHaveLength(1);
+      expect(closes(`${kind}:`)[0].payload).toEqual({ status: "tamamlandi" });
+      expect(closes(`${kind}:`)[0].filters).toContainEqual(["eq", "status", "acik"]);
+    }
   });
 
   it("görev kapanışı hata verse de dönüştürme başarılı döner", async () => {

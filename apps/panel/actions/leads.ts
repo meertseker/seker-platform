@@ -16,7 +16,8 @@ import {
   type CallOutcome,
 } from "@/lib/call-outcome";
 import { istanbulDateString } from "@/lib/cron-rules";
-import { closeCallFollowups, closeTasksByPrefix } from "@/lib/lead-flow/tasks-store";
+import { LOST_LEAD_TASK_KINDS } from "@/lib/lead-flow/followups";
+import { closeCallTasks, closeLeadTasksQuietly, closeTasksByPrefix } from "@/lib/lead-flow/tasks-store";
 
 export interface CreateLeadInput {
   parentName: string; phone: string; source: LeadSource; sourceDetail?: string;
@@ -89,8 +90,9 @@ export async function updateLeadStatus(leadId: string, to: LeadStatus, lostReaso
       console.error("updateLeadStatus kontenjan:", e);
     }
   }
-  // R27: kapanan velinin arama takibi biter (kontenjan görevi kalır).
-  if (to === "kazanildi" || to === "kaybedildi") await closeCallFollowups(supabase, leadId, "updateLeadStatus");
+  // R27: kazanılan velinin tüm otomatik görevleri biter; kaybedilende kontenjan görevi kalır.
+  if (to === "kazanildi") await closeLeadTasksQuietly(supabase, leadId, "updateLeadStatus");
+  if (to === "kaybedildi") await closeLeadTasksQuietly(supabase, leadId, "updateLeadStatus", LOST_LEAD_TASK_KINDS);
   await logEvent(supabase, {
     entityType: "lead", entityId: leadId, eventType: "durum_degisti",
     actorId: profile.id, payload: { from: lead.status, to, lostReason: lostReason ?? null },
@@ -259,8 +261,7 @@ export async function logCallOutcome(
   await supabase.from("leads").update(patch).eq("id", input.leadId);
   if (input.outcome === "ulastim") {
     try {
-      await closeTasksByPrefix(supabase, `takip:${input.leadId}:`);
-      await closeTasksByPrefix(supabase, `geri:${input.leadId}`);
+      await closeCallTasks(supabase, input.leadId);
     } catch (e) {
       console.error("logCallOutcome görev kapatma:", e);
     }
