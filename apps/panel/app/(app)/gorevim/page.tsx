@@ -42,23 +42,13 @@ export default async function GorevimPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {open.length > 0 ? (
-        <ContentTaskForm
-          firstName={firstName}
-          tasks={open.map((t) => toFormTask(t, now))}
-          banned={rules.banned}
-          limits={rules.limits}
-          videoMaxMb={videoMaxMb()}
-        />
-      ) : (
-        <div className="mx-auto flex w-full max-w-[34rem] flex-col gap-1">
-          <p className="text-[13px] text-muted-foreground">Merhaba {firstName}</p>
-          <h1 className="text-[28px] font-bold tracking-tight text-foreground">Görevim</h1>
-          <p className="mt-3 rounded-2xl border border-border bg-surface p-4 text-[15px] text-foreground">
-            Bu hafta görevin yok. Yeni görev gelince burada görünür.
-          </p>
-        </div>
-      )}
+      <ContentTaskForm
+        firstName={firstName}
+        tasks={open.map((t) => toFormTask(t, now))}
+        banned={rules.banned}
+        limits={rules.limits}
+        videoMaxMb={videoMaxMb()}
+      />
 
       {submitted.length > 0 ? (
         <section className="mx-auto flex w-full max-w-[34rem] flex-col gap-2 pb-4">
