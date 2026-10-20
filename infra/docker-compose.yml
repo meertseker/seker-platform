@@ -61,6 +61,8 @@ services:
       GA4_PROPERTY_ID: ${GA4_PROPERTY_ID:-}
       WAHA_URL: ${WAHA_URL:-}
       WAHA_API_KEY: ${WAHA_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
     mem_limit: 700m
 
   # WhatsApp HTTP API: okulun numarası "bağlı cihaz" olarak buradan bağlanır.
