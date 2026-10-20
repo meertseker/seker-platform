@@ -10,6 +10,7 @@ import {
 } from "@/lib/cron-rules";
 import { formatTRY } from "@/lib/money";
 import { loadFutureVisitLeadIds } from "@/lib/queries/stale-leads";
+import { insertNotifications } from "@/lib/notifications/insert";
 
 type StaleLead = {
   id: string;
@@ -96,10 +97,11 @@ export async function GET(req: NextRequest) {
     for (const uid of targets) {
       // Cron her tetiklendiğinde aynı randevu için tekrar bildirim atmamak üzere randevu+gün bazında kontrol edilir.
       if (await notificationExists(db, uid, "randevu_bugun", { appointmentId: a.id, tarih: today })) continue;
-      await db.from("notifications").insert({
+      const { error } = await insertNotifications(db, [{
         user_id: uid, type: "randevu_bugun",
         payload: { appointmentId: a.id, leadId: a.lead_id, at: a.scheduled_at, tarih: today },
-      });
+      }]);
+      if (error) console.error(`Bildirim yazılamadı: ${error.message}`);
     }
   }
 
@@ -111,7 +113,7 @@ export async function GET(req: NextRequest) {
     if (totalKurus > 0) for (const y of yoneticiler ?? []) {
       // Aynı gün içinde tekrar tetiklenen cron, yöneticiye ikinci bir özet göndermesin.
       if (await notificationExists(db, y.id, "geciken_ozet", { tarih: today })) continue;
-      await db.from("notifications").insert({
+      const { error } = await insertNotifications(db, [{
         user_id: y.id, type: "geciken_ozet",
         payload: {
           count: overdue!.length,
@@ -119,7 +121,8 @@ export async function GET(req: NextRequest) {
           totalFormatted: formatTRY(totalKurus),
           tarih: today,
         },
-      });
+      }]);
+      if (error) console.error(`Bildirim yazılamadı: ${error.message}`);
     }
   }
   return NextResponse.json({ ok: true, staleLeads: staleLeads?.length ?? 0, appts: appts?.length ?? 0 });

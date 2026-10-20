@@ -5,6 +5,7 @@ import { getAccessToken } from "@/lib/ads/googleAds";
 import { supabaseAdsStore } from "@/lib/ads/store";
 import { istanbulDaysAgo, syncSpend, uploadPending } from "@/lib/ads/sync";
 import { istanbulDateString } from "@/lib/cron-rules";
+import { insertNotifications } from "@/lib/notifications/insert";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,8 @@ async function notifyYoneticiler(db: ReturnType<typeof createAdminSupabase>, mes
       .eq("payload->>tarih", today)
       .limit(1);
     if (existing?.length) continue;
-    await db.from("notifications").insert({ user_id: y.id, type: "ads_senkron_hata", payload: { message, tarih: today } });
+    const { error } = await insertNotifications(db, [{ user_id: y.id, type: "ads_senkron_hata", payload: { message, tarih: today } }]);
+    if (error) console.error(`Bildirim yazılamadı: ${error.message}`);
   }
 }
 

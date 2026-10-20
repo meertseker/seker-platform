@@ -24,8 +24,8 @@ function query(table: string) {
       return q;
     },
     limit: () => q,
-    insert: (row: Record<string, unknown>) => {
-      inserts.push(row);
+    insert: (row: Record<string, unknown> | Record<string, unknown>[]) => {
+      inserts.push(...(Array.isArray(row) ? row : [row]));
       return Promise.resolve({ error: null });
     },
     then: (resolve: (value: unknown) => void) => {

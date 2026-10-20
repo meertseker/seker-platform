@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSessionProfile } from "@/lib/auth";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { insertNotifications } from "@/lib/notifications/insert";
 import type { NotificationType } from "@/lib/notifications/types";
 
 export type { NotificationType } from "@/lib/notifications/types";
@@ -14,11 +15,9 @@ export async function notify(
   type: NotificationType,
   payload: Record<string, unknown>,
 ) {
-  const { error } = await supabase.from("notifications").insert({
-    user_id: userId,
-    type,
-    payload,
-  });
+  const { error } = await insertNotifications(supabase, [
+    { user_id: userId, type, payload },
+  ]);
 
   // Mutasyon zaten commit edildi; kayıp bir bildirim 500'e ve tekrar
   // denemeye yol açmamalı, yalnızca loglanır.
