@@ -37,6 +37,7 @@ type ObjectDbRow = {
   name: string;
   status: string | null;
   daily_budget_micros: number | string | null;
+  budget_resource: string | null;
   content_code: string | null;
 };
 
@@ -101,7 +102,7 @@ async function loadObjects(supabase: SupabaseClient): Promise<CampaignObject[]> 
   const rows = await fetchAllPages<ObjectDbRow>((f, t) =>
     supabase
       .from("ad_objects")
-      .select("platform, level, object_id, parent_id, campaign_id, name, status, daily_budget_micros, content_code")
+      .select("platform, level, object_id, parent_id, campaign_id, name, status, daily_budget_micros, budget_resource, content_code")
       .order("platform")
       .order("level")
       .order("object_id")
@@ -116,6 +117,7 @@ async function loadObjects(supabase: SupabaseClient): Promise<CampaignObject[]> 
     name: r.name,
     status: r.status,
     dailyBudgetMicros: r.daily_budget_micros === null ? null : Number(r.daily_budget_micros),
+    budgetResource: r.budget_resource,
     contentCode: r.content_code,
   }));
 }

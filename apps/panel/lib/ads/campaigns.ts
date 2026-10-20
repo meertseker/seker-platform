@@ -31,6 +31,8 @@ export type CampaignObject = {
   name: string;
   status: string | null;
   dailyBudgetMicros: number | null;
+  /** Bütçenin durduğu yer: Google campaignBudgets kaynak adı, Meta kampanya ya da reklam seti kimliği. */
+  budgetResource: string | null;
   contentCode: string | null;
 };
 
@@ -73,6 +75,8 @@ export type CampaignRow = {
   selfPaused: boolean;
   /** Üst kampanya ya da reklam seti durdurulmuş (görünen durum "durduruldu", ham durum korunur). */
   parentPaused: boolean;
+  /** Bütçe başka düzeyde ya da paylaşılıyorsa onay penceresindeki uyarı satırı. */
+  budgetNote: string | null;
 };
 
 const MICROS_PER_KURUS = 10_000;
@@ -116,7 +120,14 @@ function toRow(
   base: { key: string; platform: Platform; level: "campaign" | "ad"; depth: 0 | 1; objectId: string; name: string },
   status: CampaignRow["status"],
   c: Counts,
-  extra: { contentCode: string | null; unmatched: boolean; dailyBudgetMicros: number | null; selfPaused: boolean; parentPaused: boolean },
+  extra: {
+    contentCode: string | null;
+    unmatched: boolean;
+    dailyBudgetMicros: number | null;
+    selfPaused: boolean;
+    parentPaused: boolean;
+    budgetNote?: string | null;
+  },
   s: AdSettings,
 ): CampaignRow {
   const spendKurus = Math.round(c.micros / MICROS_PER_KURUS);
@@ -137,7 +148,26 @@ function toRow(
     dailyBudgetTl: extra.dailyBudgetMicros === null ? null : Math.round((extra.dailyBudgetMicros / 1_000_000) * 100) / 100,
     selfPaused: extra.selfPaused,
     parentPaused: extra.parentPaused,
+    budgetNote: extra.budgetNote ?? null,
   };
+}
+
+/**
+ * Bütçe değişikliğinin başka nesneleri de etkilediğini söyleyen satır. Meta reklamının bütçesi reklam setinde ya da
+ * kampanyadadır; Google kampanyası bütçesini başka kampanyalarla paylaşabilir.
+ */
+function budgetNoteFor(o: CampaignObject | null, objects: CampaignObject[], index: Map<string, CampaignObject>): string | null {
+  if (!o?.budgetResource) return null;
+  if (o.level === "ad" || o.level === "adset") {
+    const owner =
+      index.get(`${o.platform}|adset|${o.budgetResource}`) ?? index.get(`${o.platform}|campaign|${o.budgetResource}`);
+    const word = owner?.level === "campaign" ? "kampanya" : "reklam seti";
+    return `Bu bütçe ${word} “${owner?.name || o.budgetResource}” düzeyinde; aynı bütçeyi kullanan reklamları da etkiler.`;
+  }
+  const shared = objects.some(
+    (x) => x.platform === o.platform && x.level === "campaign" && x.objectId !== o.objectId && x.budgetResource === o.budgetResource,
+  );
+  return shared ? "Bu bütçe başka kampanyalarla paylaşılıyor; aynı bütçeyi kullanan kampanyaları da etkiler." : null;
 }
 
 /**
@@ -254,7 +284,14 @@ export function buildCampaignRows(
           { key: `${platform}:campaign:${c.id}`, platform, level: "campaign", depth: 0, objectId: c.id, name: c.name },
           c.obj ? (campaignPaused ? "durduruldu" : "yayinda") : null,
           c.counts,
-          { contentCode: null, unmatched: false, dailyBudgetMicros: c.obj?.dailyBudgetMicros ?? null, selfPaused: campaignPaused, parentPaused: false },
+          {
+            contentCode: null,
+            unmatched: false,
+            dailyBudgetMicros: c.obj?.dailyBudgetMicros ?? null,
+            selfPaused: campaignPaused,
+            parentPaused: false,
+            budgetNote: budgetNoteFor(c.obj, objects, objIndex),
+          },
           s,
         ),
       );
@@ -270,7 +307,14 @@ export function buildCampaignRows(
             { key: `meta:ad:${a.id}`, platform: "meta", level: "ad", depth: 1, objectId: a.id, name: a.name },
             status,
             a.counts,
-            { contentCode: a.code, unmatched: !a.code, dailyBudgetMicros: a.obj?.dailyBudgetMicros ?? null, selfPaused, parentPaused },
+            {
+              contentCode: a.code,
+              unmatched: !a.code,
+              dailyBudgetMicros: a.obj?.dailyBudgetMicros ?? null,
+              selfPaused,
+              parentPaused,
+              budgetNote: budgetNoteFor(a.obj, objects, objIndex),
+            },
             s,
           ),
         );

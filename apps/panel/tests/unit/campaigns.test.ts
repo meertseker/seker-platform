@@ -18,7 +18,7 @@ function spend(o: Partial<CampaignSpendRow> & Pick<CampaignSpendRow, "platform" 
 }
 
 function obj(o: Partial<CampaignObject> & Pick<CampaignObject, "platform" | "level" | "objectId">): CampaignObject {
-  return { parentId: null, campaignId: null, name: o.objectId, status: "ENABLED", dailyBudgetMicros: null, contentCode: null, ...o };
+  return { parentId: null, campaignId: null, name: o.objectId, status: "ENABLED", dailyBudgetMicros: null, budgetResource: null, contentCode: null, ...o };
 }
 
 function lead(o: Partial<CampaignLead>): CampaignLead {
@@ -34,10 +34,10 @@ function many(n: number, o: Partial<CampaignLead>): CampaignLead[] {
 
 // Prototipteki örnek: bir Google kampanyası, iki Instagram kampanyası (biri kodsuz reklamlı).
 const objects: CampaignObject[] = [
-  obj({ platform: "google", level: "campaign", objectId: "11", name: "TR_K9_Kres2Yas", status: "ENABLED", dailyBudgetMicros: 250 * TL }),
+  obj({ platform: "google", level: "campaign", objectId: "11", name: "TR_K9_Kres2Yas", status: "ENABLED", dailyBudgetMicros: 250 * TL, budgetResource: "customers/1/campaignBudgets/9" }),
   obj({ platform: "meta", level: "campaign", objectId: "21", name: "IG_Buyutme", status: "ACTIVE" }),
-  obj({ platform: "meta", level: "adset", objectId: "211", parentId: "21", campaignId: "21", status: "ACTIVE", dailyBudgetMicros: 300 * TL }),
-  obj({ platform: "meta", level: "ad", objectId: "2111", parentId: "211", campaignId: "21", name: "R-2641-A · Neden 13 kişilik sınıf", status: "ACTIVE", dailyBudgetMicros: 300 * TL, contentCode: "R-2641-A" }),
+  obj({ platform: "meta", level: "adset", objectId: "211", parentId: "21", campaignId: "21", name: "Beykent anneler", status: "ACTIVE", dailyBudgetMicros: 300 * TL, budgetResource: "211" }),
+  obj({ platform: "meta", level: "ad", objectId: "2111", parentId: "211", campaignId: "21", name: "R-2641-A · Neden 13 kişilik sınıf", status: "ACTIVE", dailyBudgetMicros: 300 * TL, budgetResource: "211", contentCode: "R-2641-A" }),
   obj({ platform: "meta", level: "campaign", objectId: "22", name: "IG_Test", status: "PAUSED" }),
   obj({ platform: "meta", level: "adset", objectId: "221", parentId: "22", campaignId: "22", status: "ACTIVE" }),
   obj({ platform: "meta", level: "ad", objectId: "2211", parentId: "221", campaignId: "22", name: "R-2643-B · Oyunla İngilizce", status: "ACTIVE", contentCode: "R-2643-B" }),
@@ -90,7 +90,7 @@ describe("buildCampaignRows", () => {
       key: "google:campaign:11", platform: "google", level: "campaign", depth: 0, objectId: "11", name: "TR_K9_Kres2Yas",
       status: "yayinda", spendKurus: 500_000, leads: 11, platformResults: 6, qualified: 4, appts: 1, enrolled: 1,
       cplKurus: 125_000, cplTone: "yellow", contentCode: null, unmatched: false, dailyBudgetTl: 250,
-      selfPaused: false, parentPaused: false,
+      selfPaused: false, parentPaused: false, budgetNote: null,
     });
   });
 
@@ -102,6 +102,7 @@ describe("buildCampaignRows", () => {
     expect(byKey.get("meta:ad:2111")).toMatchObject({
       level: "ad", depth: 1, status: "reklam", name: "R-2641-A · Neden 13 kişilik sınıf", spendKurus: 456_000,
       leads: 9, qualified: 6, cplTone: "green", contentCode: "R-2641-A", unmatched: false, dailyBudgetTl: 300,
+      budgetNote: "Bu bütçe reklam seti “Beykent anneler” düzeyinde; aynı bütçeyi kullanan reklamları da etkiler.",
     });
   });
 
@@ -137,6 +138,29 @@ describe("buildCampaignRows", () => {
       ["google:bilinmiyor", "Google · kampanya bilinmiyor", 1, null, ""],
       ["meta:bilinmiyor", "Instagram · kampanya bilinmiyor", 1, null, ""],
     ]);
+  });
+});
+
+describe("budgetNote", () => {
+  it("kampanya bütçesindeki Meta reklamı kampanya adını, paylaşılan Google bütçesi uyarıyı taşır", () => {
+    const r = buildCampaignRows(
+      [],
+      [
+        obj({ platform: "meta", level: "campaign", objectId: "7", name: "IG_CBO", status: "ACTIVE", dailyBudgetMicros: 200 * TL, budgetResource: "7" }),
+        obj({ platform: "meta", level: "adset", objectId: "71", parentId: "7", campaignId: "7", status: "ACTIVE", dailyBudgetMicros: 200 * TL, budgetResource: "7" }),
+        obj({ platform: "meta", level: "ad", objectId: "711", parentId: "71", campaignId: "7", status: "ACTIVE", dailyBudgetMicros: 200 * TL, budgetResource: "7", contentCode: "R-2650-A" }),
+        obj({ platform: "google", level: "campaign", objectId: "1", status: "ENABLED", dailyBudgetMicros: 100 * TL, budgetResource: "b/1" }),
+        obj({ platform: "google", level: "campaign", objectId: "2", status: "ENABLED", dailyBudgetMicros: 100 * TL, budgetResource: "b/1" }),
+        obj({ platform: "google", level: "campaign", objectId: "3", status: "ENABLED", dailyBudgetMicros: 100 * TL, budgetResource: "b/3" }),
+      ],
+      [],
+      S,
+    );
+    const note = (k: string) => r.find((x) => x.key === k)?.budgetNote;
+    expect(note("meta:ad:711")).toBe("Bu bütçe kampanya “IG_CBO” düzeyinde; aynı bütçeyi kullanan reklamları da etkiler.");
+    expect(note("meta:campaign:7")).toBeNull();
+    expect(note("google:campaign:1")).toBe("Bu bütçe başka kampanyalarla paylaşılıyor; aynı bütçeyi kullanan kampanyaları da etkiler.");
+    expect(note("google:campaign:3")).toBeNull();
   });
 });
 
