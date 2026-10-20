@@ -15,6 +15,13 @@ describe("canOpen", () => {
     expect(canOpen("yonetici", "/reklam/icerik")).toBe(true);
     expect(canOpen("danisman", "/reklam/icerik")).toBe(false);
   });
+  it("dört /reklam yolu yalnız yöneticiye açık", () => {
+    for (const path of ["/reklam/hafta", "/reklam/icerik", "/reklam/kampanyalar", "/reklam/ayarlar"]) {
+      expect(canOpen("yonetici", path)).toBe(true);
+      expect(canOpen("danisman", path)).toBe(false);
+      expect(canOpen("ogretmen", path)).toBe(false);
+    }
+  });
   it("homeFor rolün ana ekranını verir", () => {
     expect(homeFor("ogretmen")).toBe(TEACHER_HOME);
     expect(homeFor("danisman")).toBe("/bugun");

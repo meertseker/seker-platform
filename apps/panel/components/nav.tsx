@@ -7,16 +7,19 @@ import {
   BadgePercent,
   Banknote,
   BarChart3,
+  CalendarCheck,
   CalendarDays,
   ClipboardList,
   FileVideo,
   GraduationCap,
+  LineChart,
   LogOut,
   Megaphone,
   MessageSquarePlus,
   PencilLine,
   Plus,
   Settings,
+  SlidersHorizontal,
   Sun,
   User,
   Users,
@@ -51,8 +54,13 @@ const mainItems = [
 // Takvim kenar çubuğunda ana menüde; telefonda alt çubuk dolu olduğundan Menü'nün başında.
 const teacherItem = { href: "/gorevim", label: "Görevim", icon: ClipboardList } as const;
 
-// Yönetici için "Reklam" grubu (Aşama 4 buraya Bu hafta, Kampanyalar, Ayarlar ve hedefler ekler).
-const adItems = [{ href: "/reklam/icerik", label: "İçerik panosu", icon: FileVideo }] as const;
+// Yönetici için "Reklam" grubu.
+const adItems = [
+  { href: "/reklam/hafta", label: "Bu hafta", icon: CalendarCheck },
+  { href: "/reklam/icerik", label: "İçerik panosu", icon: FileVideo },
+  { href: "/reklam/kampanyalar", label: "Kampanyalar", icon: LineChart },
+  { href: "/reklam/ayarlar", label: "Ayarlar ve hedefler", icon: SlidersHorizontal },
+] as const;
 
 const calendarItem = { href: "/takvim", label: "Takvim", icon: CalendarDays } as const;
 
