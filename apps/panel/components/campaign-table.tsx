@@ -6,6 +6,7 @@ import { linkAdToContent } from "@/actions/ad-changes";
 import { AdChangeDialog, type AdChangeKind } from "@/components/ad-change-dialog";
 import { useToast } from "@/components/toast";
 import type { CampaignRow } from "@/lib/ads/campaigns";
+import { instagramCodes, statusLabel } from "@/lib/ads/change-text";
 
 type Filter = "all" | "google" | "meta";
 
@@ -63,7 +64,12 @@ export function CampaignTable({ heading, children, rows, codes, gate, writeEnabl
           Bu aralıkta kampanya, harcama ya da reklam velisi yok.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-surface">
+        <div
+          role="region"
+          aria-label="Kampanya tablosu"
+          tabIndex={0}
+          className="overflow-x-auto rounded-2xl border border-border bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <table className="w-full min-w-[900px] border-collapse text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -100,21 +106,14 @@ export function CampaignTable({ heading, children, rows, codes, gate, writeEnabl
   );
 }
 
-function statusText(row: CampaignRow): string | null {
-  if (row.status === "yayinda") return "yayında";
-  if (row.status === "reklam") return "reklam";
-  if (row.status === "durduruldu") return row.parentPaused && !row.selfPaused ? "durduruldu · üst düzey" : "durduruldu";
-  return null;
-}
-
 function Row({ row, codes, onAction }: { row: CampaignRow; codes: { code: string; topic: string }[]; onAction: (kind: AdChangeKind) => void }) {
   const cell = "border-b border-border px-3.5 py-3 text-right";
-  const status = statusText(row);
+  const status = statusLabel(row);
   const actionable = row.objectId !== "" && row.status !== null;
   const noData = row.spendKurus === 0 && row.qualified === 0;
   return (
     <tr className={row.depth === 1 ? "bg-background/50" : undefined}>
-      <td className="border-b border-border px-3.5 py-3">
+      <th scope="row" className="border-b border-border px-3.5 py-3 text-left font-normal">
         <div className={`flex flex-wrap items-center gap-2 ${row.depth === 1 ? "pl-7" : ""}`}>
           <span
             className={`rounded-full px-2 py-0.5 text-[11.5px] font-bold ${row.platform === "google" ? "bg-google-soft text-google" : "bg-instagram-soft text-instagram"}`}
@@ -125,9 +124,9 @@ function Row({ row, codes, onAction }: { row: CampaignRow; codes: { code: string
           {status ? (
             <span className={`text-xs ${row.status === "durduruldu" ? "text-destructive-strong" : "text-muted-foreground"}`}>{status}</span>
           ) : null}
-          {row.unmatched ? <LinkCode adId={row.objectId} codes={codes} /> : null}
+          {row.unmatched ? <LinkCode adId={row.objectId} codes={instagramCodes(codes)} /> : null}
         </div>
-      </td>
+      </th>
       <td className={cell}>{row.spendKurus > 0 ? money(row.spendKurus) : "—"}</td>
       <td className={cell}>
         <div className="text-base font-bold text-foreground">{row.leads}</div>
@@ -194,7 +193,7 @@ function LinkCode({ adId, codes }: { adId: string; codes: { code: string; topic:
       {open ? (
         <span className="flex flex-wrap items-center gap-1.5">
           {codes.length === 0 ? (
-            <span className="text-xs text-muted-foreground">Son 8 haftada içerik kodu yok.</span>
+            <span className="text-xs text-muted-foreground">Son 8 haftada Reels (R-) kodu yok.</span>
           ) : (
             <>
               <label className="sr-only" htmlFor={`kod-${adId}`}>İçerik kodu</label>

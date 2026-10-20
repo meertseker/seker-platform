@@ -6,13 +6,13 @@ import { applyAdChange } from "@/actions/ad-changes";
 import { Sheet } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import type { CampaignRow } from "@/lib/ads/campaigns";
+import { dialogLines, reasonToSend, type AdChangeKind } from "@/lib/ads/change-text";
 
-export type AdChangeKind = "pause" | "resume" | "budget";
+export type { AdChangeKind };
 
 const MIN_REASON = 10;
 const PLATFORM_LABEL = { google: "Google", meta: "Instagram" } as const;
 const tl = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 });
-const tlInt = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 });
 
 type Props = {
   target: { row: CampaignRow; kind: AdChangeKind } | null;
@@ -100,7 +100,6 @@ function DialogBody({ row, kind, gate, writeEnabled, budgetText, setBudgetText, 
   const [serverWarn, setServerWarn] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const platform = PLATFORM_LABEL[row.platform];
   const current = row.dailyBudgetTl ?? 0;
   const { valid: budgetValid, nextTl } = parseBudget(budgetText, current);
   const increase = kind === "budget" && nextTl > current;
@@ -114,24 +113,7 @@ function DialogBody({ row, kind, gate, writeEnabled, budgetText, setBudgetText, 
   const reasonOk = reason.trim().length >= MIN_REASON;
   const canSubmit = !pending && (kind !== "budget" || (budgetValid && nextTl !== current)) && (!needsReason || reasonOk);
 
-  const lines: string[] = [];
-  if (kind === "budget") {
-    const monthly = Math.round(Math.abs(nextTl - current) * 30);
-    lines.push(
-      increase
-        ? `Aylık en fazla ${tlInt.format(monthly)} TL ek harcama demek.`
-        : `Aylık en fazla ${tlInt.format(monthly)} TL daha az harcama demek.`,
-    );
-    if (writeEnabled) lines.push(`${platform} hesabında hemen uygulanır.`);
-    lines.push("Kim, ne zaman, eski ve yeni değer kayda geçer.");
-  } else if (kind === "pause") {
-    lines.push("Reklam bugün içinde gösterilmeyi bırakır, harcama durur.");
-    lines.push("Gelmiş veliler ve geçmiş sayılar silinmez.");
-    lines.push("İstediğinizde aynı düğmeyle yeniden başlatılır.");
-  } else {
-    lines.push("Reklam yeniden gösterilmeye başlar.");
-    if (row.platform === "meta") lines.push("Instagram'da öğrenme dönemi baştan başlayabilir.");
-  }
+  const lines = dialogLines(row, kind, { writeEnabled, currentTl: current, nextTl });
 
   const okLabel = kind === "pause" ? "Durdur" : kind === "resume" ? "Başlat" : increase ? "Bütçeyi artır" : "Bütçeyi azalt";
 
@@ -145,7 +127,8 @@ function DialogBody({ row, kind, gate, writeEnabled, budgetText, setBudgetText, 
         objectName: row.name,
         kind,
         ...(kind === "budget" ? { newDailyBudgetTl: nextTl } : {}),
-        ...(reason.trim() ? { reason: reason.trim() } : {}),
+        // Uyarı artık geçerli değilse (ör. tutar düşürüldü) yazılmış gerekçe gönderilmez.
+        ...(reasonToSend(needsReason, reason) ? { reason: reasonToSend(needsReason, reason) } : {}),
         source: "kampanyalar",
       });
       if ("ok" in result) {
@@ -236,7 +219,8 @@ function DialogBody({ row, kind, gate, writeEnabled, budgetText, setBudgetText, 
         <button
           type="button"
           onClick={onClose}
-          className="min-h-12 cursor-pointer rounded-xl border border-border bg-surface px-4 text-[15px] font-semibold text-foreground hover:bg-muted"
+          disabled={pending}
+          className="min-h-12 cursor-pointer rounded-xl border border-border bg-surface px-4 text-[15px] font-semibold text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
         >
           Vazgeç
         </button>
