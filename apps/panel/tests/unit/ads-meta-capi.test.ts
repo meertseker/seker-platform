@@ -54,6 +54,7 @@ function makeEvent(over: Partial<Omit<MetaPendingEvent, "lead">> = {}, lead: Par
       adConsentRevokedAt: null,
       webPayload: { child_name: "Ali", child_birth_year: 2022, district: "Beylikdüzü" },
       landingPath: "/kayit",
+      clientUserAgent: "Mozilla/5.0 (iPhone) Test",
       ...lead,
     },
   };
@@ -174,7 +175,8 @@ describe("buildCapiEvent", () => {
       const userData = payload.user_data as { ph: string[]; external_id: string[] };
       expect(userData.ph[0]).toMatch(/^[0-9a-f]{64}$/);
       expect(userData.external_id[0]).toMatch(/^[0-9a-f]{64}$/);
-      expect(Object.keys(userData).sort()).toEqual(["external_id", "fbc", "fbp", "ph"]);
+      const keys = action === "lead" ? ["client_user_agent", "external_id", "fbc", "fbp", "ph"] : ["external_id", "fbc", "fbp", "ph"];
+      expect(Object.keys(userData).sort()).toEqual(keys);
     }
   });
 
@@ -191,6 +193,7 @@ describe("buildCapiEvent", () => {
         external_id: [sha("lead-abc")],
         fbc: "fb.1.1700000000000.AbC",
         fbp: "fb.1.1700000000000.123",
+        client_user_agent: "Mozilla/5.0 (iPhone) Test",
       },
     });
     expect(payload).not.toHaveProperty("custom_data");
@@ -301,20 +304,20 @@ describe("uploadMetaPending", () => {
       makeEvent({ id: "d", action: "randevu", conversionAt: iso(8 * DAY) }),
     ];
     const { store, saved } = fakeStore(events);
-    const fetchFn = vi.fn().mockResolvedValue(jsonResponse({ events_received: 2 }));
+    const fetchFn = vi.fn().mockImplementation(async () => jsonResponse({ events_received: 2 }));
     const result = await uploadMetaPending(
       { cfg: { ...CFG, testEventCode: "TEST123" }, store, siteUrl: "https://x", fetchFn, now: NOW },
       10,
     );
     expect(result).toEqual({ sent: 2, failed: 0, skipped: 2 });
     expect(store.listPending).toHaveBeenCalledWith(10);
-    expect(fetchFn).toHaveBeenCalledTimes(1);
-    const body = JSON.parse(String((fetchFn.mock.calls[0] as [string, RequestInit])[1].body)) as {
-      data: { event_id: string }[];
-      test_event_code: string;
-    };
-    expect(body.test_event_code).toBe("TEST123");
-    expect(body.data.map((e) => e.event_id)).toEqual(["ev-1", "LEAD-ABC:schedule"]);
+    // Lead ve aşama olayları ayrı isteklerde gider (I-2).
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    const bodies = fetchFn.mock.calls.map(
+      (call) => JSON.parse(String((call as [string, RequestInit])[1].body)) as { data: { event_id: string }[]; test_event_code: string },
+    );
+    for (const body of bodies) expect(body.test_event_code).toBe("TEST123");
+    expect(bodies.map((b) => b.data.map((e) => e.event_id))).toEqual([["ev-1"], ["LEAD-ABC:schedule"]]);
     expect(saved).toEqual(
       expect.arrayContaining([
         { id: "a", status: "gonderildi", error: null },
@@ -336,7 +339,7 @@ describe("uploadMetaPending", () => {
 
   it("Meta hata verirse satırlar hata olur ve mesaj kaydedilir", async () => {
     const { store, saved } = fakeStore([makeEvent({ id: "a" }), makeEvent({ id: "b", action: "kayit", value: 100 })]);
-    const fetchFn = vi.fn().mockResolvedValue(jsonResponse({ error: { message: "Invalid parameter", code: 100 } }, 400));
+    const fetchFn = vi.fn().mockImplementation(async () => jsonResponse({ error: { message: "Invalid parameter", code: 100 } }, 400));
     const result = await uploadMetaPending({ cfg: CFG, store, siteUrl: "https://x", fetchFn, now: NOW });
     expect(result).toEqual({ sent: 0, failed: 2, skipped: 0 });
     expect(saved).toHaveLength(2);
@@ -357,7 +360,7 @@ describe("uploadMetaPending", () => {
 
   it("site adresi yoksa Lead atlanır, Schedule gider", async () => {
     const { store, saved } = fakeStore([makeEvent({ id: "a" }), makeEvent({ id: "b", action: "randevu" })]);
-    const fetchFn = vi.fn().mockResolvedValue(jsonResponse({ events_received: 1 }));
+    const fetchFn = vi.fn().mockImplementation(async () => jsonResponse({ events_received: 1 }));
     const result = await uploadMetaPending({ cfg: CFG, store, siteUrl: null, fetchFn, now: NOW });
     expect(result).toEqual({ sent: 1, failed: 0, skipped: 1 });
     expect(saved).toEqual(
@@ -366,5 +369,143 @@ describe("uploadMetaPending", () => {
         { id: "b", status: "gonderildi", error: null },
       ]),
     );
+  });
+
+  it("tarayıcı bilgisi olmayan Lead atlanır, aşama olayı gider (I-2)", async () => {
+    const { store, saved } = fakeStore([
+      makeEvent({ id: "a" }, { clientUserAgent: null }),
+      makeEvent({ id: "b" }, { clientUserAgent: "   " }),
+      makeEvent({ id: "c", action: "randevu" }, { clientUserAgent: null }),
+    ]);
+    const fetchFn = vi.fn().mockImplementation(async () => jsonResponse({ events_received: 1 }));
+    const result = await uploadMetaPending({ cfg: CFG, store, siteUrl: "https://x", fetchFn, now: NOW });
+    expect(result).toEqual({ sent: 1, failed: 0, skipped: 2 });
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(saved).toEqual(
+      expect.arrayContaining([
+        { id: "a", status: "atlandi", error: "tarayıcı bilgisi yok" },
+        { id: "b", status: "atlandi", error: "tarayıcı bilgisi yok" },
+        { id: "c", status: "gonderildi", error: null },
+      ]),
+    );
+  });
+
+  it("bozuk Lead isteği aşama olaylarını düşürmez: ayrı istek, ayrı sonuç (I-2)", async () => {
+    const { store, saved } = fakeStore([
+      makeEvent({ id: "a" }),
+      makeEvent({ id: "b", action: "randevu", eventId: "LEAD-ABC:schedule" }),
+      makeEvent({ id: "c", action: "kayit", eventId: "LEAD-ABC:enrolled", value: 100 }),
+    ]);
+    const fetchFn = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { data: { event_name: string }[] };
+      return body.data.some((e) => e.event_name === "Lead")
+        ? jsonResponse({ error: { message: "Invalid parameter", code: 100 } }, 400)
+        : jsonResponse({ events_received: body.data.length });
+    });
+    const result = await uploadMetaPending({ cfg: CFG, store, siteUrl: "https://x", fetchFn, now: NOW });
+    expect(result).toEqual({ sent: 2, failed: 1, skipped: 0 });
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(saved).toEqual(
+      expect.arrayContaining([
+        { id: "a", status: "hata", error: expect.stringContaining("Invalid parameter") },
+        { id: "b", status: "gonderildi", error: null },
+        { id: "c", status: "gonderildi", error: null },
+      ]),
+    );
+  });
+});
+
+describe("buildCapiEvent client_user_agent (I-2)", () => {
+  it("Lead'de çerez onayı varsa hash'lenmeden eklenir", () => {
+    const payload = buildCapiEvent(makeEvent({}, { clientUserAgent: "UA/1.0" }), "https://x");
+    expect((payload.user_data as Record<string, unknown>).client_user_agent).toBe("UA/1.0");
+  });
+
+  it("çerez onayı yoksa ya da aşama olayıysa eklenmez", () => {
+    for (const ev of [
+      makeEvent({}, { adCookieConsent: false }),
+      makeEvent({}, { adCookieConsent: null }),
+      makeEvent({ action: "randevu" }),
+      makeEvent({ action: "kayit" }),
+    ]) {
+      expect(buildCapiEvent(ev, "https://x").user_data).not.toHaveProperty("client_user_agent");
+    }
+  });
+});
+
+describe("uploadMetaPending hata ayrımı (C-2)", () => {
+  type Reply = Response | Error;
+  /** Her olay kimliği için yanıt üretir; toplu istekte herhangi biri kötüyse toplu yanıt `batch` olur. */
+  function fetchBy(batch: () => Reply, single: (eventId: string) => Reply) {
+    return vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { data: { event_id: string }[] };
+      const reply = body.data.length > 1 ? batch() : single(body.data[0].event_id);
+      if (reply instanceof Error) throw reply;
+      return reply;
+    });
+  }
+  const ok = () => jsonResponse({ events_received: 1 });
+  const bad = () => jsonResponse({ error: { message: "Invalid fbc", code: 100 } }, 400);
+
+  const stages = () => [
+    makeEvent({ id: "a", action: "randevu", eventId: "A:schedule" }),
+    makeEvent({ id: "b", action: "randevu", eventId: "B:schedule" }),
+    makeEvent({ id: "c", action: "kayit", eventId: "C:enrolled", value: 10 }),
+  ];
+
+  it("toplu 4xx'te olaylar tek tek denenir; yalnız bozuk olan hata olur", async () => {
+    const { store, saved } = fakeStore(stages());
+    const fetchFn = fetchBy(bad, (id) => (id === "B:schedule" ? bad() : ok()));
+    const result = await uploadMetaPending({ cfg: CFG, store, siteUrl: "https://x", fetchFn, now: NOW });
+    expect(fetchFn).toHaveBeenCalledTimes(4);
+    expect(result).toEqual({ sent: 2, failed: 1, skipped: 0 });
+    expect(saved).toEqual(
+      expect.arrayContaining([
+        { id: "a", status: "gonderildi", error: null },
+        { id: "b", status: "hata", error: expect.stringContaining("Invalid fbc") },
+        { id: "c", status: "gonderildi", error: null },
+      ]),
+    );
+    expect(saved).toHaveLength(3);
+  });
+
+  it.each([
+    ["ağ hatası", () => new Error("ECONNRESET")],
+    ["HTTP 500", () => jsonResponse({ error: { message: "Service down" } }, 500)],
+    ["HTTP 503", () => new Response("bakım", { status: 503 })],
+    ["HTTP 429", () => jsonResponse({ error: { message: "Too many calls" } }, 429)],
+  ])("geçici hata (%s) satırları bekliyor bırakır, hata metni yazılır, tek tek denenmez", async (_name, reply) => {
+    const { store, saved } = fakeStore(stages());
+    const fetchFn = fetchBy(reply as () => Reply, () => ok());
+    const result = await uploadMetaPending({ cfg: CFG, store, siteUrl: "https://x", fetchFn, now: NOW });
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ sent: 0, failed: 3, skipped: 0 });
+    expect(saved).toHaveLength(3);
+    for (const outcome of saved) {
+      expect(outcome.status).toBe("bekliyor");
+      expect(outcome.error).toMatch(/^Meta CAPI isteği başarısız: /);
+    }
+  });
+
+  it("tek tek denemede geçici hata alan olay bekliyor kalır", async () => {
+    const { store, saved } = fakeStore(stages());
+    const fetchFn = fetchBy(bad, (id) => (id === "A:schedule" ? new Error("timeout") : id === "B:schedule" ? bad() : ok()));
+    const result = await uploadMetaPending({ cfg: CFG, store, siteUrl: "https://x", fetchFn, now: NOW });
+    expect(result).toEqual({ sent: 1, failed: 2, skipped: 0 });
+    expect(saved).toEqual(
+      expect.arrayContaining([
+        { id: "a", status: "bekliyor", error: expect.stringContaining("timeout") },
+        { id: "b", status: "hata", error: expect.stringContaining("Invalid fbc") },
+        { id: "c", status: "gonderildi", error: null },
+      ]),
+    );
+  });
+
+  it("tek olaylık grupta 4xx doğrudan hata olur (yeniden denenmez)", async () => {
+    const { store, saved } = fakeStore([makeEvent({ id: "a", action: "randevu" })]);
+    const fetchFn = fetchBy(bad, () => bad());
+    await uploadMetaPending({ cfg: CFG, store, siteUrl: "https://x", fetchFn, now: NOW });
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(saved).toEqual([{ id: "a", status: "hata", error: expect.stringContaining("Invalid fbc") }]);
   });
 });

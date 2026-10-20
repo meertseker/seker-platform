@@ -24,7 +24,8 @@ export interface PendingConversion {
 
 export interface UploadOutcome {
   id: string;
-  status: "gonderildi" | "hata" | "atlandi";
+  /** `bekliyor`: geçici hata (ağ, 5xx, 429); satır kuyrukta kalır, sonraki koşuda yeniden denenir (yalnız Meta). */
+  status: "gonderildi" | "hata" | "atlandi" | "bekliyor";
   error: string | null;
 }
 

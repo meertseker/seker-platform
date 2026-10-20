@@ -93,7 +93,7 @@ function eventSourceUrl(siteUrl: string | null, landingPath: string | null): str
 
 /**
  * Tek CAPI olayı. Yalnız izin verilen alanlar: çocuk verisi, düz telefon, not, semt yük'e hiç girmez.
- * fbc/fbp hash'lenmez ve yalnız çerez onayı varsa eklenir (her olay türünde).
+ * fbc/fbp hash'lenmez ve yalnız çerez onayı varsa eklenir (her olay türünde); client_user_agent yalnız Lead'de.
  * Kaynak: https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/fbp-and-fbc
  */
 export function buildCapiEvent(ev: MetaPendingEvent, siteUrl: string | null): Record<string, unknown> {
@@ -104,6 +104,9 @@ export function buildCapiEvent(ev: MetaPendingEvent, siteUrl: string | null): Re
   if (ev.lead.adCookieConsent === true) {
     if (ev.lead.fbc) userData.fbc = ev.lead.fbc;
     if (ev.lead.fbp) userData.fbp = ev.lead.fbp;
+    // website olayında zorunlu; hash'lenmez. Yalnız Lead'de (aşama olayları system_generated).
+    const ua = ev.lead.clientUserAgent?.trim();
+    if (ev.action === "lead" && ua) userData.client_user_agent = ua;
   }
 
   const event: Record<string, unknown> = {
@@ -144,7 +147,23 @@ export async function sendCapiBatch(
   events: Record<string, unknown>[],
   fetchFn: FetchFn = fetch,
 ): Promise<{ ok: true; received: number } | { ok: false; error: string }> {
-  if (!cfg.pixelId) return { ok: false, error: "Meta piksel kimliği yok" };
+  const result = await sendCapiRequest(cfg, events, fetchFn);
+  return result.ok ? result : { ok: false, error: result.error };
+}
+
+type CapiResult = { ok: true; received: number } | { ok: false; error: string; transient: boolean };
+
+/** Geçici hata: ağ/zaman aşımı, HTTP 5xx ve 429. Bunlar sonraki koşuda yeniden denenir; diğer 4xx kalıcıdır. */
+function isTransientStatus(status: number): boolean {
+  return status >= 500 || status === 429;
+}
+
+async function sendCapiRequest(
+  cfg: MetaConfig,
+  events: Record<string, unknown>[],
+  fetchFn: FetchFn = fetch,
+): Promise<CapiResult> {
+  if (!cfg.pixelId) return { ok: false, error: "Meta piksel kimliği yok", transient: false };
   if (events.length === 0) return { ok: true, received: 0 };
 
   const url = new URL(`${META_GRAPH_BASE}/${META_GRAPH_API_VERSION}/${cfg.pixelId}/events`);
@@ -168,7 +187,11 @@ export async function sendCapiBatch(
       } catch {
         // JSON değilse ham metin
       }
-      return { ok: false, error: `Meta CAPI isteği başarısız: ${sanitize(message, cfg)}` };
+      return {
+        ok: false,
+        error: `Meta CAPI isteği başarısız: ${sanitize(message, cfg)}`,
+        transient: isTransientStatus(response.status),
+      };
     }
     // Yanıt biçimi `{events_received, messages, fbtrace_id}` (araştırma notu: TEYİTSİZ).
     let received = 0;
@@ -181,13 +204,43 @@ export async function sendCapiBatch(
     return { ok: true, received };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, error: `Meta CAPI isteği başarısız: ${sanitize(message, cfg)}` };
+    return { ok: false, error: `Meta CAPI isteği başarısız: ${sanitize(message, cfg)}`, transient: true };
   }
+}
+
+/** Başarısız istek sonucunu satıra çevirir: geçici hata `bekliyor` (yeniden denenir), kalıcı hata `hata`. */
+function failedOutcome(id: string, result: { error: string; transient: boolean }): UploadOutcome {
+  return { id, status: result.transient ? "bekliyor" : "hata", error: result.error };
+}
+
+/**
+ * Bir grubu gönderir. Toplu istek kalıcı hatayla (4xx, 429 dışı) düşerse olaylar tek tek denenir; böylece
+ * yalnız bozuk olay `hata` olur. Geçici hatada (ağ, 5xx, 429) satırlar `bekliyor` kalır ve hata metni yazılır;
+ * sonraki cron yeniden dener. Sınır: 6 gün 20 saati geçen olay uygunluktan düşer (`atlandi`), sonsuz deneme olmaz.
+ */
+async function sendGroup(
+  cfg: MetaConfig,
+  group: MetaPendingEvent[],
+  siteUrl: string | null,
+  fetchFn: FetchFn | undefined,
+): Promise<UploadOutcome[]> {
+  const result = await sendCapiRequest(cfg, group.map((ev) => buildCapiEvent(ev, siteUrl)), fetchFn);
+  if (result.ok) return group.map((ev) => ({ id: ev.id, status: "gonderildi", error: null }));
+  if (result.transient || group.length === 1) return group.map((ev) => failedOutcome(ev.id, result));
+
+  const outcomes: UploadOutcome[] = [];
+  for (const ev of group) {
+    const single = await sendCapiRequest(cfg, [buildCapiEvent(ev, siteUrl)], fetchFn);
+    outcomes.push(single.ok ? { id: ev.id, status: "gonderildi", error: null } : failedOutcome(ev.id, single));
+  }
+  return outcomes;
 }
 
 /**
  * Bekleyen Meta olaylarını gönderir. `capiEnabled` kapalıysa kuyruğa dokunmaz (satırlar `bekliyor` kalır).
- * Uygun olmayanlar nedeniyle `atlandi`; uygunlar tek toplu istekte gider, sonuç hepsine yazılır.
+ * Uygun olmayanlar nedeniyle `atlandi`. Uygunlar iki ayrı grupta gider: Lead (website) ve aşama
+ * olayları (Schedule/Enrolled); topluda tek bozuk olay tüm isteği düşürdüğü için bozuk bir Lead aşama
+ * olaylarını batırmasın. Hata ayrımı için bkz. sendGroup. `failed`: gönderilemeyen (hata + yeniden denenecek).
  */
 export async function uploadMetaPending(
   deps: { cfg: MetaConfig; store: MetaStore; siteUrl: string | null; fetchFn?: FetchFn; now?: Date },
@@ -207,6 +260,9 @@ export async function uploadMetaPending(
     } else if (ev.action === "lead" && eventSourceUrl(siteUrl, ev.lead.landingPath) === null) {
       // website olayında event_source_url zorunlu; eksik olay tüm toplu isteği düşürmesin.
       outcomes.push({ id: ev.id, status: "atlandi", error: "site adresi yok" });
+    } else if (ev.action === "lead" && !ev.lead.clientUserAgent?.trim()) {
+      // website olayında client_user_agent da zorunlu.
+      outcomes.push({ id: ev.id, status: "atlandi", error: "tarayıcı bilgisi yok" });
     } else {
       eligible.push(ev);
     }
@@ -214,19 +270,14 @@ export async function uploadMetaPending(
 
   let sent = 0;
   let failed = 0;
-  if (eligible.length > 0) {
-    const result = await sendCapiBatch(
-      cfg,
-      eligible.map((ev) => buildCapiEvent(ev, siteUrl)),
-      deps.fetchFn,
-    );
-    for (const ev of eligible) {
-      outcomes.push(
-        result.ok ? { id: ev.id, status: "gonderildi", error: null } : { id: ev.id, status: "hata", error: result.error },
-      );
+  const groups = [eligible.filter((ev) => ev.action === "lead"), eligible.filter((ev) => ev.action !== "lead")];
+  for (const group of groups) {
+    if (group.length === 0) continue;
+    for (const outcome of await sendGroup(cfg, group, siteUrl, deps.fetchFn)) {
+      outcomes.push(outcome);
+      if (outcome.status === "gonderildi") sent += 1;
+      else failed += 1;
     }
-    if (result.ok) sent = eligible.length;
-    else failed = eligible.length;
   }
 
   if (outcomes.length > 0) await store.saveOutcomes(outcomes);

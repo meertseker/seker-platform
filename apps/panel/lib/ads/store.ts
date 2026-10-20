@@ -127,6 +127,8 @@ export interface MetaPendingEvent {
     fbp: string | null;
     consentVersion: number | null;
     adCookieConsent: boolean | null;
+    /** Başvuru isteğinin tarayıcı bilgisi; yalnız çerez onayı varsa yazılır (CAPI Lead için zorunlu). */
+    clientUserAgent: string | null;
     consentAt: string | null;
     adConsentRevokedAt: string | null;
     webPayload: Record<string, unknown> | null;
@@ -147,6 +149,7 @@ interface MetaLeadRow {
   fbp: string | null;
   consent_version: number | null;
   ad_cookie_consent: boolean | null;
+  client_user_agent: string | null;
   consent_at: string | null;
   ad_consent_revoked_at: string | null;
   web_payload: Record<string, unknown> | null;
@@ -196,7 +199,7 @@ export function supabaseMetaStore(db: SupabaseClient): MetaStore {
       const { data, error } = await db
         .from("conversion_uploads")
         .select(
-          "id, lead_id, conversion_action, event_id, conversion_at, value, lead:leads(phone, created_at, fbc, fbp, consent_version, ad_cookie_consent, consent_at, ad_consent_revoked_at, web_payload, landing_path)",
+          "id, lead_id, conversion_action, event_id, conversion_at, value, lead:leads(phone, created_at, fbc, fbp, consent_version, ad_cookie_consent, client_user_agent, consent_at, ad_consent_revoked_at, web_payload, landing_path)",
         )
         .eq("platform", "meta")
         .eq("status", "bekliyor")
@@ -222,6 +225,7 @@ export function supabaseMetaStore(db: SupabaseClient): MetaStore {
               fbp: lead.fbp,
               consentVersion: lead.consent_version,
               adCookieConsent: lead.ad_cookie_consent,
+              clientUserAgent: lead.client_user_agent,
               consentAt: lead.consent_at,
               adConsentRevokedAt: lead.ad_consent_revoked_at,
               webPayload: lead.web_payload,

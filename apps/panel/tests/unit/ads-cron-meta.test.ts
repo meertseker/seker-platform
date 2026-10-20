@@ -133,4 +133,16 @@ describe("GET /api/cron/ads · Meta", () => {
     expect(body).toEqual({ ok: true, spendRows: 0, sent: 0, failed: 0, skipped: 0 });
     expect(fetchMetaAdSpend).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["", "https://yeni.sekeranaokulu.com"],
+    ["   ", "https://yeni.sekeranaokulu.com"],
+    [" https://www.sekeranaokulu.com ", "https://www.sekeranaokulu.com"],
+  ])("SITE_PUBLIC_URL=%j iken site adresi %s (boş değer varsayılana düşer, I-5)", async (value, expected) => {
+    stub({ ...META_ENV, META_PIXEL_ID: "999", META_CAPI_ENABLED: "true", SITE_PUBLIC_URL: value });
+    fetchMetaAdSpend.mockResolvedValue([]);
+    await GET(req());
+    expect(uploadMetaPending).toHaveBeenCalledTimes(1);
+    expect(uploadMetaPending.mock.calls[0][0]).toMatchObject({ siteUrl: expected });
+  });
 });

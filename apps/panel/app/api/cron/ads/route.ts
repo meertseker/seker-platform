@@ -81,7 +81,8 @@ export async function GET(req: NextRequest) {
       errors.push(`Meta harcama: ${(e as Error).message.slice(0, 240)}`);
     }
     try {
-      const siteUrl = process.env.SITE_PUBLIC_URL ?? "https://yeni.sekeranaokulu.com";
+      // Boş ya da yalnız boşluk değer de varsayılana düşer; aksi halde her Lead "site adresi yok" ile atlanır.
+      const siteUrl = process.env.SITE_PUBLIC_URL?.trim() || "https://yeni.sekeranaokulu.com";
       const result = await uploadMetaPending({ cfg: metaCfg, store: metaStore, siteUrl });
       meta = { ...meta, ...result };
       if (result.failed > 0) errors.push(`Meta dönüşüm: ${result.failed} kayıt gönderilemedi`);
