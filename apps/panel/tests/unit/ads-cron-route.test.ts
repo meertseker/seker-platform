@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getAccessToken, fetchCampaignSpend, ingestConversion, store } = vi.hoisted(() => ({
+const { getAccessToken, fetchCampaignSpend, ingestConversion, store, fetchGoogleCampaignStates, upsertAdObjects } = vi.hoisted(() => ({
+  fetchGoogleCampaignStates: vi.fn(),
+  upsertAdObjects: vi.fn(),
   getAccessToken: vi.fn(),
   fetchCampaignSpend: vi.fn(),
   ingestConversion: vi.fn(),
@@ -9,6 +11,8 @@ const { getAccessToken, fetchCampaignSpend, ingestConversion, store } = vi.hoist
 
 vi.mock("@/lib/ads/googleAds", () => ({ getAccessToken, fetchCampaignSpend, ingestConversion }));
 vi.mock("@/lib/ads/store", () => ({ supabaseAdsStore: () => store }));
+vi.mock("@/lib/ads/google-objects", () => ({ fetchGoogleCampaignStates }));
+vi.mock("@/lib/ads/objects-store", () => ({ upsertAdObjects }));
 
 const inserts: Array<Record<string, unknown>> = [];
 const existingNotifications = new Set<string>();
@@ -85,6 +89,8 @@ beforeEach(() => {
   store.upsertSpend.mockResolvedValue(undefined);
   store.listPending.mockResolvedValue([]);
   store.saveOutcomes.mockResolvedValue(undefined);
+  fetchGoogleCampaignStates.mockResolvedValue([]);
+  upsertAdObjects.mockImplementation(async (_db: unknown, rows: unknown[]) => rows.length);
 });
 
 afterEach(() => {
@@ -119,7 +125,7 @@ describe("GET /api/cron/ads", () => {
     ingestConversion.mockResolvedValue({ ok: true, requestId: "r" });
     const response = await GET(request("Bearer s3cret"));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, spendRows: 1, sent: 1, failed: 0, skipped: 0 });
+    expect(await response.json()).toEqual({ ok: true, spendRows: 1, sent: 1, failed: 0, skipped: 0, objects: 0 });
     expect(inserts).toHaveLength(0);
   });
 
@@ -172,7 +178,7 @@ describe("GET /api/cron/ads", () => {
     ingestConversion.mockResolvedValue({ ok: true, requestId: "r" });
     const response = await GET(request("Bearer s3cret"));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, spendRows: 0, sent: 1, failed: 0, skipped: 0 });
+    expect(await response.json()).toEqual({ ok: true, spendRows: 0, sent: 1, failed: 0, skipped: 0, objects: 0 });
     expect(fetchCampaignSpend).toHaveBeenCalledTimes(1);
   });
 

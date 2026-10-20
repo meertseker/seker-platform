@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ConversionAction } from "@/lib/constants";
 import { adUserDataFor } from "./consent";
+import { loadContentLinks } from "./objects-store";
 import type { AdsStore, PendingConversion, PlatformSpendRow, UploadOutcome } from "./types";
 
 interface LeadRow {
@@ -170,6 +171,12 @@ export function supabaseMetaStore(db: SupabaseClient): MetaStore {
   return {
     async upsertSpend(rows) {
       if (rows.length === 0) return;
+      // Elle bağlı içerik kodu (ad_content_links) reklam adından çıkarılanın üstüne geçer.
+      const links = await loadContentLinks(
+        db,
+        "meta",
+        rows.map((r) => r.adId ?? ""),
+      );
       const { error } = await db.from("ad_spend_daily").upsert(
         rows.map((row) => ({
           date: row.date,
@@ -185,7 +192,7 @@ export function supabaseMetaStore(db: SupabaseClient): MetaStore {
           adset_name: row.adsetName,
           ad_id: row.adId,
           ad_name: row.adName,
-          content_code: row.contentCode,
+          content_code: (row.adId ? links.get(row.adId) : undefined) ?? row.contentCode,
           reach: row.reach,
           frequency: row.frequency,
           platform_results: row.platformResults,
