@@ -70,8 +70,9 @@ const SUBMITTED = "2026-10-20T07:00:00.5+00:00";
 
 const ofOps = (client: Op["client"], table: string, op: string) =>
   ops.filter((o) => o.client === client && o.table === table && o.op === op);
+// insertNotifications dizi yazar; dizi yükleri satırlara açılır.
 const payloads = (client: Op["client"], table: string, op: string) =>
-  ofOps(client, table, op).map((o) => o.payload as Record<string, unknown>);
+  ofOps(client, table, op).flatMap((o) => (Array.isArray(o.payload) ? o.payload : [o.payload]) as Array<Record<string, unknown>>);
 const writes = () => ops.filter((o) => o.op !== "select");
 
 const taskInput = {

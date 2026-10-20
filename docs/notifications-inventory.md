@@ -21,6 +21,17 @@ RLS: a user selects/updates only their own rows; any active staff may insert.
 | `randevu_bugun` | `app/api/cron/daily` rule 2 (03:00) | appointment creator + active `yonetici`, once per appointment per day | `appointmentId, leadId, at, tarih` | **"Yeni bildirim var."** | `/leads/{leadId}` |
 | `geciken_ozet` | `app/api/cron/daily` rule 5 (Mondays) | active `yonetici`, once per day | `count` (installments), `totalKurus, totalFormatted, tarih` | **"Yeni bildirim var."** | `/` |
 
+Added by `feat/reklam-suiti-2` (content tasks, `actions/content.ts` via `notify` → `insertNotifications`, service role):
+
+| Type | Recipients | Payload | Text | Click target |
+|---|---|---|---|---|
+| `icerik_gorev` | task owner (`ogretmen`) | `contentId, code` | "Yeni içerik görevi: R-2643-A" | `/gorevim` |
+| `icerik_teslim` | active `yonetici` | `contentId, code` | "R-2643-A teslim edildi, onayını bekliyor" | `/reklam/icerik?kod=…` |
+| `icerik_duzeltme` | task owner | `contentId, code, note` | "R-2643-A için düzeltme istendi: …" | `/gorevim` |
+| `icerik_onay` | task owner | `contentId, code` | "R-2643-A onaylandı" | `/gorevim` |
+
+Teachers only open `/gorevim`; their bell sends every row there (`fixedHref`).
+
 Planned on other branches (not produced on main yet): `cevapsiz_arama`, `santral_senkron_hata`
 (`feat/santral` plan). Texts for them are pre-registered on this branch so that merge is additive.
 

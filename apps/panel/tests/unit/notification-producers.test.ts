@@ -74,7 +74,8 @@ function sqlTypes(): Set<string> {
   return found;
 }
 
-describe("bildirim üreticileri", () => {
+// Tüm kaynakları okur; paralel turbo koşusunda 5 sn varsayılanı aşabiliyor.
+describe("bildirim üreticileri", { timeout: 30_000 }, () => {
   it("ham notifications insert yalnızca lib/notifications/insert.ts içinde", () => {
     const offenders = tsFiles
       .filter((f) => rel(f) !== ALLOWED_RAW.split(sep).join("/"))
