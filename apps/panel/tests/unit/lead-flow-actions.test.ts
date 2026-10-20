@@ -288,8 +288,23 @@ describe("recordCall", () => {
     expect(inserts("events").some((e) => e.event_type === "arama_kaydi")).toBe(true);
     const history = ops.find((o) => o.table === "events" && isClaimHistory(o))!;
     expect(history.filters).toEqual(expect.arrayContaining([
-      ["eq", "entity_id", "L1"], ["in", "event_type", ["ustlenildi", "arama_kaydi"]], ["limit", 2],
+      ["eq", "entity_id", "L1"], ["in", "event_type", ["ustlenildi", "arama_kaydi"]], ["limit", 10],
     ]));
+  });
+
+  it("uzun arama kabulü: Ara'ya iki kez basılmış olsa da önceki üstlenen tanınır", async () => {
+    const OTHER = "00000000-0000-0000-0000-000000000003";
+    claimRows = [];
+    lead.assigned_to = OTHER;
+    claimHistory = [
+      { event_type: "ustlenildi", actor_id: OTHER },
+      { event_type: "ustlenildi", actor_id: OTHER },
+      { event_type: "ustlenildi", actor_id: ME },
+      { event_type: "ustlenildi", actor_id: ME },
+      { event_type: "arama_kaydi", actor_id: "00000000-0000-0000-0000-000000000004" },
+    ];
+    const r = await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
+    expect("done" in r).toBe(true);
   });
 
   it("önceki üstlenen değilse hiçbir şey yazmaz; form korunsun diye bayrak döner", async () => {
@@ -301,6 +316,13 @@ describe("recordCall", () => {
       [{ event_type: "ustlenildi", actor_id: OTHER }],
       [{ event_type: "ustlenildi", actor_id: OTHER }, { event_type: "ustlenildi", actor_id: "00000000-0000-0000-0000-000000000004" }],
       [{ event_type: "arama_kaydi", actor_id: OTHER }, { event_type: "ustlenildi", actor_id: ME }],
+      // Meslektaş üstlendi, sonra arama kaydetti, ondan önce ben üstlenmiştim: aradaki kayıt kabulü keser.
+      [
+        { event_type: "ustlenildi", actor_id: OTHER },
+        { event_type: "arama_kaydi", actor_id: OTHER },
+        { event_type: "ustlenildi", actor_id: OTHER },
+        { event_type: "ustlenildi", actor_id: ME },
+      ],
     ]) {
       ops = [];
       claimHistory = history;
@@ -468,10 +490,18 @@ describe("recordCall", () => {
 
 describe("claimLead", () => {
   it("başarılı üstlenmede ustlenildi olayı yazar (uzun arama kabulü için geçmiş)", async () => {
-    expect(await claimLead("L1")).toEqual({ ok: true });
+    expect(await claimLead("L1")).toEqual({ ok: true, claimed: true });
     expect(inserts("events")).toEqual([
       expect.objectContaining({ event_type: "ustlenildi", entity_type: "lead", entity_id: "L1", actor_id: ME }),
     ]);
+  });
+
+  it("ilk teması yapılmış velide üstlenme yazılmaz, olay da yazılmaz (takip araması)", async () => {
+    claimRows = [];
+    lead.first_contact_at = "2026-11-02T07:00:00Z";
+    lead.assigned_to = "00000000-0000-0000-0000-000000000003";
+    expect(await claimLead("L1")).toEqual({ ok: true, claimed: false });
+    expect(inserts("events")).toEqual([]);
   });
 
   it("üstlenemeyince olay yazmaz", async () => {

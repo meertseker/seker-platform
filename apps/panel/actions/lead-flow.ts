@@ -56,18 +56,23 @@ export async function claimLead(leadId: string): Promise<ClaimResult> {
   const settings = await getLeadFlowSettings(supabase);
   const result = await claimLeadAs(supabase, leadId, profile.id, settings.claimMinutes);
   if (result.ok) {
-    // Üstlenme geçmişi: süre dolup meslektaş devralırsa önceki üstlenenin kaydı buradan doğrulanır (B6).
-    // WhatsApp grubuna yazılmaz (lib/wa/format SILENT_EVENTS).
-    await logEvent(supabase, { entityType: "lead", entityId: leadId, eventType: "ustlenildi", actorId: profile.id });
+    // Üstlenme geçmişi (yalnız gerçekten yazılınca; takip aramasında ve ilk temas sonrası yazılmaz): süre dolup
+    // meslektaş devralırsa önceki üstlenenin kaydı buradan doğrulanır (B6). WhatsApp grubuna gitmez (SILENT_EVENTS).
+    if (result.claimed) {
+      await logEvent(supabase, { entityType: "lead", entityId: leadId, eventType: "ustlenildi", actorId: profile.id });
+    }
     revalidatePath("/bugun");
     revalidatePath(`/leads/${leadId}`);
   }
   return result;
 }
 
+const CLAIM_HISTORY_LIMIT = 10;
+
 /**
  * B6: uzun ilk arama. Üstlenme süresi dolup meslektaş "Ara"ya bastıysa ilk danışmanın kaydı yine kabul edilir:
- * son üstlenen meslektaş, ondan bir önceki üstlenen bu kullanıcı ve arada arama kaydı yok.
+ * en son üstlenen bu kullanıcı değil, bu kullanıcının daha eski bir üstlenmesi var ve ondan bu yana arama kaydı
+ * yazılmamış. Aynı kişinin "Ara"ya birkaç kez basması (peş peşe üstlenme satırları) kuralı bozmaz.
  */
 async function wasPreviousClaimant(supabase: SupabaseClient, leadId: string, userId: string): Promise<boolean> {
   const { data, error } = await supabase
@@ -77,13 +82,14 @@ async function wasPreviousClaimant(supabase: SupabaseClient, leadId: string, use
     .eq("entity_id", leadId)
     .in("event_type", ["ustlenildi", "arama_kaydi"])
     .order("created_at", { ascending: false })
-    .limit(2);
+    .limit(CLAIM_HISTORY_LIMIT);
   if (error) throw new Error(`Üstlenme geçmişi okunamadı: ${error.message}`);
-  const [latest, previous] = ((data ?? []) as { event_type: string; actor_id: string | null }[]);
-  return (
-    latest?.event_type === "ustlenildi" && latest.actor_id !== userId &&
-    previous?.event_type === "ustlenildi" && previous.actor_id === userId
-  );
+  const rows = (data ?? []) as { event_type: string; actor_id: string | null }[]; // yeniden eskiye
+  const newestClaim = rows.find((r) => r.event_type === "ustlenildi");
+  if (!newestClaim || newestClaim.actor_id === userId) return false;
+  const mine = rows.findIndex((r) => r.event_type === "ustlenildi" && r.actor_id === userId);
+  if (mine < 0) return false;
+  return !rows.slice(0, mine).some((r) => r.event_type === "arama_kaydi");
 }
 
 /** Trigger'ın Google'a gönderilecek ("bekliyor") bir dönüşüm satırı açıp açmayacağı. */

@@ -60,18 +60,18 @@ describe("veli üstlenme", () => {
 
   it("15 dakikayı geçmiş üstlenme başkasına açılır", async () => {
     const id = await newLead();
-    expect(await claimLeadAs(danA, id, DAN_ID, 15)).toEqual({ ok: true });
+    expect(await claimLeadAs(danA, id, DAN_ID, 15)).toEqual({ ok: true, claimed: true });
     expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: false, claimedBy: "Danışman (Test)" });
     await admin.from("leads")
       .update({ claimed_at: new Date(Date.now() - 16 * 60_000).toISOString() }).eq("id", id);
-    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true });
+    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true, claimed: true });
     const { data: row } = await admin.from("leads").select("assigned_to").eq("id", id).single();
     expect(row!.assigned_to).toBe(DAN2_ID);
   });
 
   it("otomatik atanmış ama kimsenin aramadığı veliyi başkası üstlenebilir", async () => {
     const id = await newLead({ assigned_to: DAN_ID });
-    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true });
+    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true, claimed: true });
     const { data: row } = await admin.from("leads").select("assigned_to, claimed_at").eq("id", id).single();
     expect(row!.assigned_to).toBe(DAN2_ID);
     expect(row!.claimed_at).not.toBeNull();
@@ -81,8 +81,8 @@ describe("veli üstlenme", () => {
     const claimedAt = new Date(Date.now() - 60_000).toISOString();
     const id = await newLead({ assigned_to: DAN_ID, first_contact_at: new Date(Date.now() - 3_600_000).toISOString(),
       claimed_at: claimedAt });
-    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true });
-    expect(await claimLeadAs(danA, id, DAN_ID, 15)).toEqual({ ok: true });
+    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true, claimed: false });
+    expect(await claimLeadAs(danA, id, DAN_ID, 15)).toEqual({ ok: true, claimed: false });
     const { data: row } = await admin.from("leads").select("assigned_to, claimed_at").eq("id", id).single();
     expect(row!.assigned_to).toBe(DAN_ID);
     expect(new Date(row!.claimed_at).toISOString()).toBe(claimedAt);
@@ -90,7 +90,7 @@ describe("veli üstlenme", () => {
 
   it("R26: durumu yeni olmayan veli ilk temas boş olsa da üstlenilmez; sahibi değişmez", async () => {
     const id = await newLead({ assigned_to: DAN_ID, status: "ulasildi" });
-    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true });
+    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true, claimed: false });
     const { data: row } = await admin.from("leads").select("assigned_to, claimed_at, first_contact_at").eq("id", id).single();
     expect(row).toMatchObject({ assigned_to: DAN_ID, claimed_at: null, first_contact_at: null });
   });
