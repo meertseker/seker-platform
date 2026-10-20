@@ -15,7 +15,7 @@ Hedef: Gelen her veli, kanalı ne olursa olsun, panelde bir kayıt olur ve 5 dak
 - Veliye 15 dakika içinde ulaşamazsanız veli herkese geri döner.
 - "Ara"ya basmak yalnız ilk aramayı ayırır. İlk aramadan sonra veliyi kim ararsa arasın veli ilk arayanın kalır. Meslektaşınızın takip aramasını yaparsanız veli ona ait kalır.
 - Listede hiç aranmamış yeni veliler var. Aday hattı açılmadan 14 günden daha önce gelenler listeye girmez. Pipeline'da duruyorlar.
-- Panelde notu olan eski veliler aranmış sayılır. Listeye girmezler.
+- Panelde notu olan eski veliler aranmış sayılır. Durumu "Yeni" olmayan veliler de aranmış sayılır. Bu veliler listeye girmez. "Ara"ya basmak onları size geçirmez.
 - Liste 30 saniyede bir kendiliğinden yenilenir.
 - Ziyaretlerde veli gelince "Geldi", gelmezse "Gelmedi" düğmesine basın.
 
@@ -47,6 +47,7 @@ Hedef: Gelen her veli, kanalı ne olursa olsun, panelde bir kayıt olur ve 5 dak
 - Mesaj adımlarında (hatırlatma, teşekkür, kontenjan) hazır metinli WhatsApp düğmesi çıkar. Gönderdikten sonra ✓'ye basın.
 - Otomatik görevler vakti gelmeden "Takip bekleyenler"de görünmez.
 - Veliye ulaşınca sıra durur.
+- Kayıt "Kazanıldı" ya da "Kaybedildi" olunca veya öğrenciye dönünce açık takip ve geri arama görevleri kendiliğinden kapanır. Bu satırlar "Takip aramaları"ndan düşer. Kontenjan mesajı görevi kalır.
 - Son denemeden sonra kayıt "Kaybedildi · Ulaşılamadı" olarak kapanır. 1 ay sonrası için bir "kontenjan" mesajı görevi açılır.
 
 ## Randevu ve ziyaret

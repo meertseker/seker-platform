@@ -171,7 +171,13 @@ export function queueBannerSummary(leads: QueueLead[], now: Date, hours: Busines
   };
 }
 
-type LeadJoin = { id: string; parent_name: string; phone: string };
+type LeadJoin = {
+  id: string;
+  parent_name: string;
+  phone: string;
+  status?: string;
+  converted_student_id?: string | null;
+};
 
 export type FollowupRow = {
   id: string;
@@ -276,6 +282,20 @@ export function labelFollowups(rows: FollowupRow[], now: Date): FollowupItem[] {
   });
 }
 
+/**
+ * Saf (R27): kapanmış (kazanıldı/kaybedildi) ya da öğrenciye dönmüş velinin arama takibi (takip:, geri:)
+ * listelenmez; eski kalmış açık satırlar da böylece düşer. Velisiz ve diğer görevler (kontenjan dahil) kalır.
+ */
+export function dropClosedLeadFollowups(rows: FollowupRow[]): FollowupRow[] {
+  return rows.filter((r) => {
+    const kind = (r.rule_key ?? "").split(":")[0];
+    if (kind !== "takip" && kind !== "geri") return true;
+    const lead = Array.isArray(r.lead) ? (r.lead[0] ?? null) : (r.lead ?? null);
+    if (!lead) return true;
+    return !lead.converted_student_id && lead.status !== "kazanildi" && lead.status !== "kaybedildi";
+  });
+}
+
 /** Bugün (ve öncesinde) vadesi gelmiş açık görevler. Danışman yalnız kendininkini görür. */
 export async function loadFollowupTasks(
   supabase: SupabaseClient,
@@ -286,7 +306,7 @@ export async function loadFollowupTasks(
 ): Promise<FollowupItem[]> {
   let query = supabase
     .from("tasks")
-    .select("id, title, rule_key, due_at, due_date, lead:leads(id, parent_name, phone)")
+    .select("id, title, rule_key, due_at, due_date, lead:leads(id, parent_name, phone, status, converted_student_id)")
     .eq("status", "acik")
     .lte("due_date", today)
     .order("due_at", { ascending: true, nullsFirst: false })
@@ -294,5 +314,5 @@ export async function loadFollowupTasks(
   if (role !== "yonetici") query = query.eq("assigned_to", me);
   const { data, error } = await query;
   if (error) throw new Error(`Takip görevleri okunamadı: ${error.message}`);
-  return labelFollowups((data ?? []) as unknown as FollowupRow[], now);
+  return labelFollowups(dropClosedLeadFollowups((data ?? []) as unknown as FollowupRow[]), now);
 }

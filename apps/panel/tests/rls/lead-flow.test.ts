@@ -15,7 +15,7 @@ vi.mock("@/lib/auth", () => ({
 
 import { claimLeadAs } from "@/lib/lead-flow/claim";
 import { recordCall } from "@/actions/lead-flow";
-import { loadCallQueue } from "@/lib/queries/call-queue";
+import { loadCallQueue, loadFollowupTasks } from "@/lib/queries/call-queue";
 import { DEFAULT_BUSINESS_HOURS } from "@/lib/lead-flow/business-hours";
 
 const PREFIX = "+90500666"; // web-leads.test.ts +90500777 kullanır; paralel silmeler çakışmasın
@@ -93,6 +93,24 @@ describe("veli üstlenme", () => {
     expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true });
     const { data: row } = await admin.from("leads").select("assigned_to, claimed_at, first_contact_at").eq("id", id).single();
     expect(row).toMatchObject({ assigned_to: DAN_ID, claimed_at: null, first_contact_at: null });
+  });
+});
+
+describe("Takip aramaları listesi (R27)", () => {
+  it("kapanmış ya da öğrenciye dönmüş velinin açık takip/geri görevi listelenmez", async () => {
+    const open = await newLead({ assigned_to: DAN_ID, status: "ulasildi" });
+    const won = await newLead({ assigned_to: DAN_ID, status: "kazanildi" });
+    const lost = await newLead({ assigned_to: DAN_ID, status: "kaybedildi", lost_reason: "ulasilamadi" });
+    const due = { due_date: "2026-10-20", due_at: "2026-10-20T07:00:00Z", auto_generated: true, assigned_to: DAN_ID };
+    await admin.from("tasks").insert([
+      { ...due, lead_id: open, title: "açık", rule_key: `takip:${open}:2` },
+      { ...due, lead_id: won, title: "kazanıldı", rule_key: `takip:${won}:2` },
+      { ...due, lead_id: lost, title: "kaybedildi", rule_key: `geri:${lost}` },
+      { ...due, lead_id: lost, title: "kontenjan", rule_key: `kontenjan:${lost}` },
+    ]);
+    const items = await loadFollowupTasks(danA, DAN_ID, "danisman", "2026-10-20", new Date("2026-10-20T08:00:00Z"));
+    const mine = items.filter((t) => [open, won, lost].includes(t.leadId ?? "")).map((t) => t.title);
+    expect(mine.sort()).toEqual(["açık", "kontenjan"]);
   });
 });
 

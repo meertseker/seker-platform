@@ -107,3 +107,36 @@ describe("logCallOutcome (eski arama paneli, R24)", () => {
     expect(closes("geri:L1")).toHaveLength(1);
   });
 });
+
+describe("updateLeadStatus · kapanışta arama takibi (R27)", () => {
+  it("kazanıldı takip ve geri arama görevlerini kapatır", async () => {
+    leadRow = { status: "teklif", converted_student_id: null };
+    expect(await updateLeadStatus("L1", "kazanildi")).toEqual({});
+    expect(closes("takip:L1:")).toHaveLength(1);
+    expect(closes("geri:L1")).toHaveLength(1);
+    expect(closes("takip:L1:")[0].payload).toEqual({ status: "tamamlandi" });
+  });
+
+  it("kaybedildi takip ve geri aramayı kapatır, kontenjan görevine dokunmaz", async () => {
+    leadRow = { status: "ulasildi", converted_student_id: null };
+    await updateLeadStatus("L1", "kaybedildi", "fiyat");
+    expect(closes("takip:L1:")).toHaveLength(1);
+    expect(closes("geri:L1")).toHaveLength(1);
+    expect(kontenjanCloses()).toHaveLength(0);
+  });
+
+  it("açık durumlar arası geçişte kapatmaz", async () => {
+    leadRow = { status: "ulasildi", converted_student_id: null };
+    await updateLeadStatus("L1", "randevu");
+    expect(closes("takip:L1:")).toHaveLength(0);
+    expect(closes("geri:L1")).toHaveLength(0);
+  });
+
+  it("kapanış hata verirse durum olayı yine yazılır", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    leadRow = { status: "teklif", converted_student_id: null };
+    tasksUpdateError = { message: "boom" };
+    expect(await updateLeadStatus("L1", "kazanildi")).toEqual({});
+    expect(logEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ eventType: "durum_degisti" }));
+  });
+});

@@ -49,6 +49,20 @@ export async function closeTasksByPrefix(supabase: SupabaseClient, prefix: strin
   if (error) throw new Error(`Görevler kapatılamadı: ${error.message}`);
 }
 
+/**
+ * R27: veli kapandı (kazanıldı/kaybedildi) ya da öğrenciye döndü; arama takibi (takip:, geri:) artık geçersizdir.
+ * Kontenjan görevine dokunulmaz (7 gün sonu kaybedildi'de kurulur). Hata yutulur ve loglanır: çağıran
+ * asıl yazısını yapmıştır, açık kalan satırı Bugün ekranı zaten göstermez (loadFollowupTasks).
+ */
+export async function closeCallFollowups(supabase: SupabaseClient, leadId: string, context: string): Promise<void> {
+  try {
+    await closeTasksByPrefix(supabase, `takip:${leadId}:`);
+    await closeTasksByPrefix(supabase, `geri:${leadId}`);
+  } catch (e) {
+    console.error(`${context} takip/geri:`, e);
+  }
+}
+
 /** rule_key'i `prefix` ile başlayan tüm görevler (durumdan bağımsız), oluşturulma sırasıyla. */
 export async function tasksByPrefix(
   supabase: SupabaseClient,

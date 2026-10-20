@@ -16,7 +16,7 @@ import {
   type CallOutcome,
 } from "@/lib/call-outcome";
 import { istanbulDateString } from "@/lib/cron-rules";
-import { closeTasksByPrefix } from "@/lib/lead-flow/tasks-store";
+import { closeCallFollowups, closeTasksByPrefix } from "@/lib/lead-flow/tasks-store";
 
 export interface CreateLeadInput {
   parentName: string; phone: string; source: LeadSource; sourceDetail?: string;
@@ -89,6 +89,8 @@ export async function updateLeadStatus(leadId: string, to: LeadStatus, lostReaso
       console.error("updateLeadStatus kontenjan:", e);
     }
   }
+  // R27: kapanan velinin arama takibi biter (kontenjan görevi kalır).
+  if (to === "kazanildi" || to === "kaybedildi") await closeCallFollowups(supabase, leadId, "updateLeadStatus");
   await logEvent(supabase, {
     entityType: "lead", entityId: leadId, eventType: "durum_degisti",
     actorId: profile.id, payload: { from: lead.status, to, lostReason: lostReason ?? null },

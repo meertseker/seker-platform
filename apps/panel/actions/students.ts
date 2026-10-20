@@ -6,6 +6,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { PAYMENT_METHODS, PROGRAMS, type PaymentMethod, type Program } from "@/lib/constants";
 import { normalizeTurkishPhone } from "@/lib/phone";
 import { logEvent } from "@/lib/events";
+import { closeCallFollowups } from "@/lib/lead-flow/tasks-store";
 import { kurusToTl, tlToKurus } from "@/lib/money";
 import { installmentsToCancel } from "@/lib/student-leave";
 import { createAdminSupabase } from "@/lib/supabase/admin";
@@ -103,6 +104,9 @@ export async function convertLeadToStudent(leadId: string, startDate: string) {
         : "Veli öğrenciye dönüştürülemedi",
     };
   }
+
+  // R27: öğrenciye dönen velinin arama takibi biter.
+  await closeCallFollowups(supabase, leadId, "convertLeadToStudent");
 
   await logEvent(supabase, {
     entityType: "student",

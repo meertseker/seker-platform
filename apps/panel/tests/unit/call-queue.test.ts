@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   applyQueueFilter,
+  dropClosedLeadFollowups,
   followupAction,
   inQueueWindow,
   isAutoRuleKey,
@@ -248,5 +249,27 @@ describe("aday hattı açılışı (R23: son 14 gün listede)", () => {
     calls.length = 0;
     applyQueueFilter(q, null);
     expect(calls.some((c) => c[0] === "gte")).toBe(false);
+  });
+});
+
+describe("dropClosedLeadFollowups (R27)", () => {
+  const row = (id: string, rule_key: string | null, lead: FollowupRow["lead"]): FollowupRow => ({
+    id, title: id, rule_key, due_at: null, due_date: "2026-10-20", lead,
+  });
+  const lead = (status: string, converted_student_id: string | null = null) => ({
+    id: "l1", parent_name: "Veli", phone: "+905005550001", status, converted_student_id,
+  });
+
+  it("kapanmış ya da öğrenciye dönmüş velinin takip ve geri arama satırı düşer", () => {
+    const kept = dropClosedLeadFollowups([
+      row("acik-takip", "takip:l1:2", lead("ulasildi")),
+      row("kazanildi-takip", "takip:l1:2", lead("kazanildi")),
+      row("kaybedildi-geri", "geri:l1", lead("kaybedildi")),
+      row("donmus-geri", "geri:l1", lead("teklif", "s1")),
+      row("kontenjan", "kontenjan:l1", lead("kaybedildi")),
+      row("elle", null, lead("kazanildi")),
+      row("velisiz", "takip:l1:2", null),
+    ]);
+    expect(kept.map((r) => r.id)).toEqual(["acik-takip", "kontenjan", "elle", "velisiz"]);
   });
 });
