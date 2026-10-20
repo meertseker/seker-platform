@@ -578,6 +578,25 @@ describe("executeAdChange · canlı bütçe (bayat satır artışı gizleyemez)"
     expect(logs[0].oldValue).toMatchObject({ live_budget_tl: null, canli_okuma: "basarisiz" });
   });
 
+  it("canlı okuma başarısız ve haftalık taban yoksa kapı yeşilken de bayat satıra göre azaltma sayılmaz: gerekçe ister", async () => {
+    const { store, logs } = fakeStore([STALE]);
+    const fetchFn = liveMeta(null, 500);
+    const res = await executeAdChange(deps(store, { env: ENABLED_META, fetchFn: fetchFn as unknown as typeof fetch }), budget(190));
+    expect(res).toMatchObject({ needsReason: true });
+    expect("error" in res && res.error).toContain("eski bütçe bilinmiyor");
+    expect(logs).toHaveLength(0);
+    expect(fetchFn.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "POST")).toBe(false);
+  });
+
+  it("canlı okuma başarısız ama bu hafta taban varsa sınır tabana göre", async () => {
+    const { store } = fakeStore([STALE], { baselineTl: 180 });
+    const res = await executeAdChange(
+      deps(store, { env: ENABLED_META, fetchFn: liveMeta(null, 500) as unknown as typeof fetch }),
+      budget(190),
+    );
+    expect(res).toMatchObject({ ok: true, status: "uygulandi" });
+  });
+
   it("canlı yazım kapalıyken canlı okuma yapılmaz, satır kullanılır", async () => {
     const { store } = fakeStore([STALE]);
     const d = deps(store, { red: true });
@@ -594,7 +613,7 @@ describe("executeAdChange · haftalık sınır bütçe kaynağına göre", () =>
     const { store } = fakeStore([a, b], { baselineTl: 150 });
     const res = await executeAdChange(deps(store), budget(200, b));
     expect(res).toMatchObject({ needsReason: true });
-    expect(store.weekBudgetBaselineTl).toHaveBeenCalledWith("meta", SHARED, expect.any(String));
+    expect(store.weekBudgetBaselineTl).toHaveBeenCalledWith("meta", SHARED, expect.any(String), "120000222");
   });
 
   it("kayıtta eski ve yeni değer bütçe kaynağını taşır", async () => {
