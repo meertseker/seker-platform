@@ -19,8 +19,8 @@ describe("buildMarketingReport", () => {
     );
     expect(report.rows[0]).toEqual({
       key: "kampanya:555", kind: "kampanya", label: "Beylikdüzü",
-      spendKurus: 100_000, leads: 2, randevu: 2, kayit: 1,
-      costPerLeadKurus: 50_000, costPerKayitKurus: 100_000,
+      spendKurus: 100_000, leads: 2, randevu: 2, kayit: 1, qualified: 0,
+      costPerLeadKurus: 50_000, costPerKayitKurus: 100_000, costPerQualifiedKurus: null,
     });
   });
 

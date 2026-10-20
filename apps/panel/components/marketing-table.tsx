@@ -17,9 +17,11 @@ function Row({ row, strong = false }: { row: ReportRow; strong?: boolean }) {
       </th>
       <td className={cell}>{row.spendKurus > 0 ? formatTRY(row.spendKurus) : "—"}</td>
       <td className={cell}>{row.leads}</td>
+      <td className={cell}>{row.qualified}</td>
       <td className={cell}>{row.randevu}</td>
       <td className={cell}>{row.kayit}</td>
       <td className={cell}>{money(row.costPerLeadKurus)}</td>
+      <td className={cell}>{money(row.costPerQualifiedKurus)}</td>
       <td className={cell}>{money(row.costPerKayitKurus)}</td>
     </tr>
   );
@@ -35,15 +37,17 @@ export function MarketingTable({ report }: { report: MarketingReport }) {
   }
   return (
     <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
-      <table className="w-full min-w-[720px] text-sm">
+      <table className="w-full min-w-[880px] text-sm">
         <thead className="bg-muted text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
             <th scope="col" className="px-3 py-2 text-left">Kampanya / kaynak</th>
             <th scope="col" className="px-3 py-2 text-right">Harcama</th>
             <th scope="col" className="px-3 py-2 text-right">Aday</th>
+            <th scope="col" className="px-3 py-2 text-right">Nitelikli</th>
             <th scope="col" className="px-3 py-2 text-right">Randevu</th>
             <th scope="col" className="px-3 py-2 text-right">Kayıt</th>
             <th scope="col" className="px-3 py-2 text-right">Aday başı</th>
+            <th scope="col" className="px-3 py-2 text-right">Nitelikli veli başı</th>
             <th scope="col" className="px-3 py-2 text-right">Kayıt başı</th>
           </tr>
         </thead>

@@ -50,7 +50,7 @@ export async function getMarketingData(
     fetchAll<LeadRow>((f, t) =>
       supabase
         .from("leads")
-        .select("id, source, gclid, utm_campaign, status, converted_student_id, ad_platform, appointments(id)")
+        .select("id, source, gclid, utm_campaign, status, converted_student_id, ad_platform, is_qualified, appointments(id)")
         .gte("created_at", istanbulDayStartIso(from))
         .lt("created_at", istanbulDayStartIso(nextDay(to)))
         .order("created_at")
@@ -86,6 +86,7 @@ export async function getMarketingData(
     status: row.status,
     converted_student_id: row.converted_student_id,
     ad_platform: row.ad_platform ?? null,
+    is_qualified: row.is_qualified ?? null,
   }));
 
   const report = buildMarketingReport(
