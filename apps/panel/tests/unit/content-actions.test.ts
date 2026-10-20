@@ -65,6 +65,8 @@ const DAN: Me = { id: "00000000-0000-0000-0000-000000000002", full_name: "Zehra 
 const OGR: Me = { id: "00000000-0000-0000-0000-000000000004", full_name: "Rüya Yılmaz", role: "ogretmen", can_edit_site: false };
 const CID = "11111111-1111-1111-1111-111111111111";
 const MB = 1024 * 1024;
+const UPDATED = "2026-10-20T08:00:00.123456+00:00";
+const SUBMITTED = "2026-10-20T07:00:00.5+00:00";
 
 const ofOps = (client: Op["client"], table: string, op: string) =>
   ops.filter((o) => o.client === client && o.table === table && o.op === op);
@@ -93,6 +95,7 @@ beforeEach(() => {
     id: CID, code: "R-2643-A", kind: "reels", owner_id: OGR.id, status: "taslak", stage: "gorev",
     caption: "Sabah kapıda her çocuğu adıyla karşılıyoruz.", page_fields: null,
     media_path: `${OGR.id}/${CID}/video.mp4`, face_answer: false,
+    submitted_at: null, updated_at: UPDATED,
   };
   list.mockResolvedValue({ data: [{ name: "video.mp4" }], error: null });
   createSignedUploadUrl.mockResolvedValue({
@@ -128,7 +131,7 @@ describe("yetki", () => {
   it("öğretmen yönetici eylemlerini çağıramaz, gizli anahtarlı istemci oluşturulmaz", async () => {
     me = OGR;
     const calls: [string, () => Promise<unknown>][] = [
-      ["approveContent", () => approveContent(CID, { noStudentFaceOrName: true })],
+      ["approveContent", () => approveContent(CID, { noStudentFaceOrName: true, submittedAt: SUBMITTED })],
       ["requestRevision", () => requestRevision(CID, "Sesi kısık")],
       ["moveContentStage", () => moveContentStage(CID, "test")],
       ["createContentTask", () => createContentTask(taskInput)],
@@ -416,6 +419,16 @@ describe("submitContent", () => {
     expect(writes()).toHaveLength(0);
   });
 
+  it("kontrol edilen yazı sürümü teslim edilir; arada değiştiyse teslim edilmez", async () => {
+    expect(await submitContent(CID)).toMatchObject({ ok: true });
+    expect(ofOps("admin", "content_items", "update")[0].filters).toContainEqual(["eq", "updated_at", UPDATED]);
+    ops = [];
+    const base = respond;
+    respond = (o) => (o.table === "content_items" && o.op === "update" ? { data: [] } : base(o));
+    expect(await submitContent(CID)).toEqual({ error: "Yazı değişti, tekrar dene" });
+    expect(payloads("admin", "notifications", "insert")).toHaveLength(0);
+  });
+
   it("teslim edilmiş içerik yeniden teslim edilemez", async () => {
     row = { ...row, status: "teslim" };
     expect(await submitContent(CID)).toHaveProperty("error");
@@ -425,11 +438,28 @@ describe("submitContent", () => {
 
 describe("approveContent", () => {
   beforeEach(() => {
-    row = { ...row, status: "teslim", stage: "kontrol" };
+    row = { ...row, status: "teslim", stage: "kontrol", submitted_at: SUBMITTED };
+  });
+
+  it("onay, yöneticinin gördüğü teslime bağlıdır", async () => {
+    expect(await approveContent(CID, { noStudentFaceOrName: true, submittedAt: SUBMITTED })).toEqual({ ok: true });
+    expect(ofOps("admin", "content_items", "update")[0].filters).toContainEqual(["eq", "submitted_at", SUBMITTED]);
+  });
+
+  it("görülen teslimden sonra içerik değiştiyse onaylanmaz", async () => {
+    const changed = { error: "İçerik değişti, sayfayı yenileyin" };
+    expect(await approveContent(CID, { noStudentFaceOrName: true, submittedAt: "2026-10-19T07:00:00+00:00" })).toEqual(changed);
+    expect(await approveContent(CID, { noStudentFaceOrName: true } as never)).toEqual(changed);
+    expect(writes()).toHaveLength(0);
+    // Okuma ile yazma arasında yeniden teslim edildiyse satır eşleşmez.
+    const base = respond;
+    respond = (o) => (o.table === "content_items" && o.op === "update" ? { data: [] } : base(o));
+    expect(await approveContent(CID, { noStudentFaceOrName: true, submittedAt: SUBMITTED })).toEqual(changed);
+    expect(payloads("admin", "notifications", "insert")).toHaveLength(0);
   });
 
   it("onay Reels'i organik, sayfayı test aşamasına taşır", async () => {
-    expect(await approveContent(CID, { noStudentFaceOrName: true })).toEqual({ ok: true });
+    expect(await approveContent(CID, { noStudentFaceOrName: true, submittedAt: SUBMITTED })).toEqual({ ok: true });
     const reels = payloads("admin", "content_items", "update")[0];
     expect(reels).toMatchObject({
       status: "onaylandi", approved_by: YON.id, approver_face_check: true, stage: "organik",
@@ -443,12 +473,12 @@ describe("approveContent", () => {
 
     ops = [];
     row = { ...row, kind: "sayfa", code: "S-2643-G", face_answer: null, media_path: null };
-    expect(await approveContent(CID, { noStudentFaceOrName: false })).toEqual({ ok: true });
+    expect(await approveContent(CID, { noStudentFaceOrName: false, submittedAt: SUBMITTED })).toEqual({ ok: true });
     expect(payloads("admin", "content_items", "update")[0]).toMatchObject({ status: "onaylandi", stage: "test" });
   });
 
   it("Reels onayı yüz/isim onay kutusu işaretlenmeden reddedilir", async () => {
-    expect(await approveContent(CID, { noStudentFaceOrName: false })).toEqual({
+    expect(await approveContent(CID, { noStudentFaceOrName: false, submittedAt: SUBMITTED })).toEqual({
       error: "Videoyu izleyip öğrenci yüzü ve adı olmadığını onaylayın",
     });
     expect(writes()).toHaveLength(0);
@@ -456,15 +486,15 @@ describe("approveContent", () => {
 
   it("öğretmenin cevabı Hayır değilse Reels onaylanmaz", async () => {
     row = { ...row, face_answer: null };
-    expect(await approveContent(CID, { noStudentFaceOrName: true })).toHaveProperty("error");
+    expect(await approveContent(CID, { noStudentFaceOrName: true, submittedAt: SUBMITTED })).toHaveProperty("error");
     row = { ...row, face_answer: true };
-    expect(await approveContent(CID, { noStudentFaceOrName: true })).toHaveProperty("error");
+    expect(await approveContent(CID, { noStudentFaceOrName: true, submittedAt: SUBMITTED })).toHaveProperty("error");
     expect(writes()).toHaveLength(0);
   });
 
   it("teslim edilmemiş içerik onaylanmaz", async () => {
     row = { ...row, status: "taslak" };
-    expect(await approveContent(CID, { noStudentFaceOrName: true })).toHaveProperty("error");
+    expect(await approveContent(CID, { noStudentFaceOrName: true, submittedAt: SUBMITTED })).toHaveProperty("error");
     expect(writes()).toHaveLength(0);
   });
 });
