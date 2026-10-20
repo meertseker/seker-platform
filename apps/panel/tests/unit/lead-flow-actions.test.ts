@@ -282,10 +282,16 @@ describe("recordCall", () => {
     const r = await recordCall({ leadId: "L1", result: "geri_ara", quals, callbackAt: "2026-11-04T15:00", note: "bahçe" });
     if (!("done" in r)) throw new Error(`done bekleniyordu: ${JSON.stringify(r)}`);
     expect(r.done[0]).toBe("Üstlenme süresi dolmuştu; kaydın yine de alındı");
-    // Veli ilk teması yapana geçer; not ve olay yazılır.
-    expect(leadPatches()[0].payload).toMatchObject({ assigned_to: ME, contact_note: "bahçe" });
+    // Telefondaki meslektaş sahibi kalır: assigned_to ve claimed_at yazılmaz; not ve olay yazılır.
+    const patch = leadPatches()[0].payload as Record<string, unknown>;
+    expect(patch).toMatchObject({ contact_note: "bahçe" });
+    expect(patch).not.toHaveProperty("assigned_to");
+    expect(patch).not.toHaveProperty("claimed_at");
     expect(inserts("lead_notes")).toHaveLength(1);
-    expect(inserts("events").some((e) => e.event_type === "arama_kaydi")).toBe(true);
+    const call = inserts("events").find((e) => e.event_type === "arama_kaydi")!;
+    expect(call.payload).toMatchObject({ result: "geri_ara", reclaimed: true });
+    // Geri arama görevi de sahibine (meslektaşa) açılır.
+    expect(inserts("tasks")[0]).toMatchObject({ rule_key: "geri:L1", assigned_to: OTHER });
     const history = ops.find((o) => o.table === "events" && isClaimHistory(o))!;
     expect(history.filters).toEqual(expect.arrayContaining([
       ["eq", "entity_id", "L1"], ["in", "event_type", ["ustlenildi", "arama_kaydi"]], ["limit", 10],

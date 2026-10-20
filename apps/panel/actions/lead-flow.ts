@@ -289,7 +289,8 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
       patch.q_timing_ok = input.quals.timing;
     }
     // R24: veli yalnız üstlenilince (ilk temas) ya da sahipsizse arayana geçer; takibi arayan meslektaş devralmaz.
-    const owner = !contacted || !lead.assigned_to ? profile.id : lead.assigned_to;
+    // B6 kabulünde telefondaki meslektaş sahibi kalır: assigned_to ve claimed_at yazılmaz.
+    const owner = reclaimAccepted ? lead.assigned_to! : !contacted || !lead.assigned_to ? profile.id : lead.assigned_to;
     if (owner !== lead.assigned_to) patch.assigned_to = owner;
     if (!lead.first_contact_at) patch.first_contact_at = now.toISOString();
     const userNote = input.note?.trim();
@@ -342,6 +343,7 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
         appointmentId: appointment?.id,
         callbackAt: callbackAt?.toISOString(),
         notFitReason: input.notFitReason,
+        reclaimed: reclaimAccepted || undefined,
       },
     });
 
