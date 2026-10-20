@@ -4,6 +4,7 @@ import { LANDING_PAGES, getLandingPage } from '@/content/landingPages';
 import { getReaderData } from '@/lib/content/server';
 import { makeReader } from '@/lib/content/reader';
 import { buildMetadata } from '@/lib/metadata';
+import { currentYear } from '@/lib/time';
 
 export function generateStaticParams() {
   return LANDING_PAGES.map((page) => ({ slug: page.slug }));
@@ -28,5 +29,5 @@ export default async function LandingPageRoute({
 }) {
   const { slug } = await params;
   if (!getLandingPage(slug)) notFound();
-  return <LandingView slug={slug} data={await getReaderData()} />;
+  return <LandingView slug={slug} data={await getReaderData()} year={await currentYear()} />;
 }

@@ -12,7 +12,15 @@ import type { ReaderData } from '@/lib/content/types';
 type Block = { id: string; heading: string; text: string };
 type Faq = { id: string; question: string; answer: string };
 
-export default function LandingView({ slug, data }: { slug: string; data: ReaderData }) {
+export default function LandingView({
+  slug,
+  data,
+  year,
+}: {
+  slug: string;
+  data: ReaderData;
+  year?: number;
+}) {
   const c = makeReader(data);
   const k = (field: string) => `lp.${slug}.${field}`;
   const blocks = c.list<Block>(k('bodyBlocks'));
@@ -67,7 +75,7 @@ export default function LandingView({ slug, data }: { slug: string; data: Reader
           <Editable c={c} k={k('formHeading')} as="h2" className="text-3xl text-paper" />
           <Editable c={c} k={k('formIntro')} as="p" className="mt-4 text-paper/80" />
           <div className="mt-8 rounded-2xl bg-paper p-6 md:p-8">
-            <LeadForm data={pickData(data, ['form.'])} qualify currentYear={new Date().getFullYear()} />
+            <LeadForm data={pickData(data, ['form.'])} qualify currentYear={year} />
           </div>
         </div>
       </section>
