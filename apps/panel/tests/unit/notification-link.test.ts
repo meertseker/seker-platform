@@ -27,6 +27,11 @@ describe("notificationHref", () => {
       expect(href(t)).toBe("/bildirimler");
     }
   });
+  it("içerik türleri", () => {
+    expect(href("icerik_teslim", { code: "R-2643-A" })).toBe("/reklam/icerik?kod=R-2643-A");
+    expect(href("icerik_teslim")).toBe("/reklam/icerik");
+    for (const t of ["icerik_gorev", "icerik_duzeltme", "icerik_onay"]) expect(href(t, { code: "R-1" })).toBe("/gorevim");
+  });
   it("bilinmeyen tür", () => {
     expect(href("kayit_yenileme", { leadId: "L1" })).toBe("/bildirimler");
   });

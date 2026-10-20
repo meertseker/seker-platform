@@ -47,7 +47,8 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isLogin) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    // Oturumlu kullanıcı Bugün'e; öğretmen kapıdan geçemeyeceği için doğrudan Görevim'e.
+    url.pathname = (await gateTeacher(supabase, user, "/bugun")) ?? "/bugun";
     return NextResponse.redirect(url);
   }
 

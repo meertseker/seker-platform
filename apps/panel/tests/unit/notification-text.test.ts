@@ -69,8 +69,8 @@ describe("notificationText teklif_karsi_onaylandi", () => {
 });
 
 describe("notificationText tüm türler", () => {
-  it("14 tür kayıtlı", () => {
-    expect(NOTIFICATION_TYPES).toHaveLength(14);
+  it("18 tür kayıtlı", () => {
+    expect(NOTIFICATION_TYPES).toHaveLength(18);
     expect(isNotificationType("geciken_ozet")).toBe(true);
     expect(isNotificationType("baska")).toBe(false);
   });
