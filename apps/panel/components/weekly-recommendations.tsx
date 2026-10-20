@@ -7,7 +7,7 @@ import type { RecommendationRow } from "@/lib/ads/recommendations";
 
 const MIN_REASON = 10;
 
-type RowState = { result?: string; error?: string; reasonOpen?: boolean; reason?: string };
+type RowState = { result?: string; error?: string; reasonOpen?: boolean; reason?: string; reasonMessage?: string };
 
 const PLATFORM: Record<"google" | "meta", { label: string; className: string }> = {
   google: { label: "Google", className: "bg-google-soft text-google" },
@@ -16,11 +16,23 @@ const PLATFORM: Record<"google" | "meta", { label: string; className: string }> 
 
 const btn = "inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-semibold disabled:cursor-not-allowed";
 
+/** Geçmiş haftada karar verilmemiş öneri (yalnız durum yazısı). */
+const PAST_OPEN = "Karar verilmedi · geçmiş hafta";
+
 /**
  * 2 · Panelin önerdiği kararlar. Onayla / Şimdilik bekle; sonuç yazısı eylemden gelir.
- * Kapı kırmızıyken bütçe artışı tek onayla yapılabilir ama gerekçe (en az 10 karakter) zorunludur.
+ * Kapı kırmızıyken ya da artış haftalık büyütme sınırını aştığında bütçe artışı gerekçe (en az 10 karakter) ister.
+ * `readOnly`: geçmiş bir hafta açıkken karar düğmeleri yoktur, yalnız durum gösterilir.
  */
-export function WeeklyRecommendations({ recs, redGates }: { recs: RecommendationRow[]; redGates: string[] }) {
+export function WeeklyRecommendations({
+  recs,
+  redGates,
+  readOnly = false,
+}: {
+  recs: RecommendationRow[];
+  redGates: string[];
+  readOnly?: boolean;
+}) {
   const router = useRouter();
   const [state, setState] = useState<Record<string, RowState>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -35,7 +47,8 @@ export function WeeklyRecommendations({ recs, redGates }: { recs: Recommendation
       try {
         const res = await call();
         if ("error" in res) {
-          patch(id, { error: res.error, ...(res.needsReason ? { reasonOpen: true } : {}) });
+          // Gerekçe istendiyse sunucunun nedeni (kırmızı kapı ya da haftalık sınır) gerekçe kutusunda yazar.
+          patch(id, res.needsReason ? { reasonOpen: true, reasonMessage: res.error } : { error: res.error });
           return;
         }
         patch(id, { result: res.result, reasonOpen: false });
@@ -66,7 +79,8 @@ export function WeeklyRecommendations({ recs, redGates }: { recs: Recommendation
         <ul className="flex flex-col gap-2">
           {recs.map((r) => {
             const s = state[r.id] ?? {};
-            const decided = s.result ?? (r.status !== "acik" ? r.result ?? "Karar verildi" : null);
+            const decided =
+              s.result ?? (r.status !== "acik" ? r.result ?? "Karar verildi" : readOnly ? PAST_OPEN : null);
             const blocked = !!r.blockedReason;
             const busy = busyId === r.id;
             const reason = s.reason ?? "";
@@ -121,7 +135,8 @@ export function WeeklyRecommendations({ recs, redGates }: { recs: Recommendation
                 {!decided && s.reasonOpen ? (
                   <div className="flex flex-col gap-2 rounded-xl border border-destructive/30 bg-destructive-soft p-3">
                     <p className="text-sm text-destructive-strong">
-                      Bu hafta bir kapı kırmızı ({gateNames}). Bütçe artışı önerilmiyor. Yine de yapacaksanız nedenini yazın.
+                      {s.reasonMessage ??
+                        `Bir kapı kırmızı (${gateNames}). Bütçe artışı önerilmiyor. Yine de yapacaksanız nedenini yazın.`}
                     </p>
                     <label htmlFor={`gerekce-${r.id}`} className="text-sm font-medium text-foreground">
                       Gerekçe (en az {MIN_REASON} karakter)
@@ -146,7 +161,7 @@ export function WeeklyRecommendations({ recs, redGates }: { recs: Recommendation
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => patch(r.id, { reasonOpen: false })}
+                        onClick={() => patch(r.id, { reasonOpen: false, reasonMessage: undefined })}
                         className={`${btn} border border-border bg-surface text-foreground hover:bg-muted`}
                       >
                         Vazgeç

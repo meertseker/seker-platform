@@ -29,6 +29,7 @@ import { loadWeeklyData } from "@/lib/queries/weekly";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DECIDED = "Bu öneri için karar zaten verildi.";
 const INVALID = "Bu öneri artık geçerli değil.";
+const PAST_WEEK = "Bu öneri geçmiş bir haftaya ait.";
 const PATH = "/reklam/hafta";
 
 type Decision = { ok: true; result: string } | { error: string; needsReason?: boolean };
@@ -47,12 +48,17 @@ export async function approveRecommendation(id: string, reason?: string): Promis
   if (typeof id !== "string" || !UUID.test(id)) return { error: "Geçersiz öneri." };
   const store = supabaseRecommendationStore(db());
 
+  // Yalnız toplantı haftasının (son tamamlanmış hafta) önerisine karar verilir; ?hafta= ile açılan eski hafta salt okunur.
+  const current = await store.get(id);
+  if (!current) return { error: "Öneri bulunamadı." };
+  if (current.weekStart !== lastCompletedWeekStart(new Date())) return { error: PAST_WEEK };
+
   // Önce ayırma: uygulanan eylem ayrılan satırınkidir (okuma ile ayırma arasında tazelenen öneri eski eylemle uygulanmaz).
   const rec = await store.claim(id, profile.id);
   if (!rec) {
-    const current = await store.get(id);
-    if (!current) return { error: "Öneri bulunamadı." };
-    return { error: current.status === "gecersiz" ? INVALID : DECIDED };
+    const latest = await store.get(id);
+    if (!latest) return { error: "Öneri bulunamadı." };
+    return { error: latest.status === "gecersiz" ? INVALID : DECIDED };
   }
 
   let result: string;
@@ -78,7 +84,8 @@ export async function approveRecommendation(id: string, reason?: string): Promis
         await store.release(id);
         return applied.needsReason ? { error: applied.error, needsReason: true } : { error: applied.error };
       }
-      result = applied.status === "uygulandi" ? APPLIED_RESULT : CLOSED_RESULT;
+      // Uygulandıysa kapının kendi metni (ör. "✓ Bütçe 150 TL → 180 TL · kayda geçti").
+      result = applied.status === "uygulandi" ? applied.message : CLOSED_RESULT;
     }
   } catch {
     try {
@@ -103,8 +110,12 @@ export async function approveRecommendation(id: string, reason?: string): Promis
 export async function holdRecommendation(id: string): Promise<Decision> {
   const profile = await requireRole("yonetici");
   if (typeof id !== "string" || !UUID.test(id)) return { error: "Geçersiz öneri." };
+  const store = supabaseRecommendationStore(db());
   try {
-    const held = await supabaseRecommendationStore(db()).hold(id, profile.id, HOLD_RESULT, new Date().toISOString());
+    const current = await store.get(id);
+    if (!current) return { error: "Öneri bulunamadı." };
+    if (current.weekStart !== lastCompletedWeekStart(new Date())) return { error: PAST_WEEK };
+    const held = await store.hold(id, profile.id, HOLD_RESULT, new Date().toISOString());
     if (!held) return { error: DECIDED };
   } catch {
     return { error: "Kaydedilemedi, tekrar deneyin." };
