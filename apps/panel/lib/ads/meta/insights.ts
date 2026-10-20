@@ -22,7 +22,7 @@ export class MetaApiError extends Error {
 }
 
 /** Mesajdan erişim anahtarını ve appsecret_proof'u siler, sonra kısaltır. */
-function sanitize(text: string, cfg: MetaConfig): string {
+export function sanitize(text: string, cfg: MetaConfig): string {
   let out = text;
   for (const secret of [cfg.accessToken, appSecretProof(cfg.accessToken, cfg.appSecret)]) {
     if (secret) out = out.split(secret).join("[gizli]");
