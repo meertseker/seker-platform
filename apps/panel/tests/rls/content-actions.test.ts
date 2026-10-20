@@ -62,6 +62,14 @@ describe("saveContentDraft (öğretmen oturumu)", () => {
     expect(data).toEqual({ caption: "Sabah kapıda karşılama", face_answer: false });
   });
 
+  it("video değişince eski yüz cevabı silinir", async () => {
+    const item = await newReels(OGR_ID, { face_answer: false, media_path: null });
+    const path = `${OGR_ID}/${item.id}/yeni-1.mp4`;
+    expect(await saveContentDraft(item.id, { mediaPath: path })).toEqual({ ok: true });
+    const { data } = await admin.from("content_items").select("media_path, face_answer").eq("id", item.id).single();
+    expect(data).toEqual({ media_path: path, face_answer: null });
+  });
+
   it("başka öğretmenin içeriğine yazamaz", async () => {
     const item = await newReels(OGR2_ID, { caption: "dokunulmaz" });
     const res = await saveContentDraft(item.id, { caption: "değiştirildi" });
@@ -90,6 +98,9 @@ describe("saveContentDraft (öğretmen oturumu)", () => {
 
     const sub = await submitContent(item.id);
     expect(sub).toEqual({ ok: true, done: ["Otomatik kontrol geçti", "Yöneticinin onayında"] });
+    // Öğretmenin oturumu durumu doğrudan değiştiremez.
+    const direct = await current.from("content_items").update({ status: "taslak" }).eq("id", item.id).select();
+    expect(direct.error).not.toBeNull();
     const { data: after } = await admin
       .from("content_items").select("status, stage, submitted_at").eq("id", item.id).single();
     expect(after).toMatchObject({ status: "teslim", stage: "kontrol" });

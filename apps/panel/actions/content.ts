@@ -3,6 +3,7 @@
 // İçerik görevleri: yönetici görev açar, öğretmen hazırlayıp teslim eder, tek yönetici onayı yeter.
 // Öğretmen eylemleri oturum istemcisiyle (RLS + kolon yetkisi) yazar; ekleme, onay, aşama ve bildirim
 // gizli anahtarlı istemcidedir ve her biri önce requireRole ile rolü doğrular.
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createAdminSupabase } from "@seker/auth/admin";
 import { requireRole } from "@/lib/auth";
@@ -88,6 +89,7 @@ export async function createContentTask(
   if (topic.length > 200) return { error: "Konu en fazla 200 karakter olabilir" };
   const due = parseIstanbulDateTime(input.dueAt ?? "");
   if (!due) return { error: "Teslim zamanını seçin" };
+  if (due.getTime() <= Date.now()) return { error: "Teslim zamanı geçmiş olamaz" };
   let at = new Date();
   if (input.weekOf) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.weekOf)) return { error: "Hafta geçersiz" };
@@ -196,6 +198,7 @@ export async function approveContent(contentId: string, confirm: { noStudentFace
 
   await notify(admin, row.owner_id, "icerik_onay", { contentId: row.id, code: row.code });
   revalidatePath(BOARD);
+  revalidatePath(MY_TASKS);
   return { ok: true };
 }
 
@@ -210,7 +213,15 @@ export async function requestRevision(contentId: string, note: string): Promise<
 
   const { data, error } = await admin
     .from("content_items")
-    .update({ status: "duzeltme", stage: "gorev", review_note: text, stage_changed_at: nowIso() })
+    // Yeni video gelebilir: yüz cevabı ve onaylayanın kutusu yeniden sorulur.
+    .update({
+      status: "duzeltme",
+      stage: "gorev",
+      review_note: text,
+      stage_changed_at: nowIso(),
+      face_answer: null,
+      approver_face_check: null,
+    })
     .eq("id", row.id)
     .eq("status", "teslim")
     .select("id");
@@ -218,6 +229,7 @@ export async function requestRevision(contentId: string, note: string): Promise<
 
   await notify(admin, row.owner_id, "icerik_duzeltme", { contentId: row.id, code: row.code, note: text });
   revalidatePath(BOARD);
+  revalidatePath(MY_TASKS);
   return { ok: true };
 }
 
@@ -302,14 +314,16 @@ export async function requestVideoUpload(
   if (row.kind !== "reels") return { error: "Bu görevde video yok" };
   if (!editable(row)) return { error: LOCKED };
 
-  const path = `${row.owner_id}/${row.id}/${safeVideoFileName(fileName ?? "", mime)}`;
+  // Her istek yeni bir ad alır ve üzerine yazılamaz: teslim ya da onaydan sonra eski adresle video değiştirilemez.
+  const name = safeVideoFileName(fileName ?? "", mime, randomBytes(4).toString("hex"));
+  const path = `${row.owner_id}/${row.id}/${name}`;
   const admin = createAdminSupabase();
-  const { data, error } = await admin.storage.from(CONTENT_BUCKET).createSignedUploadUrl(path, { upsert: true });
+  const { data, error } = await admin.storage.from(CONTENT_BUCKET).createSignedUploadUrl(path, { upsert: false });
   if (error || !data) {
     console.error("[content] yükleme adresi alınamadı:", error?.message ?? "bilinmeyen");
     return { error: "Yükleme başlatılamadı, tekrar dene" };
   }
-  return { path: data.path, signedUrl: data.signedUrl, token: data.token };
+  return { path, signedUrl: data.signedUrl, token: data.token };
 }
 
 export type ContentDraftInput = {
@@ -365,6 +379,12 @@ export async function saveContentDraft(contentId: string, input: ContentDraftInp
 
   // RLS: yalnız sahibi ve yalnız taslak|duzeltme iken; teslimden sonra satır eşleşmez.
   const supabase = await createServerSupabase();
+  if (patch.media_path !== undefined && patch.face_answer === undefined) {
+    // Video değişti: eski "Hayır" cevabı yeni videoyu kapsamaz, soru yeniden sorulur (MEB Ek Madde 4).
+    const { row } = await loadOwn(contentId, profile.id);
+    if (!row) return { error: LOCKED };
+    if (row.media_path !== patch.media_path) patch.face_answer = null;
+  }
   const { data, error } = await supabase
     .from("content_items")
     .update(patch)
@@ -396,24 +416,17 @@ export async function submitContent(
     return { error: "Video bulunamadı, yeniden yükle" };
   }
 
-  // Teslim zamanı sunucuda damgalanır; istemcinin yazdığı değer geçersiz kalır.
-  const now = nowIso();
-  const { data, error } = await supabase
+  // Öğretmenin oturumu durumu değiştiremez (kolon yetkisi yok); teslim kontrollerden sonra burada yazılır.
+  // submitted_at, stage='kontrol' ve stage_changed_at aynı güncellemede DB tetikleyicisinde damgalanır.
+  const { data, error } = await admin
     .from("content_items")
-    .update({ status: "teslim", submitted_at: now })
+    .update({ status: "teslim" })
     .eq("id", row.id)
     .eq("owner_id", profile.id)
     .in("status", ["taslak", "duzeltme"])
     .select("id");
   if (error?.code === "23514") return { error: "Öğrenci yüzü ya da adı olan içerik teslim edilemez" };
   if (error || !data || data.length === 0) return { error: "Teslim edilemedi, sayfayı yenile" };
-
-  const stage = await admin
-    .from("content_items")
-    .update({ stage: "kontrol", stage_changed_at: now })
-    .eq("id", row.id)
-    .eq("status", "teslim");
-  if (stage.error) console.error("[content] kontrol aşaması yazılamadı:", stage.error.code ?? "bilinmeyen");
 
   const managers = await activeManagerIds(admin);
   for (const id of managers) {

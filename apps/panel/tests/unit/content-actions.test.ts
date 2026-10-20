@@ -40,7 +40,8 @@ const requireRole = vi.fn(async (...roles: string[]) => {
   return me;
 });
 
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+const revalidatePath = vi.fn();
+vi.mock("next/cache", () => ({ revalidatePath: (p: string) => revalidatePath(p) }));
 vi.mock("@/lib/auth", () => ({ requireRole: (...r: string[]) => requireRole(...r) }));
 vi.mock("@/lib/supabase/server", () => ({ createServerSupabase: async () => sessionClient }));
 vi.mock("@seker/auth/admin", () => ({ createAdminSupabase: () => createAdminSupabase() }));
@@ -152,6 +153,19 @@ describe("yetki", () => {
 });
 
 describe("createContentTask", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-19T09:00:00+03:00"));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("geçmiş teslim zamanı reddedilir", async () => {
+    expect(await createContentTask({ ...taskInput, dueAt: "2026-10-18T17:00" })).toEqual({
+      error: "Teslim zamanı geçmiş olamaz",
+    });
+    expect(ofOps("admin", "content_items", "insert")).toHaveLength(0);
+  });
+
   it("öğretmen olmayan profile görev atanamaz", async () => {
     const base = respond;
     respond = (o) =>
@@ -260,7 +274,7 @@ describe("requestVideoUpload", () => {
     expect(await requestVideoUpload(CID, "a.mp4", 50 * MB + 1, "video/mp4")).toHaveProperty("error");
     expect(createSignedUploadUrl).not.toHaveBeenCalled();
     const ok = await requestVideoUpload(CID, "a.mp4", 50 * MB, "video/mp4");
-    expect(ok).toEqual({ path: `${OGR.id}/${CID}/video.mp4`, signedUrl: "https://x/upload?token=t", token: "t" });
+    expect(ok).toEqual({ path: createSignedUploadUrl.mock.calls[0][0], signedUrl: "https://x/upload?token=t", token: "t" });
   });
 
   it("CONTENT_VIDEO_MAX_MB sınırı yükseltir", async () => {
@@ -279,7 +293,16 @@ describe("requestVideoUpload", () => {
     const name = path.slice(`${OGR.id}/${CID}/`.length);
     expect(name).toMatch(/^[a-z0-9._-]+$/);
     expect(name).not.toContain("..");
-    expect(name).toBe("sabah-cekimi-1.mp4");
+    expect(name).toMatch(/^sabah-cekimi-1-[a-z0-9]+\.mp4$/);
+  });
+
+  it("her istek yeni bir dosya adı alır ve üzerine yazmaz", async () => {
+    await requestVideoUpload(CID, "video.mp4", MB, "video/mp4");
+    await requestVideoUpload(CID, "video.mp4", MB, "video/mp4");
+    const [a, b] = createSignedUploadUrl.mock.calls;
+    expect(a[0]).not.toBe(b[0]);
+    expect(a[1]).toEqual({ upsert: false });
+    expect(b[1]).toEqual({ upsert: false });
   });
 
   it("izinsiz tür, başkasının içeriği, teslim edilmiş içerik ve sayfa görevi reddedilir", async () => {
@@ -303,6 +326,22 @@ describe("saveContentDraft", () => {
     expect(await saveContentDraft(CID, { caption: "Yeni açıklama", faceAnswer: false })).toEqual({ ok: true });
     expect(createAdminSupabase).not.toHaveBeenCalled();
     expect(payloads("session", "content_items", "update")).toEqual([{ caption: "Yeni açıklama", face_answer: false }]);
+  });
+
+  it("video değişip yüz cevabı birlikte gelmezse cevap sıfırlanır", async () => {
+    const path = `${OGR.id}/${CID}/yeni-abc.mp4`;
+    expect(await saveContentDraft(CID, { mediaPath: path })).toEqual({ ok: true });
+    expect(payloads("session", "content_items", "update")).toEqual([{ media_path: path, face_answer: null }]);
+  });
+
+  it("aynı video yeniden yazılınca ya da cevap birlikte gelince cevap korunur", async () => {
+    expect(await saveContentDraft(CID, { mediaPath: row.media_path as string, caption: "x" })).toEqual({ ok: true });
+    const path = `${OGR.id}/${CID}/yeni-abc.mp4`;
+    expect(await saveContentDraft(CID, { mediaPath: path, faceAnswer: false })).toEqual({ ok: true });
+    expect(payloads("session", "content_items", "update")).toEqual([
+      { caption: "x", media_path: row.media_path },
+      { media_path: path, face_answer: false },
+    ]);
   });
 
   it("satır güncellenmezse hata döner", async () => {
@@ -352,10 +391,13 @@ describe("submitContent", () => {
     } finally {
       vi.useRealTimers();
     }
-    const sessionUpdate = payloads("session", "content_items", "update");
-    expect(sessionUpdate).toEqual([{ status: "teslim", submitted_at: "2026-10-21T09:00:00.000Z" }]);
-    const adminUpdate = payloads("admin", "content_items", "update");
-    expect(adminUpdate).toEqual([{ stage: "kontrol", stage_changed_at: "2026-10-21T09:00:00.000Z" }]);
+    // Öğretmen durumu değiştiremez: teslim, kontrollerden sonra gizli anahtarlı istemciyle yazılır;
+    // submitted_at, stage='kontrol' ve stage_changed_at DB tetikleyicisinde aynı güncellemede damgalanır.
+    expect(payloads("session", "content_items", "update")).toEqual([]);
+    const adminUpdate = ofOps("admin", "content_items", "update");
+    expect(adminUpdate.map((o) => o.payload)).toEqual([{ status: "teslim" }]);
+    expect(adminUpdate[0].filters).toContainEqual(["eq", "owner_id", OGR.id]);
+    expect(adminUpdate[0].filters).toContainEqual(["in", "status", ["taslak", "duzeltme"]]);
     expect(payloads("admin", "notifications", "insert")).toEqual([
       { user_id: YON.id, type: "icerik_teslim", payload: { contentId: CID, code: "R-2643-A" } },
       { user_id: "00000000-0000-0000-0000-000000000009", type: "icerik_teslim", payload: { contentId: CID, code: "R-2643-A" } },
@@ -396,6 +438,7 @@ describe("approveContent", () => {
     expect(payloads("admin", "notifications", "insert")).toEqual([
       { user_id: OGR.id, type: "icerik_onay", payload: { contentId: CID, code: "R-2643-A" } },
     ]);
+    expect(revalidatePath).toHaveBeenCalledWith("/gorevim");
 
     ops = [];
     row = { ...row, kind: "sayfa", code: "S-2643-G", face_answer: null, media_path: null };
@@ -440,7 +483,9 @@ describe("requestRevision", () => {
     expect(await requestRevision(CID, " Sesi kısık, yeniden çek ")).toEqual({ ok: true });
     expect(payloads("admin", "content_items", "update")[0]).toMatchObject({
       status: "duzeltme", stage: "gorev", review_note: "Sesi kısık, yeniden çek",
+      face_answer: null, approver_face_check: null,
     });
+    expect(revalidatePath).toHaveBeenCalledWith("/gorevim");
     expect(payloads("admin", "notifications", "insert")).toEqual([
       { user_id: OGR.id, type: "icerik_duzeltme", payload: { contentId: CID, code: "R-2643-A", note: "Sesi kısık, yeniden çek" } },
     ]);

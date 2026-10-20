@@ -95,8 +95,8 @@ create index idx_content_items_stage on public.content_items (stage, stage_chang
 create trigger content_items_touch before update on public.content_items
   for each row execute function public.touch_updated_at();
 
--- Video yolu, MEB teslim kuralı ve öğretmenin durum geçişleri.
--- (a) ve (b) service_role dahil herkese uygulanır; (c) yalnız içeriğin sahibi öğretmene
+-- Video yolu, MEB teslim kuralı, teslim damgası ve öğretmenin durum kuralı.
+-- (a), (b) ve (d) service_role dahil herkese uygulanır; (c) yalnız içeriğin sahibi öğretmene
 -- (service_role: auth.uid() boş; yönetici: is_ogretmen() yanlış → kısıtsız).
 create or replace function public.content_items_guard() returns trigger
 language plpgsql set search_path = '' as $$
@@ -120,13 +120,21 @@ begin
     raise exception 'MEB: öğrenci yüzü ya da adı olan içerik teslim edilemez' using errcode = '23514';
   end if;
 
-  -- (c) Öğretmen yalnız taslak|duzeltme → taslak|duzeltme|teslim geçişi yapar
+  -- (c) Öğretmen durumu hiç değiştirmez ve yalnız taslak|duzeltme içeriği düzenler.
+  -- Teslim yalnız submitContent eylemiyle (kontrollerden sonra service_role) yapılır.
   if tg_op = 'UPDATE'
      and (select auth.uid()) is not null
      and (select auth.uid()) = old.owner_id
      and public.is_ogretmen()
-     and (old.status not in ('taslak','duzeltme') or new.status not in ('taslak','duzeltme','teslim')) then
+     and (old.status not in ('taslak','duzeltme') or new.status is distinct from old.status) then
     raise exception 'Bu içerik şu an değiştirilemez' using errcode = '42501';
+  end if;
+
+  -- (d) Teslime geçişte zaman ve Kontrol aşaması burada damgalanır; istemcinin değeri geçersizdir.
+  if new.status = 'teslim' and (tg_op = 'INSERT' or old.status is distinct from 'teslim') then
+    new.submitted_at := now();
+    new.stage := 'kontrol';
+    new.stage_changed_at := now();
   end if;
 
   return new;
@@ -141,16 +149,16 @@ alter table public.content_items enable row level security;
 
 create policy sel_content_items on public.content_items for select
   using (public.is_staff() or owner_id = auth.uid());
--- Öğretmen yalnız kendi taslak/düzeltme içeriğini düzenler ve teslim eder.
--- Ekleme, silme, onay ve aşama değişiklikleri yönetici eylemidir (service_role).
+-- Öğretmen yalnız kendi taslak/düzeltme içeriğini düzenler.
+-- Teslim (submitContent), ekleme, silme, onay ve aşama değişiklikleri sunucu eylemidir (service_role).
 create policy upd_content_items_owner on public.content_items for update
   using (owner_id = auth.uid() and status in ('taslak','duzeltme'))
-  with check (owner_id = auth.uid() and status in ('taslak','duzeltme','teslim'));
+  with check (owner_id = auth.uid() and status in ('taslak','duzeltme'));
 
--- Kolon yetkisi: authenticated yalnız öğretmenin doldurduğu alanları günceller.
+-- Kolon yetkisi: authenticated yalnız öğretmenin doldurduğu alanları günceller; status ve submitted_at yok.
 revoke all on public.content_items from anon, public, authenticated;
 grant select on public.content_items to authenticated;
-grant update (caption, page_fields, media_path, media_meta, face_answer, status, submitted_at, updated_at)
+grant update (caption, page_fields, media_path, media_meta, face_answer, updated_at)
   on public.content_items to authenticated;
 grant all on public.content_items to service_role;
 
