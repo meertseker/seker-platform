@@ -73,6 +73,16 @@ update public.leads l
   ) ev
  where ev.lead_id = l.id
    and l.first_contact_at is null;
+-- R26: durumu 'yeni' olmayan veli işlenmiştir; notu olmasa da ilk temas yapılmış sayılır.
+-- Kanıt: ilk durum değişikliği olayı; yoksa son hareket, o da yoksa geliş zamanı.
+update public.leads l
+   set first_contact_at = coalesce(
+         (select min(e.created_at) from public.events e
+           where e.entity_type = 'lead' and e.entity_id = l.id and e.event_type = 'durum_degisti'),
+         l.last_activity_at,
+         l.created_at)
+ where l.status <> 'yeni'
+   and l.first_contact_at is null;
 -- first-contact-backfill:end
 
 -- === create_web_lead: 0006 gövdesi korunur; yalnız yeni alanlar eklenir ===

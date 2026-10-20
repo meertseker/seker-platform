@@ -12,7 +12,7 @@ import { appointmentTasks, followupAfterAttempt, kontenjanTask, type PlannedTask
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { callWaLink } from "@/lib/lead-flow/call-wa";
 import { closeTasksByPrefix, tasksByPrefix, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
-import { claimLeadAs, type ClaimResult } from "@/lib/lead-flow/claim";
+import { alreadyContacted, claimLeadAs, type ClaimResult } from "@/lib/lead-flow/claim";
 import { normalizeTurkishPhone } from "@/lib/phone";
 import { inQueueWindow } from "@/lib/queries/call-queue";
 
@@ -179,7 +179,9 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
   const settings = await getLeadFlowSettings(supabase);
 
   // İlk temas yapılmadıysa veli önce üstlenilir; başkası arıyorsa hiçbir şey yazılmaz.
-  if (!lead.first_contact_at) {
+  // R26: durumu 'yeni' olmayan veli ilk teması yapılmış sayılır; üstlenilmez, sahibi değişmez.
+  const contacted = alreadyContacted(lead);
+  if (!contacted) {
     try {
       const claim = await claimLeadAs(supabase, leadId, profile.id, settings.claimMinutes, now);
       if (!claim.ok) return { error: `${claim.claimedBy} bu veliyi arıyor` };
@@ -246,7 +248,7 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
       patch.q_timing_ok = input.quals.timing;
     }
     // R24: veli yalnız üstlenilince (ilk temas) ya da sahipsizse arayana geçer; takibi arayan meslektaş devralmaz.
-    const owner = !lead.first_contact_at || !lead.assigned_to ? profile.id : lead.assigned_to;
+    const owner = !contacted || !lead.assigned_to ? profile.id : lead.assigned_to;
     if (owner !== lead.assigned_to) patch.assigned_to = owner;
     if (!lead.first_contact_at) patch.first_contact_at = now.toISOString();
     const userNote = input.note?.trim();

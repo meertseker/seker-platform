@@ -87,6 +87,13 @@ describe("veli üstlenme", () => {
     expect(row!.assigned_to).toBe(DAN_ID);
     expect(new Date(row!.claimed_at).toISOString()).toBe(claimedAt);
   });
+
+  it("R26: durumu yeni olmayan veli ilk temas boş olsa da üstlenilmez; sahibi değişmez", async () => {
+    const id = await newLead({ assigned_to: DAN_ID, status: "ulasildi" });
+    expect(await claimLeadAs(danB, id, DAN2_ID, 15)).toEqual({ ok: true });
+    const { data: row } = await admin.from("leads").select("assigned_to, claimed_at, first_contact_at").eq("id", id).single();
+    expect(row).toMatchObject({ assigned_to: DAN_ID, claimed_at: null, first_contact_at: null });
+  });
 });
 
 describe("arama kaydı", () => {
@@ -155,6 +162,19 @@ describe("takibi başka danışman arar (R24)", () => {
     expect(r).toHaveProperty("done");
     const { data: lead } = await admin.from("leads").select("assigned_to").eq("id", id).single();
     expect(lead!.assigned_to).toBe(DAN_ID);
+  });
+
+  it("R26: durumu yeni olmayan, ilk teması boş veliyi arayan meslektaş devralmaz", async () => {
+    current = danA;
+    const id = await newLead({ assigned_to: DAN2_ID, status: "ulasildi" });
+    const r = await recordCall({
+      leadId: id, result: "geri_ara", quals: { age: true, area: true, timing: true, reached: true },
+      callbackAt: "2026-11-05T11:00",
+    });
+    expect(r).toHaveProperty("done");
+    const { data: lead } = await admin.from("leads").select("assigned_to, first_contact_at").eq("id", id).single();
+    expect(lead!.assigned_to).toBe(DAN2_ID);
+    expect(lead!.first_contact_at).not.toBeNull();
   });
 });
 

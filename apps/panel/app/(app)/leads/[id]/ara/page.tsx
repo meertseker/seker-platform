@@ -4,6 +4,7 @@ import { CallScreen, type CallScreenLead } from "@/components/call-screen";
 import { getSessionProfile } from "@/lib/auth";
 import { clockStart } from "@/lib/lead-flow/business-hours";
 import { callWaLink } from "@/lib/lead-flow/call-wa";
+import { alreadyContacted } from "@/lib/lead-flow/claim";
 import { readConflictWindowMinutes } from "@/lib/lead-flow/conflict-window";
 import { ageFromBirth, fillScript, suggestSlots } from "@/lib/lead-flow/script";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
@@ -36,6 +37,7 @@ interface LeadRow {
   claimed_at: string | null;
   assigned_to: string | null;
   first_contact_at: string | null;
+  status: string;
   converted_student_id: string | null;
   q_age_ok: boolean | null;
   q_area_ok: boolean | null;
@@ -71,7 +73,7 @@ export default async function CallPage({ params }: { params: Promise<{ id: strin
   const { data } = await supabase
     .from("leads")
     .select(
-      "id, parent_name, phone, source, source_detail, channel, content_code, district, start_window, child_birth_month, child_birth_year, created_at, claimed_at, assigned_to, first_contact_at, converted_student_id, q_age_ok, q_area_ok, q_timing_ok, claimer:profiles!leads_assigned_to_fkey(full_name)",
+      "id, parent_name, phone, source, source_detail, channel, content_code, district, start_window, child_birth_month, child_birth_year, created_at, claimed_at, assigned_to, first_contact_at, status, converted_student_id, q_age_ok, q_area_ok, q_timing_ok, claimer:profiles!leads_assigned_to_fkey(full_name)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -85,7 +87,9 @@ export default async function CallPage({ params }: { params: Promise<{ id: strin
   const settings = await getLeadFlowSettings(supabase);
 
   // Bugün listesindeki kuralın aynısı; sayfa açılırken üstlenme yapılmaz (onu "Ara" düğmesi yapar).
-  if (!lead.first_contact_at && heldByOther(lead, profile.id, now, settings.claimMinutes)) {
+  // R26: durumu 'yeni' olmayan veli de ilk teması yapılmış sayılır (claimLeadAs ile aynı kural).
+  const contacted = alreadyContacted(lead);
+  if (!contacted && heldByOther(lead, profile.id, now, settings.claimMinutes)) {
     const claimer = Array.isArray(lead.claimer) ? lead.claimer[0] : lead.claimer;
     return <Notice leadId={lead.id} message={`${claimer?.full_name || UNKNOWN_CLAIMER} bu veliyi arıyor`} />;
   }
@@ -135,7 +139,7 @@ export default async function CallPage({ params }: { params: Promise<{ id: strin
     childAge: age,
     district: lead.district,
     startWindow: lead.start_window,
-    startedAt: lead.first_contact_at ? null : clockStart(new Date(lead.created_at), settings.hours).toISOString(),
+    startedAt: contacted ? null : clockStart(new Date(lead.created_at), settings.hours).toISOString(),
   };
 
   return (
