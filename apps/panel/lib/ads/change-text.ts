@@ -8,6 +8,14 @@ const tlInt = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 });
 
 export const PARENT_PAUSED_LINE = "Kampanya / reklam seti durdurulmuş; bu reklam üst düzey başlatılana kadar gösterilmez.";
 
+/**
+ * Bütçe penceresinin varsayılan yeni tutarı: haftalık büyütme sınırı kadar artış, aşağı yuvarlanır
+ * (153 TL × %20 → 183; 184 sınırı aşıp gerekçe isterdi). Önerinin tutarıyla aynı hesap.
+ */
+export function defaultNewBudget(currentTl: number, scaleMaxPct: number): number {
+  return Math.floor((currentTl * (100 + scaleMaxPct)) / 100 + 1e-9);
+}
+
 /** Kampanya hücresindeki küçük durum yazısı. */
 export function statusLabel(row: CampaignRow): string | null {
   if (row.status === "yayinda") return "yayında";

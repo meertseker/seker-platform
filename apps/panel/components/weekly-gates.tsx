@@ -33,7 +33,7 @@ export function WeeklyGates({ gates, topLost }: { gates: Gate[]; topLost: Funnel
         })}
       </div>
       {red.length > 0 ? (
-        <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive-soft px-3.5 py-3 text-sm leading-relaxed text-foreground">
+        <div role="note" className="rounded-xl border border-destructive/30 bg-destructive-soft px-3.5 py-3 text-sm leading-relaxed text-foreground">
           <b>Bu hafta bütçe artmıyor.</b> Kırmızı {red.length > 1 ? "kapılar" : "kapı"}: {red.map((g) => g.label).join(", ")}.
           {topLost ? (
             <>

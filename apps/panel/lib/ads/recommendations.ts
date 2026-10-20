@@ -5,6 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { costPerQualifiedTl, formatTl, stopRuleHit, winRuleHit, type ContentPerf } from "@/lib/content/board";
 import type { AdSettings } from "./ad-settings";
+import { defaultNewBudget } from "./change-text";
 import type { AdChangeAction } from "./writes";
 import { anyGateRed, type Gate } from "./weekly";
 
@@ -234,7 +235,7 @@ export function buildRecommendations(inputs: RecInput[], gates: Gate[], s: AdSet
       const b = budgetTarget(input);
       const objectKey = b ? `${platform}:${b.budgetResource}` : "";
       // Aşağı yuvarlanır: önerinin kendisi haftalık büyütme sınırını aşıp gerekçe istemesin (153 → 183, 184 değil).
-      const newTl = b ? Math.floor(b.tl * (1 + s.scaleMaxPct / 100)) : 0;
+      const newTl = b ? defaultNewBudget(b.tl, s.scaleMaxPct) : 0;
       if (b && newTl > b.tl && !budgetKeys.has(objectKey)) {
         budgetKeys.add(objectKey);
         const blocked = red.red;
