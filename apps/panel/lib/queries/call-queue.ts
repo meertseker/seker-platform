@@ -3,7 +3,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ageFromBirth } from "@/lib/lead-flow/age";
 import { type BusinessHours, businessMinutesBetween, clockStart } from "@/lib/lead-flow/business-hours";
 import { FOLLOWUP_STEPS, LEAD_TASK_KINDS } from "@/lib/lead-flow/followups";
+import { LEAD_SOURCES, label } from "@/lib/constants";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
+
+/** Kartta görünen kaynak: mesaj kanalı önce; Instagram reklamı ile Google reklamı ayrı yazılır. */
+export function queueSourceLabel(source: string, channel: string | null, adPlatform?: string | null): string {
+  if (channel === "ig_dm" || channel === "ig_yorum") return "Instagram";
+  if (channel === "whatsapp") return "WhatsApp";
+  if (channel === "telefon") return "Telefon";
+  if (adPlatform === "meta") return "Instagram reklamı";
+  if (source === "reklam") return "Google";
+  if (source === "web_sitesi") return "Web sitesi";
+  return label(LEAD_SOURCES, source as keyof typeof LEAD_SOURCES);
+}
 
 /** Listeye düşen kaynaklar; `channel` doluysa (mesajdan / formdan gelen) kaynak fark etmez. */
 export const QUEUE_SOURCES = ["reklam", "web_sitesi", "instagram", "whatsapp"] as const;
@@ -15,6 +27,7 @@ export type QueueRow = {
   phone: string;
   source: string;
   channel: string | null;
+  ad_platform?: string | null;
   content_code: string | null;
   district: string | null;
   start_window: string | null;
@@ -32,6 +45,7 @@ export type QueueLead = {
   phone: string;
   source: string;
   channel: string | null;
+  adPlatform?: string | null;
   contentCode: string | null;
   childAge: number | null;
   district: string | null;
@@ -84,6 +98,7 @@ export function labelQueue(
       phone: r.phone,
       source: r.source,
       channel: r.channel,
+      adPlatform: r.ad_platform ?? null,
       contentCode: r.content_code,
       childAge: ageFromBirth(r.child_birth_month, r.child_birth_year, now),
       district: r.district,
@@ -157,7 +172,7 @@ export async function loadCallQueue(
     supabase
       .from("leads")
       .select(
-        "id, parent_name, phone, source, channel, content_code, district, start_window, child_birth_month, child_birth_year, created_at, claimed_at, assigned_to, claimer:profiles!leads_assigned_to_fkey(full_name)",
+        "id, parent_name, phone, source, channel, ad_platform, content_code, district, start_window, child_birth_month, child_birth_year, created_at, claimed_at, assigned_to, claimer:profiles!leads_assigned_to_fkey(full_name)",
       ),
     queueCutoff(launchAt),
   )

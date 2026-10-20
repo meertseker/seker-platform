@@ -9,6 +9,7 @@ import {
   labelFollowups,
   labelQueue,
   queueCutoff,
+  queueSourceLabel,
   type FollowupRow,
   type QueueRow,
 } from "@/lib/queries/call-queue";
@@ -299,5 +300,21 @@ describe("isInQueue", () => {
     expect(isInQueue({ ...base, source: "referans" }, null)).toBe(false);
     expect(isInQueue({ ...base, source: "referans", channel: "telefon" }, null)).toBe(true);
     expect(isInQueue(base, new Date("2026-11-20T00:00:00Z"))).toBe(false);
+  });
+});
+
+describe("queueSourceLabel", () => {
+  it("meta reklamı Instagram reklamı, Google reklamı Google", () => {
+    expect(queueSourceLabel("instagram", "form", "meta")).toBe("Instagram reklamı");
+    expect(queueSourceLabel("reklam", "form", null)).toBe("Google");
+    expect(queueSourceLabel("instagram", "form", null)).toBe("Instagram");
+    expect(queueSourceLabel("instagram", "form")).toBe("Instagram");
+  });
+
+  it("kuyruk satırı ad_platform değerini taşır", () => {
+    const [l] = labelQueue([row({ source: "instagram", channel: "form", ad_platform: "meta" })], ME, now, 15, hours);
+    expect(l.adPlatform).toBe("meta");
+    const [m] = labelQueue([row()], ME, now, 15, hours);
+    expect(m.adPlatform).toBeNull();
   });
 });

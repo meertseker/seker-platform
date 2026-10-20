@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Phone } from "lucide-react";
 import { claimLead } from "@/actions/lead-flow";
-import { LEAD_SOURCES, START_WINDOWS, label } from "@/lib/constants";
+import { START_WINDOWS, label } from "@/lib/constants";
 import { type BusinessHours, businessMinutesBetween, timerTone } from "@/lib/lead-flow/business-hours";
-import type { QueueLead } from "@/lib/queries/call-queue";
+import { type QueueLead, queueSourceLabel } from "@/lib/queries/call-queue";
 import { waMeUrl } from "@/lib/whatsapp";
 
 const TICK_MS = 30_000;
@@ -18,15 +18,7 @@ const PILL_TONE = {
   late: "bg-destructive text-on-primary",
 } as const;
 
-/** Kartta görünen kaynak: mesaj kanalı önce, Google reklamı "Google". */
-export function queueSourceLabel(source: string, channel: string | null): string {
-  if (channel === "ig_dm" || channel === "ig_yorum") return "Instagram";
-  if (channel === "whatsapp") return "WhatsApp";
-  if (channel === "telefon") return "Telefon";
-  if (source === "reklam") return "Google";
-  if (source === "web_sitesi") return "Web sitesi";
-  return label(LEAD_SOURCES, source as keyof typeof LEAD_SOURCES);
-}
+export { queueSourceLabel };
 
 function firstName(name: string) {
   return name.split(" ")[0] || name;
@@ -65,7 +57,7 @@ function CallQueueCard({
   const disabled = isPending || !!heldBy || errorActive;
   const waHref = waMeUrl(lead.phone, waMessage);
 
-  const sourceChip = [queueSourceLabel(lead.source, lead.channel), lead.contentCode].filter(Boolean).join(" · ");
+  const sourceChip = [queueSourceLabel(lead.source, lead.channel, lead.adPlatform), lead.contentCode].filter(Boolean).join(" · ");
   const ageChip = [lead.childAge !== null ? `${lead.childAge} yaş` : null, lead.district].filter(Boolean).join(" · ");
   const windowChip = lead.startWindow
     ? label(START_WINDOWS, lead.startWindow as keyof typeof START_WINDOWS)
