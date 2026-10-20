@@ -48,7 +48,7 @@ export default async function KampanyalarPage({ searchParams }: { searchParams: 
 
   if (!data) {
     return (
-      <div className="mx-auto w-full max-w-[1180px] space-y-4">
+      <div className="mx-auto w-full min-w-0 max-w-[1180px] space-y-4">
         {heading}
         <p role="alert" className="rounded-2xl border border-destructive-soft bg-destructive-soft p-5 text-sm text-destructive-strong">
           Kampanya verileri şu an okunamadı. Lütfen sayfayı yenileyin; sorun sürerse daha sonra tekrar deneyin.
@@ -62,7 +62,7 @@ export default async function KampanyalarPage({ searchParams }: { searchParams: 
   const pace = budgetPace(data.monthSpendKurus, data.settings, data.today);
 
   return (
-    <div className="mx-auto w-full max-w-[1180px]">
+    <div className="mx-auto w-full min-w-0 max-w-[1180px]">
       <CampaignTable
         heading={heading}
         rows={rows}
@@ -104,7 +104,8 @@ export default async function KampanyalarPage({ searchParams }: { searchParams: 
         <BudgetBar pace={pace} month={MONTHS[Number(data.today.slice(5, 7)) - 1]} />
 
         <div className="rounded-xl border border-google/25 bg-google-soft px-3.5 py-2.5 text-[13.5px] leading-normal text-foreground">
-          <b>Tabloyu nasıl okumalı?</b> Gri küçük sayı, Google&apos;ın ya da Instagram&apos;ın kendi saydığı başvurudur; iki platform aynı veliyi ikisi de sayabilir. Büyük sayılar paneldeki gerçek velilerdir. Kararlar büyük sayılara göre verilir.
+          <b>Tabloyu nasıl okumalı?</b>{" "}
+          Gri küçük sayı, Google&apos;ın ya da Instagram&apos;ın kendi saydığı başvurudur; iki platform aynı veliyi ikisi de sayabilir. Büyük sayılar paneldeki gerçek velilerdir. Kararlar büyük sayılara göre verilir.
         </div>
       </CampaignTable>
     </div>
@@ -130,7 +131,7 @@ function BudgetBar({ pace, month }: { pace: BudgetPace; month: string }) {
       <div className="flex flex-wrap justify-between gap-2 text-sm">
         <b className="text-foreground">{month} bütçesi: {tl.format(pace.totalTl)} TL</b>
         <span className={fast.length > 0 ? "font-semibold text-warning" : "text-muted-foreground"}>
-          Harcanan {tl.format(pace.spentTl)} TL (%{pace.pctSpent}) · ayın %{pace.pctMonth}&apos;i geçti
+          {`Harcanan ${tl.format(pace.spentTl)} TL (%${pace.pctSpent}) · ayın %${pace.pctMonth}'i geçti`}
           {fast.length > 0 ? ` · ${fast.map((p) => p.label).join(" ve ")} hızlı gidiyor` : ""}
         </span>
       </div>

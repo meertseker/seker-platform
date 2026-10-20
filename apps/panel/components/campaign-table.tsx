@@ -64,11 +64,12 @@ export function CampaignTable({ heading, children, rows, codes, gate, writeEnabl
           Bu aralıkta kampanya, harcama ya da reklam velisi yok.
         </p>
       ) : (
+        // relative: tablodaki sr-only (mutlak konumlu) öğeler kaydırma kutusuna bağlanır; yoksa sayfayı yana taşırırlar.
         <div
           role="region"
           aria-label="Kampanya tablosu"
           tabIndex={0}
-          className="overflow-x-auto rounded-2xl border border-border bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="relative max-w-full overflow-x-auto rounded-2xl border border-border bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <table className="w-full min-w-[900px] border-collapse text-sm">
             <thead>
@@ -92,7 +93,7 @@ export function CampaignTable({ heading, children, rows, codes, gate, writeEnabl
         </div>
       )}
       <p className="text-sm text-muted-foreground">
-        Hedef: nitelikli veli başı en fazla {tlFormatter.format(targetTl)} TL (Ayarlar ve hedefler&apos;den değişir). Yeşil = hedefin altında, kırmızı = 2 katından fazla.
+        {`Hedef: nitelikli veli başı en fazla ${tlFormatter.format(targetTl)} TL (Ayarlar ve hedefler'den değişir). Yeşil = hedefin altında, kırmızı = 2 katından fazla.`}
       </p>
 
       <AdChangeDialog
