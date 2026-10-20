@@ -3,6 +3,7 @@ import { createAdminSupabase } from "@seker/auth/admin";
 import { businessMinutesBetween, clockStart, nextBusinessMoment } from "@/lib/lead-flow/business-hours";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { applyQueueFilter, queueCutoff } from "@/lib/queries/call-queue";
+import { insertNotifications } from "@/lib/notifications/insert";
 
 export const dynamic = "force-dynamic";
 
@@ -61,10 +62,11 @@ export async function GET(req: NextRequest) {
   for (const lead of due) {
     if (alreadyNotified.has(lead.id)) continue;
     // Tek insert = tek ifade (atomik): kısmi başarı olmaz, hata olursa sonraki koşu yeniden dener.
-    const { error: insertError } = await db.from("notifications").insert(
+    const { error: insertError } = await insertNotifications(
+      db,
       yoneticiler.map((y) => ({
         user_id: y.id,
-        type: "veli_bekliyor",
+        type: "veli_bekliyor" as const,
         payload: { leadId: lead.id, parentName: lead.parentName, minutes: lead.minutes },
       })),
     );

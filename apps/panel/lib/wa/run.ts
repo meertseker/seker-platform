@@ -3,6 +3,7 @@ import { istanbulDateString } from "@/lib/cron-rules";
 import { flushOutbox, type FlushResult } from "./flush";
 import { supabaseWaStore } from "./store";
 import { getSession, readWahaConfig, sendText } from "./waha";
+import { insertNotifications } from "@/lib/notifications/insert";
 
 type Db = ReturnType<typeof createAdminSupabase>;
 
@@ -19,7 +20,7 @@ async function notifyDisconnected(db: Db) {
       .eq("payload->>tarih", today)
       .limit(1);
     if (existing?.length) continue;
-    await db.from("notifications").insert({ user_id: y.id, type: "wa_baglanti_koptu", payload: { tarih: today } });
+    await insertNotifications(db, [{ user_id: y.id, type: "wa_baglanti_koptu", payload: { tarih: today } }]);
   }
 }
 
