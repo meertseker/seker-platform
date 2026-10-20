@@ -29,6 +29,12 @@
   --color-warning: #b45309; /* amber-700 — geciken/bekleyen; beyaz üzerinde 5:1 */
   --color-warning-soft: #fffbeb;
 
+  /* Platform kimliği (içerik kodu, platform rozeti); başarı yeşili değildir. */
+  --color-instagram: #9d174d; /* pink-800 — beyaz üzerinde 8:1 */
+  --color-instagram-soft: #fdf2f8;
+  --color-google: #1d4ed8; /* blue-700 — beyaz üzerinde 6.7:1 */
+  --color-google-soft: #eff6ff;
+
   --color-muted: #f2f2f5;
   --color-muted-foreground: #4b4b52; /* beyaz üzerinde 4.5:1 üstü */
   --color-border: #e3e3e8; /* ince ayraç (yalnız süs; form kutusu çerçevesi için değil) */

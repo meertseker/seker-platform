@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   adviceFor,
   cardTag,
+  chunk,
   emptyPerf,
+  fetchAllPages,
   groupByStage,
   loadContentPerf,
+  perfCodes,
   ruleBars,
+  stopRuleHit,
   type BoardItem,
   type ContentPerf,
 } from "@/lib/content/board";
@@ -146,38 +150,112 @@ describe("groupByStage", () => {
   });
 });
 
+describe("chunk", () => {
+  it("listeyi en çok n elemanlı parçalara böler", () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(chunk([], 100)).toEqual([]);
+  });
+});
+
+describe("fetchAllPages", () => {
+  it("kısa sayfa gelene kadar .range() ile okur", async () => {
+    const rows = Array.from({ length: 5 }, (_, i) => i);
+    const calls: [number, number][] = [];
+    const out = await fetchAllPages<number>(async (from, to) => {
+      calls.push([from, to]);
+      return { data: rows.slice(from, to + 1), error: null };
+    }, 2);
+    expect(out).toEqual(rows);
+    expect(calls).toEqual([[0, 1], [2, 3], [4, 5]]);
+  });
+
+  it("hata fırlatır", async () => {
+    await expect(fetchAllPages(async () => ({ data: null, error: { message: "x" } }))).rejects.toThrow("x");
+  });
+});
+
+describe("perfCodes", () => {
+  it("yalnız organik, test, kazanan ve arşiv kodları", () => {
+    const codes = perfCodes([
+      item({ code: "R-2646-A", stage: "gorev" }),
+      item({ code: "S-2646-G", stage: "kontrol" }),
+      item({ code: "R-2645-A", stage: "organik" }),
+      item({ code: "R-2643-B", stage: "test" }),
+      item({ code: "R-2641-A", stage: "kazanan" }),
+      item({ code: "R-2638-A", stage: "arsiv" }),
+    ]);
+    expect(codes).toEqual(["R-2645-A", "R-2643-B", "R-2641-A", "R-2638-A"]);
+  });
+});
+
+describe("stopRuleHit", () => {
+  it("hedef 0 ya da altıysa kural tutmaz", () => {
+    expect(stopRuleHit(emptyPerf(), { ...rules, targetTl: 0 })).toBe(false);
+    expect(stopRuleHit(STOP, rules)).toBe(true);
+  });
+});
+
 describe("loadContentPerf", () => {
-  function fake(tables: Record<string, unknown[]>) {
+  type Call = { table: string; in: unknown[]; range: [number, number] | null };
+  function fake(tables: Record<string, unknown[]>, calls: Call[]) {
     return {
       from(table: string) {
+        const call: Call = { table, in: [], range: null };
+        calls.push(call);
         const q = {
           select: () => q,
-          in: () => q,
-          neq: () => q,
-          then: (resolve: (v: { data: unknown[]; error: null }) => void) => resolve({ data: tables[table] ?? [], error: null }),
+          order: () => q,
+          in: (_col: string, values: unknown[]) => {
+            call.in = values;
+            return q;
+          },
+          range: (from: number, to: number) => {
+            call.range = [from, to];
+            return q;
+          },
+          then: (resolve: (v: { data: unknown[]; error: null }) => void) => {
+            const codes = new Set(call.in);
+            const rows = (tables[table] ?? []).filter((r) => codes.has((r as { content_code: string }).content_code));
+            const [f, t] = call.range ?? [0, rows.length];
+            resolve({ data: rows.slice(f, t + 1), error: null });
+          },
         };
         return q;
       },
     };
   }
 
-  it("harcamayı mikrodan kuruşa, velileri ve randevuları koda göre toplar", async () => {
-    const supabase = fake({
-      ad_spend_daily: [
-        { content_code: "R-2643-B", cost_micros: 2_000_000_000, clicks: 100, platform_results: 4 },
-        { content_code: "R-2643-B", cost_micros: 1_150_000_000, clicks: 112, platform_results: null },
-      ],
-      leads: [
-        { id: "l1", content_code: "R-2643-B", is_qualified: false },
-        { id: "l2", content_code: "R-2643-B", is_qualified: true },
-      ],
-      appointments: [{ lead_id: "l2" }, { lead_id: "l2" }],
-    });
+  it("harcamayı mikrodan kuruşa, velileri ve randevuya döneni koda göre toplar", async () => {
+    const calls: Call[] = [];
+    const supabase = fake(
+      {
+        ad_spend_daily: [
+          { content_code: "R-2643-B", cost_micros: 2_000_000_000, clicks: 100, platform_results: 4 },
+          { content_code: "R-2643-B", cost_micros: 1_150_000_000, clicks: 112, platform_results: null },
+        ],
+        leads: [
+          { id: "l1", content_code: "R-2643-B", is_qualified: false, appointments: [{ outcome: "iptal" }] },
+          { id: "l2", content_code: "R-2643-B", is_qualified: true, appointments: [{ outcome: "bekliyor" }, { outcome: "geldi" }] },
+        ],
+      },
+      calls,
+    );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const map = await loadContentPerf(supabase as any, ["R-2643-B", "S-2646-G"]);
     expect(map.get("R-2643-B")).toEqual({
       spendKurus: 315_000, clicks: 212, platformResults: 4, leads: 2, qualified: 1, appointments: 1,
     });
     expect(map.get("S-2646-G")).toEqual(emptyPerf());
+    expect(calls.every((c) => c.range !== null)).toBe(true);
+  });
+
+  it("kod listesini 100'lük parçalarla sorar", async () => {
+    const calls: Call[] = [];
+    const codes = Array.from({ length: 250 }, (_, i) => `R-26${String(i).padStart(2, "0")}-A`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await loadContentPerf(fake({}, calls) as any, codes);
+    const spendCalls = calls.filter((c) => c.table === "ad_spend_daily");
+    expect(spendCalls.map((c) => c.in.length)).toEqual([100, 100, 50]);
+    expect(calls.every((c) => c.in.length <= 100)).toBe(true);
   });
 });
