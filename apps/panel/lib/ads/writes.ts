@@ -14,7 +14,7 @@ import { readMetaConfig } from "./meta/config";
 import { MetaApiError } from "./meta/insights";
 import { metaSetDailyBudget, metaSetStatus } from "./meta/writes";
 import type { FetchFn } from "./types";
-import { anyGateRed, computeGates, lastCompletedWeekStart, mondayOf, weekRange } from "./weekly";
+import { anyGateRed, computeWeekGates, lastCompletedWeekStart, mondayOf, weekRange } from "./weekly";
 
 export type AdChangeAction = {
   platform: "google" | "meta";
@@ -108,7 +108,8 @@ export async function loadGateStatus(supabase: SupabaseClient, now: Date, settin
   const weeks = [mondayOf(istanbulDateString(now)), lastCompletedWeekStart(now)];
   const data = await Promise.all(weeks.map((w) => loadWeeklyData(supabase, w)));
   const labels = new Set<string>();
-  for (const d of data) for (const l of anyGateRed(computeGates(d.leads, d.appts, now, hours, settings)).labels) labels.add(l);
+  // "Bu hafta" ekranıyla aynı hesap: ulaşma önceki haftanın olgun kohortu, gelme takvim haftasının randevuları.
+  for (const d of data) for (const l of anyGateRed(computeWeekGates(d, now, hours, settings)).labels) labels.add(l);
   return { red: labels.size > 0, labels: [...labels] };
 }
 
