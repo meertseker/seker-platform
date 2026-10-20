@@ -56,10 +56,23 @@ function Chip({ status }: { status: string }) {
   );
 }
 
-function FeedbackItem({ row, showAuthor, admin }: { row: FeedbackRow; showAuthor: boolean; admin: boolean }) {
+function FeedbackItem({
+  row,
+  showAuthor,
+  admin,
+  anchor = false,
+}: {
+  row: FeedbackRow;
+  showAuthor: boolean;
+  admin: boolean;
+  anchor?: boolean;
+}) {
   const kindLabel = FEEDBACK_KINDS[row.kind as FeedbackKind] ?? row.kind;
   return (
-    <li className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+    <li
+      id={anchor ? `gb-${row.id}` : undefined}
+      className="scroll-mt-20 rounded-2xl border border-border bg-surface p-4 shadow-sm"
+    >
       <div className="flex flex-wrap items-center gap-2">
         <Chip status={row.status} />
         <span className="text-xs font-semibold text-muted-foreground">{kindLabel}</span>
@@ -120,7 +133,7 @@ export default async function GeriBildirimPage() {
         ) : (
           <ul className="space-y-3">
             {mine.map((row) => (
-              <FeedbackItem key={row.id} row={row} showAuthor={false} admin={false} />
+              <FeedbackItem key={row.id} row={row} showAuthor={false} admin={false} anchor={!isAdmin} />
             ))}
           </ul>
         )}
@@ -140,7 +153,7 @@ export default async function GeriBildirimPage() {
           ) : (
             <ul className="space-y-3">
               {all.map((row) => (
-                <FeedbackItem key={row.id} row={row} showAuthor admin />
+                <FeedbackItem key={row.id} row={row} showAuthor admin anchor />
               ))}
             </ul>
           )}

@@ -117,13 +117,15 @@ export default async function AyarlarPage() {
 
       <LeadLineSettings settings={leadSettings} />
 
-      <WhatsappSettings
-        enabled={waSetting.get("wa_enabled") === true}
-        groupId={typeof waSetting.get("wa_group_id") === "string" ? (waSetting.get("wa_group_id") as string) : ""}
-        groupName={typeof waSetting.get("wa_group_name") === "string" ? (waSetting.get("wa_group_name") as string) : ""}
-        recent={waRecent}
-        failedCount={waFailed ?? 0}
-      />
+      <div id="whatsapp" className="scroll-mt-20">
+        <WhatsappSettings
+          enabled={waSetting.get("wa_enabled") === true}
+          groupId={typeof waSetting.get("wa_group_id") === "string" ? (waSetting.get("wa_group_id") as string) : ""}
+          groupName={typeof waSetting.get("wa_group_name") === "string" ? (waSetting.get("wa_group_name") as string) : ""}
+          recent={waRecent}
+          failedCount={waFailed ?? 0}
+        />
+      </div>
     </div>
   );
 }
