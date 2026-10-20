@@ -139,6 +139,7 @@ export default async function PipelinePage({ searchParams }: PipelinePageProps) 
       .from("profiles")
       .select("id, full_name")
       .eq("is_active", true)
+      .in("role", ["yonetici", "danisman"])
       .order("full_name", { ascending: true }),
     (async () => {
       let query = supabase

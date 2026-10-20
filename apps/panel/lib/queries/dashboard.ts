@@ -208,6 +208,7 @@ export async function getConsultantBreakdown(): Promise<ConsultantBreakdownRow[]
       .from("profiles")
       .select("id, full_name")
       .eq("is_active", true)
+      .in("role", ["yonetici", "danisman"])
       .order("full_name", { ascending: true }),
     supabase.from("leads").select("assigned_to, status").not("assigned_to", "is", null),
   ]);
