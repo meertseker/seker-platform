@@ -39,7 +39,7 @@ describe('AttributionFields — ilk dokunuş navigasyonu', () => {
     });
     expect(hiddenValue(first.container, 'landingPath')).toBe('/lp/az-mevcutlu-anaokulu');
     expect(window.sessionStorage.getItem(ATTRIBUTION_KEY)).toBe(
-      JSON.stringify({ gclid: 'Cj0ABC123', landingPath: '/lp/az-mevcutlu-anaokulu', utm: {} }),
+      JSON.stringify({ gclid: 'Cj0ABC123', fbclid: '', fbc: '', landingPath: '/lp/az-mevcutlu-anaokulu', utm: {} }),
     );
     first.unmount();
 

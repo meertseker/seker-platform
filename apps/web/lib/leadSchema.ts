@@ -32,6 +32,12 @@ const base = z.object({
   }),
   gclid: hidden.optional().default(''),
   landingPath: hidden.optional().default(''),
+  // Meta (Instagram) tıklama/olay verisi: gizli alanlar, kırpılır; adCookieConsent çerez bandı seçimidir.
+  fbclid: hidden.optional().default(''),
+  fbc: hidden.optional().default(''),
+  fbp: hidden.optional().default(''),
+  metaEventId: hidden.optional().default(''),
+  adCookieConsent: z.boolean().optional().default(false),
   utm: z
     .object({
       utm_source: hidden.optional(),

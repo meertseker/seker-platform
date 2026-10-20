@@ -14,6 +14,11 @@ const lead: Lead = {
   utm: { utm_campaign: 'kres' },
   website: '',
   kvkkConsent: true,
+  fbclid: '',
+  fbc: '',
+  fbp: '',
+  metaEventId: '',
+  adCookieConsent: false,
 };
 
 describe('createWebLead', () => {
@@ -32,7 +37,7 @@ describe('createWebLead', () => {
       p_utm: { utm_campaign: 'kres' },
       p_landing_path: '/lp/kres-2-yas',
       p_consent_at: '2026-10-20T09:00:00.000Z',
-      p_meta: {},
+      p_meta: { consent_version: 1, ad_cookie_consent: false },
     });
     expect(result).toEqual({ status: 'saved', leadId: 'L1', duplicate: false });
   });
@@ -63,11 +68,33 @@ describe('createWebLead', () => {
       wantsWhatsapp: false,
     });
     expect(rpc.mock.calls[0][1].p_meta).toEqual({
+      consent_version: 1,
+      ad_cookie_consent: false,
       child_birth_month: 5,
       child_birth_year: 2023,
       district: 'Diğer',
       start_window: 'hemen',
       wants_whatsapp: false,
+    });
+  });
+
+  it("p_meta'ya consent_version ve dolu meta alanlarını koyar", async () => {
+    rpc.mockResolvedValue({ data: { lead_id: 'L1', duplicate: false }, error: null });
+    await createWebLead({
+      ...lead,
+      fbclid: 'IwAR0',
+      fbc: 'fb.1.1.IwAR0',
+      fbp: 'fb.1.2.3',
+      metaEventId: 'ev-1',
+      adCookieConsent: true,
+    });
+    expect(rpc.mock.calls[0][1].p_meta).toEqual({
+      consent_version: 1,
+      ad_cookie_consent: true,
+      fbclid: 'IwAR0',
+      fbc: 'fb.1.1.IwAR0',
+      fbp: 'fb.1.2.3',
+      meta_event_id: 'ev-1',
     });
   });
 });

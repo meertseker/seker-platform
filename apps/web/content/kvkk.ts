@@ -1,12 +1,17 @@
 import { SITE } from '@/lib/site';
+import { CONSENT_VERSION } from '@/lib/metaClick';
 
 // Literal ifade bilerek bölünmüş: grep yalnızca gerçek yer tutucuları saysın.
 export const TEYIT_MARKER = '[OKULDAN ' + 'TEYİT ALINACAK';
 
 const address = `${SITE.address.street}, ${SITE.address.district}, ${SITE.address.city}`;
 
-export const KVKK_CONSENT_LABEL =
-  'Aydınlatma Metni\'ni okudum. Başvurum için aranmama ve başvuru bilgilerimin reklamlarımızın etkinliğini ölçmek amacıyla Google ile paylaşılmasına onay veriyorum.';
+const V2 = CONSENT_VERSION === 2;
+
+// v1 metni bugünkü haliyle aynen kalır; v2 hukuk onayından sonra NEXT_PUBLIC_CONSENT_VERSION=2 ile açılır.
+export const KVKK_CONSENT_LABEL = V2
+  ? 'Aydınlatma Metni\'ni okudum. Başvurum için aranmama ve başvuru bilgilerimin reklamlarımızın etkinliğini ölçmek amacıyla Google ve Meta (Instagram) ile paylaşılmasına onay veriyorum.'
+  : 'Aydınlatma Metni\'ni okudum. Başvurum için aranmama ve başvuru bilgilerimin reklamlarımızın etkinliğini ölçmek amacıyla Google ile paylaşılmasına onay veriyorum.';
 
 export type KvkkSection = { id: string; title: string; paragraphs: string[]; items?: string[] };
 
@@ -28,6 +33,11 @@ export const KVKK_TEXT: { updatedOn: string; sections: KvkkSection[] } = {
         'Kimlik ve iletişim: velinin adı soyadı ve telefon numarası.',
         'Başvuru bilgisi: formun doldurulduğu sayfa, tarih ve saat, onay kaydı.',
         'Reklam ve pazarlama bilgisi: bir Google reklamına tıklayarak geldiyseniz reklam tıklama kimliği (gclid) ve kampanya bilgisi (UTM parametreleri).',
+        ...(V2
+          ? [
+              'Meta reklamı bilgisi: bir Instagram veya Facebook reklamına tıklayarak geldiyseniz Meta tıklama kimliği (fbclid), Meta çerezleri (_fbc, _fbp; yalnızca çerezlere onay verirseniz) ve başvuru olayı kimliği.',
+            ]
+          : []),
         'Görüşme süreci: sizinle yaptığımız görüşme, randevu ve kayıt aşamalarına ilişkin notlar.',
         'Site kullanım bilgisi (yalnızca çerezlere onay verirseniz): ziyaret ettiğiniz sayfalar, siteye hangi kaynaktan geldiğiniz, cihaz ve tarayıcı türü, yaklaşık konum (şehir düzeyi).',
       ],
@@ -40,6 +50,11 @@ export const KVKK_TEXT: { updatedOn: string; sections: KvkkSection[] } = {
         'Başvurunuza dönüş yapmak, sizi aramak, WhatsApp üzerinden yazmak ve okul ziyareti randevusu oluşturmak.',
         'Kayıt sürecini yürütmek ve kayıt olmanız halinde sözleşme ilişkisini kurmak.',
         'Hangi reklam ve sayfaların başvuru ve kayıt getirdiğini ölçmek; bu amaçla başvurunuzun bir randevuya veya kayda dönüştüğü bilgisini, reklam tıklama kimliğiyle birlikte Google\'a bildirmek.',
+        ...(V2
+          ? [
+              'Başvurunuzun bir randevuya veya kayda dönüştüğü bilgisini Meta Platforms Ireland Limited\'e bildirerek Instagram ve Facebook reklamlarımızın etkinliğini ölçmek.',
+            ]
+          : []),
         'Sitemizin nasıl kullanıldığını ölçmek ve geliştirmek (Google Analytics; yalnızca çerez onayınızla).',
         'Yasal yükümlülüklerimizi yerine getirmek ve olası uyuşmazlıklarda hakkımızı korumak.',
       ],
@@ -61,6 +76,11 @@ export const KVKK_TEXT: { updatedOn: string; sections: KvkkSection[] } = {
       items: [
         'Google Analytics: site kullanım istatistikleri; yalnızca çerezleri kabul ederseniz çerez kullanılır. Form bilgileriniz (ad, telefon) Google Analytics\'e gönderilmez (yurt dışı).',
         'Google (Google Ads): reklam ölçümü; başvurunuzun randevu veya kayda dönüştüğü bilgisi reklam tıklama kimliğiyle birlikte bildirilir. Ad ve telefon numaranız Google Ads\'e gönderilmez; reklam ölçümü için yalnızca tıklama kimliği ve kampanya bilgisi paylaşılır.',
+        ...(V2
+          ? [
+              'Meta Platforms Ireland Limited (Instagram / Facebook): reklam ölçümü; başvurunuzun randevu veya kayda dönüştüğü bilgisi, telefon numaranızın tek yönlü şifrelenmiş (SHA-256) özeti ve Meta çerez kimlikleriyle birlikte bildirilir. Çocuğunuza ilişkin hiçbir bilgi paylaşılmaz. Aktarım yurt dışınadır ve açık rızanıza dayanır.',
+            ]
+          : []),
         'Supabase: başvuru ve kayıt bilgilerinin saklandığı veritabanı (Avrupa Birliği, Frankfurt [OKULDAN TEYİT ALINACAK: Supabase proje bölgesi]).',
         'Amazon Web Services: web sitesi ve okul yönetim panelinin çalıştığı sunucu ve yedekler (Avrupa Birliği, Frankfurt).',
         'Resend: yeni başvuru bildiriminin okul yönetimine e-posta ile iletilmesi (ABD).',

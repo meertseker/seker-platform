@@ -98,3 +98,12 @@ describe('isBotUserAgent', () => {
     expect(isBotUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Safari/604.1')).toBe(false);
   });
 });
+
+describe('meta_ads kaynağı', () => {
+  it("instagram ücretli UTM'si meta_ads ziyareti sayılır; gclid yine önde", () => {
+    const q2 = (s: string) => new URLSearchParams(s);
+    expect(classifyEntrySource(q2('utm_source=instagram&utm_medium=paid_social&utm_content=R-1'), '', 'x.com')).toBe('meta_ads');
+    expect(classifyEntrySource(q2('fbclid=abc'), '', 'x.com')).toBe('dogrudan');
+    expect(classifyEntrySource(q2('gclid=a&utm_source=instagram&utm_medium=paid_social'), '', 'x.com')).toBe('google_ads');
+  });
+});

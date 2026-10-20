@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trackLead } from '@/lib/analytics';
 import { UTM_KEYS } from '@/lib/attribution';
+import { newEventId } from '@/lib/metaClick';
+import { readConsent } from '@/lib/consent';
 import AttributionFields from './AttributionFields';
 import { KVKK_CONSENT_LABEL } from '@/content/kvkk';
 import { makeReader } from '@/lib/content/reader';
@@ -34,6 +36,8 @@ export default function LeadForm({
   const attrs = (key: string): Record<string, string> => (reader && data && key in data.meta ? reader.attrs(key) : {});
   // Sabit seçenek metinleri (ay, yıl, semt) içerik alanı değildir; yalnız düzenleme modunda işaretlenir.
   const ign: Record<string, string> = reader?.editing ? { 'data-edit-ignore': '' } : {};
+  // Tarayıcı pikseli ile sunucu olayının eşleşmesi için form açılışında bir kez üretilir.
+  const [metaEventId] = useState(newEventId);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState('');
@@ -48,11 +52,23 @@ export default function LeadForm({
     const utm = Object.fromEntries(
       UTM_KEYS.map((key) => [key, String(data.get(key) ?? '')]).filter(([, value]) => value),
     );
+    // Çerez onayı gönderim anında okunur; depolama hata verirse başvuru yine gider (onay yok sayılır).
+    let adCookieConsent = false;
+    try {
+      adCookieConsent = readConsent(window.localStorage) === 'granted';
+    } catch {
+      adCookieConsent = false;
+    }
     const payload = {
       parentName: String(data.get('parentName') ?? ''),
       phone: String(data.get('phone') ?? ''),
       gclid: String(data.get('gclid') ?? ''),
       landingPath: String(data.get('landingPath') ?? ''),
+      fbclid: String(data.get('fbclid') ?? ''),
+      fbc: String(data.get('fbc') ?? ''),
+      fbp: String(data.get('fbp') ?? ''),
+      metaEventId,
+      adCookieConsent,
       utm,
       website: String(data.get('website') ?? ''),
       kvkkConsent: data.get('kvkkConsent') === 'on',

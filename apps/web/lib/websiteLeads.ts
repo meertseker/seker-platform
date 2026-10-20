@@ -1,14 +1,27 @@
 import { createAdminSupabase } from '@seker/auth/admin';
 import type { Lead } from './leadSchema';
+import { CONSENT_VERSION } from './metaClick';
 
 export type CreateWebLeadResult =
   | { status: 'saved'; leadId: string; duplicate: boolean }
   | { status: 'failed' };
 
-/** Yalnız qualify açıkken nitelik cevapları RPC'ye gider; ana sayfa formu boş p_meta gönderir. */
-function qualifyMeta(lead: Lead): { [key: string]: string | number | boolean } {
-  if (!lead.qualify) return {};
-  const meta: { [key: string]: string | number | boolean } = {};
+type Meta = { [key: string]: string | number | boolean };
+
+/** Onay sürümü ve Meta kimlikleri her formda gider; boş Meta alanları eklenmez. */
+function trackingMeta(lead: Lead): Meta {
+  const meta: Meta = { consent_version: CONSENT_VERSION, ad_cookie_consent: lead.adCookieConsent };
+  if (lead.fbclid) meta.fbclid = lead.fbclid;
+  if (lead.fbc) meta.fbc = lead.fbc;
+  if (lead.fbp) meta.fbp = lead.fbp;
+  if (lead.metaEventId) meta.meta_event_id = lead.metaEventId;
+  return meta;
+}
+
+/** Nitelik cevapları yalnız qualify açıkken RPC'ye gider; izleme alanları her formda gider. */
+function qualifyMeta(lead: Lead): Meta {
+  const meta: Meta = trackingMeta(lead);
+  if (!lead.qualify) return meta;
   if (lead.childBirthMonth !== undefined) meta.child_birth_month = lead.childBirthMonth;
   if (lead.childBirthYear !== undefined) meta.child_birth_year = lead.childBirthYear;
   if (lead.district !== undefined) meta.district = lead.district;
