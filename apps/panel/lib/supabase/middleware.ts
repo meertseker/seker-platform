@@ -1,9 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { authCookieOptions } from "@seker/auth/cookie";
 import { NextResponse, type NextRequest } from "next/server";
+import { LOGIN_REASON_PARAM, hasAuthCookie } from "@/lib/login-reason";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+  // Yenileme öncesi: çerez vardı ama oturum doğrulanamıyorsa kullanıcı düşürülmüştür (tek oturum kuralı).
+  const hadSession = hasAuthCookie(request.cookies.getAll().map((c) => c.name));
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,6 +35,9 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isLogin) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    // B7: sessizce /login'e düşmek yerine neden söylenir; sayfa bunu Türkçe gösterir.
+    if (hadSession) url.searchParams.set(LOGIN_REASON_PARAM, "baska-cihaz");
     return NextResponse.redirect(url);
   }
 

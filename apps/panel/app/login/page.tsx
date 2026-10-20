@@ -1,9 +1,22 @@
 "use client";
 
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn, type SignInState } from "@/actions/auth";
+import { LOGIN_REASON_PARAM, loginReasonMessage } from "@/lib/login-reason";
 
 const initialState: SignInState | null = null;
+
+/** ?neden=… varsa (tek oturum kuralı düşürdü) kullanıcıya söylenir; Suspense: useSearchParams ön çizimde askıya alır. */
+function LoginReason() {
+  const message = loginReasonMessage(useSearchParams().get(LOGIN_REASON_PARAM));
+  if (!message) return null;
+  return (
+    <p role="status" className="mb-5 rounded-xl bg-warning-soft px-4 py-3 text-sm font-medium text-warning">
+      {message}
+    </p>
+  );
+}
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(signIn, initialState);
@@ -20,6 +33,10 @@ export default function LoginPage() {
             Yönetici veya danışman hesabınızla devam edin.
           </p>
         </div>
+
+        <Suspense fallback={null}>
+          <LoginReason />
+        </Suspense>
 
         <form action={formAction} className="space-y-5">
           <div>
