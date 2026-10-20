@@ -47,6 +47,8 @@ async function fetchAll(cfg: MetaConfig, edge: string, fields: string, fetchFn: 
     out.push(...body.data);
     url = body.paging?.next ? nextUrl(body.paging.next, cfg) : null;
   }
+  // Sınıra dayanıp hâlâ sayfa varsa liste eksiktir; eksik liste temizlikte gerçek satırları sildirir.
+  if (url) throw new MetaApiError("Meta sayfa sınırı aşıldı", 502);
   return out;
 }
 

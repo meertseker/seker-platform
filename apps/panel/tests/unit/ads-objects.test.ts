@@ -59,6 +59,13 @@ describe("fetchMetaObjects", () => {
     expect(byId.a1).toMatchObject({ parentId: "s1", campaignId: "c1", contentCode: "R-2645-A", status: "PAUSED" });
   });
 
+  it("sayfa sınırı aşılırsa kısmi liste dönmez, hata fırlatır", async () => {
+    const fetchFn = vi.fn(async () =>
+      json({ data: [{ id: "c1", name: "K", status: "ACTIVE" }], paging: { next: "https://graph.facebook.com/v26.0/act_42/campaigns?after=x" } }),
+    ) as unknown as typeof fetch;
+    await expect(fetchMetaObjects(mcfg, fetchFn)).rejects.toThrow("Meta sayfa sınırı aşıldı");
+  });
+
   it("bütçe üstte duruyorsa alt satırlar üstün bütçesini ve kaynağını devralır", async () => {
     const rows = await fetchMetaObjects(
       mcfg,
@@ -95,7 +102,7 @@ describe("upsertAdObjects", () => {
   function fakeDb(links: { ad_id: string; content_code: string }[]) {
     const upserts: Record<string, unknown>[][] = [];
     const inCalls: string[][] = [];
-    const deletes: { platform?: unknown; ltSyncedAt?: unknown }[] = [];
+    const deletes: { platform?: unknown; level?: unknown; ltSyncedAt?: unknown }[] = [];
     const db = {
       from: (table: string) => {
         if (table === "ad_content_links") {
@@ -109,10 +116,10 @@ describe("upsertAdObjects", () => {
         return {
           upsert: (rows: Record<string, unknown>[]) => (upserts.push(rows), Promise.resolve({ error: null })),
           delete: () => {
-            const rec: { platform?: unknown; ltSyncedAt?: unknown } = {};
+            const rec: { platform?: unknown; level?: unknown; ltSyncedAt?: unknown } = {};
             deletes.push(rec);
             const q: Record<string, unknown> = {
-              eq: (_c: string, v: unknown) => ((rec.platform = v), q),
+              eq: (c: string, v: unknown) => ((rec[c === "level" ? "level" : "platform"] = v), q),
               lt: (_c: string, v: unknown) => ((rec.ltSyncedAt = v), Promise.resolve({ error: null })),
             };
             return q;
@@ -147,7 +154,15 @@ describe("upsertAdObjects", () => {
     await upsertAdObjects(db, [ad()]);
     expect(deletes).toHaveLength(1);
     expect(deletes[0].platform).toBe("meta");
+    expect(deletes[0].level).toBe("ad");
     expect(deletes[0].ltSyncedAt).toBe(upserts[0][0].synced_at);
+  });
+
+  it("temizlik seviye bazlıdır: satır gelmeyen seviyeye dokunulmaz", async () => {
+    const { db, deletes } = fakeDb([]);
+    await upsertAdObjects(db, [ad(), ad({ level: "adset", objectId: "s1" })]);
+    expect(deletes.map((d) => d.level).sort()).toEqual(["ad", "adset"]);
+    expect(deletes.some((d) => d.level === "campaign")).toBe(false);
   });
 
   it("yazım patlarsa temizlik yapılmaz", async () => {

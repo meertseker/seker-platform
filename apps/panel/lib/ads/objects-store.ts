@@ -73,9 +73,17 @@ export async function upsertAdObjects(db: SupabaseClient, rows: AdObjectSyncRow[
       .upsert(payload.slice(i, i + CHUNK), { onConflict: "platform,level,object_id" });
     if (error) throw new Error(`ad_objects yazılamadı: ${error.message}`);
   }
-  // Temizlik yalnız yazım tamamen başarılıysa ve satır gelen platformlar için.
-  for (const platform of new Set(rows.map((r) => r.platform))) {
-    const { error } = await db.from("ad_objects").delete().eq("platform", platform).lt("synced_at", syncedAt);
+  // Temizlik (platform, seviye) bazlıdır ve yalnız bu koşuda en az bir satır gelen seviyeler için yapılır:
+  // bir uç boş dönerse o seviyenin mevcut satırları silinmez.
+  const seen = new Set(rows.map((r) => `${r.platform}|${r.level}`));
+  for (const key of seen) {
+    const [platform, level] = key.split("|");
+    const { error } = await db
+      .from("ad_objects")
+      .delete()
+      .eq("platform", platform)
+      .eq("level", level)
+      .lt("synced_at", syncedAt);
     if (error) throw new Error(`ad_objects temizlenemedi: ${error.message}`);
   }
   return rows.length;
