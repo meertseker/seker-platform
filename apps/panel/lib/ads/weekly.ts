@@ -1,5 +1,6 @@
 // Bu hafta: bütçe kapıları, reklam velisi hunisi ve ekip karnesi (saf modül).
-// Hesaplar haftada gelen reklam velileri (K6) ve onların randevuları üzerinden yapılır.
+// Yalnız reklam velileri (K6). Huni, ilk arama ve randevu toplantı haftasında gelen velilerle; ulaşma bir önceki
+// haftanın (7 günü dolmuş) velileriyle; ziyarete gelme takvim haftasının randevularıyla hesaplanır.
 // Şimdiki an dışarıdan verilir; modül saat okumaz.
 import { LOST_REASONS, type LeadStatus } from "@/lib/constants";
 import {
@@ -8,7 +9,7 @@ import {
   istanbulDateString,
   type BusinessHours,
 } from "@/lib/lead-flow/business-hours";
-import { DEFAULT_AD_SETTINGS, type AdSettings } from "./ad-settings";
+import type { AdSettings } from "./ad-settings";
 
 export type WeeklyLead = {
   id: string;
@@ -28,7 +29,13 @@ export type WeeklyLead = {
 
 export type WeeklyAppt = { leadId: string; scheduledAt: string; outcome: string | null; assignedTo: string | null };
 
-/** K6: Google, Instagram reklamı ya da Instagram mesajı/yorumu ile gelen veli. Huni, kapı ve karne bunlarla. */
+/** Açık görev; `dueAt` yoksa `dueDate` günü bitene kadar gecikmiş sayılmaz. */
+export type WeeklyTask = { assignedTo: string; dueDate: string; dueAt: string | null };
+
+/**
+ * K6: Google, Instagram reklamı ya da Instagram mesajı/yorumu ile gelen veli. Huni, kapı ve karne bunlarla.
+ * K10: `source='reklam'` yalnız Google (gclid) içindir; `ad_platform` boş eski kayıtlar da Google sayılır.
+ */
 export function isAdSourced(l: Pick<WeeklyLead, "adPlatform" | "source" | "channel">): boolean {
   return l.adPlatform === "google" || l.adPlatform === "meta" || l.source === "reklam" || l.channel === "ig_dm" || l.channel === "ig_yorum";
 }
@@ -60,10 +67,20 @@ export function lastCompletedWeekStart(now: Date): string {
   return addDaysToDateString(mondayOf(istanbulDateString(now)), -7);
 }
 
+const MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+
+/** "2026-11-02" → "2–8 Kasım"; ay geçişinde "26 Ekim–1 Kasım". */
+export function formatWeekLabel(weekStart: string): string {
+  const end = addDaysToDateString(weekStart, 6);
+  const [, m1, d1] = weekStart.split("-").map(Number);
+  const [, m2, d2] = end.split("-").map(Number);
+  return m1 === m2 ? `${d1}–${d2} ${MONTHS[m2 - 1]}` : `${d1} ${MONTHS[m1 - 1]}–${d2} ${MONTHS[m2 - 1]}`;
+}
+
 // ---- Yardımcılar ----
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const NO_DATA = "veri yok";
+const DAY_MS = 24 * 60 * 60 * 1000;
 const APPT_STATUSES: LeadStatus[] = ["randevu", "gorusme_yapildi", "teklif", "kazanildi"];
 const VISITED_STATUSES: LeadStatus[] = ["gorusme_yapildi", "teklif", "kazanildi"];
 
@@ -90,28 +107,27 @@ function hasAppt(l: WeeklyLead): boolean {
   return l.hasAppointment || APPT_STATUSES.includes(l.status);
 }
 
-/** Ulaşma kapısına girer mi: gelişinden 7 gün geçti ya da geldiği hafta bitti. `now` yoksa hepsi girer. */
-function reachEligible(l: WeeklyLead, now: Date | undefined): boolean {
-  if (!now) return true;
-  const created = new Date(l.createdAt);
-  const weekEnd = Date.parse(weekRange(mondayOf(istanbulDateString(created))).to);
-  return now.getTime() - created.getTime() >= 7 * DAY_MS || now.getTime() >= weekEnd;
+/**
+ * İlk arama bekleyişi (mesai dakikası). Aranmamış veli şimdiye kadar beklediği süreyle (alt sınır) girer:
+ * hiç aranmayan veli ortancayı iyi göstermesin.
+ */
+function firstCallMinutes(leads: WeeklyLead[], now: Date, hours: BusinessHours): number[] {
+  return leads.map((l) =>
+    businessMinutesBetween(new Date(l.createdAt), l.firstContactAt ? new Date(l.firstContactAt) : now, hours),
+  );
 }
 
-function firstCallMinutes(leads: WeeklyLead[], hours: BusinessHours): number[] {
-  return leads
-    .filter((l) => l.firstContactAt)
-    .map((l) => businessMinutesBetween(new Date(l.createdAt), new Date(l.firstContactAt as string), hours));
-}
-
-function reachRate(leads: WeeklyLead[], now: Date | undefined): number | null {
-  const eligible = leads.filter((l) => reachEligible(l, now));
-  return pct(eligible.filter(isReached).length, eligible.length);
+function reachRate(leads: WeeklyLead[]): number | null {
+  return pct(leads.filter(isReached).length, leads.length);
 }
 
 function apptRate(leads: WeeklyLead[]): number | null {
   const qualified = leads.filter((l) => l.isQualified);
   return pct(qualified.filter(hasAppt).length, qualified.length);
+}
+
+function isTaskOverdue(t: WeeklyTask, now: Date): boolean {
+  return t.dueAt ? Date.parse(t.dueAt) < now.getTime() : t.dueDate < istanbulDateString(now);
 }
 
 // ---- Kapılar ----
@@ -125,6 +141,16 @@ export type Gate = {
   tone: "green" | "red" | "none";
 };
 
+/** Yükleyicinin ek verisi (`computeWeekGates` hepsini geçirir). */
+export type GateInputs = {
+  /** Toplantı haftasının Pazartesisi: ziyarete gelme bu takvim haftasıyla süzülür, ulaşma hedef satırı önceki haftayı adlandırır. */
+  weekStart?: string;
+  /** Bir önceki haftada gelen reklam velileri (ulaşma kapısı). */
+  reachLeads?: WeeklyLead[];
+  /** Takvim haftasına düşen, reklam velilerinin randevuları (ziyarete gelme kapısı). */
+  weekAppts?: WeeklyAppt[];
+};
+
 function tone(value: number | null, ok: (v: number) => boolean): Gate["tone"] {
   if (value === null) return "none";
   return ok(value) ? "green" : "red";
@@ -132,18 +158,48 @@ function tone(value: number | null, ok: (v: number) => boolean): Gate["tone"] {
 
 /**
  * Dört bütçe kapısı. Payda 0 ise "veri yok" (gri), kırmızı sayılmaz.
- * Randevuya gelme: verilen randevulardan sonucu "geldi" olanların geldi + gelmedi içindeki payı.
+ * - İlk arama: `leads` (toplantı haftası) mesai dakikası ortancası; aranmamış veli şimdiye kadarki beklemesiyle.
+ * - Ulaşma: `inputs.reachLeads` (önceki hafta, hepsi 7 günü doldurmuş). Verilmezse `leads` içinden 7 günü dolanlar.
+ * - Randevu: `leads` içindeki nitelikliler.
+ * - Ziyarete gelme: `inputs.weekAppts` (verilmezse `leads`'in `appts`'ı); `weekStart` varsa takvim haftasıyla süzülür.
+ *   geldi / (geldi + gelmedi). Saati geçmiş, sonucu girilmemiş randevular hedef satırında sayılır.
  */
-export function computeGates(leads: WeeklyLead[], appts: WeeklyAppt[], now: Date, hours: BusinessHours, s: AdSettings): Gate[] {
+export function computeGates(
+  leads: WeeklyLead[],
+  appts: WeeklyAppt[],
+  now: Date,
+  hours: BusinessHours,
+  s: AdSettings,
+  inputs: GateInputs = {},
+): Gate[] {
   const ad = leads.filter(isAdSourced);
-  const adIds = new Set(ad.map((l) => l.id));
   const g = s.gates;
 
-  const firstCall = median(firstCallMinutes(ad, hours));
-  const reach = reachRate(ad, now);
+  const firstCall = median(firstCallMinutes(ad, now, hours));
+
+  const reachCohort = inputs.reachLeads
+    ? inputs.reachLeads.filter(isAdSourced)
+    : ad.filter((l) => now.getTime() - Date.parse(l.createdAt) >= 7 * DAY_MS);
+  const reach = reachRate(reachCohort);
+  const reachWeek = inputs.weekStart ? ` · ${formatWeekLabel(addDaysToDateString(inputs.weekStart, -7))} haftası` : "";
+
   const appt = apptRate(ad);
-  const done = appts.filter((a) => adIds.has(a.leadId) && (a.outcome === "geldi" || a.outcome === "gelmedi"));
+
+  const adIds = new Set(ad.map((l) => l.id));
+  let showAppts = inputs.weekAppts ?? appts.filter((a) => adIds.has(a.leadId));
+  if (inputs.weekStart) {
+    const range = weekRange(inputs.weekStart);
+    const [from, to] = [Date.parse(range.from), Date.parse(range.to)];
+    showAppts = showAppts.filter((a) => {
+      const at = Date.parse(a.scheduledAt);
+      return at >= from && at < to;
+    });
+  }
+  const done = showAppts.filter((a) => a.outcome === "geldi" || a.outcome === "gelmedi");
   const show = pct(done.filter((a) => a.outcome === "geldi").length, done.length);
+  const unresolvedPast = showAppts.filter(
+    (a) => (a.outcome === null || a.outcome === "bekliyor") && Date.parse(a.scheduledAt) < now.getTime(),
+  ).length;
 
   return [
     {
@@ -159,7 +215,7 @@ export function computeGates(leads: WeeklyLead[], appts: WeeklyAppt[], now: Date
       label: "Ulaşılan veli",
       value: reach,
       display: showPct(reach),
-      target: `hedef en az %${g.reachPct}`,
+      target: `hedef en az %${g.reachPct}${reachWeek}`,
       tone: tone(reach, (v) => v >= g.reachPct),
     },
     {
@@ -175,10 +231,24 @@ export function computeGates(leads: WeeklyLead[], appts: WeeklyAppt[], now: Date
       label: "Ziyarete gelen",
       value: show,
       display: showPct(show),
-      target: `hedef en az %${g.showPct}`,
+      target: `hedef en az %${g.showPct}${unresolvedPast > 0 ? ` · sonucu girilmemiş ${unresolvedPast}` : ""}`,
       tone: tone(show, (v) => v >= g.showPct),
     },
   ];
+}
+
+/** Yükleyici çıktısıyla kapılar (önerilen çağrı): haftayı, ulaşma kohortunu ve takvim haftası randevularını geçirir. */
+export function computeWeekGates(
+  data: { weekStart: string; leads: WeeklyLead[]; appts: WeeklyAppt[]; reachLeads: WeeklyLead[]; weekAppts: WeeklyAppt[] },
+  now: Date,
+  hours: BusinessHours,
+  s: AdSettings,
+): Gate[] {
+  return computeGates(data.leads, data.appts, now, hours, s, {
+    weekStart: data.weekStart,
+    reachLeads: data.reachLeads,
+    weekAppts: data.weekAppts,
+  });
 }
 
 export function anyGateRed(gates: Gate[]): { red: boolean; labels: string[] } {
@@ -196,31 +266,35 @@ export type Funnel = {
   lostReasons: { reason: string; label: string; n: number }[];
 };
 
-/** Haftada gelen reklam velilerinin bugünkü aşaması; en büyük oransal düşüş `worst`. */
+const FUNNEL_LABELS = ["Gelen veli", "Ulaşılan", "Nitelikli", "Randevu", "Ziyarete gelen", "Kayıt"];
+
+/**
+ * Haftada gelen reklam velilerinin bugünkü aşaması. Her veli ulaştığı en ileri aşamaya yerleşir ve önceki tüm
+ * adımlarda da sayılır (adım = "bu aşamada ya da ilerisinde"), böylece adımlar hiç artmaz. En büyük oransal düşüş `worst`.
+ */
 export function computeFunnel(leads: WeeklyLead[], appts: WeeklyAppt[]): Funnel {
   const ad = leads.filter(isAdSourced);
   const visitedIds = new Set(appts.filter((a) => a.outcome === "geldi").map((a) => a.leadId));
 
-  const counts: [string, number][] = [
-    ["Gelen veli", ad.length],
-    ["Ulaşılan", ad.filter(isReached).length],
-    ["Nitelikli", ad.filter((l) => l.isQualified).length],
-    ["Randevu", ad.filter(hasAppt).length],
-    ["Ziyarete gelen", ad.filter((l) => visitedIds.has(l.id) || VISITED_STATUSES.includes(l.status)).length],
-    ["Kayıt", ad.filter((l) => l.status === "kazanildi").length],
-  ];
+  const stageOf = (l: WeeklyLead): number => {
+    if (l.status === "kazanildi") return 5;
+    if (visitedIds.has(l.id) || VISITED_STATUSES.includes(l.status)) return 4;
+    if (hasAppt(l)) return 3;
+    if (l.isQualified) return 2;
+    if (isReached(l)) return 1;
+    return 0;
+  };
+  const stages = ad.map(stageOf);
+  const counts = FUNNEL_LABELS.map((_, i) => stages.filter((st) => st >= i).length);
 
-  const rates = counts.map(([, n], i) => {
-    const prev = i === 0 ? 0 : counts[i - 1][1];
-    return i === 0 || prev === 0 ? null : Math.max(0, prev - n) / prev;
-  });
+  const rates = counts.map((n, i) => (i === 0 || counts[i - 1] === 0 ? null : (counts[i - 1] - n) / counts[i - 1]));
   let worstIdx = -1;
   rates.forEach((r, i) => {
     if (r !== null && r > 0 && (worstIdx === -1 || r > (rates[worstIdx] as number))) worstIdx = i;
   });
-  const steps = counts.map(([label, n], i) => ({
+  const steps = FUNNEL_LABELS.map((label, i) => ({
     label,
-    n,
+    n: counts[i],
     dropPct: rates[i] === null ? null : Math.round((rates[i] as number) * 100),
     worst: i === worstIdx,
   }));
@@ -228,6 +302,7 @@ export function computeFunnel(leads: WeeklyLead[], appts: WeeklyAppt[]): Funnel 
   const byPlatform = { google: 0, meta: 0, organik: 0 };
   for (const l of ad) {
     if (l.adPlatform === "meta") byPlatform.meta += 1;
+    // K10: source='reklam' yalnız Google (gclid) için kalır; ad_platform boş eski kayıtlar da Google sayılır.
     else if (l.adPlatform === "google" || l.source === "reklam") byPlatform.google += 1;
     else byPlatform.organik += 1;
   }
@@ -252,44 +327,56 @@ export type ScorecardRow = {
   reachPct: string;
   apptPct: string;
   openTasks: number;
+  overdueTasks: number;
   flags: { apptRed: boolean; tasksWarn: boolean };
 };
 
-/**
- * Kişi başına (veli `assignedTo`) ortanca ilk arama, ulaşma, nitelikliden randevu ve açık görev.
- * `opts.now` verilirse ulaşma kapıdaki 7 gün kuralıyla, verilmezse tüm velilerle hesaplanır.
- * Randevu oranı kapı eşiğinin altındaysa kırmızı; açık görevi olan turuncu.
- */
-export function computeScorecard(
-  leads: WeeklyLead[],
-  appts: WeeklyAppt[],
-  openTasksByUser: Map<string, number>,
-  names: Map<string, string>,
-  hours: BusinessHours,
-  opts: { now?: Date; gates?: AdSettings["gates"] } = {},
-): ScorecardRow[] {
-  void appts; // Karne randevu oranını velinin randevu durumundan alır.
-  const gates = opts.gates ?? DEFAULT_AD_SETTINGS.gates;
-  const byUser = new Map<string, WeeklyLead[]>();
-  for (const l of leads) {
-    if (!l.assignedTo || !isAdSourced(l)) continue;
-    const list = byUser.get(l.assignedTo) ?? [];
-    list.push(l);
-    byUser.set(l.assignedTo, list);
-  }
+export type ScorecardInput = {
+  /** Toplantı haftasında gelen veliler: ilk arama ve randevu. */
+  leads: WeeklyLead[];
+  /** Bir önceki haftada gelen veliler: ulaşma (kapıyla aynı kohort). */
+  reachLeads: WeeklyLead[];
+  /** Kişilerin açık görevleri. */
+  tasks: WeeklyTask[];
+  names: Map<string, string>;
+  hours: BusinessHours;
+  now: Date;
+  gates: AdSettings["gates"];
+};
 
-  return [...byUser.entries()]
-    .map(([userId, own]) => {
+/**
+ * Kişi başına (veli `assignedTo`) ortanca ilk arama, ulaşma, nitelikliden randevu ve açık görev; yalnız reklam velileri.
+ * Randevu oranı kapı eşiğinin altındaysa kırmızı; süresi geçmiş açık görevi olan turuncu.
+ */
+export function computeScorecard(input: ScorecardInput): ScorecardRow[] {
+  const { hours, now, gates } = input;
+  const group = (leads: WeeklyLead[]) => {
+    const map = new Map<string, WeeklyLead[]>();
+    for (const l of leads) {
+      if (!l.assignedTo || !isAdSourced(l)) continue;
+      map.set(l.assignedTo, [...(map.get(l.assignedTo) ?? []), l]);
+    }
+    return map;
+  };
+  const week = group(input.leads);
+  const prev = group(input.reachLeads);
+  const userIds = [...new Set([...week.keys(), ...prev.keys()])];
+
+  return userIds
+    .map((userId) => {
+      const own = week.get(userId) ?? [];
       const appt = apptRate(own);
-      const openTasks = openTasksByUser.get(userId) ?? 0;
+      const tasks = input.tasks.filter((t) => t.assignedTo === userId);
+      const overdueTasks = tasks.filter((t) => isTaskOverdue(t, now)).length;
       return {
         userId,
-        name: names.get(userId) ?? "Bilinmeyen kişi",
-        firstCallMedian: showMinutes(median(firstCallMinutes(own, hours))),
-        reachPct: showPct(reachRate(own, opts.now)),
+        name: input.names.get(userId) ?? "Bilinmeyen kişi",
+        firstCallMedian: showMinutes(median(firstCallMinutes(own, now, hours))),
+        reachPct: showPct(reachRate(prev.get(userId) ?? [])),
         apptPct: showPct(appt),
-        openTasks,
-        flags: { apptRed: appt !== null && appt < gates.apptPct, tasksWarn: openTasks > 0 },
+        openTasks: tasks.length,
+        overdueTasks,
+        flags: { apptRed: appt !== null && appt < gates.apptPct, tasksWarn: overdueTasks > 0 },
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "tr"));

@@ -4,12 +4,15 @@ import {
   computeFunnel,
   computeGates,
   computeScorecard,
+  computeWeekGates,
+  formatWeekLabel,
   isAdSourced,
   isPaidAd,
   lastCompletedWeekStart,
   weekRange,
   type WeeklyAppt,
   type WeeklyLead,
+  type WeeklyTask,
 } from "@/lib/ads/weekly";
 import { loadWeeklyData } from "@/lib/queries/weekly";
 import { DEFAULT_AD_SETTINGS } from "@/lib/ads/ad-settings";
@@ -17,8 +20,10 @@ import { DEFAULT_BUSINESS_HOURS, istanbulAt } from "@/lib/lead-flow/business-hou
 
 const H = DEFAULT_BUSINESS_HOURS;
 const S = DEFAULT_AD_SETTINGS;
-// Hafta: Pazartesi 2026-11-02 … Pazar 2026-11-08. Toplantı: Pazartesi 2026-11-16 (her veli 7 günü doldurdu).
-const NOW = istanbulAt("2026-11-16", "09:00");
+// Toplantı haftası: Pazartesi 2026-11-02 … Pazar 2026-11-08. Toplantı: Pazartesi 2026-11-09 09:00.
+// Ulaşma kohortu: bir önceki hafta, 26 Ekim … 1 Kasım.
+const WEEK = "2026-11-02";
+const NOW = istanbulAt("2026-11-09", "09:00");
 
 let seq = 0;
 function lead(over: Partial<WeeklyLead> = {}): WeeklyLead {
@@ -41,13 +46,15 @@ function lead(over: Partial<WeeklyLead> = {}): WeeklyLead {
   };
 }
 const at = (day: string, hhmm: string) => istanbulAt(day, hhmm).toISOString();
-const appt = (leadId: string, outcome: string | null, assignedTo: string | null = null): WeeklyAppt => ({
+const appt = (leadId: string, outcome: string | null, scheduledAt = at("2026-11-05", "10:00"), assignedTo: string | null = null): WeeklyAppt => ({
   leadId,
-  scheduledAt: at("2026-11-05", "10:00"),
+  scheduledAt,
   outcome,
   assignedTo,
 });
 const gate = (gates: ReturnType<typeof computeGates>, key: string) => gates.find((g) => g.key === key)!;
+const called = (min: number, base = at("2026-11-03", "10:00")) =>
+  lead({ createdAt: base, firstContactAt: new Date(Date.parse(base) + min * 60000).toISOString() });
 
 describe("reklam velisi kaynağı (K6/K10)", () => {
   it("Google, Meta reklamı ve organik Instagram mesajı reklam velisidir; referans değildir", () => {
@@ -78,6 +85,10 @@ describe("hafta", () => {
     // Pazar gece UTC'de hâlâ Pazar ama İstanbul'da Pazartesi 01:30
     expect(lastCompletedWeekStart(new Date("2026-11-08T22:30:00Z"))).toBe("2026-11-02");
   });
+  it("hafta etiketi: aynı ay ve ay geçişi", () => {
+    expect(formatWeekLabel("2026-11-02")).toBe("2–8 Kasım");
+    expect(formatWeekLabel("2026-10-26")).toBe("26 Ekim–1 Kasım");
+  });
 });
 
 describe("computeGates", () => {
@@ -91,20 +102,28 @@ describe("computeGates", () => {
     expect(g.tone).toBe("green");
   });
 
-  it("ortanca çift sayıda ortadaki ikisinin ortalaması; firstContactAt olmayan sayılmaz", () => {
-    const mk = (min: number) =>
-      lead({ createdAt: at("2026-11-03", "10:00"), firstContactAt: new Date(Date.parse(at("2026-11-03", "10:00")) + min * 60000).toISOString() });
-    const leads = [mk(4), mk(30), mk(10), mk(20), lead({ firstContactAt: null })];
-    const g = gate(computeGates(leads, [], NOW, H, S), "firstCall");
+  it("ortanca çift sayıda ortadaki ikisinin ortalaması", () => {
+    const g = gate(computeGates([called(4), called(30), called(10), called(20)], [], NOW, H, S), "firstCall");
     expect(g.value).toBe(15);
     expect(g.tone).toBe("green");
-    const g2 = gate(computeGates([mk(10), mk(30)], [], NOW, H, S), "firstCall");
+    const g2 = gate(computeGates([called(10), called(30)], [], NOW, H, S), "firstCall");
     expect(g2.value).toBe(20);
     expect(g2.tone).toBe("red");
   });
 
+  it("aranmamış veli şimdiye kadarki mesai beklemesiyle ortancaya girer", () => {
+    const now = istanbulAt("2026-11-03", "10:40");
+    const uncalled = lead({ createdAt: at("2026-11-03", "10:00"), firstContactAt: null });
+    const g = gate(computeGates([called(4), called(10), uncalled], [], now, H, S), "firstCall");
+    expect(g.value).toBe(10);
+    // Hiç aranmayan iki veli: ortanca kırmızı, "veri yok" değil
+    const g2 = gate(computeGates([uncalled, lead({ createdAt: at("2026-11-03", "10:20") })], [], now, H, S), "firstCall");
+    expect(g2.value).toBe(30);
+    expect(g2.tone).toBe("red");
+  });
+
   it("veli yokken dört kapı 'veri yok', kırmızı değil", () => {
-    const gates = computeGates([], [], NOW, H, S);
+    const gates = computeGates([], [], NOW, H, S, { weekStart: WEEK, reachLeads: [], weekAppts: [] });
     expect(gates.map((g) => g.key)).toEqual(["firstCall", "reach", "appt", "show"]);
     for (const g of gates) {
       expect(g.value).toBeNull();
@@ -116,14 +135,14 @@ describe("computeGates", () => {
 
   it("nitelikliden randevu %29 kırmızı, %35 yeşil", () => {
     const build = (withAppt: number, total: number) =>
-      Array.from({ length: total }, (_, i) => lead({ isQualified: true, qReached: true, status: "ulasildi", hasAppointment: i < withAppt }));
-    // 2/7 = %28,6 → %29
+      Array.from({ length: total }, (_, i) =>
+        lead({ isQualified: true, qReached: true, status: "ulasildi", firstContactAt: at("2026-11-03", "10:05"), hasAppointment: i < withAppt }),
+      );
     const red = computeGates(build(2, 7), [], NOW, H, S);
     expect(gate(red, "appt").display).toBe("%29");
     expect(gate(red, "appt").tone).toBe("red");
     expect(gate(red, "appt").target).toBe("hedef en az %35 · nitelikli velilerden");
     expect(anyGateRed(red)).toEqual({ red: true, labels: ["Randevu verilen"] });
-    // 7/20 = %35
     const green = computeGates(build(7, 20), [], NOW, H, S);
     expect(gate(green, "appt").display).toBe("%35");
     expect(gate(green, "appt").tone).toBe("green");
@@ -135,60 +154,89 @@ describe("computeGates", () => {
       lead({ isQualified: true, status: "ulasildi" }),
       lead({ isQualified: false, status: "randevu", hasAppointment: true }),
     ];
-    const g = gate(computeGates(leads, [], NOW, H, S), "appt");
-    expect(g.value).toBe(50);
+    expect(gate(computeGates(leads, [], NOW, H, S), "appt").value).toBe(50);
   });
 
-  it("ulaşma: qReached ya da 'ulaşılamadı' dışında ilerlemiş durum; 7 günü dolmamış veli sayılmaz", () => {
-    const leads = [
-      lead({ qReached: true, status: "yeni" }),
-      lead({ status: "ulasildi" }),
-      lead({ status: "kaybedildi", lostReason: "ulasilamadi" }),
-      lead({ status: "kaybedildi", lostReason: "fiyat" }),
-      lead({ status: "yeni" }),
+  it("ulaşma: bir önceki haftanın (7 günü dolmuş) kohortundan; hedef satırı haftayı söyler", () => {
+    const prev = (over: Partial<WeeklyLead>) => lead({ createdAt: at("2026-10-28", "10:00"), ...over });
+    const reachLeads = [
+      prev({ qReached: true, status: "yeni" }),
+      prev({ status: "ulasildi" }),
+      prev({ status: "kaybedildi", lostReason: "ulasilamadi" }),
+      prev({ status: "kaybedildi", lostReason: "fiyat" }),
+      prev({ status: "yeni" }),
+      prev({ status: "ulasildi", source: "referans", adPlatform: null, channel: "telefon" }),
     ];
-    const g = gate(computeGates(leads, [], NOW, H, S), "reach");
+    // Toplantı haftasının velileri ulaşmaya girmez
+    const weekLeads = [lead({ status: "yeni" }), lead({ status: "yeni" })];
+    const g = gate(computeGates(weekLeads, [], NOW, H, S, { weekStart: WEEK, reachLeads }), "reach");
     expect(g.value).toBe(60);
     expect(g.display).toBe("%60");
     expect(g.label).toBe("Ulaşılan veli");
-    expect(g.target).toBe("hedef en az %80");
+    expect(g.target).toBe("hedef en az %80 · 26 Ekim–1 Kasım haftası");
     expect(g.tone).toBe("red");
-
-    // Çarşamba bakılan içinde bulunulan hafta: Pazartesi gelen veli henüz 7 gün doldurmadı.
-    const midWeek = istanbulAt("2026-11-04", "12:00");
-    const fresh = [lead({ createdAt: at("2026-11-02", "10:00"), status: "yeni" })];
-    expect(gate(computeGates(fresh, [], midWeek, H, S), "reach").display).toBe("veri yok");
   });
 
-  it("ulaşma: hafta bittiyse Pazar gelen veli 7 gün dolmadan sayılır", () => {
-    const sunday = lead({ createdAt: at("2026-11-08", "20:00"), status: "ulasildi" });
-    const g = gate(computeGates([sunday], [], istanbulAt("2026-11-09", "09:00"), H, S), "reach");
-    expect(g.value).toBe(100);
-    expect(g.tone).toBe("green");
+  it("ulaşma: önceki hafta kohortu boşsa 'veri yok'", () => {
+    const g = gate(computeGates([lead({ status: "ulasildi" })], [], NOW, H, S, { weekStart: WEEK, reachLeads: [] }), "reach");
+    expect(g.display).toBe("veri yok");
+    expect(g.tone).toBe("none");
   });
 
-  it("ziyarete gelme: geldi / (geldi + gelmedi); bekleyen ve iptal sayılmaz", () => {
-    const l = lead();
-    const appts = [appt(l.id, "geldi"), appt(l.id, "geldi"), appt(l.id, "geldi"), appt(l.id, "gelmedi"), appt(l.id, "bekliyor"), appt(l.id, "iptal")];
-    const g = gate(computeGates([l], appts, NOW, H, S), "show");
+  it("ziyarete gelme: takvim haftasının randevuları, geldi / (geldi + gelmedi); hafta dışı sayılmaz", () => {
+    const weekAppts = [
+      appt("x1", "geldi"),
+      appt("x2", "geldi", at("2026-11-02", "00:00")),
+      appt("x3", "geldi", at("2026-11-08", "23:59")),
+      appt("x4", "gelmedi"),
+      appt("x5", "iptal"),
+      appt("x6", "gelmedi", at("2026-11-09", "00:00")), // sonraki hafta
+      appt("x7", "gelmedi", at("2026-11-01", "23:59")), // önceki hafta
+    ];
+    const g = gate(computeGates([], [], NOW, H, S, { weekStart: WEEK, weekAppts }), "show");
     expect(g.value).toBe(75);
     expect(g.label).toBe("Ziyarete gelen");
     expect(g.target).toBe("hedef en az %70");
     expect(g.tone).toBe("green");
   });
 
+  it("ziyarete gelme: saati geçmiş ama sonucu girilmemiş randevu sayısı hedef satırında", () => {
+    const now = istanbulAt("2026-11-06", "12:00");
+    const weekAppts = [
+      appt("a", "geldi", at("2026-11-03", "10:00")),
+      appt("b", "bekliyor", at("2026-11-04", "10:00")),
+      appt("c", null, at("2026-11-05", "10:00")),
+      appt("d", "bekliyor", at("2026-11-07", "10:00")), // henüz saati gelmedi
+    ];
+    const g = gate(computeGates([], [], now, H, S, { weekStart: WEEK, weekAppts }), "show");
+    expect(g.value).toBe(100);
+    expect(g.target).toBe("hedef en az %70 · sonucu girilmemiş 2");
+  });
+
   it("eşikler ayarlardan gelir", () => {
-    const l = lead({ createdAt: at("2026-11-03", "10:00"), firstContactAt: at("2026-11-03", "10:12") });
     const custom = { ...S, gates: { ...S.gates, firstCallMin: 10 } };
-    const g = gate(computeGates([l], [], NOW, H, custom), "firstCall");
+    const g = gate(computeGates([called(12)], [], NOW, H, custom), "firstCall");
     expect(g.tone).toBe("red");
     expect(g.target).toBe("hedef en fazla 10 dk (ideal 5)");
   });
 
   it("referans velisi kapılara girmez", () => {
-    const ref = lead({ source: "referans", adPlatform: null, channel: "telefon", firstContactAt: at("2026-11-03", "12:00") });
+    const ref = lead({ source: "referans", adPlatform: null, channel: "telefon", firstContactAt: at("2026-11-03", "12:00"), isQualified: true });
     const gates = computeGates([ref], [appt(ref.id, "gelmedi")], NOW, H, S);
     expect(gates.every((g) => g.display === "veri yok")).toBe(true);
+  });
+
+  it("computeWeekGates yükleyici çıktısıyla aynı sonucu verir", () => {
+    const data = {
+      weekStart: WEEK,
+      leads: [called(6)],
+      appts: [],
+      reachLeads: [lead({ createdAt: at("2026-10-27", "10:00"), status: "ulasildi" })],
+      weekAppts: [appt("z", "geldi")],
+    };
+    const gates = computeWeekGates(data, NOW, H, S);
+    expect(gates.map((g) => g.display)).toEqual(["6 dk", "%100", "veri yok", "%100"]);
+    expect(gates).toEqual(computeGates(data.leads, data.appts, NOW, H, S, data));
   });
 });
 
@@ -214,11 +262,25 @@ describe("computeFunnel", () => {
       ["Kayıt", 1],
     ]);
     expect(f.steps.map((s) => s.dropPct)).toEqual([null, 17, 20, 50, 50, 0]);
-    // Eşit düşüşte ilki işaretlenir
     expect(f.steps.map((s) => s.worst)).toEqual([false, false, false, true, false, false]);
-    // Organik Instagram mesajı huniye girer, platform kırılımında 'organik'
+    // source='reklam' ve ad_platform boş → Google (K10); organik Instagram mesajı 'organik'
     expect(f.byPlatform).toEqual({ google: 3, meta: 2, organik: 1 });
     expect(f.lostReasons).toEqual([{ reason: "ulasilamadi", label: "Ulaşılamadı", n: 1 }]);
+  });
+
+  it("her veli ulaştığı en ileri aşamada sayılır, adımlar hiç artmaz", () => {
+    const leads = [
+      // Nitelik işaretlenmeden kayıt olmuş veli: tüm adımlarda sayılır
+      lead({ status: "kazanildi", qReached: null, isQualified: false }),
+      // Nitelikli değil ama ziyarete gelmiş veli
+      lead({ status: "randevu", hasAppointment: true, isQualified: false, qReached: true }),
+      lead({ status: "yeni" }),
+    ];
+    const f = computeFunnel(leads, [appt(leads[1].id, "geldi")]);
+    expect(f.steps.map((s) => s.n)).toEqual([3, 2, 2, 2, 2, 1]);
+    for (let i = 1; i < f.steps.length; i++) expect(f.steps[i].n).toBeLessThanOrEqual(f.steps[i - 1].n);
+    expect(f.steps.map((s) => s.worst)).toEqual([false, false, false, false, false, true]);
+    expect(f.steps.map((s) => s.dropPct)).toEqual([null, 33, 0, 0, 0, 50]);
   });
 
   it("kayıp nedenleri sayılır, çoktan aza", () => {
@@ -247,32 +309,61 @@ describe("computeFunnel", () => {
 });
 
 describe("computeScorecard", () => {
-  it("kişi başına ortanca ilk arama, ulaşma, randevu ve açık görev", () => {
-    const z = "u-zehra";
-    const s = "u-selin";
+  const z = "u-zehra";
+  const s = "u-selin";
+  const task = (assignedTo: string, dueDate: string, dueAt: string | null = null): WeeklyTask => ({ assignedTo, dueDate, dueAt });
+
+  it("kişi başına ortanca ilk arama, ulaşma (önceki hafta), randevu, açık ve geciken görev", () => {
     const leads = [
       lead({ assignedTo: z, createdAt: at("2026-11-03", "10:00"), firstContactAt: at("2026-11-03", "10:05"), status: "ulasildi", qReached: true, isQualified: true }),
       lead({ assignedTo: z, createdAt: at("2026-11-03", "11:00"), firstContactAt: at("2026-11-03", "11:07"), status: "ulasildi", qReached: true, isQualified: true }),
       lead({ assignedTo: z, createdAt: at("2026-11-03", "12:00"), firstContactAt: at("2026-11-03", "12:03"), status: "randevu", qReached: true, isQualified: true, hasAppointment: true }),
       lead({ assignedTo: s, adPlatform: null, source: "instagram", channel: "ig_dm", createdAt: at("2026-11-04", "10:00"), firstContactAt: at("2026-11-04", "10:11"), status: "ulasildi", qReached: true, isQualified: true, hasAppointment: true }),
-      lead({ assignedTo: s, status: "kaybedildi", lostReason: "ulasilamadi" }),
       lead({ assignedTo: s, source: "referans", adPlatform: null, channel: "telefon", status: "ulasildi", qReached: true }),
       lead({ assignedTo: null, status: "ulasildi" }),
     ];
-    const tasks = new Map([[s, 2]]);
+    const prev = (over: Partial<WeeklyLead>) => lead({ createdAt: at("2026-10-28", "10:00"), ...over });
+    const reachLeads = [
+      prev({ assignedTo: z, status: "ulasildi" }),
+      prev({ assignedTo: s, status: "ulasildi" }),
+      prev({ assignedTo: s, status: "kaybedildi", lostReason: "ulasilamadi" }),
+    ];
+    const tasks = [
+      task(s, "2026-11-06"), // geçmiş gün → gecikti
+      task(s, "2026-11-09", at("2026-11-09", "08:30")), // saati geçti → gecikti
+      task(z, "2026-11-09", at("2026-11-09", "17:00")), // bugün, saati gelmedi
+      task(z, "2026-11-09"), // bugün, saatsiz → gecikmedi
+    ];
     const names = new Map([[z, "Zehra"], [s, "Selin"]]);
-    const rows = computeScorecard(leads, [], tasks, names, H);
+    const rows = computeScorecard({ leads, reachLeads, tasks, names, hours: H, now: NOW, gates: S.gates });
     expect(rows).toEqual([
-      { userId: s, name: "Selin", firstCallMedian: "11 dk", reachPct: "%50", apptPct: "%100", openTasks: 2, flags: { apptRed: false, tasksWarn: true } },
-      { userId: z, name: "Zehra", firstCallMedian: "5 dk", reachPct: "%100", apptPct: "%33", openTasks: 0, flags: { apptRed: true, tasksWarn: false } },
+      { userId: s, name: "Selin", firstCallMedian: "11 dk", reachPct: "%50", apptPct: "%100", openTasks: 2, overdueTasks: 2, flags: { apptRed: false, tasksWarn: true } },
+      { userId: z, name: "Zehra", firstCallMedian: "5 dk", reachPct: "%100", apptPct: "%33", openTasks: 2, overdueTasks: 0, flags: { apptRed: true, tasksWarn: false } },
     ]);
   });
 
-  it("hesaplanamayan oran 'veri yok', bilinmeyen kişi adı yerine kısa etiket", () => {
-    const rows = computeScorecard([lead({ assignedTo: "u-x", status: "yeni" })], [], new Map(), new Map(), H);
+  it("aranmamış veli ilk aramaya girer; hesaplanamayan oran 'veri yok'; bilinmeyen kişi", () => {
+    const now = istanbulAt("2026-11-03", "10:20");
+    const rows = computeScorecard({
+      leads: [lead({ assignedTo: "u-x", createdAt: at("2026-11-03", "10:00"), status: "yeni" })],
+      reachLeads: [],
+      tasks: [],
+      names: new Map(),
+      hours: H,
+      now,
+      gates: { ...S.gates, apptPct: 50 },
+    });
     expect(rows).toEqual([
-      { userId: "u-x", name: "Bilinmeyen kişi", firstCallMedian: "veri yok", reachPct: "%0", apptPct: "veri yok", openTasks: 0, flags: { apptRed: false, tasksWarn: false } },
+      { userId: "u-x", name: "Bilinmeyen kişi", firstCallMedian: "20 dk", reachPct: "veri yok", apptPct: "veri yok", openTasks: 0, overdueTasks: 0, flags: { apptRed: false, tasksWarn: false } },
     ]);
+  });
+
+  it("randevu eşiği ayarlardan", () => {
+    const leads = [lead({ assignedTo: z, isQualified: true, hasAppointment: true }), lead({ assignedTo: z, isQualified: true })];
+    const run = (apptPct: number) =>
+      computeScorecard({ leads, reachLeads: [], tasks: [], names: new Map(), hours: H, now: NOW, gates: { ...S.gates, apptPct } })[0].flags.apptRed;
+    expect(run(50)).toBe(false);
+    expect(run(60)).toBe(true);
   });
 });
 
@@ -310,42 +401,72 @@ function fakeClient(handlers: Record<string, (call: Call, range: [number, number
   return { client: { from } as never, calls };
 }
 
+const opArg = (c: Call, m: string) => c.ops.find(([op]) => op === m)?.[1];
+
 describe("loadWeeklyData", () => {
-  it("haftanın reklam velilerini sayfalayarak okur, randevu, açık görev ve adları toplar", async () => {
+  it("toplantı haftası ve önceki hafta velilerini, takvim haftası randevularını, görevleri ve adları okur", async () => {
     const total = 1150;
     const users = Array.from({ length: 150 }, (_, i) => `u${i}`);
+    const weekFrom = "2026-11-01T21:00:00.000Z";
+    const prevFrom = "2026-10-25T21:00:00.000Z";
     const { client, calls } = fakeClient({
-      leads: (_c, [f, t]) => ({
-        data: Array.from({ length: Math.max(0, Math.min(t, total - 1) - f + 1) }, (_, k) => {
-          const i = f + k;
+      leads: (c, [f, t]) => {
+        const prevWeek = (opArg(c, "gte") as string[])[1] === prevFrom;
+        if (prevWeek) {
           return {
-            id: `l${i}`, created_at: "2026-11-03T07:00:00Z", first_contact_at: null, status: "yeni", lost_reason: null,
-            is_qualified: i === 0 ? null : false, q_reached: null, source: i === 1 ? "referans" : "reklam",
-            channel: i === 1 ? "telefon" : "form", ad_platform: i === 1 ? null : "google", content_code: null,
-            assigned_to: users[i % users.length],
-            appointments: i === 0 ? [{ scheduled_at: "2026-11-05T07:00:00Z", outcome: "geldi" }, { scheduled_at: "2026-11-06T07:00:00Z", outcome: "iptal" }]
-              : i === 2 ? [{ scheduled_at: "2026-11-05T07:00:00Z", outcome: "iptal" }] : [],
+            data: f === 0 ? [
+              { id: "p1", created_at: "2026-10-27T07:00:00Z", first_contact_at: null, status: "ulasildi", lost_reason: null, is_qualified: false, q_reached: true, source: "reklam", channel: "form", ad_platform: "google", content_code: null, assigned_to: "u-prev", appointments: [] },
+            ] : [],
+            error: null,
           };
-        }),
+        }
+        return {
+          data: Array.from({ length: Math.max(0, Math.min(t, total - 1) - f + 1) }, (_, k) => {
+            const i = f + k;
+            return {
+              id: `l${i}`, created_at: "2026-11-03T07:00:00Z", first_contact_at: null, status: "yeni", lost_reason: null,
+              is_qualified: i === 0 ? null : false, q_reached: null, source: i === 1 ? "referans" : "reklam",
+              channel: i === 1 ? "telefon" : "form", ad_platform: i === 1 ? null : "google", content_code: null,
+              assigned_to: users[i % users.length],
+              appointments: i === 0 ? [{ scheduled_at: "2026-11-05T07:00:00Z", outcome: "geldi" }, { scheduled_at: "2026-11-06T07:00:00Z", outcome: "iptal" }]
+                : i === 2 ? [{ scheduled_at: "2026-11-05T07:00:00Z", outcome: "iptal" }] : [],
+            };
+          }),
+          error: null,
+        };
+      },
+      appointments: () => ({
+        data: [
+          { lead_id: "old1", scheduled_at: "2026-11-04T07:00:00Z", outcome: "gelmedi", lead: { assigned_to: "u0", source: "instagram", channel: "ig_dm", ad_platform: null } },
+          { lead_id: "ref1", scheduled_at: "2026-11-04T08:00:00Z", outcome: "geldi", lead: { assigned_to: "u0", source: "referans", channel: "telefon", ad_platform: null } },
+        ],
         error: null,
       }),
       tasks: (c) => {
-        const ids = (c.ops.find(([m]) => m === "in")![1][1] as string[]);
-        return { data: ids.includes("u0") ? [{ assigned_to: "u0" }, { assigned_to: "u0" }] : [], error: null };
+        const ids = (opArg(c, "in") as unknown[])[1] as string[];
+        return {
+          data: ids.includes("u0") ? [
+            { assigned_to: "u0", due_date: "2026-11-05", due_at: null },
+            { assigned_to: "u0", due_date: "2026-11-12", due_at: "2026-11-12T07:00:00Z" },
+          ] : [],
+          error: null,
+        };
       },
       profiles: (c) => {
-        const ids = (c.ops.find(([m]) => m === "in")![1][1] as string[]);
+        const ids = (opArg(c, "in") as unknown[])[1] as string[];
         return { data: ids.map((id) => ({ id, full_name: `Ad ${id}` })), error: null };
       },
     });
 
     const data = await loadWeeklyData(client, "2026-11-02");
+    expect(data.weekStart).toBe("2026-11-02");
 
-    const leadCalls = calls.filter((c) => c.table === "leads");
-    expect(leadCalls.map((c) => c.ops.find(([m]) => m === "range")![1])).toEqual([[0, 999], [1000, 1999]]);
-    expect(leadCalls[0].ops).toContainEqual(["gte", ["created_at", "2026-11-01T21:00:00.000Z"]]);
-    expect(leadCalls[0].ops).toContainEqual(["lt", ["created_at", "2026-11-08T21:00:00.000Z"]]);
-    expect(leadCalls[0].ops).toContainEqual(["or", ["ad_platform.in.(google,meta),source.eq.reklam,channel.in.(ig_dm,ig_yorum)"]]);
+    const weekLeadCalls = calls.filter((c) => c.table === "leads" && (opArg(c, "gte") as string[])[1] === weekFrom);
+    expect(weekLeadCalls.map((c) => opArg(c, "range"))).toEqual([[0, 999], [1000, 1999]]);
+    expect(weekLeadCalls[0].ops).toContainEqual(["lt", ["created_at", "2026-11-08T21:00:00.000Z"]]);
+    expect(weekLeadCalls[0].ops).toContainEqual(["or", ["ad_platform.in.(google,meta),source.eq.reklam,channel.in.(ig_dm,ig_yorum)"]]);
+    const prevCall = calls.find((c) => c.table === "leads" && (opArg(c, "gte") as string[])[1] === prevFrom)!;
+    expect(prevCall.ops).toContainEqual(["lt", ["created_at", weekFrom]]);
 
     // Referans velisi süzgeçten kaçsa da düşer
     expect(data.leads).toHaveLength(total - 1);
@@ -357,20 +478,37 @@ describe("loadWeeklyData", () => {
       { leadId: "l0", scheduledAt: "2026-11-05T07:00:00Z", outcome: "geldi", assignedTo: "u0" },
       { leadId: "l0", scheduledAt: "2026-11-06T07:00:00Z", outcome: "iptal", assignedTo: "u0" },
     ]);
+    expect(data.reachLeads.map((l) => l.id)).toEqual(["p1"]);
+
+    // Takvim haftası randevuları: K6 süzgeci ilişkili velide, referans düşer
+    const apptCall = calls.find((c) => c.table === "appointments")!;
+    expect((opArg(apptCall, "select") as string[])[0]).toContain("lead:leads!inner(");
+    expect(apptCall.ops).toContainEqual(["gte", ["scheduled_at", weekFrom]]);
+    expect(apptCall.ops).toContainEqual(["lt", ["scheduled_at", "2026-11-08T21:00:00.000Z"]]);
+    expect(apptCall.ops).toContainEqual(["or", ["ad_platform.in.(google,meta),source.eq.reklam,channel.in.(ig_dm,ig_yorum)", { referencedTable: "lead" }]]);
+    expect(data.weekAppts).toEqual([{ leadId: "old1", scheduledAt: "2026-11-04T07:00:00Z", outcome: "gelmedi", assignedTo: "u0" }]);
 
     // .in() listeleri ≤ 100
     for (const c of calls.filter((c) => c.table === "tasks" || c.table === "profiles")) {
-      expect((c.ops.find(([m]) => m === "in")![1][1] as string[]).length).toBeLessThanOrEqual(100);
+      expect(((opArg(c, "in") as unknown[])[1] as string[]).length).toBeLessThanOrEqual(100);
     }
     const taskCall = calls.find((c) => c.table === "tasks")!;
     expect(taskCall.ops).toContainEqual(["eq", ["status", "acik"]]);
     expect(data.openTasksByUser.get("u0")).toBe(2);
+    expect(data.openTasks.filter((t) => t.assignedTo === "u0")).toEqual([
+      { assignedTo: "u0", dueDate: "2026-11-05", dueAt: null },
+      { assignedTo: "u0", dueDate: "2026-11-12", dueAt: "2026-11-12T07:00:00Z" },
+    ]);
     expect(data.names.get("u149")).toBe("Ad u149");
-    expect(data.names.size).toBe(150);
+    expect(data.names.get("u-prev")).toBe("Ad u-prev");
+    expect(data.names.size).toBe(151);
   });
 
   it("sorgu hatasında fırlatır", async () => {
-    const { client } = fakeClient({ leads: () => ({ data: null, error: { message: "leads boom" } }) });
+    const { client } = fakeClient({
+      leads: () => ({ data: null, error: { message: "leads boom" } }),
+      appointments: () => ({ data: [], error: null }),
+    });
     await expect(loadWeeklyData(client, "2026-11-02")).rejects.toThrow("leads boom");
   });
 });
