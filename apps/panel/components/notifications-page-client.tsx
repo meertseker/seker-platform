@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { BellOff, CheckCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { markNotificationRead, markNotificationsRead } from "@/actions/notifications";
 import { NotificationList } from "@/components/notification-list";
 import { visibleUnreadCount } from "@/lib/notifications/bell-state";
@@ -31,6 +31,7 @@ export function NotificationsPageClient({
 }: NotificationsPageClientProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   // İyimser okundu durumu (zildekiyle aynı desen); sunucudan yeni veri gelince sıfırlanır.
   const [readIds, setReadIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -63,9 +64,15 @@ export function NotificationsPageClient({
 
   function markAllRead() {
     setAllRead(true);
+    // Düğme devre dışı kalınca odak body'ye düşmesin.
+    headingRef.current?.focus({ preventScroll: true });
     startTransition(async () => {
-      const result = await markNotificationsRead();
-      if ("error" in result && result.error) setAllRead(false);
+      try {
+        const result = await markNotificationsRead();
+        if ("error" in result && result.error) setAllRead(false);
+      } catch {
+        setAllRead(false);
+      }
       router.refresh();
     });
   }
@@ -74,7 +81,11 @@ export function NotificationsPageClient({
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold text-foreground">Bildirimler</h1>
+          <h1
+            ref={headingRef}
+            tabIndex={-1}
+            className="text-3xl font-semibold text-foreground focus:outline-none"
+          >Bildirimler</h1>
           <p className="mt-2 text-sm text-muted-foreground tabular-nums">
             {count > 0 ? `${count} okunmamış` : "Hepsi okundu"}
           </p>

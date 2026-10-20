@@ -92,13 +92,20 @@ describe("notificationText yeni türler", () => {
     expect(notificationText({ type: "geciken_ozet", payload: {} })).toBe("Ödemesi geciken taksitler var");
     expect(notificationHint({ type: "geciken_ozet", payload: {} })).toBe("Gecikenler listesinden velileri arayın.");
   });
+  it("randevu_bugun yalnız saat", () => {
+    expect(notificationText({ type: "randevu_bugun", payload: { at: "2026-10-20T14:19:00Z" } })).toBe("17:19 randevu");
+  });
+  it("geciken_ozet NaN/Infinity sayıyı reddeder", () => {
+    expect(notificationText({ type: "geciken_ozet", payload: { count: Number.NaN } })).toBe("Ödemesi geciken taksitler var");
+    expect(notificationText({ type: "geciken_ozet", payload: { count: Infinity } })).toBe("Ödemesi geciken taksitler var");
+  });
   it("randevu_bugun", () => {
     const at = "2026-10-20T14:19:00+00:00";
-    expect(notificationText({ type: "randevu_bugun", payload: { at, parentName: "Ayşe Yılmaz" } })).toBe("Bugün 17:19 randevu: Ayşe Yılmaz");
-    expect(notificationText({ type: "randevu_bugun", payload: { at }, leadName: "Ayşe Yılmaz" })).toBe("Bugün 17:19 randevu: Ayşe Yılmaz");
-    expect(notificationText({ type: "randevu_bugun", payload: { parentName: "Ayşe Yılmaz" } })).toBe("Bugün randevu: Ayşe Yılmaz");
-    expect(notificationText({ type: "randevu_bugun", payload: { at: "bozuk" } })).toBe("Bugün bir randevunuz var");
-    expect(notificationText({ type: "randevu_bugun", payload: {} })).toBe("Bugün bir randevunuz var");
+    expect(notificationText({ type: "randevu_bugun", payload: { at, parentName: "Ayşe Yılmaz" } })).toBe("17:19 randevu: Ayşe Yılmaz");
+    expect(notificationText({ type: "randevu_bugun", payload: { at }, leadName: "Ayşe Yılmaz" })).toBe("17:19 randevu: Ayşe Yılmaz");
+    expect(notificationText({ type: "randevu_bugun", payload: { parentName: "Ayşe Yılmaz" } })).toBe("Randevu: Ayşe Yılmaz");
+    expect(notificationText({ type: "randevu_bugun", payload: { at: "bozuk" } })).toBe("Randevu hatırlatması");
+    expect(notificationText({ type: "randevu_bugun", payload: {} })).toBe("Randevu hatırlatması");
   });
   it("teklif metinleri ad ile", () => {
     expect(notificationText({ type: "teklif_onay_bekliyor", payload: { offered: 21000 }, leadName: "Ayşe Yılmaz" })).toBe(
@@ -122,5 +129,21 @@ describe("notificationText yeni türler", () => {
   });
   it("bilinmeyen türün ipucu yok", () => {
     expect(notificationHint({ type: "baska", payload: {} })).toBeNull();
+  });
+});
+
+describe("teklif adlı metinler", () => {
+  it("teklif_revize_edildi adı kullanır", () => {
+    expect(
+      notificationText({ type: "teklif_revize_edildi", payload: { counterPrice: 18000 }, leadName: "Ayşe Yılmaz" }),
+    ).toBe("Ayşe Yılmaz teklifine karşı rakam girildi: 18.000,00 ₺");
+    expect(notificationText({ type: "teklif_revize_edildi", payload: { counterPrice: 18000 } })).toBe(
+      "Teklif için karşı rakam girildi: 18.000,00 ₺",
+    );
+  });
+  it("teklif_karsi_onaylandi adı kullanır", () => {
+    expect(
+      notificationText({ type: "teklif_karsi_onaylandi", payload: { counterPrice: 18000, parentName: "Ayşe Yılmaz" } }),
+    ).toBe("Ayşe Yılmaz teklifi karşı rakamla onaylandı: 18.000,00 ₺");
   });
 });

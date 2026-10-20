@@ -44,10 +44,20 @@ export function notificationText(n: NotificationLike): string {
     case "teklifiniz_onaylandi":
       return name ? `${name} için teklifiniz onaylandı` : "Teklifiniz onaylandı.";
     case "teklif_revize_edildi":
+      if (name) {
+        return counterPrice
+          ? `${name} teklifine karşı rakam girildi: ${counterPrice}`
+          : `${name} teklifine karşı rakam girildi`;
+      }
       return counterPrice
         ? `Teklif için karşı rakam girildi: ${counterPrice}`
         : "Teklif için karşı rakam girildi.";
     case "teklif_karsi_onaylandi":
+      if (name) {
+        return counterPrice
+          ? `${name} teklifi karşı rakamla onaylandı: ${counterPrice}`
+          : `${name} teklifi karşı rakamla onaylandı`;
+      }
       return counterPrice
         ? `Teklif karşı rakamla onaylandı: ${counterPrice}`
         : "Teklif karşı rakamla onaylandı.";
@@ -74,14 +84,15 @@ export function notificationText(n: NotificationLike): string {
       return `${name ?? "Bir veli"} 15 dakikadır aranmadı`;
     case "randevu_bugun": {
       const time = istanbulTime(payload.at);
-      if (time) return name ? `Bugün ${time} randevu: ${name}` : `Bugün ${time} randevu`;
-      return name ? `Bugün randevu: ${name}` : "Bugün bir randevunuz var";
+      // "Bugün" yazılmaz: eski satırlarda yanlış olurdu, gün başlığı tarihi zaten verir.
+      if (time) return name ? `${time} randevu: ${name}` : `${time} randevu`;
+      return name ? `Randevu: ${name}` : "Randevu hatırlatması";
     }
     case "geciken_ozet": {
       const total =
         str(payload.totalFormatted) ??
         (typeof payload.totalKurus === "number" ? formatTRY(payload.totalKurus) : null);
-      if (typeof payload.count !== "number") return "Ödemesi geciken taksitler var";
+      if (typeof payload.count !== "number" || !Number.isFinite(payload.count)) return "Ödemesi geciken taksitler var";
       return total
         ? `Ödemesi geciken ${payload.count} taksit var (toplam ${total})`
         : `Ödemesi geciken ${payload.count} taksit var`;

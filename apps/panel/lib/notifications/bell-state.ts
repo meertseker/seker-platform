@@ -29,3 +29,17 @@ export function badgeLabel(count: number): string {
 export function summaryChanged(known: BellSummary, next: BellSummary): boolean {
   return known.unread !== next.unread || known.latestId !== next.latestId;
 }
+
+/**
+ * Özet isteğinin yanıtı: "stop" oturum yok (401 ya da girişe yönlendirme) → yoklama biter;
+ * "ignore" geçici hata → değişiklik yok; "read" gövde okunur.
+ */
+export function classifySummaryResponse(res: {
+  ok: boolean;
+  status: number;
+  type: string;
+  redirected: boolean;
+}): "stop" | "ignore" | "read" {
+  if (res.type === "opaqueredirect" || res.status === 401 || res.redirected) return "stop";
+  return res.ok ? "read" : "ignore";
+}

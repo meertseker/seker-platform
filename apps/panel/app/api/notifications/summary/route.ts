@@ -11,9 +11,10 @@ const NO_STORE = { "Cache-Control": "no-store" };
  */
 export async function GET() {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.auth.getUser();
-  const user = data?.user;
-  if (!user) {
+  // getClaims() JWT'yi yerelde doğrular; her yoklamada Auth sunucusuna gidilmez.
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims.sub;
+  if (!userId) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: NO_STORE });
   }
 
@@ -21,12 +22,12 @@ export async function GET() {
     supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .is("read_at", null),
     supabase
       .from("notifications")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(1),

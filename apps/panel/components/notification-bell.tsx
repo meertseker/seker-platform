@@ -8,6 +8,7 @@ import { markNotificationRead, markNotificationsRead } from "@/actions/notificat
 import { NotificationList } from "@/components/notification-list";
 import {
   badgeLabel,
+  classifySummaryResponse,
   summaryChanged,
   visibleUnreadCount,
   type BellSummary,
@@ -75,14 +76,19 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
       if (stopped || inFlight || document.hidden) return;
       inFlight = true;
       try {
-        const response = await fetch("/api/notifications/summary", { cache: "no-store" });
+        // Ara katman oturumsuz isteği girişe yönlendirir; manual ile bu yönlendirme görünür kalır.
+        const response = await fetch("/api/notifications/summary", {
+          cache: "no-store",
+          redirect: "manual",
+        });
+        const verdict = classifySummaryResponse(response);
         // Oturum yoksa bu sayfada sormaya devam etmenin anlamı yok.
-        if (response.status === 401) {
-          stopped = true;
+        if (verdict === "stop") {
+          stop();
           return;
         }
         // Geçici hata "değişiklik yok" sayılır, asla "0 okunmamış" değil.
-        if (!response.ok) return;
+        if (verdict === "ignore") return;
         const body: unknown = await response.json();
         if (!body || typeof body !== "object") return;
         const { unread, latestId } = body as Record<string, unknown>;
@@ -106,12 +112,13 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
     const interval = window.setInterval(() => void check(), SUMMARY_POLL_MS);
     window.addEventListener("focus", check);
     document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => {
+    function stop() {
       stopped = true;
       window.clearInterval(interval);
       window.removeEventListener("focus", check);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
+    }
+    return stop;
   }, [router]);
 
   useEffect(() => {
@@ -158,15 +165,31 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
     setOpenPathname(null);
     if (item.read_at || allRead || readIds.has(item.id)) return;
     setReadIds((current) => new Set(current).add(item.id));
-    // Gezinme beklemez; sonuç revalidatePath ile zile döner.
-    void markNotificationRead(item.id);
+    // Gezinme beklemez; sonuç revalidatePath ile zile döner. Hata olursa iyimser okundu geri alınır.
+    const revert = () =>
+      setReadIds((current) => {
+        const next = new Set(current);
+        next.delete(item.id);
+        return next;
+      });
+    markNotificationRead(item.id)
+      .then((result) => {
+        if (result && "error" in result && result.error) revert();
+      })
+      .catch(revert);
   }
 
   function markAllRead() {
     setAllRead(true);
+    // Düğme devre dışı kalınca odak body'ye düşmesin.
+    panelRef.current?.focus({ preventScroll: true });
     startTransition(async () => {
-      const result = await markNotificationsRead();
-      if ("error" in result && result.error) setAllRead(false);
+      try {
+        const result = await markNotificationsRead();
+        if ("error" in result && result.error) setAllRead(false);
+      } catch {
+        setAllRead(false);
+      }
       router.refresh();
     });
   }
