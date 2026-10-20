@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { badgeLabel, summaryChanged, visibleUnreadCount } from "@/lib/notifications/bell-state";
+import { badgeLabel, classifySummaryResponse, summaryChanged, visibleUnreadCount } from "@/lib/notifications/bell-state";
 
 const items = [
   { id: "a", read_at: null },
@@ -37,5 +37,18 @@ describe("summaryChanged", () => {
     expect(summaryChanged(known, { unread: 4, latestId: "a" })).toBe(true);
     expect(summaryChanged(known, { unread: 3, latestId: "b" })).toBe(true);
     expect(summaryChanged({ unread: 0, latestId: null }, { unread: 0, latestId: null })).toBe(false);
+  });
+});
+
+describe("classifySummaryResponse", () => {
+  const base = { ok: true, status: 200, type: "basic", redirected: false };
+  it("oturum yok işaretleri yoklamayı durdurur", () => {
+    expect(classifySummaryResponse({ ...base, ok: false, status: 0, type: "opaqueredirect" })).toBe("stop");
+    expect(classifySummaryResponse({ ...base, ok: false, status: 401 })).toBe("stop");
+    expect(classifySummaryResponse({ ...base, redirected: true })).toBe("stop");
+  });
+  it("diğer hatalar yok sayılır, başarılı okunur", () => {
+    expect(classifySummaryResponse({ ...base, ok: false, status: 500 })).toBe("ignore");
+    expect(classifySummaryResponse(base)).toBe("read");
   });
 });
