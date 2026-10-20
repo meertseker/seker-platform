@@ -34,13 +34,16 @@ export function supabaseAdsStore(db: SupabaseClient): AdsStore {
       const { error } = await db.from("ad_spend_daily").upsert(
         rows.map((row) => ({
           date: row.date,
+          platform: "google",
+          level: "campaign",
+          object_id: row.campaignId,
           campaign_id: row.campaignId,
           campaign_name: row.campaignName,
           cost_micros: row.costMicros,
           clicks: row.clicks,
           impressions: row.impressions,
         })),
-        { onConflict: "date,campaign_id" },
+        { onConflict: "platform,date,level,object_id" },
       );
       if (error) throw new Error(`ad_spend_daily yazılamadı: ${error.message}`);
     },
