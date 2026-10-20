@@ -1,4 +1,5 @@
 // Bugün ekranı: ortak arama listesi ("Şimdi ara") ve bugünkü takip görevleri.
+import type { Role } from "@/lib/role-access";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ageFromBirth } from "@/lib/lead-flow/age";
 import { type BusinessHours, businessMinutesBetween, clockStart } from "@/lib/lead-flow/business-hours";
@@ -329,7 +330,7 @@ export function dropClosedLeadFollowups(rows: FollowupRow[]): FollowupRow[] {
 export async function loadFollowupTasks(
   supabase: SupabaseClient,
   me: string,
-  role: "yonetici" | "danisman",
+  role: Role,
   today: string,
   now: Date = new Date(),
 ): Promise<FollowupItem[]> {

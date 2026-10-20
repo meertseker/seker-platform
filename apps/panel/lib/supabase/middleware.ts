@@ -4,6 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { LOGIN_REASON_PARAM, hasAuthCookie, loginReasonFor } from "@/lib/login-reason";
 
 export async function updateSession(request: NextRequest) {
+  // Sunucu layout'u yolu okuyabilsin (öğretmen yol kontrolü); istemciden gelen değer ezilir.
+  request.headers.set("x-pathname", request.nextUrl.pathname);
   let response = NextResponse.next({ request });
   // Yenileme öncesi: çerez vardı ama oturum doğrulanamıyorsa kullanıcı düşürülmüştür (tek oturum kuralı).
   const hadSession = hasAuthCookie(request.cookies.getAll().map((c) => c.name));

@@ -1,5 +1,6 @@
 "use client";
 
+import type { Role } from "@/lib/role-access";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote } from "lucide-react";
@@ -33,7 +34,7 @@ export interface InstallmentTableItem {
 
 interface InstallmentTableProps {
   installments: InstallmentTableItem[];
-  role: "yonetici" | "danisman";
+  role: Role;
   today: string;
   /** Kalem sütununu + aya göre gruplamayı göster (öğrenci detayında tüm planlar tek takvimde). */
   showItemColumn?: boolean;
