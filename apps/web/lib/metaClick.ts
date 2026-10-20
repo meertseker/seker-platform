@@ -33,8 +33,13 @@ export function isMetaPaid(utm: Utm): boolean {
   );
 }
 
+/** Onay metni sürümünü env'den okur (Next derlemede gömer); testler env'i değiştirip yeniden okuyabilir. */
+export function consentVersionFromEnv(): 1 | 2 {
+  return process.env.NEXT_PUBLIC_CONSENT_VERSION === '2' ? 2 : 1;
+}
+
 /** Onay metni sürümü (derleme zamanı genel env); hukuk onayı gelene kadar 1. Sunucu ve form aynı değeri görür. */
-export const CONSENT_VERSION: 1 | 2 = process.env.NEXT_PUBLIC_CONSENT_VERSION === '2' ? 2 : 1;
+export const CONSENT_VERSION: 1 | 2 = consentVersionFromEnv();
 
 /** Form açılışı için olay kimliği; randomUUID yoksa rastgele dizge (gönderimi asla engellemez). */
 export function newEventId(): string {

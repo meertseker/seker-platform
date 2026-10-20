@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { trackLead } from '@/lib/analytics';
 import { UTM_KEYS } from '@/lib/attribution';
 import { trackMetaLead } from '@/lib/metaPixel';
-import { newEventId } from '@/lib/metaClick';
+import { CONSENT_VERSION, newEventId } from '@/lib/metaClick';
 import { readConsent } from '@/lib/consent';
 import AttributionFields from './AttributionFields';
 import { KVKK_CONSENT_LABEL } from '@/content/kvkk';
@@ -70,6 +70,8 @@ export default function LeadForm({
       fbp: String(data.get('fbp') ?? ''),
       metaEventId,
       adCookieConsent,
+      // Gösterilen onay metninin sürümü (etiketle aynı sabit); sunucu kendi sürümüyle küçüğünü kaydeder.
+      consentVersion: CONSENT_VERSION,
       utm,
       website: String(data.get('website') ?? ''),
       kvkkConsent: data.get('kvkkConsent') === 'on',

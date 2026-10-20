@@ -8,9 +8,21 @@ export type CreateWebLeadResult =
 
 type Meta = { [key: string]: string | number | boolean };
 
-/** Onay sürümü ve Meta kimlikleri her formda gider; boş Meta alanları eklenmez. */
-function trackingMeta(lead: Lead): Meta {
-  const meta: Meta = { consent_version: CONSENT_VERSION, ad_cookie_consent: lead.adCookieConsent };
+export type WebLeadContext = { userAgent?: string | null };
+
+/** CAPI client_user_agent sınırı; Meta tarafında uzun dizge gerekmez. */
+const MAX_USER_AGENT = 400;
+
+/**
+ * Onay sürümü ve Meta kimlikleri her formda gider; boş Meta alanları eklenmez.
+ * Onay sürümü: formun gösterdiği ile sunucununkinin küçüğü (yayın sırasında eski sayfa açık kalmışsa
+ * veli v1 metnini okumuştur; v2 sayılmaz). Tarayıcı bilgisi yalnız çerez onayı varsa gider.
+ */
+function trackingMeta(lead: Lead, context: WebLeadContext): Meta {
+  const posted = lead.consentVersion === 2 ? 2 : 1;
+  const meta: Meta = { consent_version: Math.min(posted, CONSENT_VERSION), ad_cookie_consent: lead.adCookieConsent };
+  const userAgent = (context.userAgent ?? '').trim().slice(0, MAX_USER_AGENT);
+  if (lead.adCookieConsent === true && userAgent) meta.client_user_agent = userAgent;
   if (lead.fbclid) meta.fbclid = lead.fbclid;
   if (lead.fbc) meta.fbc = lead.fbc;
   if (lead.fbp) meta.fbp = lead.fbp;
@@ -19,8 +31,8 @@ function trackingMeta(lead: Lead): Meta {
 }
 
 /** Nitelik cevapları yalnız qualify açıkken RPC'ye gider; izleme alanları her formda gider. */
-function qualifyMeta(lead: Lead): Meta {
-  const meta: Meta = trackingMeta(lead);
+function qualifyMeta(lead: Lead, context: WebLeadContext): Meta {
+  const meta: Meta = trackingMeta(lead, context);
   if (!lead.qualify) return meta;
   if (lead.childBirthMonth !== undefined) meta.child_birth_month = lead.childBirthMonth;
   if (lead.childBirthYear !== undefined) meta.child_birth_year = lead.childBirthYear;
@@ -33,6 +45,7 @@ function qualifyMeta(lead: Lead): Meta {
 export async function createWebLead(
   lead: Lead,
   consentAt: Date = new Date(),
+  context: WebLeadContext = {},
 ): Promise<CreateWebLeadResult> {
   try {
     const db = createAdminSupabase();
@@ -43,7 +56,7 @@ export async function createWebLead(
       p_utm: lead.utm,
       p_landing_path: lead.landingPath,
       p_consent_at: consentAt.toISOString(),
-      p_meta: qualifyMeta(lead),
+      p_meta: qualifyMeta(lead, context),
     });
     if (error || !data) {
       console.error('[lead] create_web_lead failed:', error?.code ?? 'no-data');

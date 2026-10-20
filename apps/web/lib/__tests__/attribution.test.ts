@@ -109,3 +109,53 @@ describe('fbclid / fbc', () => {
     expect(r.fbc).toBe('');
   });
 });
+
+describe('organik Instagram ilk dokunuşu Google tıklamasını engellemez (I-3)', () => {
+  const mem = () => {
+    const m = new Map<string, string>();
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) };
+  };
+
+  it('yalnız fbclid olan kayıt sonraki gclid ile değişir', () => {
+    const s = mem();
+    persistAttribution(s, parseAttribution('?fbclid=ORGANIK', '/', 1000));
+    const r = persistAttribution(s, parseAttribution('?gclid=GCL1', '/lp/kres-2-yas', 2000));
+    expect(r.gclid).toBe('GCL1');
+    expect(r.landingPath).toBe('/lp/kres-2-yas');
+    expect(JSON.parse(s.getItem(ATTRIBUTION_KEY)!).gclid).toBe('GCL1');
+  });
+
+  it('yalnız fbclid olan kayıt sonraki herhangi bir UTM ile değişir', () => {
+    const s = mem();
+    persistAttribution(s, parseAttribution('?fbclid=ORGANIK', '/', 1000));
+    const r = persistAttribution(s, parseAttribution('?utm_source=instagram&utm_medium=paid_social', '/lp/x', 2000));
+    expect(r.utm).toEqual({ utm_source: 'instagram', utm_medium: 'paid_social' });
+  });
+
+  it('fbclid + UTM olan (Meta reklamı) kayıt sonraki gclid ile değişmez', () => {
+    const s = mem();
+    const first = persistAttribution(s, parseAttribution('?fbclid=AD&utm_source=instagram&utm_medium=paid_social', '/', 1000));
+    expect(persistAttribution(s, parseAttribution('?gclid=GCL2', '/kayit', 2000))).toEqual(first);
+  });
+
+  it('yalnız fbclid olan kayıt sinyalsiz sonraki sayfada korunur', () => {
+    const s = mem();
+    const first = persistAttribution(s, parseAttribution('?fbclid=ORGANIK', '/', 1000));
+    expect(persistAttribution(s, parseAttribution('', '/kayit', 2000))).toEqual(first);
+  });
+});
+
+describe('uzun fbclid kırpılmaz (I-4)', () => {
+  it('300 karakterlik fbclid ve fbc değişmeden saklanır', () => {
+    const fbclid = 'IwAR' + 'aB9_-'.repeat(59) + 'Zz';
+    const a = parseAttribution(`?fbclid=${fbclid}`, '/', 1700000000000);
+    expect(a.fbclid).toBe(fbclid);
+    expect(a.fbc).toBe(`fb.1.1700000000000.${fbclid}`);
+  });
+
+  it('fbclid 500 karakterde kesilir; gclid 200de kalır', () => {
+    const a = parseAttribution(`?fbclid=${'f'.repeat(800)}&gclid=${'g'.repeat(800)}`, '/', 1);
+    expect(a.fbclid.length).toBe(500);
+    expect(a.gclid.length).toBe(200);
+  });
+});

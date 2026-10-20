@@ -15,6 +15,8 @@ export type Attribution = {
 export const ATTRIBUTION_KEY = 'seker_attr';
 
 const MAX_VALUE = 200;
+/** fbclid uzun olabilir; kırpılırsa fbc Meta'da eşleşmez. fbclid ve fbc için ayrı sınır (leadSchema ve create_web_lead ile aynı). */
+export const MAX_META_CLICK = 500;
 
 export function parseAttribution(search: string, pathname: string, now: number = Date.now()): Attribution {
   const params = new URLSearchParams(search);
@@ -23,7 +25,7 @@ export function parseAttribution(search: string, pathname: string, now: number =
     const value = (params.get(key) ?? '').trim().slice(0, MAX_VALUE);
     if (value) utm[key] = value;
   }
-  const fbclid = (params.get('fbclid') ?? '').trim().slice(0, MAX_VALUE);
+  const fbclid = (params.get('fbclid') ?? '').trim().slice(0, MAX_META_CLICK);
   return {
     gclid: (params.get('gclid') ?? '').trim().slice(0, MAX_VALUE),
     fbclid,
@@ -35,6 +37,11 @@ export function parseAttribution(search: string, pathname: string, now: number =
 
 function hasSignal(a: Attribution): boolean {
   return Boolean(a.gclid) || Boolean(a.fbclid) || Object.keys(a.utm).length > 0;
+}
+
+/** gclid ya da UTM: reklam/kampanya işareti. Yalnız fbclid organik Instagram'dır (Meta organik bağlantılara da ekler). */
+function hasCampaignSignal(a: Attribution): boolean {
+  return Boolean(a.gclid) || Object.keys(a.utm).length > 0;
 }
 
 function readStored(raw: string | null): Attribution | null {
@@ -70,7 +77,9 @@ export function persistAttribution(
   next: Attribution,
 ): Attribution {
   const stored = readStored(storage.getItem(ATTRIBUTION_KEY));
-  if (stored && hasSignal(stored)) return stored;
+  // Yalnız fbclid'li (organik Instagram) ilk dokunuş, sonraki gclid/UTM'li dokunuşa yer açar: Google tıklaması kaybolmasın.
+  const organicOnly = stored !== null && !hasCampaignSignal(stored);
+  if (stored && hasSignal(stored) && !(organicOnly && hasCampaignSignal(next))) return stored;
 
   const resolved = stored && !hasSignal(next) ? stored : next;
   storage.setItem(ATTRIBUTION_KEY, JSON.stringify(resolved));

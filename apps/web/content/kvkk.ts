@@ -35,7 +35,7 @@ export const KVKK_TEXT: { updatedOn: string; sections: KvkkSection[] } = {
         'Reklam ve pazarlama bilgisi: bir Google reklamına tıklayarak geldiyseniz reklam tıklama kimliği (gclid) ve kampanya bilgisi (UTM parametreleri).',
         ...(V2
           ? [
-              'Meta reklamı bilgisi: bir Instagram veya Facebook reklamına tıklayarak geldiyseniz Meta tıklama kimliği (fbclid), Meta çerezleri (_fbc, _fbp; yalnızca çerezlere onay verirseniz) ve başvuru olayı kimliği.',
+              'Meta reklamı bilgisi: bir Instagram veya Facebook reklamına tıklayarak geldiyseniz Meta tıklama kimliği (fbclid), Meta çerezleri (_fbc, _fbp) ve tarayıcı bilgisi (kullanıcı aracısı; bu ikisi yalnızca çerezlere onay verirseniz) ve başvuru olayı kimliği.',
             ]
           : []),
         'Görüşme süreci: sizinle yaptığımız görüşme, randevu ve kayıt aşamalarına ilişkin notlar.',

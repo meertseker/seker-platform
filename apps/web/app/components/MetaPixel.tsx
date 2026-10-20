@@ -33,6 +33,8 @@ function loadPixel(id: string) {
   script.async = true;
   script.src = 'https://connect.facebook.net/en_US/fbevents.js';
   document.head.appendChild(script);
+  // Otomatik Gelişmiş Eşleştirme kapalı: piksel form alanlarını (ad, telefon) kendiliğinden okumasın. init'ten önce olmalı.
+  fbq('set', 'autoConfig', false, id);
   fbq('init', id);
   fbq('track', 'PageView');
 }

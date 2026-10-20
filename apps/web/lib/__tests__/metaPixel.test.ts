@@ -8,12 +8,23 @@ afterEach(() => {
 
 describe('metaPixelId', () => {
   it('yalnız rakamsa döner, boş ya da bozuksa boş', () => {
+    vi.stubEnv('NEXT_PUBLIC_CONSENT_VERSION', '2');
     vi.stubEnv('NEXT_PUBLIC_META_PIXEL_ID', ' 123456 ');
     expect(metaPixelId()).toBe('123456');
     vi.stubEnv('NEXT_PUBLIC_META_PIXEL_ID', 'abc');
     expect(metaPixelId()).toBe('');
     vi.stubEnv('NEXT_PUBLIC_META_PIXEL_ID', '');
     expect(metaPixelId()).toBe('');
+  });
+
+  it('onay metni v2 açılmadan kimlik dolu olsa da boş döner', () => {
+    vi.stubEnv('NEXT_PUBLIC_META_PIXEL_ID', '123456');
+    vi.stubEnv('NEXT_PUBLIC_CONSENT_VERSION', '');
+    expect(metaPixelId()).toBe('');
+    vi.stubEnv('NEXT_PUBLIC_CONSENT_VERSION', '1');
+    expect(metaPixelId()).toBe('');
+    vi.stubEnv('NEXT_PUBLIC_CONSENT_VERSION', '2');
+    expect(metaPixelId()).toBe('123456');
   });
 });
 

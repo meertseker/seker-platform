@@ -6,6 +6,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 import LeadForm from '../LeadForm';
 import { KVKK_CONSENT_LABEL } from '@/content/kvkk';
+import { CONSENT_VERSION } from '@/lib/metaClick';
 
 describe('LeadForm onay kutusu', () => {
   it('zorunlu ve yeni onay metnini gösterir', () => {
@@ -38,6 +39,9 @@ describe('LeadForm Meta alanları', () => {
     expect(body.adCookieConsent).toBe(true);
     expect(typeof body.metaEventId).toBe('string');
     expect(body.metaEventId.length).toBeGreaterThan(8);
+    // T8b: form, gösterdiği onay metninin sürümünü gönderir (etiketle aynı sabit).
+    expect(body.consentVersion).toBe(CONSENT_VERSION);
+    expect(body.consentVersion).toBe(1);
     window.localStorage.clear();
     vi.unstubAllGlobals();
   });
