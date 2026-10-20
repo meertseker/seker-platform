@@ -5,6 +5,7 @@ import { getAccessToken } from "@/lib/ads/googleAds";
 import { readMetaConfig } from "@/lib/ads/meta/config";
 import { uploadMetaPending } from "@/lib/ads/meta/capi";
 import { META_RESYNC_DAYS, syncMetaSpend } from "@/lib/ads/meta/sync";
+import { syncOrganicStats } from "@/lib/content/organic";
 import { supabaseAdsStore, supabaseMetaStore } from "@/lib/ads/store";
 import { istanbulDaysAgo, syncSpend, uploadPending } from "@/lib/ads/sync";
 import { istanbulDateString } from "@/lib/cron-rules";
@@ -71,7 +72,9 @@ export async function GET(req: NextRequest) {
   }
 
   // Meta, Google'dan bağımsız: biri patlasa öteki yine çalışır. Yapılandırılmamışsa yanıtta `meta` anahtarı yoktur.
-  let meta: { spendRows: number | null; sent: number; failed: number; skipped: number; capi: "acik" | "kapali" } | undefined;
+  let meta:
+    | { spendRows: number | null; sent: number; failed: number; skipped: number; capi: "acik" | "kapali"; organic?: number | null }
+    | undefined;
   if (metaCfg) {
     const metaStore = supabaseMetaStore(db);
     meta = { spendRows: null, sent: 0, failed: 0, skipped: 0, capi: metaCfg.capiEnabled ? "acik" : "kapali" };
@@ -88,6 +91,16 @@ export async function GET(req: NextRequest) {
       if (result.failed > 0) errors.push(`Meta dönüşüm: ${result.failed} kayıt gönderilemedi`);
     } catch (e) {
       errors.push(`Meta dönüşüm: ${(e as Error).message.slice(0, 240)}`);
+    }
+  }
+
+  // Organik Instagram sayıları: yalnız hesap kimliği verilmişse; harcama ve CAPI'den bağımsız, hatası onları bozmaz.
+  if (metaCfg?.instagramUserId && meta) {
+    meta.organic = null;
+    try {
+      meta.organic = await syncOrganicStats({ cfg: metaCfg, db });
+    } catch (e) {
+      errors.push(`Meta organik: ${(e as Error).message.slice(0, 240)}`);
     }
   }
 

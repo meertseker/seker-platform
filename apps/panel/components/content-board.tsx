@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Film } from "lucide-react";
-import { ContentCardDetail, TONE_BAR, TONE_TEXT } from "@/components/content-card-detail";
+import { ContentCardDetail, OrganicNumbers, TONE_BAR, TONE_TEXT } from "@/components/content-card-detail";
 import { ContentTaskNew } from "@/components/content-task-new";
 import {
   cardLine,
@@ -13,6 +13,7 @@ import {
   type BoardItem,
   type ContentPerf,
 } from "@/lib/content/board";
+import type { OrganicInfo } from "@/lib/content/organic";
 import type { AdRules } from "@/lib/content/settings";
 
 interface Props {
@@ -24,6 +25,8 @@ interface Props {
   videoUrls: Record<string, string>;
   initialCode: string | null;
   nowIso: string;
+  /** Organik aşamadaki Reels'lerin Instagram sayıları; kart kimliğine göre. */
+  organic?: Record<string, OrganicInfo>;
 }
 
 /** Önce ?kod=, yoksa onay bekleyen ilk kart, o da yoksa ilk kart. */
@@ -32,7 +35,7 @@ function initialSelection(items: BoardItem[], code: string | null): string | nul
   return items.find((i) => i.stage === "kontrol")?.code ?? items[0]?.code ?? null;
 }
 
-export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrls, initialCode, nowIso }: Props) {
+export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrls, initialCode, nowIso, organic = {} }: Props) {
   const now = useMemo(() => new Date(nowIso), [nowIso]);
   const columns = useMemo(() => groupByStage(items), [items]);
   const [selected, setSelected] = useState<string | null>(() => initialSelection(items, initialCode));
@@ -91,7 +94,7 @@ export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrl
               </div>
               {col.items.map((i) => {
                 const p = perfOf(i.code);
-                const tag = cardTag(i, p, rules, now);
+                const tag = cardTag(i, p, rules, now, organic[i.id]?.lead ?? undefined);
                 const on = i.code === selected;
                 const isGoogle = i.platform === "google";
                 return (
@@ -145,6 +148,7 @@ export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrl
           now={now}
           videoUrl={videoUrls[item.id] ?? null}
           headingRef={headingRef}
+          organic={organic[item.id] ? <OrganicNumbers info={organic[item.id]} /> : undefined}
         />
       ) : items.length > 0 ? (
         // Yeni açılan görev sayfa yenilenene kadar listede olmayabilir.

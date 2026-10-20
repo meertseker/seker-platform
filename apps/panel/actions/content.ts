@@ -271,10 +271,10 @@ export async function linkInstagramPost(contentId: string, permalink: string): P
   if (!match) return { error: "Bağlantı https://www.instagram.com/reel/... biçiminde olmalı" };
   const { admin, row } = await loadForManager(contentId);
   if (!row) return { error: NOT_FOUND };
-  // ig_media_id, organik sayılar çekilirken (Task 7) bu bağlantıdan çözülür.
+  // ig_media_id sabah senkronunda bu bağlantıdan çözülür; bağlantı değişince eskisi geçersiz olur.
   const { error } = await admin
     .from("content_items")
-    .update({ ig_permalink: `https://www.instagram.com/${match[1]}/${match[2]}/` })
+    .update({ ig_permalink: `https://www.instagram.com/${match[1]}/${match[2]}/`, ig_media_id: null })
     .eq("id", row.id);
   if (error) return { error: "Bağlantı kaydedilemedi" };
   revalidatePath(BOARD);

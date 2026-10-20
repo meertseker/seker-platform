@@ -24,6 +24,7 @@ import {
 import type { AdRules } from "@/lib/content/settings";
 import { STAGES, type StageKey } from "@/lib/content/stages";
 import { PAGE_FIELDS } from "@/lib/content/store";
+import type { OrganicInfo } from "@/lib/content/organic";
 import { dueLabel } from "@/lib/queries/content";
 import { waMeUrl } from "@/lib/whatsapp";
 
@@ -51,6 +52,46 @@ interface Props {
   headingRef?: RefObject<HTMLHeadingElement | null>;
   /** Organik Instagram sayıları (Task 7); verilmezse bölüm gösterilmez. */
   organic?: ReactNode;
+}
+
+const nf = new Intl.NumberFormat("tr-TR");
+const OFF_COPY: Record<Exclude<OrganicInfo["state"], "hazir">, string> = {
+  baglanmadi: "Instagram bağlı değil",
+  "baglanti-yok": "Gönderi bağlantısını ekleyin",
+  bekliyor: "Sayılar yarın sabah gelir",
+};
+
+/** Organik Instagram sayıları ya da neden olmadığı. */
+export function OrganicNumbers({ info }: { info: OrganicInfo }) {
+  if (info.state !== "hazir" || !info.numbers) {
+    return (
+      <div className="flex flex-col gap-1">
+        <div className="text-sm font-bold text-foreground">Organik sayılar</div>
+        <p className="text-sm text-muted-foreground">{OFF_COPY[info.state === "hazir" ? "bekliyor" : info.state]}</p>
+      </div>
+    );
+  }
+  const n = info.numbers;
+  const val = (v: number | null) => (v === null ? "—" : nf.format(v));
+  const rows: [string, string][] = [
+    ["İzlenme", val(n.views)],
+    ["Erişim", val(n.reach)],
+    ["Kaydetme", val(n.saved)],
+    ["Paylaşım", val(n.shares)],
+    ["Ortalama izlenme", n.avgWatchMs === null ? "—" : `${(n.avgWatchMs / 1000).toLocaleString("tr-TR", { maximumFractionDigits: 1 })} sn`],
+  ];
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="text-sm font-bold text-foreground">Organik sayılar</div>
+      {rows.map(([label, value]) => (
+        <div key={label} className="flex justify-between gap-2 text-[13.5px] text-foreground">
+          <span>{label}</span>
+          <b className="shrink-0 tabular-nums">{value}</b>
+        </div>
+      ))}
+      {info.lead ? <p className="text-sm text-muted-foreground">Aynı haftanın Reels&apos;leri arasında: {info.lead}</p> : null}
+    </div>
+  );
 }
 
 const FACE_CHECK = "Videoyu izledim; öğrenci yüzü ya da adı yok";

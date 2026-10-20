@@ -519,7 +519,7 @@ describe("linkInstagramPost ve saveLearnedNote", () => {
     expect(await linkInstagramPost(CID, "http://www.instagram.com/reel/AbC/")).toHaveProperty("error");
     expect(writes()).toHaveLength(0);
     expect(await linkInstagramPost(CID, " https://www.instagram.com/reel/AbC_1-x?igsh=xyz ")).toEqual({ ok: true });
-    expect(payloads("admin", "content_items", "update")[0]).toEqual({ ig_permalink: "https://www.instagram.com/reel/AbC_1-x/" });
+    expect(payloads("admin", "content_items", "update")[0]).toEqual({ ig_permalink: "https://www.instagram.com/reel/AbC_1-x/", ig_media_id: null });
   });
 
   it("öğrenilen notu yazar", async () => {

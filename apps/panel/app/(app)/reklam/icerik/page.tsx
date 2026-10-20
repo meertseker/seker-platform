@@ -3,6 +3,8 @@ import { createAdminSupabase } from "@seker/auth/admin";
 import { ContentBoard } from "@/components/content-board";
 import { requireRole } from "@/lib/auth";
 import { emptyPerf, loadBoardItems, loadContentPerf, loadTeachers, perfCodes, type BoardItem, type ContentPerf } from "@/lib/content/board";
+import { readMetaConfig } from "@/lib/ads/meta/config";
+import { loadOrganicInfo, type OrganicInfo } from "@/lib/content/organic";
 import { getContentRules } from "@/lib/content/settings";
 import { CONTENT_BUCKET } from "@/lib/content/store";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -53,6 +55,15 @@ export default async function IcerikPage({ searchParams }: { searchParams: Searc
   const perf: Record<string, ContentPerf> = {};
   for (const i of items) perf[i.code] = perfMap.get(i.code) ?? emptyPerf();
 
+  // Organik sayılar Instagram bağlıysa okunur; okunamazsa kartlar sayısız kalır, sayfa açılır.
+  const now = new Date();
+  let organic: Record<string, OrganicInfo> = {};
+  try {
+    organic = await loadOrganicInfo(supabase, items, Boolean(readMetaConfig()?.instagramUserId), now);
+  } catch (e) {
+    console.error("[icerik] organik sayılar okunamadı:", e instanceof Error ? e.message : "bilinmeyen");
+  }
+
   return (
     <ContentBoard
       items={items}
@@ -62,7 +73,8 @@ export default async function IcerikPage({ searchParams }: { searchParams: Searc
       teachers={teachers}
       videoUrls={await videoUrls(items)}
       initialCode={kod}
-      nowIso={new Date().toISOString()}
+      nowIso={now.toISOString()}
+      organic={organic}
     />
   );
 }
