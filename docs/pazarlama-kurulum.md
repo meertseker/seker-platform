@@ -149,16 +149,21 @@ Meta tarafı Google ile aynı mantıkla çalışır: değerler girilene kadar he
 | `META_PIXEL_ID` | Conversions API'nin olay göndereceği piksel | CAPI gönderimi atlanır |
 | `META_CAPI_TEST_CODE` | Olay Yöneticisi "Test Olayları" kodu (isteğe bağlı) | Gönderimler gerçek veriye yazılır |
 | `META_CAPI_ENABLED` | CAPI ana anahtarı; yalnız `true` ise açık | Kapalı: kuyruk birikir, satırlar `bekliyor` kalır |
-| `NEXT_PUBLIC_META_PIXEL_ID` | Sitedeki piksel; yalnız çerez bandında "Kabul Et" seçilirse yüklenir | Hiçbir Meta betiği yüklenmez |
+| `NEXT_PUBLIC_META_PIXEL_ID` | Sitedeki piksel; yalnız `NEXT_PUBLIC_CONSENT_VERSION=2` iken ve çerez bandında "Kabul Et" seçilirse yüklenir | Hiçbir Meta betiği yüklenmez (v1 iken kimlik girilmiş olsa da) |
 | `NEXT_PUBLIC_CONSENT_VERSION` | Form onay metni sürümü; `2` değilse 1 | 1 (hukuk onayı gelene kadar böyle kalır) |
 | `SITE_PUBLIC_URL` | Sitenin açık adresi (CAPI `Lead` olayında `event_source_url`) | `https://yeni.sekeranaokulu.com` kullanılır |
 
-`NEXT_PUBLIC_*` değerleri derleme sırasında gömülür; değiştirince paneli yeniden derle. Yönetilen Meta sürümü Graph API **v26.0**.
+`NEXT_PUBLIC_CONSENT_VERSION` ve `NEXT_PUBLIC_META_PIXEL_ID` **sitenin (apps/web)** derlemesine gömülür; değiştirince paneli değil **siteyi (web) yeniden derle ve yayınla**. Yönetilen Meta sürümü Graph API **v26.0**.
+
+**Yayın sırası:** migration `0016_reklam_cok_platform.sql` production veritabanına **web yayınından önce** uygulanmalı. Yeni site Instagram reklam ziyaretlerini `meta_ads` kaynağıyla sayar; `site_visit_daily` kaynak kontrolü 0016'dan önce bu değeri reddeder ve form yeni alanları (`client_user_agent`, uzun `fbclid`) yazamaz.
 
 ### Ne ne zaman çalışır
 - Her gün 06:00 cron'u (`/api/cron/ads`) Google'ın yanında Meta'dan son 7 günün harcamasını **reklam düzeyinde** çeker. 7 gün geriye bakmak Meta'nın geç düzelttiği rakamları yakalar; aynı gün tekrar çalışırsa satırlar güncellenir, çoğalmaz.
 - Meta yapılandırılmamışsa cron yanıtı Meta'sız halle birebir aynıdır.
 - CAPI gönderimi `META_CAPI_ENABLED=true` olmadan hiç çalışmaz. Açıldığında 7 günden eski bekleyen olaylar gönderilmez (`atlandi · olay 7 günden eski`).
+- `Lead` olayları ve aşama olayları (`Schedule`/`Enrolled`) ayrı isteklerde gider. Meta bir isteği kalıcı hatayla (4xx) reddederse olaylar tek tek denenir; yalnız bozuk olan `Hata` olur (elle yeniden denenir). Ağ hatası, 5xx ve 429 geçicidir: satır `Bekliyor` kalır, hata metni yazılır, ertesi sabah yeniden denenir (7 gün sınırına kadar).
+- `Lead` olayı tarayıcı bilgisi (user agent) olmadan gönderilmez (`atlandi · tarayıcı bilgisi yok`); tarayıcı bilgisi yalnız çerez onayı veren velide kaydedilir.
+- v2 onayı olmayan Meta velilerinin kuyruk satırları baştan `atlandi · onay sürümü eski (Meta yok)` açılır.
 
 ### Reklam bağlantı soneki
 Her Instagram reklamının "URL parametreleri" alanına (ya da `meta-apply.mjs` kurulumunda `url_tags` olarak otomatik) şu yazılır:
@@ -170,11 +175,11 @@ utm_source=instagram&utm_medium=paid_social&utm_campaign={{campaign.id}}&utm_con
 ### CAPI'yi açma adımları
 Sırayla, atlamadan:
 1. **Hukuk onayı:** v2 onay metni (reklam amaçlı veri paylaşımı) hukuk tarafından onaylanır.
-2. **Onay sürümü v2:** `NEXT_PUBLIC_CONSENT_VERSION=2`, paneli yeniden derle. Yalnız v2 onaylı ve çerez bandında reklam çerezini kabul etmiş adaylar `Lead`; v2 onaylılar `Schedule`/`Enrolled` için gönderilir. Eski onaylılar (v1, içe aktarılan, telefon onaylı) Meta'ya hiç gitmez.
+2. **Onay sürümü v2:** `NEXT_PUBLIC_CONSENT_VERSION=2`, **siteyi (web)** yeniden derle ve yayınla. Okul gizlilik sayfasını site düzenleyicide değiştirdiyse (slot `legal.gizlilik.body`), düzenlenmiş metin koddaki varsayılanın yerine geçer: v2 Meta maddeleri (Meta tıklama kimliği, `_fbc`/`_fbp`, tarayıcı bilgisi, Meta Platforms Ireland'a aktarım) oraya da elle eklenmeli. Çerez Politikası (`legal.cerez.body`) düzenlendiyse Meta pikseli çerezleri (`_fbp`, `_fbc`) de oraya eklenmeli. Piksel kimliği (`NEXT_PUBLIC_META_PIXEL_ID`) **yalnız v2 açıldıktan sonra** girilir; Olay Yöneticisi > piksel ayarlarında **Otomatik Gelişmiş Eşleştirme kapalı olmalı** (site de `autoConfig` kapalı başlatır; form alanları piksele okutulmaz). Yalnız v2 onaylı ve çerez bandında reklam çerezini kabul etmiş adaylar `Lead`; v2 onaylılar `Schedule`/`Enrolled` için gönderilir. Eski onaylılar (v1, içe aktarılan, telefon onaylı) Meta'ya hiç gitmez.
 3. **Test kodu haftası:** `META_CAPI_TEST_CODE` doldur. Masaüstünden `node meta-capi-test.mjs` ile tek `Lead` test olayı gönder; Olay Yöneticisi > Test Olayları'nda görünmesini, piksel ile sunucu olayının tekilleştiğini (aynı `event_id`) ve eşleşme kalitesini bir hafta izle.
 4. **Aç:** sorun yoksa `META_CAPI_TEST_CODE`'u boşalt, `META_CAPI_ENABLED=true` yap, `docker compose up -d panel`. Ertesi sabah `/pazarlama` listesinde Meta satırlarının "Gönderildi" olduğunu doğrula.
 
-Çocuğa ait hiçbir veri (ad, yaş, doğum tarihi, semt, not) Meta'ya gitmez; yalnız SHA-256'lı telefon ve lead kimliği, onay varsa `fbc`/`fbp`.
+Çocuğa ait hiçbir veri (ad, yaş, doğum tarihi, semt, not) Meta'ya gitmez; yalnız SHA-256'lı telefon ve lead kimliği, çerez onayı varsa `fbc`/`fbp` ve (yalnız `Lead`'de) tarayıcı bilgisi.
 
 ### Masaüstü betikleri
 `C:\Users\meert\Desktop\seker-reklam-araclar\` içinde (repo dışı, anahtar dosyası `seker-meta-ads-anahtarlar.txt`):
