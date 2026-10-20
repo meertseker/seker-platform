@@ -3,19 +3,12 @@
 import { Bell } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  markNotificationsRead,
-  type NotificationType,
-} from "@/actions/notifications";
+import { markNotificationsRead } from "@/actions/notifications";
 import { notificationText } from "@/lib/notification-text";
 
-export interface NotificationItem {
-  id: string;
-  type: NotificationType;
-  payload: Record<string, unknown>;
-  read_at: string | null;
-  created_at: string;
-}
+import type { NotificationItem } from "@/lib/queries/notifications";
+
+export type { NotificationItem } from "@/lib/queries/notifications";
 
 interface NotificationBellProps {
   notifications: NotificationItem[];

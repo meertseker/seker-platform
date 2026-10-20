@@ -3,7 +3,7 @@ import { siteEditUrl } from "@/lib/site-edit-url";
 import { Nav } from "@/components/nav";
 import { ToastProvider } from "@/components/toast";
 import { createServerSupabase } from "@/lib/supabase/server";
-import type { NotificationItem } from "@/components/notification-bell";
+import { countUnread, loadNotifications } from "@/lib/queries/notifications";
 import { PendingApplicationsBanner } from "@/components/pending-applications-banner";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { loadCallQueue, queueBannerSummary } from "@/lib/queries/call-queue";
@@ -16,18 +16,9 @@ export default async function AppLayout({
   const profile = await getSessionProfile();
   const supabase = await createServerSupabase();
   const now = new Date();
-  const [notificationsResult, unreadResult, bannerSummary] = await Promise.all([
-    supabase
-      .from("notifications")
-      .select("id, type, payload, read_at, created_at")
-      .eq("user_id", profile.id)
-      .order("created_at", { ascending: false })
-      .limit(20),
-    supabase
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", profile.id)
-      .is("read_at", null),
+  const [notifications, unreadCount, bannerSummary] = await Promise.all([
+    loadNotifications(supabase, profile.id, { limit: 20 }),
+    countUnread(supabase, profile.id),
     // Bant, Bugün'deki "Şimdi ara" listesiyle aynı kuralı sayar.
     getLeadFlowSettings(supabase)
       .then(async (settings) =>
@@ -38,19 +29,6 @@ export default async function AppLayout({
         return null;
       }),
   ]);
-  const notifications = (notificationsResult.data ?? []).map((notification) => ({
-    id: notification.id,
-    type: notification.type,
-    payload:
-      notification.payload &&
-      typeof notification.payload === "object" &&
-      !Array.isArray(notification.payload)
-        ? (notification.payload as Record<string, unknown>)
-        : {},
-    read_at: notification.read_at,
-    created_at: notification.created_at,
-  })) satisfies NotificationItem[];
-  const unreadCount = unreadResult.count ?? 0;
 
   return (
     <ToastProvider>

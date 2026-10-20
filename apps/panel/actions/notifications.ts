@@ -41,3 +41,26 @@ export async function markNotificationsRead() {
   revalidatePath("/");
   return {};
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function markNotificationRead(id: string) {
+  if (typeof id !== "string" || !UUID_RE.test(id)) {
+    return { error: "Bildirim okundu işaretlenemedi" };
+  }
+
+  const profile = await getSessionProfile();
+  const supabase = await createServerSupabase();
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("user_id", profile.id)
+    .is("read_at", null);
+
+  if (error) return { error: "Bildirim okundu işaretlenemedi" };
+
+  revalidatePath("/");
+  return {};
+}
