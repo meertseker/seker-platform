@@ -55,7 +55,7 @@ describe("compare72h", () => {
   });
 });
 
-function fakeDb(items: { id: string; ig_permalink: string | null; ig_media_id: string | null }[]) {
+function fakeDb(items: { id: string; ig_permalink: string | null; ig_media_id: string | null; ig_published_at?: string | null }[]) {
   const upserts: unknown[] = [];
   const updates: { patch: unknown; id: unknown }[] = [];
   const db = {
@@ -87,6 +87,25 @@ function fakeDb(items: { id: string; ig_permalink: string | null; ig_media_id: s
 }
 
 describe("syncOrganicStats", () => {
+  it("medya listesi senkron başına bir kez çekilir, tüm kartlar ona karşı eşlenir", async () => {
+    const list = [
+      { id: "1", permalink: "https://www.instagram.com/reel/A/", timestamp: "2026-10-13T09:30:00+0000" },
+      { id: "2", permalink: "https://www.instagram.com/reel/B/", timestamp: "2026-10-14T09:30:00+0000" },
+    ];
+    const fetchFn = vi.fn(async (url: string) =>
+      url.includes("/media?")
+        ? new Response(JSON.stringify({ data: list }))
+        : new Response(JSON.stringify({ data: [{ name: "views", values: [{ value: 1 }] }] })),
+    );
+    const { db, updates } = fakeDb([
+      { id: "c1", ig_permalink: "https://www.instagram.com/reel/A/", ig_media_id: null },
+      { id: "c2", ig_permalink: "https://www.instagram.com/reel/B/", ig_media_id: null },
+    ]);
+    await syncOrganicStats({ cfg, db: db as never, fetchFn: fetchFn as never, now: NOW });
+    expect(fetchFn.mock.calls.filter(([u]) => String(u).includes("/media?"))).toHaveLength(1);
+    expect(updates.map((u) => u.id)).toEqual(["c1", "c2"]);
+  });
+
   it("yapılandırma yokken istek gitmez ve 0 döner", async () => {
     const fetchFn = vi.fn();
     const { db } = fakeDb([{ id: "c1", ig_permalink: "https://www.instagram.com/reel/X/", ig_media_id: null }]);
@@ -98,13 +117,40 @@ describe("syncOrganicStats", () => {
   it("medya kimliğini çözer, yazar ve bugünün satırını upsert eder", async () => {
     const fetchFn = vi.fn(async (url: string) =>
       url.includes("/media?")
-        ? new Response(JSON.stringify({ data: [{ id: "99", permalink: "https://www.instagram.com/reel/X/" }] }))
+        ? new Response(JSON.stringify({ data: [{ id: "99", permalink: "https://www.instagram.com/reel/X/", timestamp: "2026-10-13T09:30:00+0000" }] }))
         : new Response(JSON.stringify({ data: [{ name: "views", values: [{ value: 7 }] }, { name: "ig_reels_avg_watch_time", values: [{ value: 1500 }] }] })),
     );
     const { db, upserts, updates } = fakeDb([{ id: "c1", ig_permalink: "https://www.instagram.com/reel/X/", ig_media_id: null }]);
     const n = await syncOrganicStats({ cfg, db: db as never, fetchFn: fetchFn as never, now: NOW });
     expect(n).toBe(1);
-    expect(updates[0]).toEqual({ patch: { ig_media_id: "99" }, id: "c1" });
+    expect(updates[0]).toEqual({ patch: { ig_media_id: "99", ig_published_at: "2026-10-13T09:30:00.000Z" }, id: "c1" });
     expect(upserts[0]).toMatchObject({ content_id: "c1", day: "2026-10-20", views: 7, avg_watch_ms: 1500 });
+  });
+});
+
+describe("loadOrganicInfo", () => {
+  const board = (over: Record<string, unknown>) =>
+    ({ id: "c1", code: "R-2643-A", kind: "reels", stage: "organik", igPermalink: "https://www.instagram.com/reel/X/", igPublishedAt: null, ...over }) as never;
+  const supa = (meta: unknown[]) => ({
+    from: (t: string) => {
+      const rows =
+        t === "content_organic_stats"
+          ? [{ content_id: "c1", day: "2026-10-19", views: 50, reach: 1, saved: 1, shares: 1, avg_watch_ms: 1 }]
+          : meta;
+      const q: Record<string, unknown> = { select: () => q, in: () => q, order: () => q, then: (r: (v: unknown) => void) => r({ data: rows, error: null }) };
+      return q;
+    },
+  });
+
+  it("medya kimliği yokken (bağlantı değişti) eski sayılar gösterilmez", async () => {
+    const { loadOrganicInfo } = await import("@/lib/content/organic");
+    const out = await loadOrganicInfo(supa([{ id: "c1", week_start: "2026-10-12", ig_media_id: null, ig_published_at: null }]) as never, [board({})], true, NOW);
+    expect(out.c1).toEqual({ state: "bekliyor", numbers: null, lead: null });
+  });
+
+  it("bağlı değilken sayılar yok ve 'baglanmadi' döner", async () => {
+    const { loadOrganicInfo } = await import("@/lib/content/organic");
+    const out = await loadOrganicInfo(supa([]) as never, [board({})], false, NOW);
+    expect(out.c1.state).toBe("baglanmadi");
   });
 });

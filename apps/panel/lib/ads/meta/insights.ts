@@ -31,7 +31,11 @@ export function sanitize(text: string, cfg: MetaConfig): string {
 }
 
 /** Hata biçimi `{error:{message,code,...}}`; kaynak: https://developers.facebook.com/docs/graph-api/guides/error-handling/ */
-export async function toApiError(response: Response, cfg: MetaConfig): Promise<MetaApiError> {
+export async function toApiError(
+  response: Response,
+  cfg: MetaConfig,
+  label = "Meta insights isteği başarısız",
+): Promise<MetaApiError> {
   const raw = await response.text();
   let message = raw ? `HTTP ${response.status}: ${raw}` : `HTTP ${response.status}`;
   let code: number | null = null;
@@ -42,7 +46,7 @@ export async function toApiError(response: Response, cfg: MetaConfig): Promise<M
   } catch {
     // JSON değilse ham metin
   }
-  return new MetaApiError(`Meta insights isteği başarısız: ${sanitize(message, cfg)}`, response.status, code);
+  return new MetaApiError(`${label}: ${sanitize(message, cfg)}`, response.status, code);
 }
 
 export function headers(cfg: MetaConfig): Record<string, string> {

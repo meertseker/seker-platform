@@ -27,13 +27,24 @@ describe("Instagram organik (Meta)", () => {
   it("permalink eşleşir (sondaki / ve sorgu yok sayılır), anahtar yalnız başlıkta", async () => {
     const fetchFn = vi.fn(async () => json(fixture.media));
     const id = await resolveMediaId(cfg, "https://www.instagram.com/reel/DBcD123?igsh=abc", asFetch(fetchFn));
-    expect(id).toBe("1790002");
+    expect(id).toEqual({ id: "1790002", timestamp: "2026-10-13T09:30:00+0000" });
     const [url, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain("/v26.0/17841400000000000/media?");
     expect(url).toContain("limit=50");
     expect(url).toContain("appsecret_proof=");
     expect(url).not.toContain("tok-secret");
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer tok-secret");
+  });
+
+  it("/p/KOD ve /reel/KOD aynı gönderidir (kısa kodla eşleşir)", async () => {
+    const fetchFn = vi.fn(async () => json(fixture.media));
+    const id = await resolveMediaId(cfg, "https://www.instagram.com/p/DBcD123/", asFetch(fetchFn));
+    expect(id?.id).toBe("1790002");
+  });
+
+  it("medya listesi hatası listeye özgü önekle gelir", async () => {
+    const fetchFn = vi.fn(async () => json({ error: { message: "izin yok", code: 10 } }, 400));
+    await expect(resolveMediaId(cfg, "https://www.instagram.com/reel/X/", asFetch(fetchFn))).rejects.toThrow(/Instagram medya listesi/);
   });
 
   it("eşleşme yoksa null döner", async () => {

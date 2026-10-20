@@ -13,6 +13,7 @@ function builder(client: Op["client"], table: string) {
   b.select = () => b;
   b.insert = (p: unknown) => ((o.op = "insert"), (o.payload = p), b);
   b.update = (p: unknown) => ((o.op = "update"), (o.payload = p), b);
+  b.delete = () => ((o.op = "delete"), b);
   b.single = () => b;
   b.maybeSingle = () => b;
   b.then = (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) => {
@@ -519,7 +520,8 @@ describe("linkInstagramPost ve saveLearnedNote", () => {
     expect(await linkInstagramPost(CID, "http://www.instagram.com/reel/AbC/")).toHaveProperty("error");
     expect(writes()).toHaveLength(0);
     expect(await linkInstagramPost(CID, " https://www.instagram.com/reel/AbC_1-x?igsh=xyz ")).toEqual({ ok: true });
-    expect(payloads("admin", "content_items", "update")[0]).toEqual({ ig_permalink: "https://www.instagram.com/reel/AbC_1-x/", ig_media_id: null });
+    expect(payloads("admin", "content_items", "update")[0]).toEqual({ ig_permalink: "https://www.instagram.com/reel/AbC_1-x/", ig_media_id: null, ig_published_at: null });
+    expect(ofOps("admin", "content_organic_stats", "delete")).toHaveLength(1);
   });
 
   it("öğrenilen notu yazar", async () => {

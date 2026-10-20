@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FetchFn } from "@/lib/ads/types";
 import type { MetaConfig } from "@/lib/ads/meta/config";
-import { fetchReelInsights, resolveMediaId } from "@/lib/ads/meta/instagram";
+import { fetchReelInsights, findMedia, listMedia, type MediaRef } from "@/lib/ads/meta/instagram";
 import { istanbulDateString } from "@/lib/cron-rules";
 import type { BoardItem, OrganicLead } from "./board";
 
@@ -10,7 +10,14 @@ const ORGANIC_HOURS = 72;
 
 // === Senkron ===
 
-type SyncItem = { id: string; ig_permalink: string | null; ig_media_id: string | null };
+type SyncItem = { id: string; ig_permalink: string | null; ig_media_id: string | null; ig_published_at?: string | null };
+
+/** Meta zaman damgası ("+0000" ekli) ISO biçimine çevrilir; çözülemezse null. */
+function toIso(ts: string | null | undefined): string | null {
+  if (!ts) return null;
+  const d = new Date(ts.replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
 
 /**
  * Organik aşamadaki, gönderi bağlantısı olan Reels'lerin bugünkü sayılarını `content_organic_stats`'a yazar
@@ -25,21 +32,34 @@ export async function syncOrganicStats(deps: { cfg: MetaConfig; db: SupabaseClie
 
   const { data, error } = await db
     .from("content_items")
-    .select("id, ig_permalink, ig_media_id")
+    .select("id, ig_permalink, ig_media_id, ig_published_at")
     .eq("stage", "organik")
     .not("ig_permalink", "is", null);
   if (error) throw new Error(`content_items: ${error.code ?? "okunamadı"}`);
 
   let written = 0;
+  let media: MediaRef[] | null = null;
   const failures: string[] = [];
   for (const item of (data ?? []) as SyncItem[]) {
     try {
       let mediaId = item.ig_media_id;
-      if (!mediaId) {
-        mediaId = await resolveMediaId(cfg, item.ig_permalink ?? "", deps.fetchFn);
-        if (!mediaId) continue; // henüz listede yok ya da bağlantı yanlış; yarın yeniden denenir
-        const { error: upErr } = await db.from("content_items").update({ ig_media_id: mediaId }).eq("id", item.id);
-        if (upErr) throw new Error("medya kimliği yazılamadı");
+      if (!mediaId || !item.ig_published_at) {
+        // Liste senkron başına bir kez çekilir; tüm kartlar ona karşı eşlenir.
+        if (!media) media = await listMedia(cfg, deps.fetchFn);
+        const hit = mediaId ? (media.find((m) => m.id === mediaId) ?? null) : findMedia(media, item.ig_permalink ?? "");
+        if (!hit) {
+          if (!mediaId) continue; // henüz listede yok ya da bağlantı yanlış; yarın yeniden denenir
+        } else {
+          const patch: Record<string, string> = {};
+          if (!mediaId) patch.ig_media_id = hit.id;
+          const published = toIso(hit.timestamp);
+          if (published) patch.ig_published_at = published;
+          mediaId = hit.id;
+          if (Object.keys(patch).length > 0) {
+            const { error: upErr } = await db.from("content_items").update(patch).eq("id", item.id);
+            if (upErr) throw new Error("medya kimliği yazılamadı");
+          }
+        }
       }
       const r = await fetchReelInsights(cfg, mediaId, deps.fetchFn);
       const { error: writeErr } = await db.from("content_organic_stats").upsert(
@@ -133,7 +153,7 @@ type StatRow = { content_id: string; day: string; views: number | null; reach: n
 
 /**
  * Organik aşamadaki kartların durumu ve sayıları. Karşılaştırma aynı haftanın organik Reels'leri arasındadır.
- * Yayın zamanı olarak kartın organiğe girdiği an (`stageChangedAt`) kullanılır: kartın "72 saat kaldı" sayacıyla aynı saat.
+ * Süre, Instagram'daki gerçek paylaşım zamanından (`ig_published_at`) sayılır; bilinmeyen kart karşılaştırmaya girmez.
  * Sorgu hatası fırlatılır (sayfa yakalar, kartlar sayısız kalır).
  */
 export async function loadOrganicInfo(
@@ -161,9 +181,11 @@ export async function loadOrganicInfo(
   const latest = new Map<string, StatRow>();
   for (const r of (statRows ?? []) as StatRow[]) if (!latest.has(r.content_id)) latest.set(r.content_id, r);
 
-  const { data: weekRows, error: weekErr } = await supabase.from("content_items").select("id, week_start").in("id", ids);
+  const { data: weekRows, error: weekErr } = await supabase.from("content_items").select("id, week_start, ig_media_id, ig_published_at").in("id", ids);
   if (weekErr) throw new Error(`content_items: ${weekErr.code ?? "okunamadı"}`);
-  const weekOf = new Map(((weekRows ?? []) as { id: string; week_start: string }[]).map((r) => [r.id, r.week_start]));
+  const metaRows = (weekRows ?? []) as { id: string; week_start: string; ig_media_id: string | null; ig_published_at: string | null }[];
+  const weekOf = new Map(metaRows.map((r) => [r.id, r.week_start]));
+  const mediaOf = new Map(metaRows.map((r) => [r.id, r.ig_media_id]));
 
   const byWeek = new Map<string, BoardItem[]>();
   for (const i of organik) {
@@ -173,8 +195,8 @@ export async function loadOrganicInfo(
   const lead = new Map<string, OrganicLead>();
   for (const group of byWeek.values()) {
     const inputs = group.flatMap((i) => {
-      const s = latest.get(i.id);
-      return s ? [{ code: i.code, publishedAt: i.stageChangedAt, views: s.views ?? 0, saves: s.saved ?? 0, shares: s.shares ?? 0 }] : [];
+      const s = mediaOf.get(i.id) ? latest.get(i.id) : undefined;
+      return s && i.igPublishedAt ? [{ code: i.code, publishedAt: i.igPublishedAt, views: s.views ?? 0, saves: s.saved ?? 0, shares: s.shares ?? 0 }] : [];
     });
     for (const r of compare72h(inputs, now)) {
       const item = group.find((i) => i.code === r.code);
@@ -183,7 +205,8 @@ export async function loadOrganicInfo(
   }
 
   for (const i of organik) {
-    const s = latest.get(i.id);
+    // Bağlantı değiştiyse ya da medya henüz çözülmediyse eski sayılar gösterilmez.
+    const s = mediaOf.get(i.id) ? latest.get(i.id) : undefined;
     if (s) {
       out[i.id] = {
         state: "hazir",

@@ -73,6 +73,8 @@ create table public.content_items (
   -- Onaylayan "Videoyu izledim; öğrenci yüzü ya da adı yok" kutusunu işaretledi.
   approver_face_check boolean,
   ig_media_id text,
+  -- Instagram'taki gerçek paylaşım zamanı (medya listesindeki timestamp); yalnız service_role yazar.
+  ig_published_at timestamptz,
   ig_permalink text,
   learned_note text,
   created_by uuid references public.profiles(id),

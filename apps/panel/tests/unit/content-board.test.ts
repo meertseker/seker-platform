@@ -42,6 +42,7 @@ function item(over: Partial<BoardItem>): BoardItem {
     reviewNote: null,
     learnedNote: null,
     igPermalink: null,
+    igPublishedAt: null,
     ...over,
   };
 }
@@ -120,7 +121,7 @@ describe("adviceFor", () => {
   });
 
   it("Organik, 72 saat doldu: Teste al", () => {
-    const a = adviceFor(item({ stage: "organik", status: "onaylandi", stageChangedAt: "2026-11-06T09:00:00Z" }), emptyPerf(), rules, NOW);
+    const a = adviceFor(item({ stage: "organik", status: "onaylandi", igPublishedAt: "2026-11-06T09:00:00Z" }), emptyPerf(), rules, NOW);
     expect(a.action).toEqual({ kind: "test", label: "Teste al" });
   });
 });
@@ -131,7 +132,7 @@ describe("cardTag", () => {
     expect(cardTag(item({ stage: "kontrol", status: "teslim" }), emptyPerf(), rules, NOW).text).toBe("Onay bekleniyor"));
   it("Organik 72 saat doldu · önde", () =>
     expect(
-      cardTag(item({ stage: "organik", status: "onaylandi", stageChangedAt: "2026-11-06T09:00:00Z" }), emptyPerf(), rules, NOW, "önde").text,
+      cardTag(item({ stage: "organik", status: "onaylandi", igPublishedAt: "2026-11-06T09:00:00Z" }), emptyPerf(), rules, NOW, "önde").text,
     ).toBe("72 saat doldu · önde"));
   it("Testte: durdurma kuralı tuttu", () =>
     expect(cardTag(item({ stage: "test", status: "onaylandi" }), STOP, rules, NOW)).toEqual({ text: "Durdurma kuralı tuttu", tone: "bad" }));
@@ -175,6 +176,12 @@ describe("fetchAllPages", () => {
 });
 
 describe("perfCodes", () => {
+  it("paylaşım saati bilinmiyorsa organik kart 72 saat dolduğunu söylemez", () => {
+    const i = item({ stage: "organik", status: "onaylandi", stageChangedAt: "2026-11-01T09:00:00Z", igPublishedAt: null });
+    expect(cardTag(i, emptyPerf(), rules, NOW).text).toBe("Paylaşım saati bekleniyor");
+    expect(adviceFor(i, emptyPerf(), rules, NOW).action.kind).toBe("none");
+  });
+
   it("yalnız organik, test, kazanan ve arşiv kodları", () => {
     const codes = perfCodes([
       item({ code: "R-2646-A", stage: "gorev" }),
