@@ -30,6 +30,8 @@ export type BoardItem = {
   reviewNote: string | null;
   learnedNote: string | null;
   igPermalink: string | null;
+  /** Instagram'daki gerçek paylaşım zamanı; bilinmiyorsa 72 saat sayılmaz. */
+  igPublishedAt: string | null;
 };
 
 export type ContentPerf = {
@@ -51,6 +53,7 @@ export type OrganicLead = "önde" | "geride" | "eşit";
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const ORGANIC_HOURS = 72;
+const ORGANIC_WAITING = "Paylaşım saati bekleniyor";
 const MICROS_PER_KURUS = 10_000;
 
 export function emptyPerf(): ContentPerf {
@@ -167,7 +170,8 @@ export function stageSince(item: BoardItem, now: Date): string {
       return d === 0 ? "bugün teslim edildi" : d === 1 ? "dün teslim edildi" : `${d} gün önce teslim edildi`;
     }
     case "organik": {
-      const h = hoursSince(item.stageChangedAt, now);
+      if (!item.igPublishedAt) return ORGANIC_WAITING;
+      const h = hoursSince(item.igPublishedAt, now);
       return h >= ORGANIC_HOURS ? "72 saat doldu" : `${ORGANIC_HOURS - h} saat kaldı`;
     }
     case "test":
@@ -194,7 +198,13 @@ export function adviceFor(item: BoardItem, perf: ContentPerf, rules: AdRules, no
     case "kontrol":
       return { text: "Otomatik kontrol geçti. Okuyup onaylayın.", action: { kind: "approve", label: "Onayla" } };
     case "organik": {
-      const h = hoursSince(item.stageChangedAt, now);
+      if (!item.igPublishedAt) {
+        return {
+          text: "Paylaşım saati bekleniyor. Gönderi bağlantısı eklenip Instagram'dan okununca 72 saat başlar.",
+          action: { kind: "none", label: "Beklemeye devam" },
+        };
+      }
+      const h = hoursSince(item.igPublishedAt, now);
       if (h < ORGANIC_HOURS) {
         return {
           text: `Organik deneme sürüyor. ${ORGANIC_HOURS - h} saat kaldı.`,
@@ -272,7 +282,8 @@ export function cardTag(
     case "kontrol":
       return { text: "Onay bekleniyor", tone: "neutral" };
     case "organik": {
-      const h = hoursSince(item.stageChangedAt, now);
+      if (!item.igPublishedAt) return { text: ORGANIC_WAITING, tone: "neutral" };
+      const h = hoursSince(item.igPublishedAt, now);
       if (h < ORGANIC_HOURS) return { text: `Organik · ${ORGANIC_HOURS - h} saat kaldı`, tone: "neutral" };
       return { text: organic ? `72 saat doldu · ${organic}` : "72 saat doldu", tone: organic === "önde" ? "ok" : "neutral" };
     }
@@ -329,7 +340,7 @@ export function cardProgress(item: BoardItem, perf: ContentPerf, rules: AdRules,
     case "kontrol":
       return 50;
     case "organik":
-      return pct(hoursSince(item.stageChangedAt, now), ORGANIC_HOURS);
+      return item.igPublishedAt ? pct(hoursSince(item.igPublishedAt, now), ORGANIC_HOURS) : 0;
     case "test":
       if (stopRuleHit(perf, rules) || winRuleHit(perf, rules)) return 100;
       return Math.max(pct(perf.qualified, rules.winMin), pct(spendTl(perf), stopLimitTl(rules)));
@@ -365,7 +376,7 @@ export function groupByStage(items: BoardItem[]): BoardColumn[] {
 
 const ITEM_COLUMNS =
   "id, code, kind, platform, topic, audience, brief, owner_id, due_at, status, stage, stage_changed_at, submitted_at, " +
-  "caption, page_fields, media_path, face_answer, review_note, learned_note, ig_permalink";
+  "caption, page_fields, media_path, face_answer, review_note, learned_note, ig_permalink, ig_published_at";
 const ARCHIVE_LIMIT = 30;
 
 type ItemRow = {
@@ -374,6 +385,7 @@ type ItemRow = {
   stage_changed_at: string; submitted_at: string | null; caption: string | null;
   page_fields: Record<string, unknown> | null; media_path: string | null; face_answer: boolean | null;
   review_note: string | null; learned_note: string | null; ig_permalink: string | null;
+  ig_published_at: string | null;
 };
 
 const STAGE_KEYS = new Set<string>(STAGES.map((s) => s.key));
@@ -408,7 +420,7 @@ export async function loadBoardItems(supabase: SupabaseClient): Promise<BoardIte
       ownerId: r.owner_id, ownerName: owner?.full_name ?? "Öğretmen", ownerPhone: owner?.phone ?? null,
       dueAt: r.due_at, status: r.status, stage: r.stage as StageKey, stageChangedAt: r.stage_changed_at,
       submittedAt: r.submitted_at, caption: r.caption, pageFields: fields, mediaPath: r.media_path,
-      faceAnswer: r.face_answer, reviewNote: r.review_note, learnedNote: r.learned_note, igPermalink: r.ig_permalink,
+      faceAnswer: r.face_answer, reviewNote: r.review_note, learnedNote: r.learned_note, igPermalink: r.ig_permalink, igPublishedAt: r.ig_published_at,
     };
   });
 }

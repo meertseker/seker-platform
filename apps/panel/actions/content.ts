@@ -274,9 +274,12 @@ export async function linkInstagramPost(contentId: string, permalink: string): P
   // ig_media_id sabah senkronunda bu bağlantıdan çözülür; bağlantı değişince eskisi geçersiz olur.
   const { error } = await admin
     .from("content_items")
-    .update({ ig_permalink: `https://www.instagram.com/${match[1]}/${match[2]}/`, ig_media_id: null })
+    .update({ ig_permalink: `https://www.instagram.com/${match[1]}/${match[2]}/`, ig_media_id: null, ig_published_at: null })
     .eq("id", row.id);
   if (error) return { error: "Bağlantı kaydedilemedi" };
+  // Eski gönderinin sayıları yeni bağlantıda görünmesin.
+  const { error: statsError } = await admin.from("content_organic_stats").delete().eq("content_id", row.id);
+  if (statsError) return { error: "Eski sayılar silinemedi, bağlantıyı yeniden kaydedin" };
   revalidatePath(BOARD);
   return { ok: true };
 }

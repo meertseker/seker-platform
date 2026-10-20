@@ -22,11 +22,15 @@ export interface ReelInsights {
   avgWatchMs: number | null;
 }
 
-/** Sondaki "/" ve sorgu/parça yok sayılır; ana makine küçük harfe çevrilir. */
+/**
+ * Gönderi anahtarı: /p/KOD, /reel/KOD, /reels/KOD ve /tv/KOD aynı kısa kodu verir; sorgu, parça ve sondaki "/" yok sayılır.
+ * Kısa kod büyük/küçük harfe duyarlıdır.
+ */
 export function normalizePermalink(raw: string): string | null {
   try {
     const url = new URL(raw.trim());
-    return `${url.hostname.toLowerCase().replace(/^www\./, "")}${url.pathname.replace(/\/+$/, "")}`;
+    const m = /^\/(?:[^/]+\/)?(?:p|reels?|tv)\/([^/]+)/i.exec(url.pathname);
+    return m ? m[1] : url.pathname.replace(/\/+$/, "") || null;
   } catch {
     return null;
   }
@@ -37,34 +41,61 @@ function signed(url: URL, cfg: MetaConfig): URL {
   return url;
 }
 
-async function getJson<T>(url: URL, cfg: MetaConfig, fetchFn: FetchFn): Promise<T> {
+async function getJson<T>(url: URL, cfg: MetaConfig, fetchFn: FetchFn, label: string): Promise<T> {
   const response = await fetchFn(url.toString(), { method: "GET", headers: headers(cfg), signal: AbortSignal.timeout(TIMEOUT_MS) });
-  if (!response.ok) throw await toApiError(response, cfg);
+  if (!response.ok) throw await toApiError(response, cfg, label);
   return (await response.json()) as T;
 }
 
-/**
- * Gönderi bağlantısından Instagram medya kimliğini bulur. Yapılandırma ya da bağlantı geçersizse istek gitmez, null döner.
- * Medya listesi alanları: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media
- * (bu oturumda canlı doğrulanmadı; ilk gerçek hesapta bakılır).
- */
-export async function resolveMediaId(cfg: MetaConfig, permalink: string, fetchFn: FetchFn = fetch): Promise<string | null> {
-  if (!cfg.instagramUserId) return null;
-  const wanted = normalizePermalink(permalink);
-  if (!wanted) return null;
+export interface MediaRef {
+  id: string;
+  permalink: string;
+  /** Instagram'daki paylaşım zamanı (Meta'nın verdiği biçim). */
+  timestamp: string | null;
+}
 
+/**
+ * Hesabın son gönderileri (sayfa başına 50, en çok 5 sayfa). Senkron başına bir kez çekilip tüm kartlar ona karşı eşlenir.
+ * Alanlar: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media
+ * (bu oturumda canlı doğrulanmadı; ilk gerçek hesapta bakılır). Yapılandırma yoksa istek gitmez.
+ */
+export async function listMedia(cfg: MetaConfig, fetchFn: FetchFn = fetch): Promise<MediaRef[]> {
+  if (!cfg.instagramUserId) return [];
   const first = new URL(`${META_GRAPH_BASE}/${META_GRAPH_API_VERSION}/${cfg.instagramUserId}/media`);
   first.searchParams.set("fields", "id,permalink,media_product_type,timestamp");
   first.searchParams.set("limit", "50");
+  const out: MediaRef[] = [];
   let url: URL | null = signed(first, cfg);
   for (let page = 0; url && page < MEDIA_PAGES; page++) {
-    const body: { data?: { id?: string; permalink?: string }[]; paging?: { next?: string } } = await getJson(url, cfg, fetchFn);
+    const body: { data?: { id?: string; permalink?: string; timestamp?: string }[]; paging?: { next?: string } } = await getJson(
+      url,
+      cfg,
+      fetchFn,
+      "Instagram medya listesi alınamadı",
+    );
     if (!Array.isArray(body.data)) throw new MetaApiError("Meta yanıtı beklenmeyen biçimde", 502);
-    const hit = body.data.find((m) => m.id && m.permalink && normalizePermalink(m.permalink) === wanted);
-    if (hit?.id) return String(hit.id);
+    for (const m of body.data) if (m.id && m.permalink) out.push({ id: String(m.id), permalink: m.permalink, timestamp: m.timestamp ?? null });
     url = body.paging?.next ? nextUrl(body.paging.next, cfg) : null;
   }
-  return null;
+  return out;
+}
+
+/** Bağlantıyı hazır medya listesinde arar. */
+export function findMedia(list: MediaRef[], permalink: string): MediaRef | null {
+  const wanted = normalizePermalink(permalink);
+  if (!wanted) return null;
+  return list.find((m) => normalizePermalink(m.permalink) === wanted) ?? null;
+}
+
+/** Tek bağlantı için medya kimliği ve paylaşım zamanı; bulunamazsa ya da yapılandırma yoksa null. */
+export async function resolveMediaId(
+  cfg: MetaConfig,
+  permalink: string,
+  fetchFn: FetchFn = fetch,
+): Promise<{ id: string; timestamp: string | null } | null> {
+  if (!cfg.instagramUserId || !normalizePermalink(permalink)) return null;
+  const hit = findMedia(await listMedia(cfg, fetchFn), permalink);
+  return hit ? { id: hit.id, timestamp: hit.timestamp } : null;
 }
 
 type InsightEntry = { name?: string; values?: { value?: unknown }[]; total_value?: { value?: unknown } };
@@ -80,7 +111,7 @@ function metricValue(entries: InsightEntry[], name: string): number | null {
 export async function fetchReelInsights(cfg: MetaConfig, mediaId: string, fetchFn: FetchFn = fetch): Promise<ReelInsights> {
   const url = new URL(`${META_GRAPH_BASE}/${META_GRAPH_API_VERSION}/${encodeURIComponent(mediaId)}/insights`);
   url.searchParams.set("metric", REEL_METRICS);
-  const body = await getJson<{ data?: InsightEntry[] }>(signed(url, cfg), cfg, fetchFn);
+  const body = await getJson<{ data?: InsightEntry[] }>(signed(url, cfg), cfg, fetchFn, "Instagram insights isteği başarısız");
   if (!Array.isArray(body.data)) throw new MetaApiError("Meta yanıtı beklenmeyen biçimde", 502);
   return {
     views: metricValue(body.data, "views"),
