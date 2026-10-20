@@ -94,9 +94,10 @@ export default async function PazarlamaPage({ searchParams }: { searchParams: Se
           <MarketingTable report={data.report} />
 
           <section className="space-y-3 rounded-2xl border border-border bg-surface p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-foreground">Google&apos;a bildirilen randevu ve kayıtlar</h2>
+            <h2 className="text-lg font-semibold text-foreground">Reklam platformlarına bildirilen başvuru, randevu ve kayıtlar</h2>
             <p className="text-sm text-muted-foreground">
-              Reklamdan gelen bir veli randevuya veya kayda dönünce Google&apos;a bildirilir. Böylece Google kayıt olan veliye benzeyenleri bulmayı öğrenir.
+              Reklamdan gelen bir veli başvurduğunda, randevuya veya kayda dönünce geldiği reklam platformuna bildirilir. Böylece platform kayıt olan veliye benzeyenleri bulmayı öğrenir.
+              Instagram (Meta) bildirimi hukuk onayı gelene kadar kapalıdır.
             </p>
             <ConversionUploadList uploads={data.uploads} />
           </section>
