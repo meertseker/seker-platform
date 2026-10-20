@@ -35,7 +35,7 @@ describe("markNotificationRead", () => {
     expect(eq1).toHaveBeenCalledWith("id", ID);
     expect(eq2).toHaveBeenCalledWith("user_id", "u1");
     expect(is).toHaveBeenCalledWith("read_at", null);
-    expect(revalidatePath).toHaveBeenCalledWith("/");
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
   });
 
   it("DB hatasında Türkçe hata döner", async () => {

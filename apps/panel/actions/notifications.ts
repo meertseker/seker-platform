@@ -38,7 +38,7 @@ export async function markNotificationsRead() {
 
   if (error) return { error: "Bildirimler okundu işaretlenemedi" };
 
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   return {};
 }
 
@@ -59,6 +59,6 @@ export async function markNotificationRead(id: string) {
 
   if (error) return { error: "Bildirim okundu işaretlenemedi" };
 
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   return {};
 }

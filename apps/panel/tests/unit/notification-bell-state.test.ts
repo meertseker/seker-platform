@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { badgeLabel, classifySummaryResponse, summaryChanged, visibleUnreadCount } from "@/lib/notifications/bell-state";
+import {
+  badgeLabel,
+  classifySummaryResponse,
+  reconcileOptimistic,
+  summaryChanged,
+  visibleUnreadCount,
+} from "@/lib/notifications/bell-state";
 
 const items = [
   { id: "a", read_at: null },
@@ -50,5 +56,59 @@ describe("classifySummaryResponse", () => {
   it("diğer hatalar yok sayılır, başarılı okunur", () => {
     expect(classifySummaryResponse({ ...base, ok: false, status: 500 })).toBe("ignore");
     expect(classifySummaryResponse(base)).toBe("read");
+  });
+});
+
+describe("reconcileOptimistic", () => {
+  const item = (id: string, read = false) => ({ id, read_at: read ? "2026-10-20T10:00:00Z" : null });
+
+  it("sunucuda hâlâ okunmamış görünen yerel okundular korunur, okunmuş olanlar düşer", () => {
+    const next = reconcileOptimistic({
+      readIds: new Set(["a", "b", "gone"]),
+      allRead: false,
+      prevItems: [item("a"), item("b"), item("gone")],
+      items: [item("a"), item("b", true)],
+      unreadCount: 3,
+    });
+    expect([...next.readIds]).toEqual(["a"]);
+    expect(next.allRead).toBe(false);
+  });
+
+  it("tümü okundu, işlem sürerken yenileme gelirse korunur", () => {
+    const next = reconcileOptimistic({
+      readIds: new Set(),
+      allRead: true,
+      prevItems: [item("a"), item("b")],
+      items: [item("a"), item("b")],
+      unreadCount: 2,
+    });
+    expect(next.allRead).toBe(true);
+  });
+
+  it("sunucu 0 okunmamış dediğinde her şey sıfırlanır", () => {
+    const next = reconcileOptimistic({
+      readIds: new Set(["a"]),
+      allRead: true,
+      prevItems: [item("a")],
+      items: [item("a", true)],
+      unreadCount: 0,
+    });
+    expect(next.allRead).toBe(false);
+    expect(next.readIds.size).toBe(0);
+  });
+
+  it("tümü okundu sürerken yeni bildirim gelirse yalnız yenisi okunmamış sayılır", () => {
+    const next = reconcileOptimistic({
+      readIds: new Set(),
+      allRead: true,
+      prevItems: [item("a"), item("b")],
+      items: [item("new"), item("a"), item("b")],
+      unreadCount: 3,
+    });
+    expect(next.allRead).toBe(false);
+    expect([...next.readIds].sort()).toEqual(["a", "b"]);
+    expect(
+      visibleUnreadCount({ unreadCount: 3, items: [item("new"), item("a"), item("b")], ...next }),
+    ).toBe(1);
   });
 });

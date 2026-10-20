@@ -105,8 +105,8 @@ export async function GET(req: NextRequest) {
     const parentName: string | null = lead?.parent_name ?? null;
     const targets = new Set([a.created_by, ...(yoneticiler ?? []).map((y) => y.id)]);
     for (const uid of targets) {
-      // Cron her tetiklendiğinde aynı randevu için tekrar bildirim atmamak üzere randevu+gün bazında kontrol edilir.
-      if (await notificationExists(db, uid, "randevu_bugun", { appointmentId: a.id, tarih: today })) continue;
+      // Cron her tetiklendiğinde aynı randevu için tekrar bildirim atmamak üzere randevu+gün+saat bazında kontrol edilir.
+      if (await notificationExists(db, uid, "randevu_bugun", { appointmentId: a.id, tarih: today, at: a.scheduled_at })) continue;
       const { error } = await insertNotifications(db, [{
         user_id: uid, type: "randevu_bugun",
         payload: {
@@ -114,8 +114,27 @@ export async function GET(req: NextRequest) {
           ...(parentName ? { parentName } : {}),
         },
       }]);
-      if (error) console.error(`Bildirim yazılamadı: ${error.message}`);
+      if (error) {
+        console.error(`Bildirim yazılamadı: ${error.message}`);
+        continue;
+      }
+      // Saat aynı gün değiştiyse eski saatli bildirim okundu olur; yalnız yenisi sayılır.
+      const { error: oldTimeError } = await db.from("notifications")
+        .update({ read_at: new Date().toISOString() })
+        .eq("user_id", uid).eq("type", "randevu_bugun").is("read_at", null)
+        .eq("payload->>appointmentId", a.id).eq("payload->>tarih", today)
+        .neq("payload->>at", a.scheduled_at);
+      if (oldTimeError) console.error(`Eski saatli randevu bildirimi temizlenemedi: ${oldTimeError.message}`);
     }
+  }
+
+  /** Yeni özet eskisinin yerini alır: kullanıcının bugünden önceki okunmamış özetleri okundu olur (bugünküne dokunulmaz).
+   *  Yalnızca o kullanıcının bugünkü özeti varken çağrılır; yazılamadıysa eskisi okunmamış kalır. */
+  async function supersedeOldSummaries(userId: string) {
+    const { error } = await db.from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("user_id", userId).eq("type", "geciken_ozet").is("read_at", null).lt("payload->>tarih", today);
+    if (error) console.error(`Eski geciken özetler temizlenemedi: ${error.message}`);
   }
 
   // Kural 5 (spec §8.5): Pazartesi geciken özeti (yöneticilere)
@@ -125,7 +144,10 @@ export async function GET(req: NextRequest) {
     const totalKurus = overdueTotalKurus(overdue ?? []);
     if (totalKurus > 0) for (const y of yoneticiler ?? []) {
       // Aynı gün içinde tekrar tetiklenen cron, yöneticiye ikinci bir özet göndermesin.
-      if (await notificationExists(db, y.id, "geciken_ozet", { tarih: today })) continue;
+      if (await notificationExists(db, y.id, "geciken_ozet", { tarih: today })) {
+        await supersedeOldSummaries(y.id);
+        continue;
+      }
       const { error } = await insertNotifications(db, [{
         user_id: y.id, type: "geciken_ozet",
         payload: {
@@ -135,14 +157,11 @@ export async function GET(req: NextRequest) {
           tarih: today,
         },
       }]);
-      if (error) console.error(`Bildirim yazılamadı: ${error.message}`);
-    }
-    // Yeni özet eskisinin yerini alır: bugünden önceki okunmamış özetler okundu olur (bugünküne dokunulmaz).
-    if (totalKurus > 0) {
-      const { error } = await db.from("notifications")
-        .update({ read_at: new Date().toISOString() })
-        .eq("type", "geciken_ozet").is("read_at", null).lt("payload->>tarih", today);
-      if (error) console.error(`Eski geciken özetler temizlenemedi: ${error.message}`);
+      if (error) {
+        console.error(`Bildirim yazılamadı: ${error.message}`);
+        continue;
+      }
+      await supersedeOldSummaries(y.id);
     }
   }
   return NextResponse.json({ ok: true, staleLeads: staleLeads?.length ?? 0, appts: appts?.length ?? 0 });
