@@ -264,7 +264,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
     supabase
       .from("leads")
       .select(
-        "id, parent_name, phone, child_name, child_birth_month, child_birth_year, channel, content_code, district, start_window, wants_whatsapp, first_contact_at, source, source_detail, gclid, utm_source, utm_medium, utm_campaign, landing_path, status, lost_reason, ingilizce_gerekli, ozel_durum, ozel_durum_note, wants_summer, assigned_to, converted_student_id, last_activity_at, created_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
+        "id, parent_name, phone, child_name, child_birth_month, child_birth_year, channel, content_code, district, start_window, wants_whatsapp, first_contact_at, source, source_detail, ad_platform, gclid, utm_source, utm_medium, utm_campaign, landing_path, status, lost_reason, ingilizce_gerekli, ozel_durum, ozel_durum_note, wants_summer, assigned_to, converted_student_id, last_activity_at, created_at, assigned:profiles!leads_assigned_to_fkey(id, full_name)",
       )
       .eq("id", id)
       .maybeSingle(),

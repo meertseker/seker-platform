@@ -32,6 +32,20 @@ describe("originLines", () => {
     expect(r.channelLabel).toBe("Google · /lp/beykent");
   });
 
+  it("meta form velisi Instagram reklamı etiketi alır", () => {
+    const r = originLines(
+      { ...base, channel: "form", source: "instagram", ad_platform: "meta", content_code: "R-2645-A" },
+      NOW,
+    );
+    expect(r.channelLabel).toBe("Instagram reklamı · Sayfa formu");
+    expect(r.codeLabel).toBe("R-2645-A · Reels");
+  });
+
+  it("organik instagram formu \"Sayfa formu\" kalır", () => {
+    expect(originLines({ ...base, channel: "form", source: "instagram", ad_platform: null }, NOW).channelLabel).toBe("Sayfa formu");
+    expect(originLines({ ...base, channel: "form", source: "instagram" }, NOW).channelLabel).toBe("Sayfa formu");
+  });
+
   it("sayfa formu cevaplarını sırayla yazar", () => {
     const r = originLines(
       {

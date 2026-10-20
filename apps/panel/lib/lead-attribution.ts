@@ -25,6 +25,8 @@ export type LeadOrigin = {
   content_code: string | null;
   source: string;
   gclid: string | null;
+  /** Reklam platformu: yalnız ücretli Instagram/Facebook velisinde "meta". */
+  ad_platform?: string | null;
   landing_path: string | null;
   district: string | null;
   start_window: string | null;
@@ -50,6 +52,8 @@ export function originLines(
 ): { channelLabel: string; codeLabel: string | null; answers: string[] } {
   const channelLabel = lead.gclid
     ? lead.landing_path ? `Google · ${lead.landing_path}` : "Google"
+    : lead.ad_platform === "meta"
+    ? `Instagram reklamı · ${lead.channel && Object.hasOwn(CHANNEL_LABELS, lead.channel) ? CHANNEL_LABELS[lead.channel] : "Sayfa formu"}`
     : (lead.channel && Object.hasOwn(CHANNEL_LABELS, lead.channel) ? CHANNEL_LABELS[lead.channel] : null) ??
       label(LEAD_SOURCES, lead.source);
 
