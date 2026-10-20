@@ -103,6 +103,18 @@ export function notificationText(n: NotificationLike): string {
     }
     case "santral_senkron_hata":
       return "Santral senkronu başarısız oldu.";
+    case "icerik_gorev": {
+      const code = str(payload.code);
+      return code ? `Yeni içerik görevi: ${code}` : "Yeni içerik görevi";
+    }
+    case "icerik_teslim":
+      return `${str(payload.code) ?? "İçerik"} teslim edildi, onayını bekliyor`;
+    case "icerik_duzeltme": {
+      const note = str(payload.note);
+      return `${str(payload.code) ?? "İçerik"} için düzeltme istendi${note ? `: ${note}` : ""}`;
+    }
+    case "icerik_onay":
+      return `${str(payload.code) ?? "İçerik"} onaylandı`;
     default:
       return `Yeni bir sistem bildirimi (${n.type.replace(/_/g, " ")})`;
   }
@@ -136,6 +148,14 @@ export function notificationHint(n: NotificationLike): string | null {
     case "ads_senkron_hata":
     case "wa_baglanti_koptu":
     case "santral_senkron_hata":
+      return null;
+    case "icerik_gorev":
+      return "Görevim ekranında açın.";
+    case "icerik_teslim":
+      return "İçerik ekranında onaylayın ya da düzeltme isteyin.";
+    case "icerik_duzeltme":
+      return "Düzeltip yeniden teslim edin.";
+    case "icerik_onay":
       return null;
   }
 }

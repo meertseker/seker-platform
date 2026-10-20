@@ -15,6 +15,10 @@ export const NOTIFICATION_TYPES = [
   "geciken_ozet",
   "cevapsiz_arama",
   "santral_senkron_hata",
+  "icerik_gorev",
+  "icerik_teslim",
+  "icerik_duzeltme",
+  "icerik_onay",
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

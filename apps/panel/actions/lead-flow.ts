@@ -535,19 +535,38 @@ export async function createMessageLead(
   }
 }
 
-/** Son 28 günde açılan velilerin içerik kodları, çoktan aza. */
-export async function recentContentCodes(): Promise<{ code: string; count: number }[]> {
+/**
+ * "Mesajdan veli ekle" kod seçicisi: son 28 günde onaylanan içerikler (henüz velisi olmayan yeni Reels dahil,
+ * konusuyla) ve son 28 günde açılan velilerin kodları. count = veli sayısı; çoktan aza, sonra koda göre.
+ */
+export async function recentContentCodes(): Promise<{ code: string; count: number; topic?: string }[]> {
   await getSessionProfile();
   const supabase = await createServerSupabase();
   const since = new Date(Date.now() - 28 * 86_400_000).toISOString();
-  const { data } = await supabase
-    .from("leads")
-    .select("content_code")
-    .not("content_code", "is", null)
-    .gte("created_at", since);
+  const [{ data }, { data: items }] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("content_code")
+      .not("content_code", "is", null)
+      .gte("created_at", since),
+    supabase
+      .from("content_items")
+      .select("code, topic")
+      .eq("status", "onaylandi")
+      .in("stage", ["organik", "test", "kazanan"])
+      .gte("approved_at", since),
+  ]);
   const counts = new Map<string, number>();
+  const topics = new Map<string, string>();
+  for (const r of (items ?? []) as { code?: string; topic?: string | null }[]) {
+    if (!r.code) continue;
+    counts.set(r.code, 0);
+    if (r.topic) topics.set(r.code, r.topic);
+  }
   for (const r of (data ?? []) as { content_code: string | null }[]) {
     if (r.content_code) counts.set(r.content_code, (counts.get(r.content_code) ?? 0) + 1);
   }
-  return [...counts].map(([code, count]) => ({ code, count })).sort((a, b) => b.count - a.count);
+  return [...counts]
+    .map(([code, count]) => (topics.has(code) ? { code, count, topic: topics.get(code) } : { code, count }))
+    .sort((a, b) => b.count - a.count || a.code.localeCompare(b.code));
 }

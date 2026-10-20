@@ -3,6 +3,7 @@ import {
   Banknote,
   Bell,
   CalendarClock,
+  Clapperboard,
   Megaphone,
   MessageCircleWarning,
   MessageSquarePlus,
@@ -39,6 +40,10 @@ const ICONS: Record<NotificationType, { icon: LucideIcon; tone: Tone }> = {
   wa_baglanti_koptu: { icon: MessageCircleWarning, tone: "destructive" },
   santral_senkron_hata: { icon: PhoneOff, tone: "destructive" },
   geri_bildirim: { icon: MessageSquarePlus, tone: "muted" },
+  icerik_gorev: { icon: Clapperboard, tone: "primary" },
+  icerik_teslim: { icon: Clapperboard, tone: "primary" },
+  icerik_duzeltme: { icon: Clapperboard, tone: "warning" },
+  icerik_onay: { icon: Clapperboard, tone: "accent" },
 };
 
 const FALLBACK = { icon: Bell, tone: "muted" as Tone };
