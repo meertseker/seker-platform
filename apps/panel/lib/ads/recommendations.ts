@@ -249,7 +249,7 @@ export function buildRecommendations(inputs: RecInput[], gates: Gate[], s: AdSet
             `Veli başı maliyet hedefin altında (${formatTl(cpq ?? 0)}, hedef ${target}). ` +
             `Günlük bütçe ${formatTl(b.tl)} → ${formatTl(newTl)}.${shared}` +
             (blocked ? ` Ancak bir kapı kırmızı (${red.labels.join(", ")}) olduğu için bekletiliyor.` : ""),
-          action: { platform, level: b.level, objectId: b.objectId, objectName: b.name, kind: "budget", newDailyBudgetTl: newTl },
+          action: { platform, level: b.level, objectId: b.objectId, objectName: b.name, kind: "budget", newDailyBudgetTl: newTl, expectedOldTl: b.tl },
           blockedReason: blocked ? GATE_BLOCKED : null,
         });
       }

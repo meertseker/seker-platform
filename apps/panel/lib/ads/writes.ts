@@ -23,6 +23,8 @@ export type AdChangeAction = {
   objectName: string;
   kind: "pause" | "resume" | "budget";
   newDailyBudgetTl?: number;
+  /** Öneriden gelen bütçe artışında önerinin yazıldığı andaki günlük bütçe (TL); değiştiyse öneri uygulanmaz. */
+  expectedOldTl?: number;
 };
 
 export type AdChangeInput = AdChangeAction & {
@@ -93,6 +95,7 @@ export type AdChangeDeps = {
 };
 
 const CLOSED_MESSAGE = "Kaydedildi · uygulanmadı: canlı yazım kapalı";
+const REC_BUDGET_CHANGED = "Bütçe öneriden sonra değişti; sayfayı yenileyin.";
 const MIN_REASON = 10;
 const MAX_REASON = 500;
 const MAX_NAME = 200;
@@ -132,6 +135,10 @@ function validate(input: AdChangeInput): string | null {
     const tl = input.newDailyBudgetTl;
     if (typeof tl !== "number" || !Number.isFinite(tl) || tl < 1 || tl > MAX_BUDGET_TL) {
       return "Günlük bütçe 1 ile 1.000.000 TL arasında olmalı.";
+    }
+    const old = input.expectedOldTl;
+    if (old !== undefined && (typeof old !== "number" || !Number.isFinite(old) || old < 0 || old > MAX_BUDGET_TL)) {
+      return "Geçersiz eski bütçe.";
     }
   }
   return null;
@@ -273,6 +280,12 @@ export async function executeAdChange(deps: AdChangeDeps, input: AdChangeInput):
       }
     }
     const newTl = roundKurus(input.newDailyBudgetTl as number);
+    // Öneri sabahki bütçeye göre yazıldı: bütçe o zamandan beri değiştiyse (ör. Reklam Yöneticisi'nde 300'e çıkarıldı)
+    // önerinin tutarı artık artış değildir; uygulanmaz. Öneriden gelen bütçe değişikliği hiçbir zaman azaltma değildir.
+    if (input.source === "oneri") {
+      const expected = input.expectedOldTl === undefined ? null : roundKurus(input.expectedOldTl);
+      if (expected === null || oldTl === null || oldTl !== expected || newTl <= oldTl) return { error: REC_BUDGET_CHANGED };
+    }
     if (!liveFailed && oldTl !== null && newTl === oldTl) return { error: "Bütçe değişmedi." };
     plan = { kind: "budget", target: obj.budgetResource, oldTl, newTl };
   } else {
