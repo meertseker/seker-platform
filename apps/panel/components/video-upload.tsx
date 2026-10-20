@@ -12,6 +12,7 @@ interface VideoUploadProps {
   hasVideo: boolean;
   maxMb: number;
   disabled?: boolean;
+  onBusyChange?: (busy: boolean) => void;
   /** Yükleme ve kayıt bitince çağrılır; üst bileşen yüz sorusunu sıfırlar (sunucu da sıfırlar). */
   onUploaded: (path: string, meta: VideoMeta) => void;
 }
@@ -41,7 +42,7 @@ function readDuration(file: File): Promise<number | undefined> {
   });
 }
 
-export function VideoUpload({ contentId, meta, hasVideo, maxMb, disabled, onUploaded }: VideoUploadProps) {
+export function VideoUpload({ contentId, meta, hasVideo, maxMb, disabled, onBusyChange, onUploaded }: VideoUploadProps) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +55,7 @@ export function VideoUpload({ contentId, meta, hasVideo, maxMb, disabled, onUplo
       return;
     }
     setBusy(true);
+    onBusyChange?.(true);
     try {
       const [durationSec, ticket] = await Promise.all([
         readDuration(file),
@@ -83,6 +85,7 @@ export function VideoUpload({ contentId, meta, hasVideo, maxMb, disabled, onUplo
       setError("Video yüklenemedi, bağlantını kontrol edip tekrar dene");
     } finally {
       setBusy(false);
+      onBusyChange?.(false);
       if (input.current) input.current.value = "";
     }
   }
@@ -90,7 +93,7 @@ export function VideoUpload({ contentId, meta, hasVideo, maxMb, disabled, onUplo
   const label = busy
     ? "Yükleniyor…"
     : hasVideo
-      ? `✓ ${meta?.name ?? "Video yüklendi"}${meta?.durationSec !== undefined ? ` · ${meta.durationSec} sn` : ""} · dikey`
+      ? `✓ ${meta?.name ?? "Video yüklendi"}${meta?.durationSec !== undefined ? ` · ${meta.durationSec} sn` : ""}`
       : "+ Video yükle";
 
   return (

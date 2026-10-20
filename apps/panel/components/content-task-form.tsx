@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveContentDraft, submitContent } from "@/actions/content";
 import { VideoUpload, type VideoMeta } from "@/components/video-upload";
 import { checkText } from "@/lib/content/checks";
+import { OFFLINE_SAVE_MESSAGE, mergePatch, tabLabel, visibleTasks, type TextPatch } from "@/lib/content/task-flow";
 import { PAGE_FIELDS, contentBlockers } from "@/lib/content/store";
 import type { ContentLimits } from "@/lib/content/settings";
 
@@ -45,14 +46,24 @@ const SHOOTING_RULES = [
 // Sunucudaki contentBlockers ile aynı işlevi çağırır; reklam kuralları teslim kontrolünde kullanılmaz.
 const NO_AD_RULES = { targetTl: 0, stopMultiple: 0, winMin: 0, noResultWeeks: 0 };
 
-export function ContentTaskForm({ firstName, tasks, banned, limits, videoMaxMb }: Props) {
-  const [activeId, setActiveId] = useState(tasks[0]?.id ?? "");
-  const [doneIds, setDoneIds] = useState<Record<string, string[]>>({});
+export function ContentTaskForm({ firstName, tasks: incoming, banned, limits, videoMaxMb }: Props) {
+  const router = useRouter();
+  const [activeId, setActiveId] = useState(incoming[0]?.id ?? "");
+  // Teslim edilen görev sunucu listesinden düşse de "Tamam"a basılana kadar teşekkür ekranı açık kalır.
+  const [doneLines, setDoneLines] = useState<Record<string, string[]>>({});
+  const [held, setHeld] = useState<Record<string, FormTask>>({});
+  const [busy, setBusy] = useState(false);
+  const tasks = visibleTasks(incoming, held, doneLines);
   const active = tasks.find((t) => t.id === activeId) ?? tasks[0];
   const kindCount = (k: string) => tasks.filter((t) => t.kind === k).length;
 
-  if (!active) return null;
-  const doneLines = doneIds[active.id];
+  function acknowledge(id: string) {
+    const without = <T,>(m: Record<string, T>) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== id));
+    setDoneLines(without);
+    setHeld(without);
+    setActiveId("");
+    router.refresh();
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-[34rem] flex-col gap-4 pb-32">
@@ -61,47 +72,56 @@ export function ContentTaskForm({ firstName, tasks, banned, limits, videoMaxMb }
         <h1 className="text-[28px] font-bold tracking-tight text-foreground">Görevim</h1>
       </header>
 
-      {tasks.length > 1 && !doneLines ? (
+      {!active ? (
+        <p className="rounded-2xl border border-border bg-surface p-4 text-[15px] text-foreground">
+          Bu hafta görevin yok. Yeni görev gelince burada görünür.
+        </p>
+      ) : null}
+
+      {tasks.length > 1 ? (
         <div role="tablist" aria-label="Görevlerim" className="flex flex-wrap gap-1.5 rounded-xl bg-muted p-1">
           {tasks.map((t) => {
-            const name =
-              kindCount(t.kind) > 1 ? t.header.split(" · ")[0] : t.kind === "reels" ? "Reels görevi" : "Sayfa görevi";
-            const on = t.id === active.id;
+            const on = t.id === active?.id;
             return (
               <button
                 key={t.id}
                 type="button"
                 role="tab"
                 aria-selected={on}
+                disabled={busy}
                 onClick={() => setActiveId(t.id)}
-                className={`min-h-11 flex-1 rounded-[9px] px-3 text-sm font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`min-h-11 flex-1 rounded-[9px] px-3 text-sm font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 ${
                   on ? "bg-surface shadow-sm" : "bg-transparent"
                 }`}
               >
-                {name}
+                {tabLabel(t, kindCount(t.kind))}
               </button>
             );
           })}
         </div>
       ) : null}
 
-      {doneLines ? (
-        <DoneScreen lines={doneLines} />
-      ) : (
+      {active && doneLines[active.id] ? (
+        <DoneScreen lines={doneLines[active.id]} onAcknowledge={() => acknowledge(active.id)} />
+      ) : active ? (
         <TaskEditor
           key={active.id}
           task={active}
           banned={banned}
           limits={limits}
           videoMaxMb={videoMaxMb}
-          onDone={(lines) => setDoneIds((d) => ({ ...d, [active.id]: lines }))}
+          onBusyChange={setBusy}
+          onDone={(lines) => {
+            setHeld((h) => ({ ...h, [active.id]: active }));
+            setDoneLines((d) => ({ ...d, [active.id]: lines }));
+          }}
         />
-      )}
+      ) : null}
     </div>
   );
 }
 
-function DoneScreen({ lines }: { lines: string[] }) {
+function DoneScreen({ lines, onAcknowledge }: { lines: string[]; onAcknowledge: () => void }) {
   return (
     <section className="flex flex-col gap-4 pt-4" aria-live="polite">
       <div className="flex size-16 items-center justify-center rounded-full bg-accent-soft text-accent">
@@ -133,6 +153,13 @@ function DoneScreen({ lines }: { lines: string[] }) {
       <p className="text-sm leading-relaxed text-muted-foreground">
         Düzeltme istenirse görev sana geri döner ve bildirim gelir.
       </p>
+      <button
+        type="button"
+        onClick={onAcknowledge}
+        className="min-h-14 w-full rounded-[14px] bg-primary text-[17px] font-bold text-on-primary transition-colors hover:bg-primary-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        Tamam
+      </button>
     </section>
   );
 }
@@ -145,22 +172,21 @@ type Draft = {
   faceAnswer: boolean | null;
 };
 
-type TextPatch = { caption?: string; pageFields?: Record<string, string> };
-
 function TaskEditor({
   task,
   banned,
   limits,
   videoMaxMb,
+  onBusyChange,
   onDone,
 }: {
   task: FormTask;
   banned: string[];
   limits: ContentLimits;
   videoMaxMb: number;
+  onBusyChange: (busy: boolean) => void;
   onDone: (lines: string[]) => void;
 }) {
-  const router = useRouter();
   const [draft, setDraft] = useState<Draft>({
     caption: task.caption,
     pageFields: task.pageFields,
@@ -171,31 +197,43 @@ function TaskEditor({
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [submitErrors, setSubmitErrors] = useState<string[]>([]);
   const timer = useRef<number | null>(null);
   const pending = useRef<TextPatch>({});
 
   const isReels = task.kind === "reels";
 
-  async function persist(patch: Parameters<typeof saveContentDraft>[1]) {
+  /** Kaydı dener; bağlantı yoksa ya da hata dönerse false döner. Asla fırlatmaz. */
+  async function persist(patch: Parameters<typeof saveContentDraft>[1]): Promise<boolean> {
     setSaveState("saving");
-    const res = await saveContentDraft(task.id, patch);
-    if ("error" in res) {
-      setSaveState("error");
-      setSaveError(res.error);
-    } else {
+    try {
+      const res = await saveContentDraft(task.id, patch);
+      if ("error" in res) {
+        setSaveState("error");
+        setSaveError(res.error);
+        return false;
+      }
       setSaveState("saved");
       setSaveError(null);
+      return true;
+    } catch {
+      setSaveState("error");
+      setSaveError(OFFLINE_SAVE_MESSAGE);
+      return false;
     }
   }
 
-  async function flush() {
+  async function flush(): Promise<boolean> {
     if (timer.current) window.clearTimeout(timer.current);
     timer.current = null;
     const patch = pending.current;
     pending.current = {};
-    if (Object.keys(patch).length === 0) return;
-    await persist(patch);
+    if (Object.keys(patch).length === 0) return true;
+    const ok = await persist(patch);
+    // Kaydedilemeyen yazı kaybolmasın: geri konur, daha yeni yazı üstün gelir.
+    if (!ok) pending.current = mergePatch(patch, pending.current);
+    return ok;
   }
 
   function queue(patch: TextPatch) {
@@ -205,6 +243,12 @@ function TaskEditor({
     timer.current = window.setTimeout(() => void flush(), SAVE_DELAY_MS);
   }
 
+  const busy = uploading || submitting;
+  useEffect(() => {
+    onBusyChange(busy);
+  }, [busy, onBusyChange]);
+  useEffect(() => () => onBusyChange(false), [onBusyChange]);
+
   // Başka göreve geçilirken ya da sayfadan ayrılırken bekleyen yazı kaybolmasın.
   const taskId = task.id;
   useEffect(
@@ -212,7 +256,7 @@ function TaskEditor({
       if (timer.current) window.clearTimeout(timer.current);
       const patch = pending.current;
       pending.current = {};
-      if (Object.keys(patch).length > 0) void saveContentDraft(taskId, patch);
+      if (Object.keys(patch).length > 0) saveContentDraft(taskId, patch).catch(() => {});
     },
     [taskId],
   );
@@ -247,20 +291,28 @@ function TaskEditor({
       ),
     [task.kind, draft, banned, limits],
   );
-  const ready = blockers.length === 0;
+  const ready = blockers.length === 0 && !uploading;
 
   async function submit() {
     if (!ready || submitting) return;
     setSubmitting(true);
     setSubmitErrors([]);
-    await flush();
-    const res = await submitContent(task.id);
-    setSubmitting(false);
-    if ("ok" in res) {
-      onDone(res.done);
-      router.refresh();
-    } else {
-      setSubmitErrors(res.blockers?.length ? res.blockers : [res.error]);
+    try {
+      // Bekleyen yazı sunucuya ulaşmadan teslim edilmez (sunucu eski metni kontrol ederdi).
+      if (!(await flush())) {
+        setSubmitErrors([OFFLINE_SAVE_MESSAGE]);
+        return;
+      }
+      const res = await submitContent(task.id);
+      if ("ok" in res) {
+        onDone(res.done);
+      } else {
+        setSubmitErrors(res.blockers?.length ? res.blockers : [res.error]);
+      }
+    } catch {
+      setSubmitErrors(["Bağlantı yok, teslim edilemedi. Bağlantı gelince tekrar dene."]);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -324,6 +376,8 @@ function TaskEditor({
             meta={draft.mediaMeta}
             hasVideo={!!draft.mediaPath}
             maxMb={videoMaxMb}
+            disabled={submitting}
+            onBusyChange={setUploading}
             onUploaded={(path, meta) =>
               setDraft((d) => ({
                 ...d,
@@ -346,6 +400,7 @@ function TaskEditor({
                     key={String(answer)}
                     type="button"
                     aria-pressed={on}
+                    disabled={submitting || uploading}
                     onClick={() => setFace(answer)}
                     className={`min-h-12 rounded-xl border-[1.5px] text-[15px] font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       on
@@ -376,6 +431,7 @@ function TaskEditor({
             max={limits.reelsCaption}
             check={reelsCheck}
             note
+            disabled={submitting}
           />
         </div>
       ) : (
@@ -399,6 +455,7 @@ function TaskEditor({
                 max={isTitle ? limits.pageTitle : undefined}
                 check={check}
                 note={isTitle}
+                disabled={submitting}
               />
             );
           })}
@@ -427,7 +484,7 @@ function TaskEditor({
             onClick={() => void submit()}
             className="min-h-14 w-full rounded-[14px] bg-primary text-[17px] font-bold text-on-primary transition-colors hover:bg-primary-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-input disabled:hover:bg-input"
           >
-            {submitting ? "Teslim ediliyor…" : ready ? "Teslim et" : "Teslim için eksikleri tamamla"}
+            {submitting ? "Teslim ediliyor…" : uploading ? "Video yükleniyor…" : ready ? "Teslim et" : "Teslim için eksikleri tamamla"}
           </button>
         </div>
       </div>
@@ -444,6 +501,7 @@ function TextBlock({
   max,
   check,
   note,
+  disabled,
 }: {
   id: string;
   label: string;
@@ -453,6 +511,7 @@ function TextBlock({
   max?: number;
   check: { ok: boolean; message: string } | null;
   note?: boolean;
+  disabled?: boolean;
 }) {
   const bad = check !== null && !check.ok;
   return (
@@ -464,6 +523,7 @@ function TextBlock({
         id={id}
         rows={rows}
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={bad}
         aria-describedby={`${id}-kontrol`}
