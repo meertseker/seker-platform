@@ -117,7 +117,9 @@ describe("applyAdChange (sunucu eylemi)", () => {
       ...({ gateRed: false } as object),
     });
     expect(res).toMatchObject({ needsReason: true });
-    expect("error" in res && res.error).toContain("Randevu verilen");
+    // Uyarı hangi haftanın kırmızı olduğunu söyler.
+    expect("error" in res && res.error).toContain("Randevu verilen · geçen hafta");
+    expect("error" in res && res.error).not.toContain("· bu hafta");
     expect(store.insertLog).not.toHaveBeenCalled();
   });
 

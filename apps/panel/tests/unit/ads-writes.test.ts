@@ -268,7 +268,7 @@ describe("executeAdChange · kırmızı kapı (Review Focus 1-2)", () => {
     const { store, logs } = fakeStore([META_AD]);
     const res = await executeAdChange(deps(store, { red: true }), budget(165));
     expect(res).toMatchObject({ needsReason: true });
-    expect("error" in res && res.error).toContain("Bu hafta bir kapı kırmızı (Randevu verilen)");
+    expect("error" in res && res.error).toContain("Bir kapı kırmızı (Randevu verilen)");
     expect(logs).toHaveLength(0);
   });
 

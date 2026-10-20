@@ -108,15 +108,23 @@ export function adsWriteEnabled(env: Record<string, string | undefined> = proces
   return env.ADS_WRITE_ENABLED === "true";
 }
 
-/** Bu hafta ve geçen tamamlanmış hafta (Pazartesi toplantısının haftası); biri kırmızıysa kırmızı. */
+/**
+ * Bu hafta ve geçen tamamlanmış hafta (Pazartesi toplantısının haftası); biri kırmızıysa kırmızı.
+ * Etiket hangi haftanın kırmızı olduğunu söyler: "Randevu verilen · geçen hafta".
+ */
 export async function loadGateStatus(supabase: SupabaseClient, now: Date, settings: AdSettings): Promise<GateStatus> {
   const { hours } = await getLeadFlowSettings(supabase);
-  const weeks = [mondayOf(istanbulDateString(now)), lastCompletedWeekStart(now)];
-  const data = await Promise.all(weeks.map((w) => loadWeeklyData(supabase, w)));
-  const labels = new Set<string>();
+  const weeks = [
+    { start: mondayOf(istanbulDateString(now)), name: "bu hafta" },
+    { start: lastCompletedWeekStart(now), name: "geçen hafta" },
+  ];
+  const data = await Promise.all(weeks.map((w) => loadWeeklyData(supabase, w.start)));
+  const labels: string[] = [];
   // "Bu hafta" ekranıyla aynı hesap: ulaşma önceki haftanın olgun kohortu, gelme takvim haftasının randevuları.
-  for (const d of data) for (const l of anyGateRed(computeWeekGates(d, now, hours, settings)).labels) labels.add(l);
-  return { red: labels.size > 0, labels: [...labels] };
+  data.forEach((d, i) => {
+    for (const l of anyGateRed(computeWeekGates(d, now, hours, settings)).labels) labels.push(`${l} · ${weeks[i].name}`);
+  });
+  return { red: labels.length > 0, labels };
 }
 
 function validate(input: AdChangeInput): string | null {
@@ -311,7 +319,7 @@ export async function executeAdChange(deps: AdChangeDeps, input: AdChangeInput):
   if (isIncrease && plan.kind === "budget") {
     if (gate.red && !hasReason) {
       return {
-        error: `Bu hafta bir kapı kırmızı (${gate.labels.join(", ")}). Bütçe artışı önerilmiyor. Yine de yapacaksanız nedenini yazın (en az ${MIN_REASON} karakter).`,
+        error: `Bir kapı kırmızı (${gate.labels.join(", ")}). Bütçe artışı önerilmiyor. Yine de yapacaksanız nedenini yazın (en az ${MIN_REASON} karakter).`,
         needsReason: true,
       };
     }

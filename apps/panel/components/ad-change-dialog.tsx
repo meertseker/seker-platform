@@ -6,7 +6,7 @@ import { applyAdChange } from "@/actions/ad-changes";
 import { Sheet } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import type { CampaignRow } from "@/lib/ads/campaigns";
-import { dialogLines, reasonToSend, type AdChangeKind } from "@/lib/ads/change-text";
+import { defaultNewBudget, dialogLines, reasonToSend, type AdChangeKind } from "@/lib/ads/change-text";
 
 export type { AdChangeKind };
 
@@ -64,8 +64,7 @@ function parseBudget(text: string, current: number): { valid: boolean; nextTl: n
 }
 
 function defaultBudget(row: CampaignRow, scaleMaxPct: number): number {
-  const current = row.dailyBudgetTl ?? 0;
-  return Math.round(current * (1 + scaleMaxPct / 100));
+  return defaultNewBudget(row.dailyBudgetTl ?? 0, scaleMaxPct);
 }
 
 function changePct(current: number, next: number): string {
@@ -107,7 +106,7 @@ function DialogBody({ row, kind, gate, writeEnabled, budgetText, setBudgetText, 
   const warnText = serverWarn
     ? serverWarn
     : gateWarn
-      ? `Bu hafta bir kapı kırmızı (${gate.labels.join(", ")}). Bütçe artışı önerilmiyor. Yine de yapacaksanız nedenini yazın.`
+      ? `Bir kapı kırmızı (${gate.labels.join(", ")}). Bütçe artışı önerilmiyor. Yine de yapacaksanız nedenini yazın.`
       : null;
   const needsReason = kind === "budget" && warnText !== null;
   const reasonOk = reason.trim().length >= MIN_REASON;

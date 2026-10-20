@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { CampaignRow } from "@/lib/ads/campaigns";
-import { dialogLines, instagramCodes, reasonToSend, statusLabel } from "@/lib/ads/change-text";
+import { defaultNewBudget, dialogLines, instagramCodes, reasonToSend, statusLabel } from "@/lib/ads/change-text";
 
 function row(o: Partial<CampaignRow>): CampaignRow {
   return {
@@ -78,5 +78,14 @@ describe("reasonToSend", () => {
 describe("instagramCodes", () => {
   it("Instagram reklamına yalnız R- kodları", () => {
     expect(instagramCodes([{ code: "S-2641-A", topic: "a" }, { code: "R-2641-B", topic: "b" }])).toEqual([{ code: "R-2641-B", topic: "b" }]);
+  });
+});
+
+describe("defaultNewBudget", () => {
+  it("haftalık sınır kadar artış, aşağı yuvarlanır: sınırı aşıp gerekçe istemez (153 → 183, 184 değil)", () => {
+    expect(defaultNewBudget(153, 20)).toBe(183);
+    expect(defaultNewBudget(150, 20)).toBe(180);
+    expect(defaultNewBudget(125, 20)).toBe(150);
+    expect(defaultNewBudget(0, 20)).toBe(0);
   });
 });
