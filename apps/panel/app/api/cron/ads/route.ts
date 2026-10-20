@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminSupabase } from "@seker/auth/admin";
 import { readAdsConfig } from "@/lib/ads/config";
 import { getAccessToken } from "@/lib/ads/googleAds";
-import { supabaseAdsStore } from "@/lib/ads/store";
+import { readMetaConfig } from "@/lib/ads/meta/config";
+import { uploadMetaPending } from "@/lib/ads/meta/capi";
+import { META_RESYNC_DAYS, syncMetaSpend } from "@/lib/ads/meta/sync";
+import { supabaseAdsStore, supabaseMetaStore } from "@/lib/ads/store";
 import { istanbulDaysAgo, syncSpend, uploadPending } from "@/lib/ads/sync";
 import { istanbulDateString } from "@/lib/cron-rules";
 import { insertNotifications } from "@/lib/notifications/insert";
@@ -36,35 +39,61 @@ export async function GET(req: NextRequest) {
   }
 
   const cfg = readAdsConfig();
-  if (!cfg) return NextResponse.json({ ok: true, skipped: "yapilandirilmamis" });
+  const metaCfg = readMetaConfig();
+  if (!cfg && !metaCfg) return NextResponse.json({ ok: true, skipped: "yapilandirilmamis" });
 
   const db = createAdminSupabase();
   const errors: string[] = [];
   let spendRows: number | null = null;
   let upload = { sent: 0, failed: 0, skipped: 0 };
 
-  try {
-    const token = await getAccessToken(cfg);
-    const deps = { cfg, token, store: supabaseAdsStore(db) };
+  if (cfg) {
+    try {
+      const token = await getAccessToken(cfg);
+      const deps = { cfg, token, store: supabaseAdsStore(db) };
 
-    // Harcama ve dönüşüm birbirinden bağımsız: Cloud projesi Explorer erişimi almadan harcama patlasa da dönüşümler gider.
-    try {
-      spendRows = await syncSpend(deps, istanbulDaysAgo(RESYNC_DAYS), istanbulDaysAgo(1));
+      // Harcama ve dönüşüm birbirinden bağımsız: Cloud projesi Explorer erişimi almadan harcama patlasa da dönüşümler gider.
+      try {
+        spendRows = await syncSpend(deps, istanbulDaysAgo(RESYNC_DAYS), istanbulDaysAgo(1));
+      } catch (e) {
+        errors.push(`Harcama: ${(e as Error).message.slice(0, 240)}`);
+      }
+      try {
+        upload = await uploadPending(deps);
+        if (upload.failed > 0) errors.push(`Dönüşüm: ${upload.failed} kayıt gönderilemedi`);
+      } catch (e) {
+        // saveOutcomes patlarsa gönderilenler bir sonraki koşuda transactionId ile güvenle yeniden denenir.
+        errors.push(`Dönüşüm: ${(e as Error).message.slice(0, 240)}`);
+      }
     } catch (e) {
-      errors.push(`Harcama: ${(e as Error).message.slice(0, 240)}`);
+      errors.push(`OAuth: ${(e as Error).message.slice(0, 240)}`);
     }
-    try {
-      upload = await uploadPending(deps);
-      if (upload.failed > 0) errors.push(`Dönüşüm: ${upload.failed} kayıt gönderilemedi`);
-    } catch (e) {
-      // saveOutcomes patlarsa gönderilenler bir sonraki koşuda transactionId ile güvenle yeniden denenir.
-      errors.push(`Dönüşüm: ${(e as Error).message.slice(0, 240)}`);
-    }
-  } catch (e) {
-    errors.push(`OAuth: ${(e as Error).message.slice(0, 240)}`);
   }
 
-  if (errors.length === 0) return NextResponse.json({ ok: true, spendRows, ...upload });
+  // Meta, Google'dan bağımsız: biri patlasa öteki yine çalışır. Yapılandırılmamışsa yanıtta `meta` anahtarı yoktur.
+  let meta: { spendRows: number | null; sent: number; failed: number; skipped: number; capi: "acik" | "kapali" } | undefined;
+  if (metaCfg) {
+    const metaStore = supabaseMetaStore(db);
+    meta = { spendRows: null, sent: 0, failed: 0, skipped: 0, capi: metaCfg.capiEnabled ? "acik" : "kapali" };
+    try {
+      meta.spendRows = await syncMetaSpend({ cfg: metaCfg, store: metaStore }, istanbulDaysAgo(META_RESYNC_DAYS), istanbulDaysAgo(1));
+    } catch (e) {
+      errors.push(`Meta harcama: ${(e as Error).message.slice(0, 240)}`);
+    }
+    try {
+      const siteUrl = process.env.SITE_PUBLIC_URL ?? "https://yeni.sekeranaokulu.com";
+      const result = await uploadMetaPending({ cfg: metaCfg, store: metaStore, siteUrl });
+      meta = { ...meta, ...result };
+      if (result.failed > 0) errors.push(`Meta dönüşüm: ${result.failed} kayıt gönderilemedi`);
+    } catch (e) {
+      errors.push(`Meta dönüşüm: ${(e as Error).message.slice(0, 240)}`);
+    }
+  }
+
+  const googleBody = cfg ? { spendRows, ...upload } : { skipped: "yapilandirilmamis" };
+  const body = meta ? { ...googleBody, meta } : googleBody;
+
+  if (errors.length === 0) return NextResponse.json({ ok: true, ...body });
 
   const message = errors.join(" | ").slice(0, 500);
   console.error("[cron/ads]", message);
@@ -73,5 +102,5 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error("[cron/ads] bildirim yazılamadı", (e as Error).message);
   }
-  return NextResponse.json({ ok: false, error: message, spendRows, ...upload }, { status: 500 });
+  return NextResponse.json({ ok: false, error: message, ...body }, { status: 500 });
 }
