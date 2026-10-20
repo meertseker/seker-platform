@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trackLead } from '@/lib/analytics';
 import { UTM_KEYS } from '@/lib/attribution';
+import { trackMetaLead } from '@/lib/metaPixel';
 import { newEventId } from '@/lib/metaClick';
 import { readConsent } from '@/lib/consent';
 import AttributionFields from './AttributionFields';
@@ -114,6 +115,7 @@ export default function LeadForm({
       }
 
       trackLead(undefined, { landing_path: payload.landingPath });
+      trackMetaLead(metaEventId);
       router.push('/tesekkurler');
     } catch {
       setFormError(t('form.error'));
