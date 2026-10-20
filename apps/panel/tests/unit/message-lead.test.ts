@@ -154,4 +154,30 @@ describe("recentContentCodes", () => {
     expect(await recentContentCodes()).toEqual([{ code: "R-1-A", count: 2 }, { code: "S-2-B", count: 1 }]);
     expect(ops[0].filters.some((f) => f[0] === "gte" && f[1] === "created_at")).toBe(true);
   });
+
+  it("velisi olmayan onaylı yeni içerik kodunu konusuyla gösterir", async () => {
+    respond = (o) => {
+      if (o.table === "content_items") {
+        return { data: [{ code: "R-2645-B", topic: "Bahçe oyunu" }, { code: "R-2645-A", topic: "Sabah karşılama" }] };
+      }
+      return { data: [{ content_code: "R-2645-A" }, { content_code: "S-2640-G" }, { content_code: "R-2645-A" }] };
+    };
+    expect(await recentContentCodes()).toEqual([
+      { code: "R-2645-A", count: 2, topic: "Sabah karşılama" },
+      { code: "S-2640-G", count: 1 },
+      { code: "R-2645-B", count: 0, topic: "Bahçe oyunu" },
+    ]);
+    const content = ops.find((o) => o.table === "content_items")!;
+    expect(content.filters).toContainEqual(["eq", "status", "onaylandi"]);
+    expect(content.filters).toContainEqual(["in", "stage", ["organik", "test", "kazanan"]]);
+    expect(content.filters.some((f) => f[0] === "gte" && f[1] === "approved_at")).toBe(true);
+  });
+
+  it("eşit sayıda koda göre sıralar", async () => {
+    respond = (o) =>
+      o.table === "content_items"
+        ? { data: [{ code: "R-2645-C", topic: "C" }, { code: "R-2645-A", topic: "A" }] }
+        : { data: [] };
+    expect((await recentContentCodes()).map((c) => c.code)).toEqual(["R-2645-A", "R-2645-C"]);
+  });
 });
