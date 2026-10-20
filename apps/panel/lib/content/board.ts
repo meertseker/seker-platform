@@ -355,6 +355,14 @@ export function platformLabel(item: Pick<BoardItem, "kind" | "platform">): strin
   return item.platform === "google" ? "Google sayfası" : "Instagram sayfası";
 }
 
+/** Onaylayanın gördüğü videonun durumu. */
+export type ReviewVideo = "yukleniyor" | "hazir" | "oynatilamadi";
+
+/** "Videoyu izledim" kutusu yalnız video gerçekten açıldıysa işaretlenebilir (MEB Ek Madde 4). */
+export function canConfirmFace(videoUrl: string | null, state: ReviewVideo): boolean {
+  return !!videoUrl && state === "hazir";
+}
+
 export type BoardColumn = { key: StageKey; title: string; hint: string; items: BoardItem[] };
 
 /** Altı sütun; Görev'de teslim zamanı yakın olan, diğerlerinde aşamaya son giren üstte. */

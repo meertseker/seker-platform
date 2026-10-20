@@ -12,6 +12,7 @@ import {
 import { useToast } from "@/components/toast";
 import {
   adviceFor,
+  canConfirmFace,
   formatTl,
   platformLabel,
   ruleBars,
@@ -19,6 +20,7 @@ import {
   type ActionKind,
   type BoardItem,
   type ContentPerf,
+  type ReviewVideo,
   type Tone,
 } from "@/lib/content/board";
 import type { AdRules } from "@/lib/content/settings";
@@ -437,6 +439,22 @@ function ReviewBlock({
       </dl>
     );
   }
+  return <ReelsReview item={item} videoUrl={videoUrl} faceChecked={faceChecked} onFaceChecked={onFaceChecked} />;
+}
+
+function ReelsReview({
+  item,
+  videoUrl,
+  faceChecked,
+  onFaceChecked,
+}: {
+  item: BoardItem;
+  videoUrl: string | null;
+  faceChecked: boolean;
+  onFaceChecked: (v: boolean) => void;
+}) {
+  const [video, setVideo] = useState<ReviewVideo>("yukleniyor");
+  const canCheck = canConfirmFace(videoUrl, video);
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
       {videoUrl ? (
@@ -445,11 +463,24 @@ function ReviewBlock({
           controls
           playsInline
           preload="metadata"
+          onLoadedData={() => setVideo("hazir")}
+          onError={() => {
+            setVideo("oynatilamadi");
+            onFaceChecked(false);
+          }}
           className="aspect-[9/16] max-h-[28rem] w-full max-w-[16rem] rounded-xl bg-foreground"
         />
       ) : (
         <p className="text-sm text-destructive">Video açılamadı. Sayfayı yenileyin.</p>
       )}
+      {videoUrl && video === "oynatilamadi" ? (
+        <p role="alert" className="text-sm text-destructive">
+          Video bu tarayıcıda oynatılamadı.{" "}
+          <a href={videoUrl} download className="font-semibold underline">
+            Videoyu indir
+          </a>
+        </p>
+      ) : null}
       <p className="text-xs text-muted-foreground">Video bağlantısı 10 dakika geçerli; süre dolarsa sayfayı yenileyin.</p>
       <div className="flex flex-col gap-0.5 text-sm">
         <span className="text-xs font-semibold text-muted-foreground">Açıklama</span>
@@ -458,10 +489,13 @@ function ReviewBlock({
       <p className="text-sm text-muted-foreground">
         Öğretmenin cevabı: {item.faceAnswer === false ? "Videoda ya da yazıda öğrenci yüzü ya da adı yok." : "cevap yok"}
       </p>
-      <label className="flex min-h-11 cursor-pointer items-center gap-3 text-[15px] font-semibold text-foreground">
+      <label
+        className={`flex min-h-11 items-center gap-3 text-[15px] font-semibold text-foreground ${canCheck ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`}
+      >
         <input
           type="checkbox"
-          checked={faceChecked}
+          checked={faceChecked && canCheck}
+          disabled={!canCheck}
           onChange={(e) => onFaceChecked(e.target.checked)}
           className="size-5 shrink-0 accent-primary"
         />
