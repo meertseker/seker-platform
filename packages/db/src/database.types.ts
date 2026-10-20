@@ -5,7 +5,81 @@ export type Database = {
   
   "public": {
           Tables: {
-            "ad_spend_daily": {
+            "ad_change_log": {
+                  Row: {
+                    "action": string,"actor_id": string,"created_at": string,"error": string | null,"gate_red": boolean,"id": string,"level": string,"new_value": Json | null,"object_id": string,"object_name": string | null,"old_value": Json | null,"platform": string,"reason": string | null,"recommendation_id": string | null,"source": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor_id": string,"created_at"?: string,"error"?: string | null,"gate_red"?: boolean,"id"?: string,"level": string,"new_value"?: Json | null,"object_id": string,"object_name"?: string | null,"old_value"?: Json | null,"platform": string,"reason"?: string | null,"recommendation_id"?: string | null,"source": string,"status": string
+                  }
+                  Update: {
+                    "action"?: string,"actor_id"?: string,"created_at"?: string,"error"?: string | null,"gate_red"?: boolean,"id"?: string,"level"?: string,"new_value"?: Json | null,"object_id"?: string,"object_name"?: string | null,"old_value"?: Json | null,"platform"?: string,"reason"?: string | null,"recommendation_id"?: string | null,"source"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ad_change_log_actor_id_fkey"
+      columns: ["actor_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"ad_content_links": {
+                  Row: {
+                    "ad_id": string,"content_code": string,"linked_at": string,"linked_by": string | null,"platform": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "ad_id": string,"content_code": string,"linked_at"?: string,"linked_by"?: string | null,"platform": string
+                  }
+                  Update: {
+                    "ad_id"?: string,"content_code"?: string,"linked_at"?: string,"linked_by"?: string | null,"platform"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ad_content_links_linked_by_fkey"
+      columns: ["linked_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"ad_objects": {
+                  Row: {
+                    "budget_resource": string | null,"campaign_id": string | null,"content_code": string | null,"daily_budget_micros": number | null,"level": string,"name": string,"object_id": string,"parent_id": string | null,"platform": string,"status": string | null,"synced_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "budget_resource"?: string | null,"campaign_id"?: string | null,"content_code"?: string | null,"daily_budget_micros"?: number | null,"level": string,"name": string,"object_id": string,"parent_id"?: string | null,"platform": string,"status"?: string | null,"synced_at"?: string
+                  }
+                  Update: {
+                    "budget_resource"?: string | null,"campaign_id"?: string | null,"content_code"?: string | null,"daily_budget_micros"?: number | null,"level"?: string,"name"?: string,"object_id"?: string,"parent_id"?: string | null,"platform"?: string,"status"?: string | null,"synced_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"ad_recommendations": {
+                  Row: {
+                    "action": Json | null,"blocked_reason": string | null,"created_at": string,"decided_at": string | null,"decided_by": string | null,"id": string,"object_key": string,"platform": string | null,"result": string | null,"rule_key": string,"status": string,"title": string,"week_start": string,"why": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action"?: Json | null,"blocked_reason"?: string | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"id"?: string,"object_key": string,"platform"?: string | null,"result"?: string | null,"rule_key": string,"status"?: string,"title": string,"week_start": string,"why": string
+                  }
+                  Update: {
+                    "action"?: Json | null,"blocked_reason"?: string | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"id"?: string,"object_key"?: string,"platform"?: string | null,"result"?: string | null,"rule_key"?: string,"status"?: string,"title"?: string,"week_start"?: string,"why"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ad_recommendations_decided_by_fkey"
+      columns: ["decided_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"ad_spend_daily": {
                   Row: {
                     "ad_id": string | null,"ad_name": string | null,"adset_id": string | null,"adset_name": string | null,"campaign_id": string,"campaign_name": string,"clicks": number,"content_code": string | null,"cost_micros": number,"date": string,"frequency": number | null,"impressions": number,"level": string,"object_id": string,"platform": string,"platform_results": number | null,"reach": number | null
                   }
@@ -614,6 +688,26 @@ isOneToOne: true
       columns: ["note_id"]
 isOneToOne: true
       referencedRelation: "lead_notes"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"weekly_reviews": {
+                  Row: {
+                    "decisions": NonNullable<Json>,"saved_at": string,"saved_by": string | null,"task_ids": (string)[] | null,"topic": string | null,"week_start": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "decisions"?: NonNullable<Json>,"saved_at"?: string,"saved_by"?: string | null,"task_ids"?: (string)[] | null,"topic"?: string | null,"week_start": string
+                  }
+                  Update: {
+                    "decisions"?: NonNullable<Json>,"saved_at"?: string,"saved_by"?: string | null,"task_ids"?: (string)[] | null,"topic"?: string | null,"week_start"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "weekly_reviews_saved_by_fkey"
+      columns: ["saved_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     }
                   ]
