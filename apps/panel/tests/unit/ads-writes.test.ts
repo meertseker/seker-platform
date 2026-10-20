@@ -672,3 +672,55 @@ describe("canlı bütçe okuma", () => {
     await expect(metaGetDailyBudget(META_CFG, "1", missing as unknown as typeof fetch)).rejects.toThrow();
   });
 });
+
+describe("executeAdChange · öneriden bütçe artışı (beklenen eski bütçe)", () => {
+  const ENABLED_META = { ...META_ENV, ADS_WRITE_ENABLED: "true" };
+  const liveMeta = (kurus: string) =>
+    vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") return json({ success: true });
+      return json({ id: "120000111", daily_budget: kurus });
+    });
+  const fromRec = (tl: number, expectedOldTl?: number, reason?: string): AdChangeInput => ({
+    ...budget(tl, META_AD, reason),
+    source: "oneri",
+    recommendationId: "22222222-2222-4222-8222-222222222222",
+    expectedOldTl,
+  });
+  const CHANGED = "Bütçe öneriden sonra değişti; sayfayı yenileyin.";
+  const posted = (f: ReturnType<typeof liveMeta>) => f.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "POST");
+
+  it("canlı bütçe öneriden sonra yükseldiyse (150 → 300) 180'e indirmez: reddedilir, kayıt ve istek yok", async () => {
+    const { store, logs } = fakeStore([META_AD]);
+    const fetchFn = liveMeta("30000");
+    const res = await executeAdChange(deps(store, { env: ENABLED_META, fetchFn: fetchFn as unknown as typeof fetch }), fromRec(180, 150));
+    expect(res).toEqual({ error: CHANGED });
+    expect(logs).toHaveLength(0);
+    expect(posted(fetchFn)).toBe(false);
+  });
+
+  it("canlı yazım kapalıyken satırdaki bütçe beklenenden farklıysa reddedilir", async () => {
+    const { store, logs } = fakeStore([{ ...META_AD, dailyBudgetMicros: 160_000_000 }]);
+    expect(await executeAdChange(deps(store), fromRec(180, 150))).toEqual({ error: CHANGED });
+    expect(logs).toHaveLength(0);
+  });
+
+  it("beklenen eski bütçe tutuyorsa uygulanır", async () => {
+    const { store, logs } = fakeStore([META_AD]);
+    const fetchFn = liveMeta("15000");
+    const res = await executeAdChange(deps(store, { env: ENABLED_META, fetchFn: fetchFn as unknown as typeof fetch }), fromRec(180, 150));
+    expect(res).toMatchObject({ ok: true, status: "uygulandi", message: "✓ Bütçe 150 TL → 180 TL · kayda geçti" });
+    expect(logs[0]).toMatchObject({ source: "oneri", oldValue: { daily_budget_tl: 150 }, newValue: { daily_budget_tl: 180 } });
+  });
+
+  it("öneriden gelen bütçe değişikliği azaltma olamaz; beklenen eski bütçe yoksa da uygulanmaz", async () => {
+    const { store, logs } = fakeStore([META_AD]);
+    expect(await executeAdChange(deps(store), fromRec(120, 150))).toEqual({ error: CHANGED });
+    expect(await executeAdChange(deps(store), fromRec(180))).toEqual({ error: CHANGED });
+    expect(logs).toHaveLength(0);
+  });
+
+  it("Kampanyalar ekranından gelen değişiklikte beklenen eski bütçe aranmaz", async () => {
+    const { store } = fakeStore([META_AD]);
+    expect(await executeAdChange(deps(store), budget(120))).toMatchObject({ ok: true });
+  });
+});

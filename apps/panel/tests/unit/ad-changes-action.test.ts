@@ -121,6 +121,25 @@ describe("applyAdChange (sunucu eylemi)", () => {
     expect(store.insertLog).not.toHaveBeenCalled();
   });
 
+  it("öneriden gelen bütçede beklenen eski bütçe kapıya taşınır: tutuyorsa kayda geçer, değiştiyse uygulanmaz", async () => {
+    const fromRec = (expectedOldTl: number) =>
+      applyAdChange({
+        platform: "meta",
+        level: "adset",
+        objectId: "120000111",
+        objectName: "x",
+        kind: "budget",
+        newDailyBudgetTl: 180,
+        expectedOldTl,
+        source: "oneri",
+        recommendationId: "22222222-2222-4222-8222-222222222222",
+      });
+    expect(await fromRec(160)).toEqual({ error: "Bütçe öneriden sonra değişti; sayfayı yenileyin." });
+    expect(store.insertLog).not.toHaveBeenCalled();
+    expect(await fromRec(150)).toMatchObject({ ok: true, status: "uygulanmadi_kapali" });
+    expect(store.insertLog).toHaveBeenCalledTimes(1);
+  });
+
   it("kapalıyken kayıt yazar, platforma gitmez, sayfaları yeniler", async () => {
     const res = await applyAdChange({
       platform: "meta",

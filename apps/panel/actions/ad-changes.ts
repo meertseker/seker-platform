@@ -36,6 +36,7 @@ export async function applyAdChange(
     objectName: input?.objectName,
     kind: input?.kind,
     newDailyBudgetTl: input?.newDailyBudgetTl,
+    expectedOldTl: input?.expectedOldTl,
     reason: input?.reason,
     source: input?.source,
     recommendationId: input?.recommendationId,
