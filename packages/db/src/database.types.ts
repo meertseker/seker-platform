@@ -85,6 +85,58 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"content_items": {
+                  Row: {
+                    "approved_at": string | null,"approved_by": string | null,"approver_face_check": boolean | null,"audience": string | null,"brief": string | null,"caption": string | null,"code": string,"created_at": string,"created_by": string | null,"due_at": string | null,"face_answer": boolean | null,"id": string,"ig_media_id": string | null,"ig_permalink": string | null,"kind": string,"learned_note": string | null,"media_meta": Json | null,"media_path": string | null,"owner_id": string,"page_fields": Json | null,"platform": string,"review_note": string | null,"stage": string,"stage_changed_at": string,"status": string,"submitted_at": string | null,"topic": string,"updated_at": string,"week_start": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"approver_face_check"?: boolean | null,"audience"?: string | null,"brief"?: string | null,"caption"?: string | null,"code": string,"created_at"?: string,"created_by"?: string | null,"due_at"?: string | null,"face_answer"?: boolean | null,"id"?: string,"ig_media_id"?: string | null,"ig_permalink"?: string | null,"kind": string,"learned_note"?: string | null,"media_meta"?: Json | null,"media_path"?: string | null,"owner_id": string,"page_fields"?: Json | null,"platform": string,"review_note"?: string | null,"stage"?: string,"stage_changed_at"?: string,"status"?: string,"submitted_at"?: string | null,"topic": string,"updated_at"?: string,"week_start": string
+                  }
+                  Update: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"approver_face_check"?: boolean | null,"audience"?: string | null,"brief"?: string | null,"caption"?: string | null,"code"?: string,"created_at"?: string,"created_by"?: string | null,"due_at"?: string | null,"face_answer"?: boolean | null,"id"?: string,"ig_media_id"?: string | null,"ig_permalink"?: string | null,"kind"?: string,"learned_note"?: string | null,"media_meta"?: Json | null,"media_path"?: string | null,"owner_id"?: string,"page_fields"?: Json | null,"platform"?: string,"review_note"?: string | null,"stage"?: string,"stage_changed_at"?: string,"status"?: string,"submitted_at"?: string | null,"topic"?: string,"updated_at"?: string,"week_start"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "content_items_approved_by_fkey"
+      columns: ["approved_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "content_items_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "content_items_owner_id_fkey"
+      columns: ["owner_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"content_organic_stats": {
+                  Row: {
+                    "avg_watch_ms": number | null,"content_id": string,"day": string,"fetched_at": string,"reach": number | null,"saved": number | null,"shares": number | null,"total_interactions": number | null,"views": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "avg_watch_ms"?: number | null,"content_id": string,"day": string,"fetched_at"?: string,"reach"?: number | null,"saved"?: number | null,"shares"?: number | null,"total_interactions"?: number | null,"views"?: number | null
+                  }
+                  Update: {
+                    "avg_watch_ms"?: number | null,"content_id"?: string,"day"?: string,"fetched_at"?: string,"reach"?: number | null,"saved"?: number | null,"shares"?: number | null,"total_interactions"?: number | null,"views"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "content_organic_stats_content_id_fkey"
+      columns: ["content_id"]
+isOneToOne: false
+      referencedRelation: "content_items"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"content_revisions": {
                   Row: {
                     "created_at": string,"editor_id": string | null,"id": string,"key": string,"new_value": Json | null,"old_value": Json | null
@@ -415,14 +467,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "can_edit_site": boolean,"created_at": string,"full_name": string,"id": string,"is_active": boolean,"role": string,"updated_at": string
+                    "can_edit_site": boolean,"created_at": string,"full_name": string,"id": string,"is_active": boolean,"phone": string | null,"role": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "can_edit_site"?: boolean,"created_at"?: string,"full_name": string,"id": string,"is_active"?: boolean,"role": string,"updated_at"?: string
+                    "can_edit_site"?: boolean,"created_at"?: string,"full_name": string,"id": string,"is_active"?: boolean,"phone"?: string | null,"role": string,"updated_at"?: string
                   }
                   Update: {
-                    "can_edit_site"?: boolean,"created_at"?: string,"full_name"?: string,"id"?: string,"is_active"?: boolean,"role"?: string,"updated_at"?: string
+                    "can_edit_site"?: boolean,"created_at"?: string,"full_name"?: string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"role"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -610,6 +662,9 @@ isOneToOne: false
                            },
 "create_web_lead":
 { Args: { "p_consent_at": string,"p_gclid": string,"p_landing_path": string,"p_meta"?: Json,"p_parent_name": string,"p_phone": string,"p_utm": Json }; Returns: Json
+                           },
+"is_ogretmen":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "is_staff":
 { Args: Record<PropertyKey, never>; Returns: boolean
