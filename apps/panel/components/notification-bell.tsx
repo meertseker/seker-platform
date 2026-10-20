@@ -1,10 +1,17 @@
 "use client";
 
-import { Bell } from "lucide-react";
-import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { markNotificationsRead } from "@/actions/notifications";
-import { notificationText } from "@/lib/notification-text";
+import Link from "next/link";
+import { Bell, BellOff, CheckCheck, ChevronRight } from "lucide-react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { markNotificationRead, markNotificationsRead } from "@/actions/notifications";
+import { NotificationList } from "@/components/notification-list";
+import {
+  badgeLabel,
+  summaryChanged,
+  visibleUnreadCount,
+  type BellSummary,
+} from "@/lib/notifications/bell-state";
 
 import type { NotificationItem } from "@/lib/queries/notifications";
 
@@ -15,127 +22,245 @@ interface NotificationBellProps {
   unreadCount: number;
 }
 
-const relativeFormatter = new Intl.RelativeTimeFormat("tr-TR", {
-  numeric: "auto",
-});
+const SUMMARY_POLL_MS = 20_000;
+const PAGE_REFRESH_MS = 60_000;
 
-function relativeTime(value: string) {
-  const diffSeconds = Math.round((Date.parse(value) - Date.now()) / 1000);
-  const absSeconds = Math.abs(diffSeconds);
+// Odak geri bele alınmasın diye: dışarıda tıklanan öğe zaten odak alabiliyorsa ona bırakılır.
+const FOCUSABLE = "a, button, input, select, textarea, [tabindex]";
 
-  if (absSeconds < 60) return "şimdi";
-  if (absSeconds < 3600) {
-    return relativeFormatter.format(Math.round(diffSeconds / 60), "minute");
-  }
-  if (absSeconds < 86400) {
-    return relativeFormatter.format(Math.round(diffSeconds / 3600), "hour");
-  }
-  return relativeFormatter.format(Math.round(diffSeconds / 86400), "day");
-}
-
-function notificationHref(notification: NotificationItem) {
-  if (notification.type === "ads_senkron_hata") return "/pazarlama";
-  if (notification.type === "wa_baglanti_koptu") return "/ayarlar#whatsapp";
-  if (notification.type === "geri_bildirim") return "/geri-bildirim";
-  const leadId = notification.payload.leadId;
-
-  if (notification.type === "teklif_onay_bekliyor") return "/teklifler";
-  return typeof leadId === "string" ? `/leads/${leadId}` : "/";
-}
-
-export function NotificationBell({
-  notifications,
-  unreadCount,
-}: NotificationBellProps) {
+export function NotificationBell({ notifications, unreadCount }: NotificationBellProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [readUnreadKey, setReadUnreadKey] = useState<string | null>(null);
+  const pathname = usePathname();
+  const panelId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [, startTransition] = useTransition();
-  const unreadKey =
-    notifications
-      .filter((notification) => !notification.read_at)
-      .map((notification) => notification.id)
-      .join(",") || String(unreadCount);
-  const displayUnreadCount = readUnreadKey === unreadKey ? 0 : unreadCount;
+
+  // Menü açıldığı sayfaya bağlı: başka sayfaya geçilince kendiliğinden kapanır.
+  const [openPathname, setOpenPathname] = useState<string | null>(null);
+  const open = openPathname === pathname;
+
+  // İyimser okundu durumu; sunucudan yeni veri gelince sıfırlanır.
+  const [readIds, setReadIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [allRead, setAllRead] = useState(false);
+  const [seed, setSeed] = useState({ notifications, unreadCount });
+  if (seed.notifications !== notifications || seed.unreadCount !== unreadCount) {
+    setSeed({ notifications, unreadCount });
+    setReadIds(new Set());
+    setAllRead(false);
+  }
+
+  const count = visibleUnreadCount({ unreadCount, items: notifications, readIds, allRead });
+
+  // Ekran okuyucuya yalnızca sayı artınca duyurulur.
+  const [prevCount, setPrevCount] = useState(count);
+  const [announcement, setAnnouncement] = useState("");
+  if (count !== prevCount) {
+    setPrevCount(count);
+    if (count > prevCount) setAnnouncement(`${count} okunmamış bildirim`);
+  }
+
+  // Özet uç noktasında görülen son durum; değişince sayfa yenilenir.
+  const knownRef = useRef<BellSummary>({
+    unread: unreadCount,
+    latestId: notifications[0]?.id ?? null,
+  });
 
   useEffect(() => {
-    // Sekme arkadayken yenileme yapılmaz: her yenileme sayfanın tüm sorgularını yeniden çalıştırır.
+    let stopped = false;
+    let inFlight = false;
+
+    async function check() {
+      if (stopped || inFlight || document.hidden) return;
+      inFlight = true;
+      try {
+        const response = await fetch("/api/notifications/summary", { cache: "no-store" });
+        // Oturum yoksa bu sayfada sormaya devam etmenin anlamı yok.
+        if (response.status === 401) {
+          stopped = true;
+          return;
+        }
+        // Geçici hata "değişiklik yok" sayılır, asla "0 okunmamış" değil.
+        if (!response.ok) return;
+        const body: unknown = await response.json();
+        if (!body || typeof body !== "object") return;
+        const { unread, latestId } = body as Record<string, unknown>;
+        if (typeof unread !== "number") return;
+        const next = { unread, latestId: typeof latestId === "string" ? latestId : null };
+        if (summaryChanged(knownRef.current, next)) {
+          knownRef.current = next;
+          router.refresh();
+        }
+      } catch {
+        // Ağ hatası: değişiklik yok sayılır.
+      } finally {
+        inFlight = false;
+      }
+    }
+
+    function onVisibilityChange() {
+      if (!document.hidden) void check();
+    }
+
+    const interval = window.setInterval(() => void check(), SUMMARY_POLL_MS);
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", check);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [router]);
+
+  useEffect(() => {
+    // Bildirim olmasa da dakikada bir yenilenir: aranacaklar şeridi gibi sayfadaki
+    // diğer canlı bilgiler de buna bağlı. Sekme arkadayken yenileme yapılmaz:
+    // her yenileme sayfanın tüm sorgularını yeniden çalıştırır.
     const interval = window.setInterval(() => {
       if (!document.hidden) router.refresh();
-    }, 60_000);
+    }, PAGE_REFRESH_MS);
     return () => window.clearInterval(interval);
   }, [router]);
 
-  function markRead() {
-    setReadUnreadKey(unreadKey);
+  // Açılınca odak ilk bildirime (yoksa panele) geçer.
+  useEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    const firstRow = panel?.querySelector<HTMLElement>("[data-notification-row]");
+    (firstRow ?? panel)?.focus({ preventScroll: true });
+  }, [open]);
+
+  // Escape ya da dışarı dokunuş kapatır; odak zile döner.
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setOpenPathname(null);
+      buttonRef.current?.focus();
+    }
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Element | null;
+      if (target && rootRef.current?.contains(target)) return;
+      setOpenPathname(null);
+      if (!target?.closest(FOCUSABLE)) buttonRef.current?.focus({ preventScroll: true });
+    }
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
+
+  function openItem(item: NotificationItem) {
+    setOpenPathname(null);
+    if (item.read_at || allRead || readIds.has(item.id)) return;
+    setReadIds((current) => new Set(current).add(item.id));
+    // Gezinme beklemez; sonuç revalidatePath ile zile döner.
+    void markNotificationRead(item.id);
+  }
+
+  function markAllRead() {
+    setAllRead(true);
     startTransition(async () => {
-      await markNotificationsRead();
+      const result = await markNotificationsRead();
+      if ("error" in result && result.error) setAllRead(false);
       router.refresh();
     });
   }
 
-  function toggleOpen() {
-    const next = !open;
-    setOpen(next);
-    if (next && displayUnreadCount > 0) markRead();
-  }
-
-  function openNotification(notification: NotificationItem) {
-    setOpen(false);
-    if (displayUnreadCount > 0) markRead();
-    router.push(notificationHref(notification));
-  }
-
   return (
-    <div className="relative">
+    <div ref={rootRef} className="relative">
       <button
+        ref={buttonRef}
         type="button"
-        aria-label={displayUnreadCount > 0 ? `Bildirimler, ${displayUnreadCount} okunmamış` : "Bildirimler"}
+        aria-label={count > 0 ? `Bildirimler, ${count} okunmamış` : "Bildirimler"}
+        aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={toggleOpen}
-        className="glass relative flex size-11 cursor-pointer items-center justify-center rounded-full text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-controls={panelId}
+        onClick={() => setOpenPathname(open ? null : pathname)}
+        className={`glass relative flex size-11 cursor-pointer items-center justify-center rounded-full text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          open ? "text-primary" : ""
+        }`}
       >
-        <Bell aria-hidden className="size-5" />
-        {displayUnreadCount > 0 ? (
-          <span className="absolute -right-1.5 -top-1.5 min-w-5 rounded-full bg-destructive px-1.5 py-0.5 text-center text-xs font-bold text-white tabular-nums">
-            {displayUnreadCount > 99 ? "99+" : displayUnreadCount}
+        <Bell aria-hidden className="size-5" strokeWidth={open ? 2.25 : 2} />
+        {count > 0 ? (
+          <span
+            aria-hidden
+            className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[0.6875rem] font-bold leading-none text-on-primary tabular-nums shadow-[0_2px_6px_rgb(225_29_72/0.35)] ring-2 ring-background"
+          >
+            {badgeLabel(count)}
           </span>
         ) : null}
       </button>
+      <span role="status" aria-live="polite" className="sr-only">
+        {announcement}
+      </span>
 
       {open ? (
-        <div className="glass-thick absolute right-0 top-14 z-50 w-80 max-w-[calc(100vw-2rem)] origin-top-right animate-pop-in overflow-hidden rounded-3xl">
-          <div className="border-b border-black/[0.06] px-4 py-3">
-            <p className="text-sm font-semibold text-foreground">Bildirimler</p>
-            <p className="mt-1 text-xs text-muted-foreground">Son 20 bildirim</p>
+        <div
+          ref={panelRef}
+          id={panelId}
+          role="dialog"
+          aria-modal="false"
+          aria-label="Bildirimler"
+          tabIndex={-1}
+          className="glass-thick fixed inset-x-3 top-[4.25rem] z-50 flex max-h-[70dvh] origin-top-right animate-pop-in flex-col overflow-hidden rounded-3xl focus:outline-none md:absolute md:inset-x-auto md:right-0 md:top-14 md:max-h-[min(36rem,calc(100dvh-6rem))] md:w-96"
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-black/[0.06] py-2 pl-4 pr-2">
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-foreground">
+                Bildirimler
+              </h2>
+              <p className="text-xs text-muted-foreground tabular-nums">
+                {count > 0 ? `${count} okunmamış` : "Hepsi okundu"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={markAllRead}
+              disabled={count === 0}
+              className="flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-primary hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:text-muted-foreground disabled:opacity-60 disabled:hover:bg-transparent"
+            >
+              <CheckCheck aria-hidden className="size-4" />
+              Tümünü okundu say
+            </button>
           </div>
 
           {notifications.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-              Henüz bildirim yok.
-            </p>
+            <div className="flex flex-col items-center px-6 py-10 text-center">
+              <span
+                aria-hidden
+                className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground"
+              >
+                <BellOff className="size-6" />
+              </span>
+              <p className="mt-3 text-sm font-semibold text-foreground">Her şey yolunda</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Yeni bir gelişme olduğunda burada görünür.
+              </p>
+            </div>
           ) : (
-            <ul className="max-h-96 overflow-y-auto">
-              {notifications.map((notification) => (
-                <li key={notification.id}>
-                  <button
-                    type="button"
-                    onClick={() => openNotification(notification)}
-                    className={`block w-full cursor-pointer px-4 py-3 text-left hover:bg-black/[0.04] ${
-                      notification.read_at ? "" : "bg-primary/[0.07]"
-                    }`}
-                  >
-                    <span className="block text-sm font-medium text-foreground tabular-nums">
-                      {notificationText(notification)}
-                    </span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {relativeTime(notification.created_at)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
+              <NotificationList
+                items={notifications}
+                onOpen={openItem}
+                readIds={readIds}
+                allRead={allRead}
+              />
+            </div>
           )}
+
+          <Link
+            href="/bildirimler"
+            onClick={() => setOpenPathname(null)}
+            className="flex min-h-11 shrink-0 items-center justify-center gap-1 border-t border-black/[0.06] px-4 text-sm font-semibold text-primary hover:bg-black/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          >
+            Tüm bildirimler
+            <ChevronRight aria-hidden className="size-4" />
+          </Link>
         </div>
       ) : null}
     </div>
