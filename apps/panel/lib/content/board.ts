@@ -45,8 +45,8 @@ export type Tone = "ok" | "warn" | "bad" | "neutral";
 export type RuleBar = { label: string; value: string; pct: number; tone: Tone };
 export type ActionKind = "approve" | "test" | "stop" | "scale" | "archive" | "remind" | "none";
 export type Advice = { text: string; action: { kind: ActionKind; label: string } };
-/** Organik 72 saat karşılaştırması (Task 7 doldurur). */
-export type OrganicLead = "önde" | "geride";
+/** Organik 72 saat karşılaştırması (lib/content/organic.ts hesaplar). */
+export type OrganicLead = "önde" | "geride" | "eşit";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;

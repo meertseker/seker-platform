@@ -31,7 +31,7 @@ export function sanitize(text: string, cfg: MetaConfig): string {
 }
 
 /** Hata biçimi `{error:{message,code,...}}`; kaynak: https://developers.facebook.com/docs/graph-api/guides/error-handling/ */
-async function toApiError(response: Response, cfg: MetaConfig): Promise<MetaApiError> {
+export async function toApiError(response: Response, cfg: MetaConfig): Promise<MetaApiError> {
   const raw = await response.text();
   let message = raw ? `HTTP ${response.status}: ${raw}` : `HTTP ${response.status}`;
   let code: number | null = null;
@@ -45,7 +45,7 @@ async function toApiError(response: Response, cfg: MetaConfig): Promise<MetaApiE
   return new MetaApiError(`Meta insights isteği başarısız: ${sanitize(message, cfg)}`, response.status, code);
 }
 
-function headers(cfg: MetaConfig): Record<string, string> {
+export function headers(cfg: MetaConfig): Record<string, string> {
   // Erişim anahtarı yalnız başlıkta; URL'ye (günlüklere, hata mesajlarına) girmez.
   return { authorization: `Bearer ${cfg.accessToken}` };
 }
@@ -66,7 +66,7 @@ function firstUrl(cfg: MetaConfig, from: string, to: string): URL {
  * `paging.next` Meta'dan tam URL gelir ve içinde access_token taşır. Yalnız graph.facebook.com'a gidilir
  * (başka sunucuya anahtar sızmaz), access_token düşürülür, anahtar başlıkla gider.
  */
-function nextUrl(raw: string, cfg: MetaConfig): URL {
+export function nextUrl(raw: string, cfg: MetaConfig): URL {
   let url: URL;
   try {
     url = new URL(raw);

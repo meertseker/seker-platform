@@ -1,0 +1,19 @@
+{
+  "media": {
+    "data": [
+      { "id": "1790001", "permalink": "https://www.instagram.com/p/AAA111/", "media_product_type": "FEED", "timestamp": "2026-10-12T08:00:00+0000" },
+      { "id": "1790002", "permalink": "https://www.instagram.com/reel/DBcD123/", "media_product_type": "REELS", "timestamp": "2026-10-13T09:30:00+0000" }
+    ],
+    "paging": {}
+  },
+  "insights": {
+    "data": [
+      { "name": "views", "period": "lifetime", "values": [{ "value": 4210 }], "title": "Views", "id": "1790002/insights/views/lifetime" },
+      { "name": "reach", "period": "lifetime", "values": [{ "value": 3100 }] },
+      { "name": "saved", "period": "lifetime", "values": [{ "value": 41 }] },
+      { "name": "shares", "period": "lifetime", "values": [{ "value": 17 }] },
+      { "name": "total_interactions", "period": "lifetime", "values": [{ "value": 130 }] },
+      { "name": "ig_reels_avg_watch_time", "period": "lifetime", "values": [{ "value": 5321.5 }] }
+    ]
+  }
+}

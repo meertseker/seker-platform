@@ -16,6 +16,8 @@ export interface MetaConfig {
   pixelId: string | null;
   testEventCode: string | null;
   capiEnabled: boolean;
+  /** Instagram işletme hesabı kimliği (META_INSTAGRAM_USER_ID); yoksa organik sayılar kapalı. */
+  instagramUserId?: string | null;
 }
 
 /**
@@ -39,6 +41,7 @@ export function readMetaConfig(
     pixelId,
     testEventCode: env.META_CAPI_TEST_CODE?.trim() || null,
     capiEnabled: env.META_CAPI_ENABLED === "true" && pixelId !== null,
+    instagramUserId: env.META_INSTAGRAM_USER_ID?.trim() || null,
   };
 }
 
