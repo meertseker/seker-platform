@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   STALE_LEAD_STATUSES,
+  dropLeadsWithFutureVisit,
+  futureVisitLeadIds,
   staleCutoffIso,
   istanbulDateString,
   isIstanbulMonday,
@@ -77,5 +79,31 @@ describe("overdueTotalKurus (spec §8.5)", () => {
   });
   it("string tutarları da destekler (DB numeric -> string dönüşü)", () => {
     expect(overdueTotalKurus([{ amount: "1200.25" }])).toBe(120025);
+  });
+});
+
+describe("ileri tarihli ziyareti olan veli takipsiz değildir", () => {
+  const now = new Date("2026-11-03T07:00:00Z");
+
+  it("randevu durumundaki veli, bekleyen randevusu ilerideyse listeden düşer", () => {
+    const ids = futureVisitLeadIds(
+      [
+        { lead_id: "L1", scheduled_at: "2026-11-05T07:00:00Z" }, // ileride
+        { lead_id: "L2", scheduled_at: "2026-11-01T07:00:00Z" }, // geçmiş, sonuç girilmemiş
+        { lead_id: "L3", scheduled_at: "2026-11-03T07:00:00Z" }, // tam şimdi: ileride sayılmaz
+      ],
+      now,
+    );
+    expect([...ids]).toEqual(["L1"]);
+    const kept = dropLeadsWithFutureVisit(
+      [{ id: "L1", status: "randevu" }, { id: "L2", status: "randevu" }, { id: "L4", status: "ulasildi" }],
+      ids,
+    );
+    expect(kept.map((l) => l.id)).toEqual(["L2", "L4"]);
+  });
+
+  it("randevu yoksa liste olduğu gibi kalır", () => {
+    const leads = [{ id: "L1" }];
+    expect(dropLeadsWithFutureVisit(leads, new Set())).toEqual(leads);
   });
 });
