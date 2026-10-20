@@ -39,3 +39,6 @@ jobs:
             echo "SUPABASE_SECRET_KEY=$SEC"
           } >> "$GITHUB_ENV"
       - run: pnpm turbo run lint typecheck test
+      # Deploy'daki Docker build ile aynı next build; prerender hataları main'e girmeden yakalanır.
+      - name: next build (web + panel)
+        run: pnpm turbo run build --filter=@seker/web --filter=@seker/panel
