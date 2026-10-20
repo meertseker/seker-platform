@@ -107,10 +107,13 @@ describe("Takip aramaları listesi (R27)", () => {
       { ...due, lead_id: won, title: "kazanıldı", rule_key: `takip:${won}:2` },
       { ...due, lead_id: lost, title: "kaybedildi", rule_key: `geri:${lost}` },
       { ...due, lead_id: lost, title: "kontenjan", rule_key: `kontenjan:${lost}` },
+      { ...due, lead_id: won, title: "ziyaret sonrası", rule_key: `ziyaret:ap-${won}:2` },
+      { ...due, lead_id: won, title: "gelmedi", rule_key: `noshow:ap-${won}` },
+      { ...due, lead_id: open, title: "açık ziyaret", rule_key: `ziyaret:ap-${open}:2` },
     ]);
     const items = await loadFollowupTasks(danA, DAN_ID, "danisman", "2026-10-20", new Date("2026-10-20T08:00:00Z"));
     const mine = items.filter((t) => [open, won, lost].includes(t.leadId ?? "")).map((t) => t.title);
-    expect(mine.sort()).toEqual(["açık", "kontenjan"]);
+    expect(mine.sort()).toEqual(["açık", "açık ziyaret", "kontenjan"]);
   });
 });
 

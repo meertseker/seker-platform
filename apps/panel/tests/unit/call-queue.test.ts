@@ -277,6 +277,17 @@ describe("dropClosedLeadFollowups (R27)", () => {
     ]);
     expect(kept.map((r) => r.id)).toEqual(["acik-takip", "acik-noshow", "kontenjan", "elle", "velisiz"]);
   });
+
+  it("kazanılan ya da öğrenciye dönen velinin ziyaret ve gelmedi araması da düşer", () => {
+    const kept = dropClosedLeadFollowups([
+      row("acik-ziyaret", "ziyaret:ap1:2", lead("gorusme_yapildi")),
+      row("kazanildi-ziyaret", "ziyaret:ap1:2", lead("kazanildi")),
+      row("kazanildi-noshow", "noshow:ap1", lead("kazanildi")),
+      row("donmus-ziyaret", "ziyaret:ap1:3", lead("teklif", "s1")),
+      row("kaybedildi-noshow", "noshow:ap1", lead("kaybedildi")),
+    ]);
+    expect(kept.map((r) => r.id)).toEqual(["acik-ziyaret"]);
+  });
 });
 
 describe("isInQueue", () => {

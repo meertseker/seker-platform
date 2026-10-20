@@ -70,6 +70,15 @@ describe("convertLeadToStudent · arama takibi (R27)", () => {
     }
   });
 
+  it("ziyaret ve gelmedi arama görevlerini veliye göre kapatır", async () => {
+    await convertLeadToStudent("L1", "2026-11-01");
+    for (const prefix of ["ziyaret:", "noshow:"]) {
+      const c = closes(prefix);
+      expect(c).toHaveLength(1);
+      expect(c[0].filters).toContainEqual(["eq", "lead_id", "L1"]);
+    }
+  });
+
   it("görev kapanışı hata verse de dönüştürme başarılı döner", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     tasksUpdateError = { message: "boom" };
