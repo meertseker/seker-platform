@@ -17,6 +17,8 @@ interface NotificationListProps {
   allRead?: boolean;
   /** Gruplama/saat için "şimdi"; verilmezse render anı. */
   now?: Date;
+  /** Öğretmen gibi tek ekranlı roller: her satır bu adrese açılır. */
+  fixedHref?: string;
 }
 
 function NotificationRow({
@@ -25,19 +27,21 @@ function NotificationRow({
   now,
   today,
   onOpen,
+  fixedHref,
 }: {
   item: NotificationItem;
   unread: boolean;
   now: Date;
   today: string;
   onOpen?: (item: NotificationItem) => void;
+  fixedHref?: string;
 }) {
   const hint = notificationHint(item);
   const time = formatNotificationTime(item.created_at, now);
 
   return (
     <Link
-      href={notificationHref(item, today)}
+      href={fixedHref ?? notificationHref(item, today)}
       onClick={() => onOpen?.(item)}
       data-notification-row
       className={`group flex min-h-11 items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
@@ -84,6 +88,7 @@ export function NotificationList({
   readIds,
   allRead = false,
   now = new Date(),
+  fixedHref,
 }: NotificationListProps) {
   const idPrefix = useId();
   const today = istanbulDateString(now);
@@ -110,6 +115,7 @@ export function NotificationList({
                     now={now}
                     today={today}
                     onOpen={onOpen}
+                    fixedHref={fixedHref}
                   />
                 </li>
               ))}

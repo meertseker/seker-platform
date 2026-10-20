@@ -21,7 +21,7 @@ export async function signIn(
     return { error: "E-posta veya şifre hatalı" };
   }
 
-  redirect("/bugun");
+  redirect("/"); // ana sayfa rolün ekranına yollar
 }
 
 export async function signOut() {
