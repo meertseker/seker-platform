@@ -245,8 +245,14 @@ export function CallScreen({
       notFitReason: outcome === "uygun_degil" ? reason! : undefined,
     });
     if ("error" in res) {
+      if (res.keepForm) {
+        // Başkası üstlendi: sayfa yenilenirse form yerine uyarı gelir ve yazılanlar kaybolur. Form durur,
+        // meslektaş kaydını bitirince (ilk temas yazılınca) "Kaydet" yeniden denenebilir.
+        setError(`${res.error}. Yazdıkların duruyor; o kaydını bitirince "Kaydet"e yeniden bas.`);
+        return;
+      }
       setError(res.error);
-      // Çakışmada öneriler yeniden hesaplansın; başkası üstlendiyse sayfa bunu gösterir.
+      // Çakışmada öneriler yeniden hesaplansın.
       router.refresh();
       return;
     }

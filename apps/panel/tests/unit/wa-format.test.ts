@@ -188,3 +188,18 @@ describe("formatGroup", () => {
     expect(formatGroup(group, c)).toBeNull();
   });
 });
+
+describe("sessiz olaylar", () => {
+  it("üstlenme olayı gruba yazılmaz; yanındaki not yine gider", () => {
+    const c = ctx();
+    const alone = groupItems([item({ eventType: "ustlenildi", entityType: "lead", entityId: "L1" })], c);
+    expect(formatGroup(alone[0], c)).toBeNull();
+    const withNote = groupItems([
+      item({ eventType: "ustlenildi", entityType: "lead", entityId: "L1", createdAt: "2026-10-19T11:00:00Z" }),
+      item({ eventType: "not_eklendi", entityType: "lead", entityId: "L1", noteBody: "Ulaştım", createdAt: "2026-10-19T11:00:10Z" }),
+    ], c);
+    const text = formatGroup(withNote[0], c)!;
+    expect(text).toContain("Ulaştım");
+    expect(text).not.toMatch(/üstlen/i);
+  });
+});

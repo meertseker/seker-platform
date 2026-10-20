@@ -55,6 +55,9 @@ export const GROUP_GAP_MS = 90_000;
 /** Toplu işlemler öğrenci başına olay yazar; grupta tek özet mesaj olarak görünür. */
 const BATCH_EVENTS = new Set(["zam_uygulandi", "tutar_kesinlesti"]);
 
+/** Gruba hiç yazılmayan olaylar: "Ara"ya basmak (ustlenildi) yalnız panel geçmişi içindir. */
+const SILENT_EVENTS = new Set(["ustlenildi"]);
+
 /** Bu olayları her zaman bir görüşme notu izler; not grupta varsa ayrı satır yazılmaz. */
 const NOTE_COVERED_EVENTS = new Set(["arama_kaydi", "mesaj_tekrar"]);
 
@@ -401,6 +404,7 @@ export function formatGroup(group: WaGroup, ctx: WaContext): string | null {
   // Görüşme notu aynı mesajdaysa arama/mesaj olayı aynı şeyi ikinci kez söylemesin.
   const hasNote = group.items.some((i) => i.eventType === "not_eklendi" && !!i.noteBody);
   const described = group.items
+    .filter((item) => !SILENT_EVENTS.has(item.eventType))
     .filter((item) => !(hasNote && NOTE_COVERED_EVENTS.has(item.eventType)))
     .map((item) => describe(item, ctx))
     .filter((d): d is Line => d !== null);

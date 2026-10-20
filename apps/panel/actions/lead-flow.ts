@@ -56,10 +56,34 @@ export async function claimLead(leadId: string): Promise<ClaimResult> {
   const settings = await getLeadFlowSettings(supabase);
   const result = await claimLeadAs(supabase, leadId, profile.id, settings.claimMinutes);
   if (result.ok) {
+    // Üstlenme geçmişi: süre dolup meslektaş devralırsa önceki üstlenenin kaydı buradan doğrulanır (B6).
+    // WhatsApp grubuna yazılmaz (lib/wa/format SILENT_EVENTS).
+    await logEvent(supabase, { entityType: "lead", entityId: leadId, eventType: "ustlenildi", actorId: profile.id });
     revalidatePath("/bugun");
     revalidatePath(`/leads/${leadId}`);
   }
   return result;
+}
+
+/**
+ * B6: uzun ilk arama. Üstlenme süresi dolup meslektaş "Ara"ya bastıysa ilk danışmanın kaydı yine kabul edilir:
+ * son üstlenen meslektaş, ondan bir önceki üstlenen bu kullanıcı ve arada arama kaydı yok.
+ */
+async function wasPreviousClaimant(supabase: SupabaseClient, leadId: string, userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("events")
+    .select("event_type, actor_id")
+    .eq("entity_type", "lead")
+    .eq("entity_id", leadId)
+    .in("event_type", ["ustlenildi", "arama_kaydi"])
+    .order("created_at", { ascending: false })
+    .limit(2);
+  if (error) throw new Error(`Üstlenme geçmişi okunamadı: ${error.message}`);
+  const [latest, previous] = ((data ?? []) as { event_type: string; actor_id: string | null }[]);
+  return (
+    latest?.event_type === "ustlenildi" && latest.actor_id !== userId &&
+    previous?.event_type === "ustlenildi" && previous.actor_id === userId
+  );
 }
 
 /** Trigger'ın Google'a gönderilecek ("bekliyor") bir dönüşüm satırı açıp açmayacağı. */
@@ -156,7 +180,13 @@ export type RecordCallResult =
       /** Bu kayıtla veli kapandı (uygun değil ya da 7 günde ulaşılamadı); WhatsApp düğmesi gösterilmez. */
       closed?: true;
     }
-  | { error: string };
+  | {
+      error: string;
+      /** Başkası üstlendi: ekran yenilenmez, yazılanlar durur; meslektaş kaydını bitirince tekrar denenir. */
+      keepForm?: true;
+    };
+
+const RECLAIM_ACCEPTED = "Üstlenme süresi dolmuştu; kaydın yine de alındı";
 
 export async function recordCall(input: RecordCallInput): Promise<RecordCallResult> {
   const now = new Date();
@@ -181,10 +211,15 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
   // İlk temas yapılmadıysa veli önce üstlenilir; başkası arıyorsa hiçbir şey yazılmaz.
   // R26: durumu 'yeni' olmayan veli ilk teması yapılmış sayılır; üstlenilmez, sahibi değişmez.
   const contacted = alreadyContacted(lead);
+  let reclaimAccepted = false;
   if (!contacted) {
     try {
       const claim = await claimLeadAs(supabase, leadId, profile.id, settings.claimMinutes, now);
-      if (!claim.ok) return { error: `${claim.claimedBy} bu veliyi arıyor` };
+      if (!claim.ok) {
+        // Uzun arama: süre dolmuş, meslektaş devralmış olabilir; önceki üstlenenin kaydı kaybolmaz (B6).
+        reclaimAccepted = await wasPreviousClaimant(supabase, leadId, profile.id);
+        if (!reclaimAccepted) return { error: `${claim.claimedBy} bu veliyi arıyor`, keepForm: true };
+      }
     } catch (e) {
       console.error("recordCall claim:", e);
       return { error: GENERIC_FAILURE };
@@ -364,6 +399,8 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
         done = [`Kayıt kapatıldı · neden: ${LOST_REASONS[input.notFitReason!]}`, "Açık takip görevleri kapandı"];
         closed = true;
     }
+
+    if (reclaimAccepted) done.unshift(RECLAIM_ACCEPTED);
 
     revalidatePath("/bugun");
     revalidatePath("/pipeline");

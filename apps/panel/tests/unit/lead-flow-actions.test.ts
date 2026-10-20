@@ -37,7 +37,7 @@ vi.mock("@/lib/supabase/server", () => ({ createServerSupabase: async () => ({ f
 vi.mock("@/actions/appointments", () => ({ createAppointment: (...a: unknown[]) => createAppointment(...a) }));
 vi.mock("@/actions/leads", () => ({ updateLeadStatus: (...a: unknown[]) => updateLeadStatus(...a) }));
 
-import { recordCall } from "@/actions/lead-flow";
+import { claimLead, recordCall } from "@/actions/lead-flow";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { DEFAULT_BUSINESS_HOURS } from "@/lib/lead-flow/business-hours";
 
@@ -51,15 +51,18 @@ let reachEvents: { created_at: string }[];
 let existingAppt: { id: string; scheduled_at: string } | null;
 let claimRows: { id: string }[];
 let settingsRows: { key: string; value: unknown }[];
+/** Üstlenme geçmişi sorgusunun cevabı (ustlenildi / arama_kaydi, yeniden eskiye). */
+let claimHistory: { event_type: string; actor_id: string }[];
 
 const isClaim = (o: Op) => o.filters.some((f) => f[0] === "is" && f[1] === "first_contact_at");
+const isClaimHistory = (o: Op) => o.filters.some((f) => f[0] === "in" && f[1] === "event_type");
 
 function defaultRespond(o: Op) {
   if (o.table === "app_settings") return { data: settingsRows };
   if (o.table === "leads" && o.op === "select") return { data: lead };
   if (o.table === "leads" && o.op === "update") return isClaim(o) ? { data: claimRows } : { data: { status: lead.status } };
   if (o.table === "profiles") return { data: { full_name: "Zehra Hanım" } };
-  if (o.table === "events" && o.op === "select") return { data: reachEvents };
+  if (o.table === "events" && o.op === "select") return { data: isClaimHistory(o) ? claimHistory : reachEvents };
   if (o.table === "tasks" && o.op === "select") {
     // Açık görevler deneme saatinden bir gün önce açılmış sayılır.
     return { data: [...takipRows, ...openTakip.map((rule_key) => ({ rule_key, created_at: "2026-11-02T07:00:00+00:00" }))] };
@@ -90,6 +93,7 @@ beforeEach(() => {
   existingAppt = null;
   claimRows = [{ id: "L1" }];
   settingsRows = [];
+  claimHistory = [];
   lead = {
     id: "L1", parent_name: "Ayşe Yılmaz", phone: "+905321112233", status: "yeni", converted_student_id: null,
     first_contact_at: null, gclid: null, created_at: "2026-11-03T06:00:00Z", web_payload: null,
@@ -262,9 +266,48 @@ describe("recordCall", () => {
     claimRows = [];
     lead.assigned_to = "00000000-0000-0000-0000-000000000003";
     const r = await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
-    expect(r).toEqual({ error: "Zehra Hanım bu veliyi arıyor" });
+    expect(r).toEqual({ error: "Zehra Hanım bu veliyi arıyor", keepForm: true });
     expect(ops.filter((o) => o.op !== "select" && !isClaim(o))).toHaveLength(0);
     expect(updateLeadStatus).not.toHaveBeenCalled();
+  });
+
+  it("uzun ilk arama: süre dolup meslektaş devraldıysa önceki üstlenenin kaydı kabul edilir (B6)", async () => {
+    const OTHER = "00000000-0000-0000-0000-000000000003";
+    claimRows = [];
+    lead.assigned_to = OTHER;
+    claimHistory = [
+      { event_type: "ustlenildi", actor_id: OTHER },
+      { event_type: "ustlenildi", actor_id: ME },
+    ];
+    const r = await recordCall({ leadId: "L1", result: "geri_ara", quals, callbackAt: "2026-11-04T15:00", note: "bahçe" });
+    if (!("done" in r)) throw new Error(`done bekleniyordu: ${JSON.stringify(r)}`);
+    expect(r.done[0]).toBe("Üstlenme süresi dolmuştu; kaydın yine de alındı");
+    // Veli ilk teması yapana geçer; not ve olay yazılır.
+    expect(leadPatches()[0].payload).toMatchObject({ assigned_to: ME, contact_note: "bahçe" });
+    expect(inserts("lead_notes")).toHaveLength(1);
+    expect(inserts("events").some((e) => e.event_type === "arama_kaydi")).toBe(true);
+    const history = ops.find((o) => o.table === "events" && isClaimHistory(o))!;
+    expect(history.filters).toEqual(expect.arrayContaining([
+      ["eq", "entity_id", "L1"], ["in", "event_type", ["ustlenildi", "arama_kaydi"]], ["limit", 2],
+    ]));
+  });
+
+  it("önceki üstlenen değilse hiçbir şey yazmaz; form korunsun diye bayrak döner", async () => {
+    const OTHER = "00000000-0000-0000-0000-000000000003";
+    claimRows = [];
+    lead.assigned_to = OTHER;
+    for (const history of [
+      [],
+      [{ event_type: "ustlenildi", actor_id: OTHER }],
+      [{ event_type: "ustlenildi", actor_id: OTHER }, { event_type: "ustlenildi", actor_id: "00000000-0000-0000-0000-000000000004" }],
+      [{ event_type: "arama_kaydi", actor_id: OTHER }, { event_type: "ustlenildi", actor_id: ME }],
+    ]) {
+      ops = [];
+      claimHistory = history;
+      const r = await recordCall({ leadId: "L1", result: "ulasilamadi", quals });
+      expect(r).toEqual({ error: "Zehra Hanım bu veliyi arıyor", keepForm: true });
+      expect(ops.filter((o) => o.op !== "select" && !isClaim(o))).toHaveLength(0);
+    }
   });
 
   it("ilk temastan sonra üstlenme aranmaz", async () => {
@@ -420,6 +463,22 @@ describe("recordCall", () => {
     expect(await recordCall({ leadId: "L1", result: "geri_ara", quals })).toHaveProperty("error");
     expect(await recordCall({ leadId: "L1", result: "uygun_degil", quals })).toHaveProperty("error");
     expect(ops.filter((o) => o.op !== "select")).toHaveLength(0);
+  });
+});
+
+describe("claimLead", () => {
+  it("başarılı üstlenmede ustlenildi olayı yazar (uzun arama kabulü için geçmiş)", async () => {
+    expect(await claimLead("L1")).toEqual({ ok: true });
+    expect(inserts("events")).toEqual([
+      expect.objectContaining({ event_type: "ustlenildi", entity_type: "lead", entity_id: "L1", actor_id: ME }),
+    ]);
+  });
+
+  it("üstlenemeyince olay yazmaz", async () => {
+    claimRows = [];
+    lead.assigned_to = "00000000-0000-0000-0000-000000000003";
+    expect(await claimLead("L1")).toEqual({ ok: false, claimedBy: "Zehra Hanım" });
+    expect(inserts("events")).toEqual([]);
   });
 });
 
