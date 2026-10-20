@@ -79,6 +79,7 @@ export function costPerQualifiedTl(perf: ContentPerf): number | null {
 
 /** Durdurma kuralı: hedefin katı kadar harcama ve hiç nitelikli veli yok. */
 export function stopRuleHit(perf: ContentPerf, rules: AdRules): boolean {
+  if (!(rules.targetTl > 0 && rules.stopMultiple > 0)) return false;
   return perf.qualified === 0 && spendTl(perf) >= stopLimitTl(rules);
 }
 
@@ -423,54 +424,90 @@ export async function loadTeachers(supabase: SupabaseClient): Promise<{ id: stri
   return ((data ?? []) as { id: string; full_name: string }[]).map((p) => ({ id: p.id, name: p.full_name }));
 }
 
+/** Sayıları okunan aşamalar: reklam ya da organik sonucu olabilenler (arşivden yalnız panoda görünenler). */
+const PERF_STAGES = new Set<StageKey>(["organik", "test", "kazanan", "arsiv"]);
+
+export function perfCodes(items: BoardItem[]): string[] {
+  return items.filter((i) => PERF_STAGES.has(i.stage)).map((i) => i.code);
+}
+
+/** .in() listesi adres sınırını aşmasın diye en çok 100 değerlik parçalar. */
+export const IN_CHUNK = 100;
+const PAGE_SIZE = 1000;
+
+export function chunk<T>(list: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+
+type PageResult = { data: unknown[] | null; error: { message: string } | null };
+
+/** PostgREST max_rows sınırında toplam sessizce kesilmesin: kısa sayfa gelene kadar .range() ile okur. */
+export async function fetchAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<PageResult>,
+  pageSize = PAGE_SIZE,
+): Promise<T[]> {
+  const all: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await page(from, from + pageSize - 1);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as T[];
+    all.push(...rows);
+    if (rows.length < pageSize) return all;
+  }
+}
+
+type SpendRow = { content_code: string; cost_micros: number; clicks: number; platform_results: number | null };
+type LeadRow = { id: string; content_code: string; is_qualified: boolean | null; appointments: { outcome: string }[] | null };
+
 /**
  * Koda göre reklam sayıları: harcama, tıklama ve platformun saydığı başvuru `ad_spend_daily.content_code`'dan
- * (Meta reklam satırları), veli, nitelikli ve randevuya dönen veli `leads.content_code`'dan.
+ * (Meta reklam satırları), veli, nitelikli ve randevuya dönen veli (iptal dışı randevusu olan) `leads.content_code`'dan.
+ * Kodlar 100'lük parçalarla, satırlar sayfa sayfa okunur.
  */
 export async function loadContentPerf(supabase: SupabaseClient, codes: string[]): Promise<Map<string, ContentPerf>> {
   const out = new Map<string, ContentPerf>(codes.map((c) => [c, emptyPerf()]));
-  if (codes.length === 0) return out;
-
-  const [spend, leads] = await Promise.all([
-    supabase.from("ad_spend_daily").select("content_code, cost_micros, clicks, platform_results").in("content_code", codes),
-    supabase.from("leads").select("id, content_code, is_qualified").in("content_code", codes),
-  ]);
-  if (spend.error) throw new Error(`ad_spend_daily: ${spend.error.code ?? "bilinmeyen"}`);
-  if (leads.error) throw new Error(`leads: ${leads.error.code ?? "bilinmeyen"}`);
-
   const micros = new Map<string, number>();
-  for (const r of (spend.data ?? []) as { content_code: string; cost_micros: number; clicks: number; platform_results: number | null }[]) {
-    const p = out.get(r.content_code);
-    if (!p) continue;
-    micros.set(r.content_code, (micros.get(r.content_code) ?? 0) + Number(r.cost_micros ?? 0));
-    p.clicks += Number(r.clicks ?? 0);
-    p.platformResults += Number(r.platform_results ?? 0);
-  }
-  for (const [code, m] of micros) out.get(code)!.spendKurus = Math.round(m / MICROS_PER_KURUS);
 
-  const leadCode = new Map<string, string>();
-  for (const r of (leads.data ?? []) as { id: string; content_code: string; is_qualified: boolean | null }[]) {
-    const p = out.get(r.content_code);
-    if (!p) continue;
-    p.leads += 1;
-    if (r.is_qualified) p.qualified += 1;
-    leadCode.set(r.id, r.content_code);
-  }
+  for (const part of chunk([...new Set(codes)], IN_CHUNK)) {
+    const [spend, leads] = await Promise.all([
+      fetchAllPages<SpendRow>((from, to) =>
+        supabase
+          .from("ad_spend_daily")
+          .select("content_code, cost_micros, clicks, platform_results")
+          .in("content_code", part)
+          .order("platform")
+          .order("date")
+          .order("level")
+          .order("object_id")
+          .range(from, to),
+      ),
+      fetchAllPages<LeadRow>((from, to) =>
+        supabase
+          .from("leads")
+          .select("id, content_code, is_qualified, appointments(outcome)")
+          .in("content_code", part)
+          .order("id")
+          .range(from, to),
+      ),
+    ]);
 
-  if (leadCode.size > 0) {
-    const { data, error } = await supabase
-      .from("appointments")
-      .select("lead_id")
-      .in("lead_id", [...leadCode.keys()])
-      .neq("outcome", "iptal");
-    if (error) throw new Error(`appointments: ${error.code ?? "bilinmeyen"}`);
-    const seen = new Set<string>();
-    for (const r of (data ?? []) as { lead_id: string }[]) {
-      if (seen.has(r.lead_id)) continue;
-      seen.add(r.lead_id);
-      const code = leadCode.get(r.lead_id);
-      if (code) out.get(code)!.appointments += 1;
+    for (const r of spend) {
+      const p = out.get(r.content_code);
+      if (!p) continue;
+      micros.set(r.content_code, (micros.get(r.content_code) ?? 0) + Number(r.cost_micros ?? 0));
+      p.clicks += Number(r.clicks ?? 0);
+      p.platformResults += Number(r.platform_results ?? 0);
+    }
+    for (const r of leads) {
+      const p = out.get(r.content_code);
+      if (!p) continue;
+      p.leads += 1;
+      if (r.is_qualified) p.qualified += 1;
+      if ((r.appointments ?? []).some((a) => a.outcome !== "iptal")) p.appointments += 1;
     }
   }
+  for (const [code, m] of micros) out.get(code)!.spendKurus = Math.round(m / MICROS_PER_KURUS);
   return out;
 }

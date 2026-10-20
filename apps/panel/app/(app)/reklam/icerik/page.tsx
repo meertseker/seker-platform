@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { createAdminSupabase } from "@seker/auth/admin";
 import { ContentBoard } from "@/components/content-board";
 import { requireRole } from "@/lib/auth";
-import { emptyPerf, loadBoardItems, loadContentPerf, loadTeachers, type BoardItem, type ContentPerf } from "@/lib/content/board";
+import { emptyPerf, loadBoardItems, loadContentPerf, loadTeachers, perfCodes, type BoardItem, type ContentPerf } from "@/lib/content/board";
 import { getContentRules } from "@/lib/content/settings";
 import { CONTENT_BUCKET } from "@/lib/content/store";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -45,7 +45,7 @@ export default async function IcerikPage({ searchParams }: { searchParams: Searc
   let perfError = false;
   let perfMap = new Map<string, ContentPerf>();
   try {
-    perfMap = await loadContentPerf(supabase, items.map((i) => i.code));
+    perfMap = await loadContentPerf(supabase, perfCodes(items));
   } catch (e) {
     console.error("[icerik] reklam sayıları okunamadı:", e instanceof Error ? e.message : "bilinmeyen");
     perfError = true;

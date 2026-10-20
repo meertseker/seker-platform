@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Film } from "lucide-react";
 import { ContentCardDetail, TONE_BAR, TONE_TEXT } from "@/components/content-card-detail";
 import { ContentTaskNew } from "@/components/content-task-new";
@@ -39,7 +39,20 @@ export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrl
   const item = items.find((i) => i.code === selected) ?? null;
   const perfOf = (code: string) => perf[code] ?? emptyPerf();
 
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const focusDetail = useRef(false);
+
+  // Telefonda ayrıntı panosu kartların altında kalır: seçimden sonra başlığına odaklanıp oraya kaydırılır.
+  useEffect(() => {
+    if (!focusDetail.current || !item) return;
+    focusDetail.current = false;
+    if (!window.matchMedia("(max-width: 1023px)").matches) return;
+    headingRef.current?.focus({ preventScroll: true });
+    headingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selected, item]);
+
   function select(code: string) {
+    focusDetail.current = true;
     setSelected(code);
     // Adres çubuğu da güncellenir; sunucu yeniden çalışmaz (bağlantı paylaşılabilir).
     window.history.replaceState(null, "", `?kod=${encodeURIComponent(code)}`);
@@ -62,7 +75,7 @@ export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrl
       ) : null}
 
       <div className="-mx-1 overflow-x-auto px-1 pb-2">
-        <div className="grid min-w-[1080px] grid-cols-[repeat(6,minmax(170px,1fr))] gap-2.5">
+        <div className="grid min-w-[1250px] grid-cols-[repeat(6,minmax(200px,1fr))] gap-2.5">
           {columns.map((col) => (
             <section
               key={col.key}
@@ -87,7 +100,7 @@ export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrl
                     type="button"
                     onClick={() => select(i.code)}
                     aria-pressed={on}
-                    className={`flex cursor-pointer flex-col gap-1.5 rounded-xl border-2 bg-surface p-2.5 text-left text-foreground shadow-sm ${
+                    className={`flex cursor-pointer flex-col gap-1.5 rounded-xl border-2 bg-surface p-2.5 text-left text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                       on ? "border-primary" : "border-transparent hover:border-border"
                     }`}
                   >
@@ -95,16 +108,16 @@ export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrl
                       <span
                         aria-hidden
                         className={`flex h-9 w-7 shrink-0 items-center justify-center rounded-md ${
-                          isGoogle ? "bg-accent-soft text-accent-strong" : "bg-primary-soft text-primary-strong"
+                          isGoogle ? "bg-google-soft text-google" : "bg-instagram-soft text-instagram"
                         }`}
                       >
                         {i.kind === "reels" ? <Film size={14} /> : <FileText size={14} />}
                       </span>
                       <span className="flex min-w-0 flex-col gap-px">
-                        <span className={`text-[11.5px] font-bold ${isGoogle ? "text-accent-strong" : "text-primary-strong"}`}>
+                        <span className={`text-[11.5px] font-bold ${isGoogle ? "text-google" : "text-instagram"}`}>
                           {i.code}
                         </span>
-                        <span className="text-sm font-semibold leading-tight [overflow-wrap:anywhere]">{i.topic}</span>
+                        <span className="text-sm font-semibold leading-tight">{i.topic}</span>
                       </span>
                     </span>
                     <span className="text-[12.5px] text-muted-foreground">{cardLine(i, p)}</span>
@@ -131,7 +144,11 @@ export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrl
           rules={rules}
           now={now}
           videoUrl={videoUrls[item.id] ?? null}
+          headingRef={headingRef}
         />
+      ) : items.length > 0 ? (
+        // Yeni açılan görev sayfa yenilenene kadar listede olmayabilir.
+        <p className="rounded-2xl border border-border bg-surface p-5 text-sm text-muted-foreground">Kart yükleniyor…</p>
       ) : (
         <p className="rounded-2xl border border-border bg-surface p-5 text-sm text-muted-foreground">
           Henüz içerik yok. &quot;Yeni görev&quot; ile ilk Reels ya da sayfa görevini açın.

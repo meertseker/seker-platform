@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useState, useTransition, type ReactNode, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import {
   approveContent,
@@ -47,6 +47,8 @@ interface Props {
   rules: AdRules;
   now: Date;
   videoUrl: string | null;
+  /** Telefonda seçimden sonra odaklanılan başlık. */
+  headingRef?: RefObject<HTMLHeadingElement | null>;
   /** Organik Instagram sayıları (Task 7); verilmezse bölüm gösterilmez. */
   organic?: ReactNode;
 }
@@ -84,7 +86,7 @@ function remindLink(item: BoardItem, now: Date): string | null {
   return waMeUrl(item.ownerPhone, message);
 }
 
-export function ContentCardDetail({ item, perf, rules, now, videoUrl, organic }: Props) {
+export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef, organic }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -133,10 +135,10 @@ export function ContentCardDetail({ item, perf, rules, now, videoUrl, organic }:
       className="flex flex-wrap gap-6 rounded-2xl border border-border bg-surface p-5"
     >
       <div className="flex min-w-0 flex-[1_1_280px] flex-col gap-2.5">
-        <div className={`text-xs font-bold ${isGoogle ? "text-accent-strong" : "text-primary-strong"}`}>
+        <div className={`text-xs font-bold ${isGoogle ? "text-google" : "text-instagram"}`}>
           {item.code} · {platformLabel(item)}
         </div>
-        <h2 className="text-2xl font-bold text-foreground [overflow-wrap:anywhere]">{item.topic}</h2>
+        <h2 ref={headingRef} tabIndex={-1} className="scroll-mt-4 text-2xl font-bold text-foreground break-words outline-none">{item.topic}</h2>
         <div className="text-sm text-muted-foreground">
           Aşama: <b className="text-foreground">{stage?.title}</b>
           {stageSince(item, now) ? ` · ${stageSince(item, now)}` : ""}
@@ -388,7 +390,7 @@ function ReviewBlock({
         {PAGE_FIELDS.map((f) => (
           <div key={f.key} className="flex flex-col gap-0.5">
             <dt className="text-xs font-semibold text-muted-foreground">{f.label}</dt>
-            <dd className="whitespace-pre-wrap text-foreground [overflow-wrap:anywhere]">{item.pageFields[f.key] || "—"}</dd>
+            <dd className="whitespace-pre-wrap break-words text-foreground">{item.pageFields[f.key] || "—"}</dd>
           </div>
         ))}
       </dl>
@@ -410,7 +412,7 @@ function ReviewBlock({
       <p className="text-xs text-muted-foreground">Video bağlantısı 10 dakika geçerli; süre dolarsa sayfayı yenileyin.</p>
       <div className="flex flex-col gap-0.5 text-sm">
         <span className="text-xs font-semibold text-muted-foreground">Açıklama</span>
-        <span className="whitespace-pre-wrap text-foreground [overflow-wrap:anywhere]">{item.caption || "—"}</span>
+        <span className="whitespace-pre-wrap break-words text-foreground">{item.caption || "—"}</span>
       </div>
       <p className="text-sm text-muted-foreground">
         Öğretmenin cevabı: {item.faceAnswer === false ? "Videoda ya da yazıda öğrenci yüzü ya da adı yok." : "cevap yok"}
