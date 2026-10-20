@@ -16,7 +16,7 @@ export default async function LandingLayout({
       {children}
       <LpFooter data={pickData(data, ['chrome.lp.footer.', 'site.'])} />
       <WhatsAppButton data={pickData(data, ['chrome.whatsapp.', 'site.'])} />
-      <MobileActionBar data={pickData(data, ['chrome.mobile.', 'site.'])} />
+      <MobileActionBar data={pickData(data, ['chrome.mobile.', 'site.'])} bookHref="#form" />
       <EditLayerGate />
     </>
   );
