@@ -6,6 +6,7 @@ let yoneticiler: Array<{ id: string }> = [];
 let appts: Array<Record<string, unknown>> = [];
 let installments: Array<{ amount: number }> = [];
 let updateError: { message: string } | null = null;
+let insertFailFor = new Set<string>();
 let seq = 0;
 
 const pathValue = (n: Notif, col: string) =>
@@ -24,6 +25,7 @@ function query(table: string) {
     },
     eq: (c: string, v: unknown) => (preds.push((n) => pathValue(n, c) === v), q),
     is: (c: string, v: unknown) => (preds.push((n) => pathValue(n, c) === v), q),
+    neq: (c: string, v: unknown) => (preds.push((n) => pathValue(n, c) !== v), q),
     lt: (c: string, v: string) => (preds.push((n) => String(pathValue(n, c)) < v), q),
     in: () => q,
     not: () => q,
@@ -34,7 +36,9 @@ function query(table: string) {
     single: () => Promise.resolve({ data: { value: 3 }, error: null }),
     insert: (rows: Array<Omit<Notif, "id" | "read_at">> | Record<string, unknown>) => {
       if (table === "notifications") {
-        for (const r of rows as Array<Omit<Notif, "id" | "read_at">>) notifs.push({ ...r, id: `n${++seq}`, read_at: null });
+        const list = rows as Array<Omit<Notif, "id" | "read_at">>;
+        if (list.some((r) => insertFailFor.has(r.user_id))) return Promise.resolve({ error: { message: "insert boom" } });
+        for (const r of list) notifs.push({ ...r, id: `n${++seq}`, read_at: null });
       }
       return Promise.resolve({ error: null });
     },
@@ -72,6 +76,7 @@ beforeEach(() => {
   notifs = [];
   seq = 0;
   updateError = null;
+  insertFailFor = new Set();
   yoneticiler = [{ id: "y1" }];
   appts = [];
   installments = [];
@@ -121,6 +126,16 @@ describe("GET /api/cron/daily", () => {
     expect(notifs).toHaveLength(first);
   });
 
+  it("aynı gün randevu saati değişince yeni satır eklenir, eskisi okundu olur", async () => {
+    appts = [{ id: "a1", scheduled_at: "2026-10-20T10:00:00+03:00", lead_id: "l1", created_by: "y1", leads: { parent_name: "Ayşe" } }];
+    await GET(request(OK));
+    appts = [{ id: "a1", scheduled_at: "2026-10-20T15:00:00+03:00", lead_id: "l1", created_by: "y1", leads: { parent_name: "Ayşe" } }];
+    await GET(request(OK));
+    const rows = notifs.filter((n) => n.type === "randevu_bugun");
+    expect(rows).toHaveLength(2);
+    expect(unread("randevu_bugun").map((n) => n.payload.at)).toEqual(["2026-10-20T15:00:00+03:00"]);
+  });
+
   it("dünkü okunmamış randevu_bugun her çalışmada okundu işaretlenir; bugünküne dokunulmaz", async () => {
     notifs = [
       { id: "old", user_id: "y1", type: "randevu_bugun", payload: { tarih: "2026-10-19" }, read_at: null },
@@ -149,6 +164,20 @@ describe("GET /api/cron/daily", () => {
     await GET(request(OK));
     expect(notifs.filter((n) => n.type === "geciken_ozet")).toHaveLength(1);
     expect(unread("geciken_ozet")).toHaveLength(1);
+  });
+
+  it("Pazartesi özeti bir yöneticiye yazılamazsa onun eski özeti okunmamış kalır", async () => {
+    vi.setSystemTime(new Date(MONDAY));
+    installments = [{ amount: 1000 }];
+    yoneticiler = [{ id: "y1" }, { id: "y2" }];
+    insertFailFor = new Set(["y2"]);
+    notifs = [
+      { id: "old1", user_id: "y1", type: "geciken_ozet", payload: { tarih: "2026-10-12" }, read_at: null },
+      { id: "old2", user_id: "y2", type: "geciken_ozet", payload: { tarih: "2026-10-12" }, read_at: null },
+    ];
+    await GET(request(OK));
+    expect(notifs.find((n) => n.id === "old1")!.read_at).not.toBeNull();
+    expect(notifs.find((n) => n.id === "old2")!.read_at).toBeNull();
   });
 
   it("Pazartesi dışı günde eski özetlere dokunulmaz", async () => {

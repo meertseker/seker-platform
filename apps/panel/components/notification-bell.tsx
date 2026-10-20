@@ -9,6 +9,7 @@ import { NotificationList } from "@/components/notification-list";
 import {
   badgeLabel,
   classifySummaryResponse,
+  reconcileOptimistic,
   summaryChanged,
   visibleUnreadCount,
   type BellSummary,
@@ -42,14 +43,21 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
   const [openPathname, setOpenPathname] = useState<string | null>(null);
   const open = openPathname === pathname;
 
-  // İyimser okundu durumu; sunucudan yeni veri gelince sıfırlanır.
+  // İyimser okundu durumu; sunucudan yeni veri gelince uzlaştırılır (işlem sürerken rozet geri yanmaz).
   const [readIds, setReadIds] = useState<ReadonlySet<string>>(() => new Set());
   const [allRead, setAllRead] = useState(false);
   const [seed, setSeed] = useState({ notifications, unreadCount });
   if (seed.notifications !== notifications || seed.unreadCount !== unreadCount) {
+    const next = reconcileOptimistic({
+      readIds,
+      allRead,
+      prevItems: seed.notifications,
+      items: notifications,
+      unreadCount,
+    });
     setSeed({ notifications, unreadCount });
-    setReadIds(new Set());
-    setAllRead(false);
+    setReadIds(next.readIds);
+    setAllRead(next.allRead);
   }
 
   const count = visibleUnreadCount({ unreadCount, items: notifications, readIds, allRead });
@@ -67,6 +75,10 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
     unread: unreadCount,
     latestId: notifications[0]?.id ?? null,
   });
+  // Sunucudan gelen her yeni durum bilinen durum olur: kendi okumamızdan sonra boşuna yenileme yapılmaz.
+  useEffect(() => {
+    knownRef.current = { unread: unreadCount, latestId: notifications[0]?.id ?? null };
+  }, [notifications, unreadCount]);
 
   useEffect(() => {
     let stopped = false;
@@ -190,7 +202,7 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
       } catch {
         setAllRead(false);
       }
-      router.refresh();
+      // Yenileme gerekmez: eylemdeki revalidatePath sayfayı zaten tazeler.
     });
   }
 

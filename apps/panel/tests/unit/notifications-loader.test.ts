@@ -108,6 +108,9 @@ describe("loadNotifications", () => {
     expect(warn).toHaveBeenCalledTimes(2);
     expect(warn).toHaveBeenCalledWith("[bildirim] tanımsız tür", "yok_tur");
     expect(warn).toHaveBeenCalledWith("[bildirim] tanımsız tür", "baska_yok");
+    // Aynı süreçte sonraki yüklemeler aynı türü tekrar loglamaz.
+    await loadNotifications(s.client, "u1", { limit: 20 });
+    expect(warn).toHaveBeenCalledTimes(2);
   });
 
   it("ana sorgu hatasında [] döner ve loglar", async () => {

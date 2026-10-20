@@ -17,6 +17,9 @@ function plainObject(value: unknown): Record<string, unknown> {
     : {};
 }
 
+/** Tanımsız tür süreç başına bir kez loglanır; her sayfa yüklemesinde aynı uyarı tekrarlanmaz. */
+const warnedTypes = new Set<string>();
+
 export async function loadNotifications(
   supabase: SupabaseClient,
   userId: string,
@@ -44,10 +47,9 @@ export async function loadNotifications(
     created_at: n.created_at as string,
   }));
 
-  const warned = new Set<string>();
   for (const row of rows) {
-    if (!isNotificationType(row.type) && !warned.has(row.type)) {
-      warned.add(row.type);
+    if (!isNotificationType(row.type) && !warnedTypes.has(row.type)) {
+      warnedTypes.add(row.type);
       console.warn("[bildirim] tanımsız tür", row.type);
     }
   }

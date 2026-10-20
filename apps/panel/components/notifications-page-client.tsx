@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { BellOff, CheckCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { markNotificationRead, markNotificationsRead } from "@/actions/notifications";
 import { NotificationList } from "@/components/notification-list";
-import { visibleUnreadCount } from "@/lib/notifications/bell-state";
+import { reconcileOptimistic, visibleUnreadCount } from "@/lib/notifications/bell-state";
 import type { NotificationFilter } from "@/lib/notifications/filter";
 import type { NotificationItem } from "@/lib/queries/notifications";
 
@@ -29,18 +28,18 @@ export function NotificationsPageClient({
   filter,
   nowIso,
 }: NotificationsPageClientProps) {
-  const router = useRouter();
   const [, startTransition] = useTransition();
   const headingRef = useRef<HTMLHeadingElement>(null);
 
-  // İyimser okundu durumu (zildekiyle aynı desen); sunucudan yeni veri gelince sıfırlanır.
+  // İyimser okundu durumu (zildekiyle aynı desen); sunucudan yeni veri gelince uzlaştırılır.
   const [readIds, setReadIds] = useState<ReadonlySet<string>>(() => new Set());
   const [allRead, setAllRead] = useState(false);
   const [seed, setSeed] = useState({ items, unreadCount });
   if (seed.items !== items || seed.unreadCount !== unreadCount) {
+    const next = reconcileOptimistic({ readIds, allRead, prevItems: seed.items, items, unreadCount });
     setSeed({ items, unreadCount });
-    setReadIds(new Set());
-    setAllRead(false);
+    setReadIds(next.readIds);
+    setAllRead(next.allRead);
   }
 
   const count = visibleUnreadCount({ unreadCount, items, readIds, allRead });
@@ -49,17 +48,17 @@ export function NotificationsPageClient({
   function openItem(item: NotificationItem) {
     if (item.read_at || allRead || readIds.has(item.id)) return;
     setReadIds((current) => new Set(current).add(item.id));
+    const revert = () =>
+      setReadIds((current) => {
+        const next = new Set(current);
+        next.delete(item.id);
+        return next;
+      });
     markNotificationRead(item.id)
       .then((result) => {
-        if (result && "error" in result && result.error) {
-          setReadIds((current) => {
-            const next = new Set(current);
-            next.delete(item.id);
-            return next;
-          });
-        }
+        if (result && "error" in result && result.error) revert();
       })
-      .catch(() => {});
+      .catch(revert);
   }
 
   function markAllRead() {
@@ -73,7 +72,7 @@ export function NotificationsPageClient({
       } catch {
         setAllRead(false);
       }
-      router.refresh();
+      // Yenileme gerekmez: eylemdeki revalidatePath sayfayı zaten tazeler.
     });
   }
 

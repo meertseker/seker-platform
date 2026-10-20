@@ -22,6 +22,37 @@ export function visibleUnreadCount({
   return Math.max(0, unreadCount - locallyRead);
 }
 
+export interface OptimisticRead {
+  readIds: ReadonlySet<string>;
+  allRead: boolean;
+}
+
+/**
+ * Sunucudan yeni liste gelince iyimser okundu durumunu uzlaştırır: işlem sürerken gelen
+ * yenileme rozeti geri yakmasın. Sunucuda okunmuş görünenler düşer; "tümü okundu"
+ * sunucu 0 diyene kadar sürer, ama arada yeni bildirim gelirse yalnız eskiler okundu kalır.
+ */
+export function reconcileOptimistic({
+  readIds,
+  allRead,
+  prevItems,
+  items,
+  unreadCount,
+}: OptimisticRead & {
+  prevItems: { id: string; read_at: string | null }[];
+  items: { id: string; read_at: string | null }[];
+  unreadCount: number;
+}): OptimisticRead {
+  if (unreadCount === 0) return { readIds: new Set(), allRead: false };
+  const newestChanged = (items[0]?.id ?? null) !== (prevItems[0]?.id ?? null);
+  if (allRead && !newestChanged) return { readIds: new Set(), allRead: true };
+  const stillUnread = new Set(items.filter((item) => !item.read_at).map((item) => item.id));
+  const candidates = allRead
+    ? prevItems.filter((item) => !item.read_at).map((item) => item.id)
+    : [...readIds];
+  return { readIds: new Set(candidates.filter((id) => stillUnread.has(id))), allRead: false };
+}
+
 export function badgeLabel(count: number): string {
   return count > 99 ? "99+" : String(count);
 }
