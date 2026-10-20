@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { authCookieOptions } from "@seker/auth/cookie";
 import { NextResponse, type NextRequest } from "next/server";
-import { LOGIN_REASON_PARAM, hasAuthCookie } from "@/lib/login-reason";
+import { LOGIN_REASON_PARAM, hasAuthCookie, loginReasonFor } from "@/lib/login-reason";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -28,7 +28,7 @@ export async function updateSession(request: NextRequest) {
 
   // getClaims() oturumu yeniler ve JWT'yi yerelde doğrular; getUser() gibi her
   // istekte (önceden yüklemeler dahil) Auth sunucusuna gitmez.
-  const { data } = await supabase.auth.getClaims();
+  const { data, error } = await supabase.auth.getClaims();
   const user = data?.claims.sub ?? null;
   const isLogin = request.nextUrl.pathname.startsWith("/login");
 
@@ -37,7 +37,8 @@ export async function updateSession(request: NextRequest) {
     url.pathname = "/login";
     url.search = "";
     // B7: sessizce /login'e düşmek yerine neden söylenir; sayfa bunu Türkçe gösterir.
-    if (hadSession) url.searchParams.set(LOGIN_REASON_PARAM, "baska-cihaz");
+    const reason = loginReasonFor(hadSession, error?.code);
+    if (reason) url.searchParams.set(LOGIN_REASON_PARAM, reason);
     return NextResponse.redirect(url);
   }
 
