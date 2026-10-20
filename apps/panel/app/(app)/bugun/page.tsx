@@ -177,14 +177,16 @@ function toVisits(rows: AppointmentRow[], today: string, now: Date): TodayVisit[
 function TodaySection({
   title,
   countText,
+  id,
   children,
 }: {
   title: string;
   countText?: string;
+  id?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-2.5">
+    <section id={id} className={`flex flex-col gap-2.5${id ? " scroll-mt-20" : ""}`}>
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-[19px] font-bold text-foreground">{title}</h2>
         {countText ? <span className="text-[13px] text-muted-foreground">{countText}</span> : null}
@@ -542,7 +544,7 @@ export default async function Home({
         )}
       </TodaySection>
 
-      <TodaySection title="Bugünkü ziyaretler" countText={`${visits.length} randevu`}>
+      <TodaySection title="Bugünkü ziyaretler" id="ziyaretler" countText={`${visits.length} randevu`}>
         {visitsLoadFailed ? (
           <ErrorState text="Randevular yüklenirken bir sorun oluştu." />
         ) : visits.length === 0 ? (
