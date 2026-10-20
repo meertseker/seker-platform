@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { MessageCirclePlus } from "lucide-react";
 import { createLead, findLeadByPhone } from "@/actions/leads";
+import { MESSAGE_LEAD_HREF } from "@/lib/lead-routes";
 import {
   label,
   LEAD_SOURCES,
@@ -112,6 +114,14 @@ export default function NewLeadPage() {
           Ad, telefon ve nereden geldiği yeterli. Gerisini sonra ekleyebilirsin.
         </p>
       </div>
+
+      <Link
+        href={MESSAGE_LEAD_HREF}
+        className="flex min-h-14 items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-input/60 bg-surface px-4 text-[15px] font-semibold text-foreground transition-colors hover:border-primary hover:text-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <MessageCirclePlus aria-hidden className="size-5" />
+        Instagram / WhatsApp'tan mı yazdı? Hızlı ekle
+      </Link>
 
       <form
         onSubmit={handleSubmit}

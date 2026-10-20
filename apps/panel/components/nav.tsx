@@ -21,6 +21,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { signOut } from "@/actions/auth";
+import { NEW_LEAD_HREF } from "@/lib/lead-routes";
 import {
   NotificationBell,
   type NotificationItem,
@@ -48,7 +49,6 @@ const mainItems = [
 // Takvim kenar çubuğunda ana menüde; telefonda alt çubuk dolu olduğundan Menü'nün başında.
 const calendarItem = { href: "/takvim", label: "Takvim", icon: CalendarDays } as const;
 
-const NEW_LEAD_HREF = "/leads/mesaj";
 
 const profileLinks = [
   { href: "/ayarlar", label: "Ayarlar", icon: Settings, roles: ["yonetici"] },
