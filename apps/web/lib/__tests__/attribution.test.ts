@@ -5,13 +5,15 @@ describe('parseAttribution', () => {
   it('gclid ve landing path çıkarır', () => {
     expect(parseAttribution('?gclid=Cj0ABC123', '/lp/az-mevcutlu-anaokulu')).toEqual({
       gclid: 'Cj0ABC123',
+      fbclid: '',
+      fbc: '',
       landingPath: '/lp/az-mevcutlu-anaokulu',
       utm: {},
     });
   });
 
   it('gclid yoksa boş bırakır ama yolu tutar', () => {
-    expect(parseAttribution('', '/kayit')).toEqual({ gclid: '', landingPath: '/kayit', utm: {} });
+    expect(parseAttribution('', '/kayit')).toEqual({ gclid: '', fbclid: '', fbc: '', landingPath: '/kayit', utm: {} });
   });
 
   it('diğer parametreler arasından gclid ve utm değerlerini bulur', () => {
@@ -43,38 +45,67 @@ describe('persistAttribution', () => {
 
   it('kayıt yoksa yeni değeri yazar', () => {
     const storage = makeStorage(null);
-    const next: Attribution = { gclid: 'A1', landingPath: '/lp/kres-2-yas', utm: {} };
+    const next: Attribution = { gclid: 'A1', fbclid: '', fbc: '', landingPath: '/lp/kres-2-yas', utm: {} };
     expect(persistAttribution(storage, next)).toEqual(next);
     expect(storage.read()).toBe(JSON.stringify(next));
   });
 
   it('ilk dokunuşu korur — sonraki sayfa gclid\'i ezmez', () => {
-    const first: Attribution = { gclid: 'FIRST', landingPath: '/lp/kres-2-yas', utm: {} };
+    const first: Attribution = { gclid: 'FIRST', fbclid: '', fbc: '', landingPath: '/lp/kres-2-yas', utm: {} };
     const storage = makeStorage(JSON.stringify(first));
-    expect(persistAttribution(storage, { gclid: '', landingPath: '/kayit', utm: {} })).toEqual(first);
+    expect(persistAttribution(storage, { gclid: '', fbclid: '', fbc: '', landingPath: '/kayit', utm: {} })).toEqual(first);
   });
 
   it('utm ile gelen ilk dokunuş da korunur', () => {
-    const first: Attribution = { gclid: '', landingPath: '/', utm: { utm_source: 'instagram' } };
+    const first: Attribution = { gclid: '', fbclid: '', fbc: '', landingPath: '/', utm: { utm_source: 'instagram' } };
     const storage = makeStorage(JSON.stringify(first));
-    expect(persistAttribution(storage, { gclid: '', landingPath: '/kayit', utm: {} })).toEqual(first);
+    expect(persistAttribution(storage, { gclid: '', fbclid: '', fbc: '', landingPath: '/kayit', utm: {} })).toEqual(first);
   });
 
   it('kayıtlı değerde sinyal yoksa yeni gclid günceller', () => {
     const storage = makeStorage(JSON.stringify({ gclid: '', landingPath: '/', utm: {} }));
-    expect(persistAttribution(storage, { gclid: 'NEW', landingPath: '/lp/kres-2-yas', utm: {} }).gclid).toBe('NEW');
+    expect(persistAttribution(storage, { gclid: 'NEW', fbclid: '', fbc: '', landingPath: '/lp/kres-2-yas', utm: {} }).gclid).toBe('NEW');
   });
 
   it('utm alanı olmayan eski biçimli kaydı okur', () => {
     const storage = makeStorage(JSON.stringify({ gclid: 'OLD', landingPath: '/lp/x' }));
-    expect(persistAttribution(storage, { gclid: '', landingPath: '/kayit', utm: {} })).toEqual({
-      gclid: 'OLD', landingPath: '/lp/x', utm: {},
+    expect(persistAttribution(storage, { gclid: '', fbclid: '', fbc: '', landingPath: '/kayit', utm: {} })).toEqual({
+      gclid: 'OLD', fbclid: '', fbc: '', landingPath: '/lp/x', utm: {},
     });
   });
 
   it('bozuk kayıtta çökmeden yeni değeri kullanır', () => {
     const storage = makeStorage('{bozuk');
-    const next: Attribution = { gclid: 'B2', landingPath: '/', utm: {} };
+    const next: Attribution = { gclid: 'B2', fbclid: '', fbc: '', landingPath: '/', utm: {} };
     expect(persistAttribution(storage, next)).toEqual(next);
+  });
+});
+
+describe('fbclid / fbc', () => {
+  const mem = () => {
+    const m = new Map<string, string>();
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) };
+  };
+
+  it('fbclid büyük/küçük harfi bozmadan fbc üretir', () => {
+    const a = parseAttribution('?fbclid=IwAR0AbC', '/', 1700000000000);
+    expect(a.fbclid).toBe('IwAR0AbC');
+    expect(a.fbc).toBe('fb.1.1700000000000.IwAR0AbC');
+  });
+
+  it('fbclid ilk dokunuşta fbc ile saklanır, sonraki sayfa ezmez', () => {
+    const s = mem();
+    persistAttribution(s, parseAttribution('?fbclid=ILK', '/lp/x', 1000));
+    const second = persistAttribution(s, parseAttribution('?fbclid=IKINCI', '/kayit', 2000));
+    expect(second.fbclid).toBe('ILK');
+    expect(second.fbc).toBe('fb.1.1000.ILK');
+  });
+
+  it('eski depolanmış nesnede fbclid/fbc yoksa boş döner', () => {
+    const s = mem();
+    s.setItem(ATTRIBUTION_KEY, JSON.stringify({ gclid: '', landingPath: '/', utm: {} }));
+    const r = persistAttribution(s, parseAttribution('', '/x'));
+    expect(r.fbclid).toBe('');
+    expect(r.fbc).toBe('');
   });
 });

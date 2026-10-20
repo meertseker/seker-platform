@@ -4,6 +4,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 
 export const VISIT_SOURCE_LABELS: Record<string, string> = {
   google_ads: "Google Ads reklamı",
+  meta_ads: "Instagram reklamı",
   arama: "Arama motoru (Google vb., ücretsiz)",
   sosyal: "Sosyal medya",
   kampanya: "Kampanya bağlantısı (UTM)",

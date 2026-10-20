@@ -135,3 +135,28 @@ describe('leadSchema qualify alanları', () => {
     }
   });
 });
+
+describe('leadSchema meta alanları', () => {
+  it('fbc ve olay kimliğini kabul eder, 200 karakterde keser', () => {
+    const r = leadSchema.safeParse({
+      ...valid,
+      fbclid: 'x'.repeat(300),
+      fbc: 'fb.1.1.abc',
+      fbp: 'fb.1.2.3',
+      metaEventId: 'e'.repeat(300),
+      adCookieConsent: true,
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.fbclid.length).toBe(200);
+      expect(r.data.fbc).toBe('fb.1.1.abc');
+      expect(r.data.metaEventId.length).toBe(200);
+      expect(r.data.adCookieConsent).toBe(true);
+    }
+  });
+
+  it('verilmezse varsayılan boş / false', () => {
+    const r = leadSchema.parse(valid);
+    expect([r.fbclid, r.fbc, r.fbp, r.metaEventId, r.adCookieConsent]).toEqual(['', '', '', '', false]);
+  });
+});

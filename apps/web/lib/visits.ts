@@ -3,7 +3,9 @@
  * Hiçbir kimlik, çerez veya tarayıcı depolaması kullanılmaz; yalnızca toplam sayı tutulur (bkz. 0011_site_visits.sql).
  */
 
-export const VISIT_SOURCES = ['google_ads', 'arama', 'sosyal', 'kampanya', 'diger_site', 'dogrudan', 'site_ici'] as const;
+import { isMetaPaid } from './metaClick';
+
+export const VISIT_SOURCES = ['google_ads', 'meta_ads', 'arama', 'sosyal', 'kampanya', 'diger_site', 'dogrudan', 'site_ici'] as const;
 export type VisitSource = (typeof VISIT_SOURCES)[number];
 
 export const VISIT_DEVICES = ['mobil', 'masaustu'] as const;
@@ -31,6 +33,7 @@ function hostOf(url: string): string | null {
 /** Siteye giriş kaynağı. Reklam tıklama kimliği her şeyin önündedir; sonra UTM, sonra yönlendiren site. */
 export function classifyEntrySource(search: URLSearchParams, referrer: string, ownHost: string): VisitSource {
   if (search.get('gclid') || search.get('gbraid') || search.get('wbraid')) return 'google_ads';
+  if (isMetaPaid({ utm_source: search.get('utm_source') ?? '', utm_medium: search.get('utm_medium') ?? '' })) return 'meta_ads';
   const refHost = referrer ? hostOf(referrer) : null;
   const external = refHost && refHost !== ownHost.toLowerCase() ? refHost : null;
   if (search.get('utm_source') || search.get('utm_campaign')) return 'kampanya';
