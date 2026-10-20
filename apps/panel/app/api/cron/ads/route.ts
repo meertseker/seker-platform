@@ -5,6 +5,9 @@ import { getAccessToken } from "@/lib/ads/googleAds";
 import { readMetaConfig } from "@/lib/ads/meta/config";
 import { uploadMetaPending } from "@/lib/ads/meta/capi";
 import { META_RESYNC_DAYS, syncMetaSpend } from "@/lib/ads/meta/sync";
+import { fetchGoogleCampaignStates } from "@/lib/ads/google-objects";
+import { fetchMetaObjects } from "@/lib/ads/meta/objects";
+import { upsertAdObjects } from "@/lib/ads/objects-store";
 import { syncOrganicStats } from "@/lib/content/organic";
 import { supabaseAdsStore, supabaseMetaStore } from "@/lib/ads/store";
 import { istanbulDaysAgo, syncSpend, uploadPending } from "@/lib/ads/sync";
@@ -47,6 +50,7 @@ export async function GET(req: NextRequest) {
   const errors: string[] = [];
   let spendRows: number | null = null;
   let upload = { sent: 0, failed: 0, skipped: 0 };
+  let googleObjects: number | null = null;
 
   if (cfg) {
     try {
@@ -66,6 +70,12 @@ export async function GET(req: NextRequest) {
         // saveOutcomes patlarsa gönderilenler bir sonraki koşuda transactionId ile güvenle yeniden denenir.
         errors.push(`Dönüşüm: ${(e as Error).message.slice(0, 240)}`);
       }
+      // Kampanya durumu ve bütçesi: harcama ve dönüşümden sonra, kendi try'ında; patlarsa onlar zaten yazılmıştır.
+      try {
+        googleObjects = await upsertAdObjects(db, await fetchGoogleCampaignStates(cfg, token));
+      } catch (e) {
+        errors.push(`Google durum: ${(e as Error).message.slice(0, 240)}`);
+      }
     } catch (e) {
       errors.push(`OAuth: ${(e as Error).message.slice(0, 240)}`);
     }
@@ -73,7 +83,7 @@ export async function GET(req: NextRequest) {
 
   // Meta, Google'dan bağımsız: biri patlasa öteki yine çalışır. Yapılandırılmamışsa yanıtta `meta` anahtarı yoktur.
   let meta:
-    | { spendRows: number | null; sent: number; failed: number; skipped: number; capi: "acik" | "kapali"; organic?: number | null }
+    | { spendRows: number | null; sent: number; failed: number; skipped: number; capi: "acik" | "kapali"; organic?: number | null; objects?: number | null }
     | undefined;
   if (metaCfg) {
     const metaStore = supabaseMetaStore(db);
@@ -94,6 +104,16 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Meta nesne durumu: harcama ve CAPI'den sonra, kendi try'ında.
+  if (metaCfg && meta) {
+    meta.objects = null;
+    try {
+      meta.objects = await upsertAdObjects(db, await fetchMetaObjects(metaCfg));
+    } catch (e) {
+      errors.push(`Meta durum: ${(e as Error).message.slice(0, 240)}`);
+    }
+  }
+
   // Organik Instagram sayıları: yalnız hesap kimliği verilmişse; harcama ve CAPI'den bağımsız, hatası onları bozmaz.
   if (metaCfg?.instagramUserId && meta) {
     meta.organic = null;
@@ -104,7 +124,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const googleBody = cfg ? { spendRows, ...upload } : { skipped: "yapilandirilmamis" };
+  const googleBody = cfg ? { spendRows, ...upload, objects: googleObjects } : { skipped: "yapilandirilmamis" };
   const body = meta ? { ...googleBody, meta } : googleBody;
 
   if (errors.length === 0) return NextResponse.json({ ok: true, ...body });

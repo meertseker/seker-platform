@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getAccessToken, fetchCampaignSpend, ingestConversion, store, metaStore, fetchMetaAdSpend, uploadMetaPending } =
+const { fetchGoogleCampaignStates, fetchMetaObjects, upsertAdObjects, getAccessToken, fetchCampaignSpend, ingestConversion, store, metaStore, fetchMetaAdSpend, uploadMetaPending } =
   vi.hoisted(() => ({
+    fetchGoogleCampaignStates: vi.fn(),
+    fetchMetaObjects: vi.fn(),
+    upsertAdObjects: vi.fn(),
     getAccessToken: vi.fn(),
     fetchCampaignSpend: vi.fn(),
     ingestConversion: vi.fn(),
@@ -15,6 +18,9 @@ vi.mock("@/lib/ads/googleAds", () => ({ getAccessToken, fetchCampaignSpend, inge
 vi.mock("@/lib/ads/store", () => ({ supabaseAdsStore: () => store, supabaseMetaStore: () => metaStore }));
 vi.mock("@/lib/ads/meta/insights", () => ({ fetchMetaAdSpend }));
 vi.mock("@/lib/ads/meta/capi", () => ({ uploadMetaPending }));
+vi.mock("@/lib/ads/google-objects", () => ({ fetchGoogleCampaignStates }));
+vi.mock("@/lib/ads/meta/objects", () => ({ fetchMetaObjects }));
+vi.mock("@/lib/ads/objects-store", () => ({ upsertAdObjects }));
 
 const inserts: Array<Record<string, unknown>> = [];
 let yoneticiler: Array<{ id: string }> = [];
@@ -66,6 +72,9 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   metaStore.upsertSpend.mockResolvedValue(undefined);
   uploadMetaPending.mockResolvedValue({ sent: 0, failed: 0, skipped: 0 });
+  fetchGoogleCampaignStates.mockResolvedValue([]);
+  fetchMetaObjects.mockResolvedValue([]);
+  upsertAdObjects.mockImplementation(async (_db: unknown, rows: unknown[]) => rows.length);
 });
 
 afterEach(() => {
@@ -83,7 +92,7 @@ describe("GET /api/cron/ads · Meta", () => {
     expect(await response.json()).toEqual({
       ok: true,
       skipped: "yapilandirilmamis",
-      meta: { spendRows: 2, sent: 0, failed: 0, skipped: 0, capi: "kapali" },
+      meta: { spendRows: 2, sent: 0, failed: 0, skipped: 0, capi: "kapali", objects: 0 },
     });
     expect(getAccessToken).not.toHaveBeenCalled();
     expect(metaStore.upsertSpend).toHaveBeenCalledTimes(1);
@@ -119,7 +128,7 @@ describe("GET /api/cron/ads · Meta", () => {
     expect(await response.json()).toEqual({
       ok: true,
       skipped: "yapilandirilmamis",
-      meta: { spendRows: 0, sent: 3, failed: 0, skipped: 1, capi: "acik" },
+      meta: { spendRows: 0, sent: 3, failed: 0, skipped: 1, capi: "acik", objects: 0 },
     });
     expect(uploadMetaPending).toHaveBeenCalledTimes(1);
   });
@@ -130,7 +139,7 @@ describe("GET /api/cron/ads · Meta", () => {
     fetchCampaignSpend.mockResolvedValue([]);
     store.listPending.mockResolvedValue([]);
     const body = await (await GET(req())).json();
-    expect(body).toEqual({ ok: true, spendRows: 0, sent: 0, failed: 0, skipped: 0 });
+    expect(body).toEqual({ ok: true, spendRows: 0, sent: 0, failed: 0, skipped: 0, objects: 0 });
     expect(fetchMetaAdSpend).not.toHaveBeenCalled();
   });
 
