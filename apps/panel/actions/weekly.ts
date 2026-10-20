@@ -10,11 +10,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireRole } from "@/lib/auth";
 import { createContentTask } from "@/actions/content";
 import { mondayOf } from "@/lib/ads/weekly";
-import type { ReelsLetter } from "@/lib/content/codes";
+import { SLOT_ORDER, SLOTS, slotOfCode, type WeeklySlot } from "@/lib/content/slots";
 import { addDaysToDateString, formatDayTime, parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
 import { waMeUrl } from "@/lib/whatsapp";
 
-export type WeeklySlot = "reels_a" | "reels_b" | "sayfa_google" | "sayfa_instagram";
+export type { WeeklySlot };
 
 export type WeeklyTaskInput = {
   slot: WeeklySlot;
@@ -28,29 +28,11 @@ export type SaveWeeklyReviewResult =
   | { ok: true; created: { code: string; owner: string }[]; waLinks: { owner: string; url: string }[] }
   | { error: string };
 
-type SlotDef = { label: string; kind: "reels" | "sayfa"; letter: string; reelsLetter?: ReelsLetter; pagePlatform?: "google" | "instagram" };
-
-/** Slot → içerik türü ve kod harfi (R-..-A, R-..-B, S-..-G, S-..-I). */
-const SLOTS: Record<WeeklySlot, SlotDef> = {
-  reels_a: { label: "Reels A", kind: "reels", letter: "A", reelsLetter: "A" },
-  reels_b: { label: "Reels B", kind: "reels", letter: "B", reelsLetter: "B" },
-  sayfa_google: { label: "Sayfa · Google", kind: "sayfa", letter: "G", pagePlatform: "google" },
-  sayfa_instagram: { label: "Sayfa · Instagram", kind: "sayfa", letter: "I", pagePlatform: "instagram" },
-};
-const SLOT_ORDER: WeeklySlot[] = ["reels_a", "reels_b", "sayfa_google", "sayfa_instagram"];
-
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const PATH = "/reklam/hafta";
 
 function db(): SupabaseClient {
   return createAdminSupabase() as unknown as SupabaseClient;
-}
-
-/** Kodun slotu: "R-2643-B" → reels_b; "S-2643-I" → sayfa_instagram. Bilinmeyen kod null. */
-function slotOfCode(code: string): WeeklySlot | null {
-  const prefix = code.charAt(0);
-  const letter = code.slice(-1);
-  return SLOT_ORDER.find((s) => (SLOTS[s].kind === "reels" ? "R" : "S") === prefix && SLOTS[s].letter === letter) ?? null;
 }
 
 function firstName(name: string): string {
