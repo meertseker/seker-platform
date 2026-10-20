@@ -35,6 +35,16 @@
   --color-google: #1d4ed8; /* blue-700 — beyaz üzerinde 6.7:1 */
   --color-google-soft: #eff6ff;
 
+  /*
+   * Grafik serileri (Rapor). Marka kırmızısı eylem rengidir, veri rengi değildir.
+   * 1 mavi + 2 turuncu: renk körlüğü denetiminden geçmiş varsayılan sıra (beyaz üzerinde ΔE 24,7).
+   * chart-1-soft aynı mavinin açık adımı: "beklenen" izi, üstünde koyu "gerçekleşen".
+   */
+  --color-chart-1: #2a78d6;
+  --color-chart-1-soft: #86b6ef;
+  --color-chart-2: #eb6834;
+  --color-chart-grid: #ececf0;
+
   --color-muted: #f2f2f5;
   --color-muted-foreground: #4b4b52; /* beyaz üzerinde 4.5:1 üstü */
   --color-border: #e3e3e8; /* ince ayraç (yalnız süs; form kutusu çerçevesi için değil) */
