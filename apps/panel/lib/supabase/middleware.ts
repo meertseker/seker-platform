@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { authCookieOptions } from "@seker/auth/cookie";
+import { gateTeacher } from "@/lib/role-access";
 import { NextResponse, type NextRequest } from "next/server";
 import { LOGIN_REASON_PARAM, hasAuthCookie, loginReasonFor } from "@/lib/login-reason";
 
@@ -46,7 +47,16 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isLogin) {
     const url = request.nextUrl.clone();
-    url.pathname = "/bugun";
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
+  // Öğretmen: yumuşak gezinti ve RSC istekleri layout'tan geçmez, kapı burada.
+  const teacherTarget = user ? await gateTeacher(supabase, user, request.nextUrl.pathname) : null;
+  if (teacherTarget) {
+    const url = request.nextUrl.clone();
+    url.pathname = teacherTarget;
+    url.search = "";
     return NextResponse.redirect(url);
   }
 

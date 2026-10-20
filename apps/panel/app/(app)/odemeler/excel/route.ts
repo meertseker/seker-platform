@@ -11,6 +11,7 @@ import {
   todayInIstanbul,
   type PaymentStudent,
 } from "@/lib/payments-scope";
+import { getSessionProfile } from "@/lib/auth";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,8 @@ export async function GET(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const profile = await getSessionProfile();
+  if (profile.role === "ogretmen") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const { data, error } = await supabase.from("students").select(PAYMENT_STUDENTS_SELECT);
   if (error) {

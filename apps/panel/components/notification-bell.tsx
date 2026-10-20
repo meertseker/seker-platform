@@ -20,6 +20,8 @@ import type { NotificationItem } from "@/lib/queries/notifications";
 export type { NotificationItem } from "@/lib/queries/notifications";
 
 interface NotificationBellProps {
+  /** Öğretmen gibi tek ekranlı roller: tüm bildirimler bu adrese açılır. */
+  fixedHref?: string;
   notifications: NotificationItem[];
   unreadCount: number;
 }
@@ -30,7 +32,7 @@ const PAGE_REFRESH_MS = 60_000;
 // Odak geri bele alınmasın diye: dışarıda tıklanan öğe zaten odak alabiliyorsa ona bırakılır.
 const FOCUSABLE = "a, button, input, select, textarea, [tabindex]";
 
-export function NotificationBell({ notifications, unreadCount }: NotificationBellProps) {
+export function NotificationBell({ notifications, unreadCount, fixedHref }: NotificationBellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const panelId = useId();
@@ -282,6 +284,7 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
               <NotificationList
                 items={notifications}
                 onOpen={openItem}
+                fixedHref={fixedHref}
                 readIds={readIds}
                 allRead={allRead}
               />
@@ -289,7 +292,7 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
           )}
 
           <Link
-            href="/bildirimler"
+            href={fixedHref ?? "/bildirimler"}
             onClick={() => setOpenPathname(null)}
             className="flex min-h-11 shrink-0 items-center justify-center gap-1 border-t border-black/[0.06] px-4 text-sm font-semibold text-primary hover:bg-black/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           >

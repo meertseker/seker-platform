@@ -286,6 +286,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
           </Link>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <NotificationBell
+              fixedHref={isTeacher ? teacherItem.href : undefined}
               notifications={notifications}
               unreadCount={unreadCount}
             />
@@ -316,7 +317,7 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
                     links={phoneMenuLinks}
                     pathname={pathname}
                     onNavigate={() => setOpenMenuPathname(null)}
-                    siteEditUrl={siteEditUrl}
+                    siteEditUrl={isTeacher ? null : siteEditUrl}
                   />
                 </div>
               ) : null}
