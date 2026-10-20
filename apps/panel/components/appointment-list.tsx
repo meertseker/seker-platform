@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setAppointmentOutcome } from "@/actions/appointments";
 import { CallButton } from "@/components/call-outcome";
+import { PanelDid } from "@/components/panel-did";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { APPOINTMENT_OUTCOME_STYLES, badgeClass } from "@/lib/status-styles";
 import {
@@ -92,6 +93,8 @@ export function AppointmentList({
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null);
+  // Son işlemin "Panel şunları yaptı" listesi; yenileme sonrası randevunun altında kalır.
+  const [done, setDone] = useState<{ id: string; items: string[] } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function submitOutcome(id: string, outcome: AppointmentOutcome, note?: string) {
@@ -107,6 +110,7 @@ export function AppointmentList({
       }
 
       setNoteDraft(null);
+      setDone({ id, items: result.done ?? [] });
       router.refresh();
       onResult?.();
     });
@@ -310,6 +314,11 @@ export function AppointmentList({
                     </div>
                   ) : null}
                 </>
+              ) : null}
+              {done?.id === appointment.id ? (
+                <div className="mt-3">
+                  <PanelDid items={done.items} />
+                </div>
               ) : null}
             </li>
           );

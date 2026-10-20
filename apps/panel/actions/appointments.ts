@@ -11,12 +11,13 @@ import {
 } from "@/lib/constants";
 import { logEvent } from "@/lib/events";
 import { getSessionProfile } from "@/lib/auth";
-import { parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
+import { formatDayTime, parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
 import {
   afterVisitTasks,
   appointmentTasks,
   noShowTask,
   type PlannedTask,
+  VISIT_CALL_STEPS,
 } from "@/lib/lead-flow/followups";
 import { readConflictWindowMinutes } from "@/lib/lead-flow/conflict-window";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
@@ -40,10 +41,27 @@ interface AppointmentMutationResult {
   warning?: string;
   /** Kurulan hatırlatma görevleri (yalnızca createAppointment başarısında). */
   reminders?: PlannedTask[];
+  /** "Panel şunları yaptı" satırları (setAppointmentOutcome). */
+  done?: string[];
 }
 
 const REMINDER_WARNING = "Randevu kaydedildi, hatırlatma görevleri kurulamadı";
 const TASKS_RETRY_ERROR = "Sonuç kaydedildi ama görevler kurulamadı, lütfen tekrar basın";
+const STATUS_RETRY_ERROR = "Sonuç kaydedildi ama veli durumu güncellenemedi, lütfen tekrar basın";
+// B1: ziyaret gerçekleşti → görüşme yapıldı. Teklif ve sonrası ile beklemede dokunulmaz (geçiş kuralı).
+const VISIT_ADVANCE_FROM: LeadStatus[] = ["yeni", "ulasildi", "randevu"];
+
+/** Ziyaret sonrası / gelmedi görevinin "Panel şunları yaptı" satırı. */
+function plannedLine(task: PlannedTask): string {
+  const [kind, , step] = task.ruleKey.split(":");
+  const when = formatDayTime(task.dueAt);
+  if (kind === "noshow") return `Tekrar arama görevi açıldı: ${when}`;
+  if (kind === "ziyaret" && Number(step) === VISIT_CALL_STEPS[VISIT_CALL_STEPS.length - 1]) {
+    return `Son arama görevi: ${when}`;
+  }
+  if (kind === "ziyaret" && task.kind === "arama") return `Ziyaret sonrası arama görevi: ${when}`;
+  return `${task.title.split(" · ")[0]} görevi: ${when}`;
+}
 
 const appointmentTypes = Object.keys(APPOINTMENT_TYPES) as AppointmentType[];
 const appointmentOutcomes = Object.keys(APPOINTMENT_OUTCOMES) as AppointmentOutcome[];
@@ -176,7 +194,7 @@ export async function setAppointmentOutcome(
   if (!id) return { error: "Randevu bulunamadı." };
   if (!appointmentOutcomes.includes(outcome)) return { error: "Geçerli bir sonuç seçin." };
 
-  const select = "id, lead_id, created_by, lead:leads(parent_name, assigned_to)";
+  const select = "id, lead_id, created_by, lead:leads(parent_name, assigned_to, status)";
   const { data: updated, error } = await supabase
     .from("appointments")
     .update({
@@ -219,18 +237,26 @@ export async function setAppointmentOutcome(
       .eq("id", appointment.lead_id);
   }
 
+  const done: string[] = [];
   try {
     // Sonuç ne olursa olsun eski hatırlatmalar kapanır: gelmeyen veliye ertesi gün hatırlatma gitmesin.
     await closeTasksByPrefix(supabase, `hatirlat:${appointment.id}:`);
 
     if (outcome === "geldi" || outcome === "gelmedi") {
-      const row = appointment as unknown as {
-        created_by: string | null;
-        lead?: { parent_name: string; assigned_to: string | null } | { parent_name: string; assigned_to: string | null }[] | null;
-      };
+      type LeadJoin = { parent_name: string; assigned_to: string | null; status?: string };
+      const row = appointment as unknown as { created_by: string | null; lead?: LeadJoin | LeadJoin[] | null };
       const lead = one(row.lead);
       const leadName = lead?.parent_name ?? "Veli";
       const assignee = lead?.assigned_to ?? row.created_by ?? profile.id;
+
+      // B1: ziyaret yapıldıysa veli görüşme yapıldı olur; durum yolu olayı ve WhatsApp mesajını yazar.
+      // Görevlerden önce: görev adımı düşerse "tekrar bas" aynı sonuçla uzlaştırır, durum ikinci kez değişmez.
+      if (outcome === "geldi" && VISIT_ADVANCE_FROM.includes(lead?.status as LeadStatus)) {
+        const res = await updateLeadStatus(appointment.lead_id, "gorusme_yapildi");
+        if (res.error) return { error: STATUS_RETRY_ERROR };
+        done.push('Veli "Görüşme yapıldı" durumuna geçti');
+      }
+
       const settings = await getLeadFlowSettings(supabase);
       const now = new Date();
       const planned =
@@ -238,11 +264,16 @@ export async function setAppointmentOutcome(
           ? afterVisitTasks(appointment.id, leadName, now, settings.hours)
           : [noShowTask(appointment.id, leadName, now, settings.hours)];
       await upsertPlannedTasks(supabase, appointment.lead_id, assignee, planned);
+      done.push(...planned.map(plannedLine));
+    } else {
+      done.push("Ziyaret hatırlatmaları kapatıldı");
     }
   } catch {
     return { error: TASKS_RETRY_ERROR };
   }
 
   revalidateAppointmentViews(appointment.lead_id);
-  return { id: appointment.id };
+  revalidatePath("/bugun");
+  revalidatePath("/pipeline");
+  return { id: appointment.id, done };
 }

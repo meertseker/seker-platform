@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setAppointmentOutcome } from "@/actions/appointments";
+import { PanelDid } from "@/components/panel-did";
 import { APPOINTMENT_OUTCOMES, label, type AppointmentOutcome } from "@/lib/constants";
 
 export interface TodayVisit {
@@ -27,6 +28,8 @@ export function TodayVisits({ visits }: { visits: TodayVisit[] }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  // Son işlemin "Panel şunları yaptı" listesi; yenileme sonrası satırın altında kalır.
+  const [lastDone, setLastDone] = useState<{ id: string; items: string[] } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function submit(id: string, outcome: AppointmentOutcome) {
@@ -39,6 +42,7 @@ export function TodayVisits({ visits }: { visits: TodayVisit[] }) {
         setError(result.error);
         return;
       }
+      setLastDone({ id, items: result.done ?? [] });
       router.refresh();
     });
   }
@@ -98,6 +102,7 @@ export function TodayVisits({ visits }: { visits: TodayVisit[] }) {
                   </button>
                 </div>
               )}
+              {lastDone?.id === visit.id ? <PanelDid items={lastDone.items} /> : null}
             </li>
           );
         })}
