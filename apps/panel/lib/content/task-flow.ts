@@ -25,6 +25,14 @@ export function mergePatch(failed: TextPatch, newer: TextPatch): TextPatch {
   return { ...failed, ...newer };
 }
 
+/**
+ * Görevin ekranda görünen taslağı: yerelde değiştirilen alanlar (sekme değişse de korunur) sunucudan
+ * gelenin üstüne konur; yerelde dokunulmayan alanlar sunucudan gelir.
+ */
+export function mergeDraft<T extends object>(server: T, local: Partial<T> | undefined): T {
+  return { ...server, ...local };
+}
+
 export function tabLabel(task: TabTask, sameKindCount: number): string {
   const base =
     sameKindCount > 1 ? task.header.split(" · ")[0] : task.kind === "reels" ? "Reels görevi" : "Sayfa görevi";

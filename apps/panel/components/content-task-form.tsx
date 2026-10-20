@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveContentDraft, submitContent } from "@/actions/content";
 import { VideoUpload, type VideoMeta } from "@/components/video-upload";
 import { checkText } from "@/lib/content/checks";
-import { OFFLINE_SAVE_MESSAGE, mergePatch, tabLabel, visibleTasks, type TextPatch } from "@/lib/content/task-flow";
+import { createDraftSaver, type DraftSaver, type SaveState } from "@/lib/content/draft-saver";
+import { mergeDraft, tabLabel, visibleTasks } from "@/lib/content/task-flow";
 import { PAGE_FIELDS, contentBlockers } from "@/lib/content/store";
 import type { ContentLimits } from "@/lib/content/settings";
 
@@ -53,14 +54,68 @@ export function ContentTaskForm({ firstName, tasks: incoming, banned, limits, vi
   const [doneLines, setDoneLines] = useState<Record<string, string[]>>({});
   const [held, setHeld] = useState<Record<string, FormTask>>({});
   const [busy, setBusy] = useState(false);
+  // Görev başına yerelde değiştirilen alanlar ve kaydedici: sekme değişince editör yeniden kurulsa da
+  // yazılan metin, cevap ve video kaybolmaz; sayfa açılışındaki eski sunucu değeri üstüne yazmaz.
+  const [local, setLocal] = useState<Record<string, Partial<Draft>>>({});
+  const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
+  const savers = useRef(new Map<string, DraftSaver>());
   const tasks = visibleTasks(incoming, held, doneLines);
   const active = tasks.find((t) => t.id === activeId) ?? tasks[0];
   const kindCount = (k: string) => tasks.filter((t) => t.kind === k).length;
+
+  /** Görevin kaydedicisi; yalnız olay işleyicilerinde çağrılır. */
+  const saverFor = useCallback((id: string): DraftSaver => {
+    let saver = savers.current.get(id);
+    if (!saver) {
+      saver = createDraftSaver({
+        save: (patch) => saveContentDraft(id, patch),
+        delayMs: SAVE_DELAY_MS,
+        onState: (st) => setSaveStates((m) => ({ ...m, [id]: st })),
+      });
+      savers.current.set(id, saver);
+    }
+    return saver;
+  }, []);
+
+  useEffect(() => {
+    const map = savers.current;
+    // Bağlantı gelince kaydedilemeyen yazı yeniden denenir.
+    const online = () => map.forEach((s) => s.retry());
+    // Kaydedilmemiş yazı varken sayfadan çıkılırken tarayıcı uyarır.
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      if ([...map.values()].some((s) => s.hasUnsaved())) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("online", online);
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => {
+      window.removeEventListener("online", online);
+      window.removeEventListener("beforeunload", beforeUnload);
+      // Panelde başka sayfaya geçilirken bekleyen yazı gönderilir.
+      map.forEach((s) => void s.flush());
+    };
+  }, []);
+
+  function switchTo(id: string) {
+    // Bekleyen yazı hemen gönderilir; taslak yerelde durduğu için dönünce ekranda aynı görünür.
+    if (active) void saverFor(active.id).flush();
+    setActiveId(id);
+  }
+
+  function changeDraft(task: FormTask, fn: (d: Draft) => Partial<Draft>) {
+    setLocal((l) => ({ ...l, [task.id]: { ...l[task.id], ...fn(mergeDraft(serverDraft(task), l[task.id])) } }));
+  }
 
   function acknowledge(id: string) {
     const without = <T,>(m: Record<string, T>) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== id));
     setDoneLines(without);
     setHeld(without);
+    // Görev düzeltmeyle geri dönerse sunucudaki (sıfırlanmış) değerler gösterilir.
+    setLocal(without);
+    setSaveStates(without);
+    savers.current.delete(id);
     setActiveId("");
     router.refresh();
   }
@@ -89,7 +144,7 @@ export function ContentTaskForm({ firstName, tasks: incoming, banned, limits, vi
                 role="tab"
                 aria-selected={on}
                 disabled={busy}
-                onClick={() => setActiveId(t.id)}
+                onClick={() => switchTo(t.id)}
                 className={`min-h-11 flex-1 rounded-[9px] px-3 text-sm font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 ${
                   on ? "bg-surface shadow-sm" : "bg-transparent"
                 }`}
@@ -107,6 +162,10 @@ export function ContentTaskForm({ firstName, tasks: incoming, banned, limits, vi
         <TaskEditor
           key={active.id}
           task={active}
+          draft={mergeDraft(serverDraft(active), local[active.id])}
+          saveState={saveStates[active.id] ?? IDLE}
+          saver={saverFor}
+          onChange={(fn) => changeDraft(active, fn)}
           banned={banned}
           limits={limits}
           videoMaxMb={videoMaxMb}
@@ -172,8 +231,24 @@ type Draft = {
   faceAnswer: boolean | null;
 };
 
+const IDLE: SaveState = { state: "idle", error: null };
+
+function serverDraft(task: FormTask): Draft {
+  return {
+    caption: task.caption,
+    pageFields: task.pageFields,
+    mediaPath: task.mediaPath,
+    mediaMeta: task.mediaMeta,
+    faceAnswer: task.faceAnswer,
+  };
+}
+
 function TaskEditor({
   task,
+  draft,
+  saveState: { state: saveState, error: saveError },
+  saver,
+  onChange,
   banned,
   limits,
   videoMaxMb,
@@ -181,67 +256,22 @@ function TaskEditor({
   onDone,
 }: {
   task: FormTask;
+  draft: Draft;
+  saveState: SaveState;
+  /** Görevin kaydedicisi; yalnız olay işleyicilerinde çağrılır. */
+  saver: (id: string) => DraftSaver;
+  onChange: (fn: (d: Draft) => Partial<Draft>) => void;
   banned: string[];
   limits: ContentLimits;
   videoMaxMb: number;
   onBusyChange: (busy: boolean) => void;
   onDone: (lines: string[]) => void;
 }) {
-  const [draft, setDraft] = useState<Draft>({
-    caption: task.caption,
-    pageFields: task.pageFields,
-    mediaPath: task.mediaPath,
-    mediaMeta: task.mediaMeta,
-    faceAnswer: task.faceAnswer,
-  });
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [submitErrors, setSubmitErrors] = useState<string[]>([]);
-  const timer = useRef<number | null>(null);
-  const pending = useRef<TextPatch>({});
 
   const isReels = task.kind === "reels";
-
-  /** Kaydı dener; bağlantı yoksa ya da hata dönerse false döner. Asla fırlatmaz. */
-  async function persist(patch: Parameters<typeof saveContentDraft>[1]): Promise<boolean> {
-    setSaveState("saving");
-    try {
-      const res = await saveContentDraft(task.id, patch);
-      if ("error" in res) {
-        setSaveState("error");
-        setSaveError(res.error);
-        return false;
-      }
-      setSaveState("saved");
-      setSaveError(null);
-      return true;
-    } catch {
-      setSaveState("error");
-      setSaveError(OFFLINE_SAVE_MESSAGE);
-      return false;
-    }
-  }
-
-  async function flush(): Promise<boolean> {
-    if (timer.current) window.clearTimeout(timer.current);
-    timer.current = null;
-    const patch = pending.current;
-    pending.current = {};
-    if (Object.keys(patch).length === 0) return true;
-    const ok = await persist(patch);
-    // Kaydedilemeyen yazı kaybolmasın: geri konur, daha yeni yazı üstün gelir.
-    if (!ok) pending.current = mergePatch(patch, pending.current);
-    return ok;
-  }
-
-  function queue(patch: TextPatch) {
-    pending.current = { ...pending.current, ...patch };
-    setSaveState("idle");
-    if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => void flush(), SAVE_DELAY_MS);
-  }
 
   const busy = uploading || submitting;
   useEffect(() => {
@@ -249,32 +279,23 @@ function TaskEditor({
   }, [busy, onBusyChange]);
   useEffect(() => () => onBusyChange(false), [onBusyChange]);
 
-  // Başka göreve geçilirken ya da sayfadan ayrılırken bekleyen yazı kaybolmasın.
-  const taskId = task.id;
-  useEffect(
-    () => () => {
-      if (timer.current) window.clearTimeout(timer.current);
-      const patch = pending.current;
-      pending.current = {};
-      if (Object.keys(patch).length > 0) saveContentDraft(taskId, patch).catch(() => {});
-    },
-    [taskId],
-  );
-
   function setCaption(value: string) {
-    setDraft((d) => ({ ...d, caption: value }));
-    queue({ caption: value });
+    onChange(() => ({ caption: value }));
+    saver(task.id).queue({ caption: value });
   }
 
   function setField(key: string, value: string) {
     const next = { ...draft.pageFields, [key]: value };
-    setDraft((d) => ({ ...d, pageFields: next }));
-    queue({ pageFields: next });
+    onChange(() => ({ pageFields: next }));
+    saver(task.id).queue({ pageFields: next });
   }
 
   function setFace(answer: boolean) {
-    setDraft((d) => ({ ...d, faceAnswer: answer }));
-    void persist({ faceAnswer: answer });
+    onChange(() => ({ faceAnswer: answer }));
+    // Yazıyla aynı sıradan, beklemeden gider; hata kayıt satırında görünür.
+    const s = saver(task.id);
+    s.queue({ faceAnswer: answer });
+    void s.flush();
   }
 
   const blockers = useMemo(
@@ -298,9 +319,10 @@ function TaskEditor({
     setSubmitting(true);
     setSubmitErrors([]);
     try {
-      // Bekleyen yazı sunucuya ulaşmadan teslim edilmez (sunucu eski metni kontrol ederdi).
-      if (!(await flush())) {
-        setSubmitErrors([OFFLINE_SAVE_MESSAGE]);
+      // Süren ve bekleyen kayıt sunucuya ulaşmadan teslim edilmez (sunucu eski metni kontrol ederdi).
+      const saved = await saver(task.id).flush();
+      if (!saved.ok) {
+        setSubmitErrors([saved.error]);
         return;
       }
       const res = await submitContent(task.id);
@@ -378,15 +400,15 @@ function TaskEditor({
             maxMb={videoMaxMb}
             disabled={submitting}
             onBusyChange={setUploading}
-            onUploaded={(path, meta) =>
-              setDraft((d) => ({
-                ...d,
+            onUploaded={(path, meta) => {
+              // Yeni video eski cevabı kapsamaz; sunucu da aynı şekilde sıfırlar, kaydedilemeyen eski cevap gönderilmez.
+              if (path !== draft.mediaPath) saver(task.id).drop("faceAnswer");
+              onChange((d) => ({
                 mediaPath: path,
                 mediaMeta: meta,
-                // Yeni video eski cevabı kapsamaz; sunucu da aynı şekilde sıfırlar.
                 faceAnswer: path === d.mediaPath ? d.faceAnswer : null,
-              }))
-            }
+              }));
+            }}
           />
 
           <fieldset className="flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3.5">
