@@ -13,6 +13,7 @@ const store = {
   insertLog: vi.fn(async () => "log-1"),
   updateLog: vi.fn(),
   updateObject: vi.fn(),
+  updateBudgetRows: vi.fn(),
   linkContent: vi.fn(),
 };
 
@@ -212,5 +213,59 @@ describe("supabaseAdChangeStore.linkContent", () => {
     const obj = calls.find((c) => c.table === "ad_objects");
     expect(obj).toMatchObject({ op: "update", arg: { content_code: "R-2645-A" } });
     expect(obj?.filters).toEqual(expect.arrayContaining([["platform", "meta"], ["level", "ad"], ["object_id", "120000111"]]));
+  });
+});
+
+describe("supabaseAdChangeStore · bütçe kaynağı", () => {
+  function recordingDb(result: unknown) {
+    const calls: { table: string; op: string; arg: unknown; filters: [string, unknown][] }[] = [];
+    const db = {
+      from: (table: string) => {
+        const rec = { table, op: "", arg: undefined as unknown, filters: [] as [string, unknown][] };
+        calls.push(rec);
+        const chain: Record<string, unknown> = {};
+        const self = () => chain;
+        Object.assign(chain, {
+          select: (arg: unknown) => ((rec.op = "select"), (rec.arg = arg), self()),
+          update: (arg: unknown) => ((rec.op = "update"), (rec.arg = arg), self()),
+          eq: (k: string, v: unknown) => (rec.filters.push([k, v]), self()),
+          gte: (k: string, v: unknown) => (rec.filters.push([`gte:${k}`, v]), self()),
+          order: self,
+          limit: self,
+          then: (res: (v: unknown) => unknown) => Promise.resolve(result).then(res),
+        });
+        return chain;
+      },
+    };
+    return { db, calls };
+  }
+
+  it("haftalık taban bütçe kaynağına göre aranır (nesneye göre değil)", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/ads/writes")>("@/lib/ads/writes");
+    const { db, calls } = recordingDb({ data: [{ old_value: { daily_budget_tl: 150 } }], error: null });
+    const tl = await actual.supabaseAdChangeStore(db as never).weekBudgetBaselineTl("meta", "120000999", "2026-10-18T21:00:00.000Z");
+    expect(tl).toBe(150);
+    expect(calls[0].table).toBe("ad_change_log");
+    expect(calls[0].filters).toEqual(
+      expect.arrayContaining([
+        ["platform", "meta"],
+        ["action", "budget"],
+        ["status", "uygulandi"],
+        ["new_value->>budget_resource", "120000999"],
+        ["gte:created_at", "2026-10-18T21:00:00.000Z"],
+      ]),
+    );
+    expect(calls[0].filters.map((f) => f[0])).not.toContain("object_id");
+  });
+
+  it("başarılı yazımdan sonra aynı bütçe kaynağındaki tüm satırlar güncellenir", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/ads/writes")>("@/lib/ads/writes");
+    const { db, calls } = recordingDb({ error: null });
+    await actual.supabaseAdChangeStore(db as never).updateBudgetRows("google", "customers/1/campaignBudgets/7", 180_000_000);
+    expect(calls[0]).toMatchObject({ table: "ad_objects", op: "update", arg: { daily_budget_micros: 180_000_000 } });
+    expect(calls[0].filters).toEqual([
+      ["platform", "google"],
+      ["budget_resource", "customers/1/campaignBudgets/7"],
+    ]);
   });
 });

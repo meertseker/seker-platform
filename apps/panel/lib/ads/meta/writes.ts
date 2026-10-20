@@ -59,3 +59,27 @@ export async function metaSetDailyBudget(
   if (!Number.isSafeInteger(kurus) || kurus <= 0) throw new MetaApiError("Geçersiz bütçe tutarı", 400);
   await postObject(cfg, objectId, { daily_budget: String(kurus) }, "Meta bütçesi değiştirilemedi", fetchFn);
 }
+
+/**
+ * Nesnenin platformdaki güncel günlük bütçesi (kuruş, TRY ×100 — TEYİTSİZ). Yazmadan önce okunur.
+ * `GET /<id>?fields=daily_budget`; anahtar başlıkta, appsecret_proof sorguda.
+ * Kaynak: https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-group/
+ */
+export async function metaGetDailyBudget(cfg: MetaConfig, objectId: string, fetchFn: FetchFn = fetch): Promise<number> {
+  if (!DIGITS.test(objectId)) throw new MetaApiError("Geçersiz Meta nesne kimliği", 400);
+  const url = new URL(`${META_GRAPH_BASE}/${META_GRAPH_API_VERSION}/${objectId}`);
+  url.searchParams.set("fields", "daily_budget");
+  url.searchParams.set("appsecret_proof", appSecretProof(cfg.accessToken, cfg.appSecret));
+  const response = await fetchFn(url.toString(), {
+    method: "GET",
+    headers: headers(cfg),
+    signal: AbortSignal.timeout(WRITE_TIMEOUT_MS),
+  });
+  if (!response.ok) throw await toApiError(response, cfg, "Meta bütçesi okunamadı");
+  const data = (await response.json().catch(() => null)) as { daily_budget?: unknown } | null;
+  const kurus = Number(data?.daily_budget);
+  if (data?.daily_budget === undefined || !Number.isSafeInteger(kurus) || kurus <= 0) {
+    throw new MetaApiError("Meta bütçesi okunamadı: günlük bütçe yok", 502);
+  }
+  return kurus;
+}
