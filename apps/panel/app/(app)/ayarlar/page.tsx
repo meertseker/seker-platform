@@ -40,6 +40,7 @@ export default async function AyarlarPage() {
     .from("profiles")
     .select("id, full_name, can_edit_site")
     .eq("is_active", true)
+    .in("role", ["yonetici", "danisman"])
     .order("full_name");
   const staff = (staffRows ?? []).map((s) => ({ id: s.id, fullName: s.full_name, canEditSite: s.can_edit_site }));
 
