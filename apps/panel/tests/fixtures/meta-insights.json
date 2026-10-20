@@ -1,0 +1,52 @@
+{
+  "pages": [
+    {
+      "data": [
+        {
+          "date_start": "2026-10-18",
+          "date_stop": "2026-10-18",
+          "campaign_id": "6001",
+          "campaign_name": "Kayıt dönemi",
+          "adset_id": "7001",
+          "adset_name": "Beylikdüzü 25-45",
+          "ad_id": "8001",
+          "ad_name": "R-2645-A · Bir günümüz",
+          "spend": "123.45",
+          "impressions": "5400",
+          "reach": "4100",
+          "frequency": "1.42",
+          "clicks": "90",
+          "inline_link_clicks": "60",
+          "actions": [
+            { "action_type": "link_click", "value": "60" },
+            { "action_type": "lead", "value": "5" },
+            { "action_type": "offsite_conversion.fb_pixel_lead", "value": "3" }
+          ]
+        }
+      ],
+      "paging": {
+        "cursors": { "before": "B1", "after": "A1" },
+        "next": "https://graph.facebook.com/v26.0/act_123/insights?access_token=SIZAN&after=A1&limit=25"
+      }
+    },
+    {
+      "data": [
+        {
+          "date_start": "2026-10-18",
+          "date_stop": "2026-10-18",
+          "campaign_id": "6001",
+          "campaign_name": "Kayıt dönemi",
+          "adset_id": "7001",
+          "adset_name": "Beylikdüzü 25-45",
+          "ad_id": "8002",
+          "ad_name": "Bir günümüz",
+          "spend": "10.5",
+          "impressions": "300",
+          "clicks": "4",
+          "inline_link_clicks": "2"
+        }
+      ],
+      "paging": { "cursors": { "before": "B2", "after": "A2" } }
+    }
+  ]
+}
