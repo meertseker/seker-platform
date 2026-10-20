@@ -10,25 +10,45 @@ const field =
 const hint = "mt-1 text-xs text-muted-foreground";
 const card = "space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6";
 
-type NumberFieldProps = { label: string; value: string; onChange: (v: string) => void; unit?: string; help?: string };
+type NumberFieldProps = {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  unit?: string;
+  help?: string;
+  decimal?: boolean;
+  invalid?: boolean;
+};
 
-function NumberField({ label, value, onChange, unit, help }: NumberFieldProps) {
+function NumberField({ id, label, value, onChange, unit, help, decimal, invalid }: NumberFieldProps) {
+  const helpId = help ? `${id}-yardim` : undefined;
   return (
-    <label className="block text-sm font-semibold text-foreground">
-      {label}
-      <span className="mt-1 flex items-center gap-2">
+    <div>
+      <label htmlFor={id} className="block text-sm font-semibold text-foreground">
+        {label}
+      </label>
+      <div className="mt-1 flex items-center gap-2">
         <input
+          id={id}
           type="number"
           inputMode="decimal"
           min={0}
+          step={decimal ? "any" : 1}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`${field} min-h-11 font-normal`}
+          aria-invalid={invalid || undefined}
+          aria-describedby={[helpId, invalid ? "ad-ayar-hata" : undefined].filter(Boolean).join(" ") || undefined}
+          className={`${field} min-h-11 ${invalid ? "border-destructive" : ""}`}
         />
-        {unit && <span className="shrink-0 text-sm font-normal text-muted-foreground">{unit}</span>}
-      </span>
-      {help && <span className={`${hint} block font-normal`}>{help}</span>}
-    </label>
+        {unit && <span className="shrink-0 text-sm text-muted-foreground">{unit}</span>}
+      </div>
+      {help && (
+        <p id={helpId} className={hint}>
+          {help}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -53,10 +73,11 @@ export function AdSettingsForm({ settings }: { settings: AdSettings }) {
     min: String(s.limits.min),
   });
   const [banned, setBanned] = useState(s.banned.join("\n"));
-  const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string; field?: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const bind = (k: keyof typeof f) => ({ value: f[k], onChange: (v: string) => setF((all) => ({ ...all, [k]: v })) });
+  const bad = (k: string) => message?.kind === "error" && message.field === k;
+  const bind = (k: keyof typeof f) => ({ id: `ad-${k}`, invalid: bad(k), value: f[k], onChange: (v: string) => setF((all) => ({ ...all, [k]: v })) });
 
   // Boş ya da sayı olmayan alan NaN olur; sunucu doğrulaması reddeder.
   const n = (k: keyof typeof f) => (f[k].trim() === "" ? Number.NaN : Number(f[k].replace(",", ".")));
@@ -77,7 +98,7 @@ export function AdSettingsForm({ settings }: { settings: AdSettings }) {
         banned: banned.split("\n"),
         limits: { reelsCaption: n("reelsCaption"), pageTitle: n("pageTitle"), min: n("min") },
       });
-      setMessage("error" in result ? { kind: "error", text: result.error } : { kind: "ok", text: "Kaydedildi" });
+      setMessage("error" in result ? { kind: "error", text: result.error, field: result.field } : { kind: "ok", text: "Kaydedildi" });
     });
   }
 
@@ -87,12 +108,12 @@ export function AdSettingsForm({ settings }: { settings: AdSettings }) {
         <h2 className="text-xl font-semibold text-foreground">Hedef ve kurallar</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <NumberField label="Hedef nitelikli veli maliyeti" unit="TL" {...bind("targetTl")} />
-          <NumberField label="Durdurma katı" unit="kat" help="Hedefin bu katı harcanıp hiç nitelikli veli gelmediyse durdurma önerilir (1–10)." {...bind("stopMultiple")} />
+          <NumberField label="Durdurma katı" unit="kat" help="Hedefin bu katı harcanıp hiç nitelikli veli gelmediyse durdurma önerilir (1–10)." decimal {...bind("stopMultiple")} />
           <NumberField label="Kazandı için en az nitelikli veli" unit="veli" {...bind("winMin")} />
           <NumberField label="Sonuçsuz sayılma süresi" unit="hafta" {...bind("noResultWeeks")} />
-          <NumberField label="Haftalık büyütme sınırı" unit="%" {...bind("scaleMaxPct")} />
-          <NumberField label="Yorgunluk: sıklık eşiği" help="Bundan yüksek sıklık yorgunluk sinyalidir." {...bind("fatigueFrequency")} />
-          <NumberField label="Yorgunluk: tıklama oranı düşüşü" unit="%" help="İlk haftaya göre." {...bind("fatigueCtrDropPct")} />
+          <NumberField label="Haftalık büyütme sınırı" unit="%" decimal {...bind("scaleMaxPct")} />
+          <NumberField label="Yorgunluk: sıklık eşiği" help="Bundan yüksek sıklık yorgunluk sinyalidir." decimal {...bind("fatigueFrequency")} />
+          <NumberField label="Yorgunluk: tıklama oranı düşüşü" unit="%" help="İlk haftaya göre." decimal {...bind("fatigueCtrDropPct")} />
         </div>
       </section>
 
@@ -101,9 +122,9 @@ export function AdSettingsForm({ settings }: { settings: AdSettings }) {
         <p className={hint}>Bir kapı kırmızıysa panel bütçe artışı önermez.</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <NumberField label="İlk arama süresi (ortanca)" unit="dk" help="Yalnız mesai dakikası sayılır (1–240)." {...bind("firstCallMin")} />
-          <NumberField label="7 günde ulaşma" unit="%" {...bind("reachPct")} />
-          <NumberField label="Nitelikliden randevu" unit="%" {...bind("apptPct")} />
-          <NumberField label="Randevuya gelme" unit="%" {...bind("showPct")} />
+          <NumberField label="7 günde ulaşma" unit="%" decimal {...bind("reachPct")} />
+          <NumberField label="Nitelikliden randevu" unit="%" decimal {...bind("apptPct")} />
+          <NumberField label="Randevuya gelme" unit="%" decimal {...bind("showPct")} />
         </div>
       </section>
 
@@ -117,11 +138,23 @@ export function AdSettingsForm({ settings }: { settings: AdSettings }) {
 
       <section className={card}>
         <h2 className="text-xl font-semibold text-foreground">İçerik kontrolleri</h2>
-        <label className="block text-sm font-semibold text-foreground">
-          Yasaklı ifadeler
-          <textarea value={banned} onChange={(e) => setBanned(e.target.value)} rows={6} className={`${field} mt-2 font-normal`} />
-          <span className={`${hint} block font-normal`}>Her satıra bir ifade yazın (2–40 karakter, en fazla 50).</span>
-        </label>
+        <div>
+          <label htmlFor="ad-banned" className="block text-sm font-semibold text-foreground">
+            Yasaklı ifadeler
+          </label>
+          <textarea
+            id="ad-banned"
+            value={banned}
+            onChange={(e) => setBanned(e.target.value)}
+            rows={6}
+            aria-invalid={bad("banned") || undefined}
+            aria-describedby={bad("banned") ? "ad-banned-yardim ad-ayar-hata" : "ad-banned-yardim"}
+            className={`${field} mt-2 ${bad("banned") ? "border-destructive" : ""}`}
+          />
+          <p id="ad-banned-yardim" className={hint}>
+            Her satıra bir ifade yazın (2–40 karakter, en fazla 50).
+          </p>
+        </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <NumberField label="Reels açıklaması" unit="karakter" help="En fazla." {...bind("reelsCaption")} />
           <NumberField label="Sayfa başlığı" unit="karakter" help="En fazla." {...bind("pageTitle")} />
@@ -145,8 +178,13 @@ export function AdSettingsForm({ settings }: { settings: AdSettings }) {
         >
           {pending ? "Kaydediliyor…" : "Kaydet"}
         </button>
-        {message && (
-          <p role="status" className={`mt-2 text-sm font-semibold ${message.kind === "ok" ? "text-accent" : "text-destructive"}`}>
+        {message?.kind === "ok" && (
+          <p role="status" className="mt-2 text-sm font-semibold text-accent">
+            {message.text}
+          </p>
+        )}
+        {message?.kind === "error" && (
+          <p id="ad-ayar-hata" role="alert" className="mt-2 text-sm font-semibold text-destructive">
             {message.text}
           </p>
         )}
