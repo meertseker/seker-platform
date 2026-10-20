@@ -16,3 +16,8 @@ Overnight session, no questions to the owner. Each ruling records what was decid
 - Ruling: unknown types render "Yeni bir sistem bildirimi (tür adı)", link to `/bildirimler`, and log a server warning. — cost if wrong: a cosmetic fallback; the producer test should prevent it from ever showing.
 - Ruling: fixed `/ayarlar#whatsapp` (anchor did not exist) and gave each feedback item an anchor so links land on the item. Small additive edits.
 - Ruling: TS producers go through one typed helper `insertNotifications`; a source-scan test fails if any producer (TS or SQL) uses a type without text. — cost if wrong: other branches adding a raw insert will fail this test after merge, which is intended.
+- Ruling: the summary endpoint keeps going through the auth middleware, because it refreshes expired access tokens. The bell fetches with `redirect: "manual"` and stops polling for good on a redirect or a 401. — cost if wrong: a tab whose session died stops updating the live badge until reload; it would have to reload anyway.
+- Ruling: the `randevu_bugun` text no longer says "Bugün" ("17:19 randevu: Ayşe Yılmaz"), because the day heading already shows the date. — cost if wrong: wording only.
+- Ruling: `/bugun#ziyaretler` may not auto-scroll on a direct mobile load while the page is still streaming. This is the same as the existing `#takip` anchor and was left as is. — cost if wrong: the user scrolls once.
+- Ruling: the `/geri-bildirim` item anchors go on the "all" list for yönetici and on "mine" for everyone else, so no id is ever duplicated. — cost if wrong: none.
+- Ruling: the optimistic read logic is duplicated between the bell and `/bildirimler` (about 20 lines) instead of being shared as a hook. — cost if wrong: two places to change later.
