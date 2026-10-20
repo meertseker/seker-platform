@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   adviceFor,
+  canConfirmFace,
   cardTag,
   chunk,
   emptyPerf,
@@ -264,5 +265,16 @@ describe("loadContentPerf", () => {
     const spendCalls = calls.filter((c) => c.table === "ad_spend_daily");
     expect(spendCalls.map((c) => c.in.length)).toEqual([100, 100, 50]);
     expect(calls.every((c) => c.in.length <= 100)).toBe(true);
+  });
+});
+
+describe("canConfirmFace", () => {
+  it("video adresi yoksa, yüklenmediyse ya da oynatılamadıysa kutu kapalı", () => {
+    expect(canConfirmFace(null, "hazir")).toBe(false);
+    expect(canConfirmFace("https://x/v.mp4", "yukleniyor")).toBe(false);
+    expect(canConfirmFace("https://x/v.mp4", "oynatilamadi")).toBe(false);
+  });
+  it("video yüklenince kutu açılır", () => {
+    expect(canConfirmFace("https://x/v.mp4", "hazir")).toBe(true);
   });
 });
