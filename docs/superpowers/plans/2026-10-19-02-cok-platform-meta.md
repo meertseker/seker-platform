@@ -55,7 +55,7 @@
   - `site_visit_daily.source` listesine `meta_ads` eklenir (`record_site_visit` kontrolü varsa o da).
 - Consumes: 0008 trigger gövdesi, 0014 `create_web_lead` gövdesi (kopyalanıp genişletilir).
 
-- [ ] **Step 1: Write the failing test** `tests/rls/cok-platform.test.ts` (telefon öneki `+90500555`; `afterAll` siler):
+- [x] **Step 1: Write the failing test** `tests/rls/cok-platform.test.ts` (telefon öneki `+90500555`; `afterAll` siler):
   - `instagram reklam UTM'si meta platformu ve Lead kuyruğu açar`: `admin.rpc('create_web_lead', {..., p_gclid:'', p_utm:{utm_source:'instagram', utm_medium:'paid_social', utm_campaign:'120200', utm_content:'R-2645-A'}, p_meta:{fbclid:'IwAR1', fbc:'fb.1.1760000000000.IwAR1', fbp:'fb.1.1760000000000.123', meta_event_id:'ev-1', consent_version:2, ad_cookie_consent:true}})` → lead `source='instagram'`, `ad_platform='meta'`, `fbc`, `consent_version=2`, `content_code='R-2645-A'`; `conversion_uploads` tek satır `{platform:'meta', conversion_action:'lead', event_id:'ev-1', click_id_type:'fbc', status:'bekliyor'}`.
   - `yalnız fbclid organik instagram sayılır`: UTM yok, `p_meta:{fbclid:'X'}` → `source='instagram'`, `ad_platform` null, kuyruk satırı yok.
   - `gclid her zaman Google kazanır`: gclid + Meta UTM → `source='reklam'`, `ad_platform='google'`, meta satırı yok.
@@ -64,10 +64,10 @@
   - `Google velisinin kuyruğu değişmedi`: gclid'li veli `kazanildi` → `platform='google'` iki satır (`randevu`, `kayit`), `click_id_type='gclid'`, `status='bekliyor'`.
   - `ad_spend_daily aynı kampanya kimliği iki platformda ayrı satır`: aynı `(date, campaign_id)` için `platform:'google', level:'campaign', object_id:'1'` ve `platform:'meta', level:'ad', object_id:'1'` iki satır olarak yazılır.
   - `danışman ad_spend_daily ve conversion_uploads okuyamaz` (mevcut RLS korunur).
-- [ ] **Step 2:** `pnpm --filter @seker/panel exec vitest run tests/rls/cok-platform.test.ts` → FAIL (kolon yok).
-- [ ] **Step 3:** Migration'ı yaz. Trigger ve `create_web_lead` `create or replace`; yetkiler önceki gibi.
-- [ ] **Step 4:** `pnpm --filter @seker/db exec supabase db reset`, `pnpm --filter @seker/db gen:types`, test → PASS. Ardından `pnpm --filter @seker/panel test` → hepsi PASS (özellikle `tests/rls/ads*.test.ts`, `web-leads.test.ts`, `on-buro-akisi.test.ts` değişmeden).
-- [ ] **Step 5: Commit** `feat(db): reklam verisi platformlu, Meta alanları ve kuyruğu (0016)`
+- [x] **Step 2:** `pnpm --filter @seker/panel exec vitest run tests/rls/cok-platform.test.ts` → FAIL (kolon yok).
+- [x] **Step 3:** Migration'ı yaz. Trigger ve `create_web_lead` `create or replace`; yetkiler önceki gibi.
+- [x] **Step 4:** `pnpm --filter @seker/db exec supabase db reset`, `pnpm --filter @seker/db gen:types`, test → PASS. Ardından `pnpm --filter @seker/panel test` → hepsi PASS (özellikle `tests/rls/ads*.test.ts`, `web-leads.test.ts`, `on-buro-akisi.test.ts` değişmeden).
+- [x] **Step 5: Commit** `feat(db): reklam verisi platformlu, Meta alanları ve kuyruğu (0016)`
 
 ### Task 2: Meta yapılandırması, içerik kodu ve fbc yardımcıları (saf)
 
@@ -84,14 +84,14 @@
   - `parseContentCode(name: string | null | undefined): string | null` — baştaki `^([RS]-\d{4}-[A-Z])(?=$|[\s·\-:|])` (K11, K5).
   - `CONTENT_CODE_RE` dışa açılır (web/DB ile aynı desen `^[RS]-\d{4}-[A-Z]$`).
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `token yoksa null`, `act_ öneki eklenir` (`"123"` → `"act_123"`, `"act_123"` aynen), `META_CAPI_ENABLED yokken capiEnabled false`, `pixel yokken true yazılsa da capiEnabled false`.
   - `appSecretProof bilinen değeri üretir`: `appSecretProof("tok","sec") === createHmac("sha256","sec").update("tok").digest("hex")`.
   - `parseContentCode("R-2645-A · Bir günümüz") === "R-2645-A"`, `"S-2646-G"` → `"S-2646-G"`, `"Bir günümüz"` → null, `"r-2645-a · x"` → null, `"R-2645-AB"` → null, `null` → null.
-- [ ] **Step 2:** `pnpm --filter @seker/panel exec vitest run tests/unit/ads-meta-config.test.ts tests/unit/content-code.test.ts` → FAIL.
-- [ ] **Step 3:** Uygula.
-- [ ] **Step 4:** Test → PASS.
-- [ ] **Step 5: Commit** `feat(panel): Meta yapılandırması ve içerik kodu çözümü`
+- [x] **Step 2:** `pnpm --filter @seker/panel exec vitest run tests/unit/ads-meta-config.test.ts tests/unit/content-code.test.ts` → FAIL.
+- [x] **Step 3:** Uygula.
+- [x] **Step 4:** Test → PASS.
+- [x] **Step 5: Commit** `feat(panel): Meta yapılandırması ve içerik kodu çözümü`
 
 ### Task 3: Meta reklam seviyesi harcama çekimi
 
@@ -107,16 +107,16 @@
   - `class MetaApiError extends Error { status: number; code: number | null }`
   - `fetchMetaAdSpend(cfg: MetaConfig, from: string, to: string, fetchFn?: FetchFn): Promise<PlatformSpendRow[]>` — `GET {base}/{ver}/{adAccountId}/insights` `level=ad`, `time_increment=1`, `time_range={"since","until"}`, `action_attribution_windows=["7d_click","1d_view"]` (K7), alanlar notlardaki liste, `appsecret_proof` sorgu parametresi, erişim anahtarı `Authorization: Bearer` başlığında (URL'de değil). `paging.next` bitene kadar izlenir (en çok 20 sayfa). `platformResults` = `actions` içinde `offsite_conversion.fb_pixel_lead` değeri, o yoksa `lead` değeri, ikisi de yoksa 0. Zaman aşımı 30 sn. Hata yanıtı `{error:{message,code}}` → `MetaApiError` (mesaj ≤ 500 karakter, token içermez).
 
-- [ ] **Step 1: Write the failing tests** (mock `fetchFn`, fixture iki sayfa):
+- [x] **Step 1: Write the failing tests** (mock `fetchFn`, fixture iki sayfa):
   - `reklam satırlarını platformlu satıra çevirir`: `spend:"123.45"` → `costMicros: 123450000`, `platform:"meta"`, `level:"ad"`, `objectId` = ad_id, `campaignId`, `contentCode:"R-2645-A"`, `frequency: 1.42`, `platformResults: 3`.
   - `sonraki sayfayı izler`: iki sayfanın toplamı döner, ikinci çağrı `paging.next` adresine.
   - `kodsuz reklam adında contentCode null` (Review Focus 5).
   - `istekte appsecret_proof ve tarih aralığı var, token URL'de yok`.
   - `hata yanıtı MetaApiError fırlatır ve mesajda token geçmez`.
-- [ ] **Step 2:** Test → FAIL.
-- [ ] **Step 3:** Uygula.
-- [ ] **Step 4:** Test → PASS.
-- [ ] **Step 5: Commit** `feat(panel): Meta reklam seviyesi harcama çekimi`
+- [x] **Step 2:** Test → FAIL.
+- [x] **Step 3:** Uygula.
+- [x] **Step 4:** Test → PASS.
+- [x] **Step 5: Commit** `feat(panel): Meta reklam seviyesi harcama çekimi`
 
 ### Task 4: Platformlu depo (store) — Google süzgeci ve Meta kuyruğu
 
@@ -132,16 +132,16 @@
   - `interface MetaStore { upsertSpend(rows: PlatformSpendRow[]): Promise<void>; listPending(limit: number): Promise<MetaPendingEvent[]>; saveOutcomes(outcomes: UploadOutcome[]): Promise<void> }`
   - `supabaseMetaStore(db: SupabaseClient): MetaStore` — `listPending` yalnız `platform='meta' and status='bekliyor'`, `conversion_at` artan.
 
-- [ ] **Step 1: Write the failing tests** (gerçek DB, `admin`):
+- [x] **Step 1: Write the failing tests** (gerçek DB, `admin`):
   - `google upsertSpend eski satırlara yazar`: aynı `(date, campaign_id)` iki kez → tek `platform='google'` satırı, son değer.
   - `meta upsertSpend reklam satırı yazar ve google satırını ezmez`.
   - `google listPending meta satırını görmez` (Review Focus 1): bir veliye `platform='meta'` gclid'li satır elle eklenir → Google `listPending` sonucunda yok; meta `listPending` sonucunda var.
   - `meta listPending velinin fbc, onay sürümü ve telefonunu döner`.
   - Mevcut `tests/rls/ads-store.test.ts` değişmeden PASS.
-- [ ] **Step 2:** Test → FAIL.
-- [ ] **Step 3:** Uygula.
-- [ ] **Step 4:** `pnpm --filter @seker/panel exec vitest run tests/rls/ads-store.test.ts tests/rls/ads-store-platform.test.ts tests/rls/ads.test.ts` → PASS.
-- [ ] **Step 5: Commit** `feat(panel): platformlu reklam deposu, Google kuyruğu yalnız Google`
+- [x] **Step 2:** Test → FAIL.
+- [x] **Step 3:** Uygula.
+- [x] **Step 4:** `pnpm --filter @seker/panel exec vitest run tests/rls/ads-store.test.ts tests/rls/ads-store-platform.test.ts tests/rls/ads.test.ts` → PASS.
+- [x] **Step 5: Commit** `feat(panel): platformlu reklam deposu, Google kuyruğu yalnız Google`
 
 ### Task 5: Conversions API — uygunluk (K9), yük ve gönderim
 
@@ -159,17 +159,17 @@
   - `sendCapiBatch(cfg: MetaConfig, events: Record<string, unknown>[], fetchFn?: FetchFn): Promise<{ ok: true; received: number } | { ok: false; error: string }>` — `POST {base}/{ver}/{pixelId}/events`, gövde `{ data, test_event_code? }`, `appsecret_proof`, zaman aşımı 15 sn.
   - `uploadMetaPending(deps: { cfg: MetaConfig; store: MetaStore; siteUrl: string | null; fetchFn?: FetchFn; now?: Date }, limit = 50): Promise<{ sent: number; failed: number; skipped: number }>` — uygun olmayanlar `atlandi`+neden; uygunlar tek toplu istekte; başarı → hepsi `gonderildi`, hata → hepsi `hata`. `cfg.capiEnabled` false ise hiçbir şey okunmaz/yazılmaz, `{0,0,0}` döner.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `v1 onaylı velinin olayı atlanır`, `çerez onayı olmayan Lead atlanır ama Schedule gider`, `iptal edilmiş onay atlanır`, `8 günlük olay atlanır` (Review Focus 3), `içe aktarılmış veli (old_web_lead_id) atlanır`.
   - `yükte çocuk verisi ve düz telefon yok`: `JSON.stringify(buildCapiEvent(ev, "https://x"))` içinde `"+90"`, `child`, `birth`, `district` geçmez; `user_data.ph[0]` 64 karakter hex.
   - `çerez onayı yokken Schedule yükünde fbc/fbp yok`, `Enrolled değer ve TRY taşır`, `Lead website kaynağı ve event_source_url taşır`, `Schedule system_generated`.
   - `capiEnabled kapalıyken store hiç çağrılmaz`.
   - `toplu gönderim başarılıysa satırlar gonderildi, test kodu varsa gövdede`.
   - `Meta hata verirse satırlar hata olur ve mesaj kaydedilir`.
-- [ ] **Step 2:** Test → FAIL.
-- [ ] **Step 3:** Uygula.
-- [ ] **Step 4:** Test → PASS.
-- [ ] **Step 5: Commit** `feat(panel): Meta Conversions API gönderimi (kapalı gelir)`
+- [x] **Step 2:** Test → FAIL.
+- [x] **Step 3:** Uygula.
+- [x] **Step 4:** Test → PASS.
+- [x] **Step 5: Commit** `feat(panel): Meta Conversions API gönderimi (kapalı gelir)`
 
 ### Task 6: Sabah görevi iki platformu çalıştırır
 
@@ -185,15 +185,15 @@
   - `META_RESYNC_DAYS = 7`.
   - Cron yanıtı: Google kısmı bugünkü gibi. Meta yapılandırılmamışsa yanıtta `meta` anahtarı **yok** (eski testler birebir). Meta yapılandırılmışsa ek `meta: { spendRows: number | null; sent; failed; skipped; capi: "acik" | "kapali" }`. Hiçbiri yapılandırılmamışsa `{ ok: true, skipped: "yapilandirilmamis" }`. Yalnız Meta varsa `{ ok, skipped: "yapilandirilmamis", meta: {...} }`. Meta hatası Google'ı durdurmaz, tersi de; hata metni `Meta harcama:`/`Meta dönüşüm:` önekiyle aynı `ads_senkron_hata` bildirimine eklenir. `siteUrl = process.env.SITE_PUBLIC_URL ?? "https://yeni.sekeranaokulu.com"`.
 
-- [ ] **Step 1: Write the failing tests** (`ads-cron-route.test.ts` desenindeki mock'larla):
+- [x] **Step 1: Write the failing tests** (`ads-cron-route.test.ts` desenindeki mock'larla):
   - `yalnız Meta yapılandırılmışsa Google çağrılmaz, meta harcaması yazılır, capi kapalı`.
   - `Meta harcama hatası Google sonucunu bozmaz ve bildirim Meta önekiyle yazılır`.
   - `META_CAPI_ENABLED=true ve piksel varken bekleyen olaylar gönderilir`.
   - Mevcut `tests/unit/ads-cron-route.test.ts` değiştirilmeden PASS.
-- [ ] **Step 2:** Test → FAIL.
-- [ ] **Step 3:** Uygula.
-- [ ] **Step 4:** `pnpm --filter @seker/panel exec vitest run tests/unit/ads-cron-route.test.ts tests/unit/ads-cron-meta.test.ts` → PASS.
-- [ ] **Step 5: Commit** `feat(panel): sabah reklam görevi Instagram'ı da çeker`
+- [x] **Step 2:** Test → FAIL.
+- [x] **Step 3:** Uygula.
+- [x] **Step 4:** `pnpm --filter @seker/panel exec vitest run tests/unit/ads-cron-route.test.ts tests/unit/ads-cron-meta.test.ts` → PASS.
+- [x] **Step 5: Commit** `feat(panel): sabah reklam görevi Instagram'ı da çeker`
 
 ### Task 7: Pazarlama raporu iki platform
 
@@ -208,13 +208,13 @@
   - Kural: Google reklamı = `gclid || source==='reklam' || ad_platform==='google'` (anahtar bugünkü gibi `kampanya:<id>`). Meta reklamı = `ad_platform==='meta'` (anahtar `kampanya:meta:<utm_campaign>`; boşsa `kampanya:meta:bilinmiyor`, etiket "Instagram · kampanya bilinmiyor"). Meta harcama satırı `kampanya:meta:<campaign_id>`, ad `campaign_name`. Diğerleri kaynak satırı.
   - `adsStatusLines(google: AdsConfig | null, meta: MetaConfig | null = null): { spend: string; conversion: string; metaSpend: string; metaConversion: string }` — eski iki alan aynen. Meta: yoksa `"Instagram bağlantısı yok — Meta hesabı kurulunca her sabah 06:00'da otomatik"`, `"kapalı (Meta bağlantısı yok)"`; varsa `"her sabah 06:00'da otomatik (son 7 gün)"`, `capiEnabled ? "açık" : "kapalı (hukuk onayı bekleniyor · META_CAPI_ENABLED)"`.
   - Tablo rozeti: `platform==='meta'` → "Instagram", aksi kampanya → "Google Ads". Gönderim listesi her satırda platform etiketi (Google / Instagram) ve eylem etiketi (`lead` → "Başvuru").
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `meta velisi ve meta harcaması Instagram kampanya satırında birleşir`, `aynı kimlikli Google ve Meta kampanyası ayrı satır`, `organik instagram velisi kaynak satırında kalır`, mevcut `ads-report.test.ts` değişmeden PASS.
   - `meta yokken durum satırları` ve `capi kapalıyken hukuk onayı yazar`.
-- [ ] **Step 2:** Test → FAIL.
-- [ ] **Step 3:** Uygula. `marketing.ts` lead sorgusuna `ad_platform`, harcama sorgusuna `platform` eklenir. `CONVERSION_ACTIONS` sözlüğüne `lead: "Başvuru"` eklenir.
-- [ ] **Step 4:** Test → PASS. Dev sunucuda `/pazarlama` (yönetici) 1440 px ve 390 px'te açılır; tablo ve durum satırları okunur.
-- [ ] **Step 5: Commit** `feat(panel): pazarlama raporunda Google ve Instagram ayrı satırlar`
+- [x] **Step 2:** Test → FAIL.
+- [x] **Step 3:** Uygula. `marketing.ts` lead sorgusuna `ad_platform`, harcama sorgusuna `platform` eklenir. `CONVERSION_ACTIONS` sözlüğüne `lead: "Başvuru"` eklenir.
+- [x] **Step 4:** Test → PASS. Dev sunucuda `/pazarlama` (yönetici) 1440 px ve 390 px'te açılır; tablo ve durum satırları okunur.
+- [x] **Step 5: Commit** `feat(panel): pazarlama raporunda Google ve Instagram ayrı satırlar`
 
 ### Task 8: Web — fbclid/_fbc/_fbp, olay kimliği, onay sürümü
 
@@ -233,7 +233,7 @@
   - `createWebLead` `p_meta`'ya her zaman ekler: `consent_version: CONSENT_VERSION`, `ad_cookie_consent`, ve dolu olanlarından `fbclid`, `fbc`, `fbp`, `meta_event_id`.
   - `KVKK_CONSENT_LABEL` sürüme göre: v1 bugünkü metin aynen; v2 `"Aydınlatma Metni'ni okudum. Başvurum için aranmama ve başvuru bilgilerimin reklamlarımızın etkinliğini ölçmek amacıyla Google ve Meta (Instagram) ile paylaşılmasına onay veriyorum."`. `KVKK_TEXT` v2'de veri, amaç, aktarım bölümlerine Meta Platforms Ireland maddesi eklenir (yalnız sürüm 2 iken).
   - `classifyEntrySource`: gclid/gbraid/wbraid'den sonra `isMetaPaid` → `'meta_ads'`. `VISIT_SOURCES`'a `meta_ads`. Panel `site-traffic` etiketi "Instagram reklamı".
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `buildFbc biçimi`, `readCookie _fbc okur`, `isMetaPaid paid_social+instagram true, organik false`.
   - `fbclid ilk dokunuşta fbc ile saklanır, sonraki sayfa ezmez`.
   - `leadSchema fbc ve olay kimliğini kabul eder, 200 karakterde keser`.
@@ -241,10 +241,10 @@
   - `v1'de onay metni Meta içermez; v2'de Meta içerir` (env ile).
   - `instagram ücretli UTM'si meta_ads ziyareti sayılır`.
   - Mevcut `apps/web` testleri PASS (`adTargets`, `LeadForm.*`, `route.test`).
-- [ ] **Step 2:** `pnpm --filter @seker/web test` → yeni testler FAIL.
-- [ ] **Step 3:** Uygula.
-- [ ] **Step 4:** `pnpm --filter @seker/web test` → PASS.
-- [ ] **Step 5: Commit** `feat(web): Instagram tıklama kimliği, olay kimliği ve onay sürümü kaydı`
+- [x] **Step 2:** `pnpm --filter @seker/web test` → yeni testler FAIL.
+- [x] **Step 3:** Uygula.
+- [x] **Step 4:** `pnpm --filter @seker/web test` → PASS.
+- [x] **Step 5: Commit** `feat(web): Instagram tıklama kimliği, olay kimliği ve onay sürümü kaydı`
 
 ### Task 9: Web — onaya bağlı Meta pikseli
 
@@ -261,14 +261,14 @@
   - `CONSENT_EVENT = "seker:consent"`: `CookieBanner.choose` seçimi kaydettikten sonra `window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: choice }))`.
   - `<MetaPixel />` istemci bileşeni: kimlik boşsa `null`; düzenleme modunda yüklenmez (`Analytics` gibi); onay `granted` olunca (ilk yüklemede ya da olayla) `fbevents.js` betiğini bir kez ekler, `fbq('init', id)`, `fbq('track','PageView')`. Onay yoksa hiçbir ağ isteği yok.
   - `LeadForm` başarıdan sonra `trackMetaLead(metaEventId)`.
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `kimlik boşken hiçbir şey çizmez ve betik eklemez`.
   - `onay yokken betik eklemez; onay olayı gelince bir kez ekler`.
   - `trackMetaLead fbq yokken hata vermez; varken eventID ile çağırır`.
-- [ ] **Step 2:** Test → FAIL.
-- [ ] **Step 3:** Uygula.
-- [ ] **Step 4:** `pnpm --filter @seker/web test` → PASS.
-- [ ] **Step 5: Commit** `feat(web): çerez onayına bağlı Meta pikseli (kimlik boşken kapalı)`
+- [x] **Step 2:** Test → FAIL.
+- [x] **Step 3:** Uygula.
+- [x] **Step 4:** `pnpm --filter @seker/web test` → PASS.
+- [x] **Step 5: Commit** `feat(web): çerez onayına bağlı Meta pikseli (kimlik boşken kapalı)`
 
 ### Task 10: Veli kartında Instagram reklamı kaynağı
 
@@ -279,11 +279,11 @@
 **Interfaces:**
 - Consumes: `leads.ad_platform` (Task 1).
 - Produces: `originLines` girdisine isteğe bağlı `ad_platform`; `ad_platform==='meta'` → kanal etiketi `"Instagram reklamı · Sayfa formu"`, kod etiketi içerik kodu. Kuyruk kartında `ad_platform==='meta'` → "Instagram reklamı"; `source==='reklam'` → "Google" (bugünkü gibi).
-- [ ] **Step 1: Write the failing tests:** `meta form velisi Instagram reklamı etiketi alır`; `organik instagram formu "Sayfa formu" kalır`; mevcut testler PASS.
-- [ ] **Step 2:** Test → FAIL.
-- [ ] **Step 3:** Uygula.
-- [ ] **Step 4:** Test → PASS.
-- [ ] **Step 5: Commit** `feat(panel): veli kartında Instagram reklamı kaynağı`
+- [x] **Step 1: Write the failing tests:** `meta form velisi Instagram reklamı etiketi alır`; `organik instagram formu "Sayfa formu" kalır`; mevcut testler PASS.
+- [x] **Step 2:** Test → FAIL.
+- [x] **Step 3:** Uygula.
+- [x] **Step 4:** Test → PASS.
+- [x] **Step 5: Commit** `feat(panel): veli kartında Instagram reklamı kaynağı`
 
 ### Task 11: Claude'un Meta masaüstü betikleri ve kurulum belgesi
 
@@ -297,14 +297,14 @@
 - `meta-capi-test.mjs`: `META_CAPI_TEST_CODE` yoksa çıkar; varsa tek `Lead` test olayı gönderir (yalnız test kodu ile).
 - `meta-apply.mjs <plan.json> [--apply]`: kampanya/reklam seti/reklam **PAUSED** kurar; `--apply` yoksa yalnız `execution_options=["validate_only"]`. Reklam adı içerik koduyla başlamalı (K11), başlamıyorsa durur. Metne dokunmaz.
 
-- [ ] **Step 1:** Betikleri yaz.
-- [ ] **Step 2:** `node --check` her biri için → hata yok. `node meta-read.mjs` (anahtar dosyası yok) → Türkçe hata, çıkış kodu 1, ağ isteği yok.
-- [ ] **Step 3:** `docs/pazarlama-kurulum.md` güncelle.
-- [ ] **Step 4: Commit** `docs: Meta kurulum ve açma adımları`
+- [x] **Step 1:** Betikleri yaz.
+- [x] **Step 2:** `node --check` her biri için → hata yok. `node meta-read.mjs` (anahtar dosyası yok) → Türkçe hata, çıkış kodu 1, ağ isteği yok.
+- [x] **Step 3:** `docs/pazarlama-kurulum.md` güncelle.
+- [x] **Step 4: Commit** `docs: Meta kurulum ve açma adımları`
 
 ### Task 12: Aşama sonu
 
-- [ ] **Step 1:** `pnpm turbo run lint typecheck test` (yerel Supabase açık) → hepsi PASS.
-- [ ] **Step 2:** `superpowers:requesting-code-review` ile Aşama 2 farkını inceletin (af0f3e1..HEAD). Bulguları düzeltin, testler yeşil.
-- [ ] **Step 3: Commit** düzeltmeler.
-- [ ] **Step 4:** Sabah raporuna Türkçe "Aşama 2'de ne çalışıyor" bölümü; koordinatöre SHA, dosyalar, 0016, env değişiklikleri (`META_*`, `NEXT_PUBLIC_META_PIXEL_ID`, `NEXT_PUBLIC_CONSENT_VERSION`, `SITE_PUBLIC_URL`), crontab değişikliği yok.
+- [x] **Step 1:** `pnpm turbo run lint typecheck test` (yerel Supabase açık) → hepsi PASS.
+- [x] **Step 2:** `superpowers:requesting-code-review` ile Aşama 2 farkını inceletin (af0f3e1..HEAD). Bulguları düzeltin, testler yeşil.
+- [x] **Step 3: Commit** düzeltmeler.
+- [x] **Step 4:** Sabah raporuna Türkçe "Aşama 2'de ne çalışıyor" bölümü; koordinatöre SHA, dosyalar, 0016, env değişiklikleri (`META_*`, `NEXT_PUBLIC_META_PIXEL_ID`, `NEXT_PUBLIC_CONSENT_VERSION`, `SITE_PUBLIC_URL`), crontab değişikliği yok.
