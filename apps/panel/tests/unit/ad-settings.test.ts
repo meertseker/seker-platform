@@ -134,3 +134,74 @@ describe("saveAdSettings", () => {
     expect("error" in (await saveAdSettings(valid()))).toBe(true);
   });
 });
+
+describe("kaydet → oku gidiş dönüş", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requireRole.mockResolvedValue({ id: "u1", role: "yonetici" });
+    upsert.mockResolvedValue({ error: null });
+  });
+
+  const roundTrip = async (input: AdSettings) => {
+    const r = await saveAdSettings(input);
+    if ("error" in r) return r;
+    const [payload] = upsert.mock.calls[0] as unknown as [{ key: string; value: unknown }[]];
+    return parseAdSettings(payload);
+  };
+
+  type Case = [string, (i: AdSettings, v: number) => void, number[]];
+  const cases: Case[] = [
+    ["targetTl", (i, v) => void (i.targetTl = v), [1, 750, 1_000_000]],
+    ["stopMultiple", (i, v) => void (i.stopMultiple = v), [1, 2.5, 10]],
+    ["winMin", (i, v) => void (i.winMin = v), [1, 8, 50]],
+    ["noResultWeeks", (i, v) => void (i.noResultWeeks = v), [1, 4, 52]],
+    ["scaleMaxPct", (i, v) => void (i.scaleMaxPct = v), [0, 12.5, 100]],
+    ["fatigueFrequency", (i, v) => void (i.fatigueFrequency = v), [1, 3.5, 100]],
+    ["fatigueCtrDropPct", (i, v) => void (i.fatigueCtrDropPct = v), [1, 22.5, 100]],
+    ["firstCallMin", (i, v) => void (i.gates.firstCallMin = v), [1, 30, 240]],
+    ["reachPct", (i, v) => void (i.gates.reachPct = v), [0, 66.5, 100]],
+    ["apptPct", (i, v) => void (i.gates.apptPct = v), [0, 40, 100]],
+    ["showPct", (i, v) => void (i.gates.showPct = v), [0, 55, 100]],
+    ["googleTl", (i, v) => void (i.monthlyBudget.googleTl = v), [0, 12000, 100_000_000]],
+    ["metaTl", (i, v) => void (i.monthlyBudget.metaTl = v), [0, 9000, 100_000_000]],
+    ["reelsCaption", (i, v) => void (i.limits.reelsCaption = v), [1, 200, 2200]],
+    ["pageTitle", (i, v) => void (i.limits.pageTitle = v), [1, 40, 200]],
+    ["min", (i, v) => void (i.limits.min = v), [0, 12, 200]],
+  ];
+
+  for (const [name, set, values] of cases) {
+    it(`${name}: kabul edilen her değer aynen okunur`, async () => {
+      for (const v of values) {
+        vi.clearAllMocks();
+        upsert.mockResolvedValue({ error: null });
+        const input = valid();
+        set(input, v);
+        const out = await roundTrip(input);
+        expect("error" in out).toBe(false);
+        expect(out).toEqual(input);
+      }
+    });
+  }
+
+  it("sıfır olamayan alanlar 0 ile reddedilir", async () => {
+    for (const set of [cases[0]![1], cases[5]![1], cases[6]![1]]) {
+      const input = valid();
+      set(input, 0);
+      expect("error" in (await saveAdSettings(input))).toBe(true);
+    }
+  });
+
+  it("yasaklı ifade uzunluğu 1/2/40/41 ve adet 50/51", async () => {
+    const at = async (banned: string[]) => {
+      const input = valid();
+      input.banned = banned;
+      return "error" in (await saveAdSettings(input));
+    };
+    expect(await at(["a"])).toBe(true);
+    expect(await at(["ab"])).toBe(false);
+    expect(await at(["a".repeat(40)])).toBe(false);
+    expect(await at(["a".repeat(41)])).toBe(true);
+    expect(await at(Array.from({ length: 50 }, (_, n) => `ifade ${n}`))).toBe(false);
+    expect(await at(Array.from({ length: 51 }, (_, n) => `ifade ${n}`))).toBe(true);
+  });
+});

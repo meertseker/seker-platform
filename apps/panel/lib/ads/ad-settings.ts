@@ -59,7 +59,7 @@ export function parseAdSettings(rows: { key: string; value: unknown }[]): AdSett
     stopMultiple: positive(rules.durdur_kat, d.stopMultiple),
     winMin: positive(rules.kazan_min_nitelikli, d.winMin),
     noResultWeeks: positive(rules.sonucsuz_hafta, d.noResultWeeks),
-    scaleMaxPct: positive(rules.buyutme_yuzde, d.scaleMaxPct),
+    scaleMaxPct: nonNegative(rules.buyutme_yuzde, d.scaleMaxPct),
     fatigueFrequency: positive(rules.yorgunluk_siklik, d.fatigueFrequency),
     fatigueCtrDropPct: positive(rules.yorgunluk_ctr_dusus_yuzde, d.fatigueCtrDropPct),
     gates: {
