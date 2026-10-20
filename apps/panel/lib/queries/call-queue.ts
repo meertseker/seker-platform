@@ -113,6 +113,19 @@ export function inQueueWindow(createdAt: string, launchAt: Date | null): boolean
   return !cutoff || Date.parse(createdAt) >= cutoff.getTime();
 }
 
+/** Saf: applyQueueFilter'ın satır karşılığı; veli "Şimdi ara" listesinde mi. */
+export function isInQueue(
+  lead: { status: string; first_contact_at: string | null; source: string; channel: string | null; created_at: string },
+  launchAt: Date | null,
+): boolean {
+  return (
+    lead.status === "yeni" &&
+    !lead.first_contact_at &&
+    ((QUEUE_SOURCES as readonly string[]).includes(lead.source) || !!lead.channel) &&
+    inQueueWindow(lead.created_at, launchAt)
+  );
+}
+
 /**
  * "Şimdi ara" listesinin süzgeci; bant ve 15 dakika uyarısı (cron) da bunu kullanır, hiçbiri ayrışmaz.
  * `cutoff`: queueCutoff(launchAt); bundan önce gelen veliler listeye girmez.

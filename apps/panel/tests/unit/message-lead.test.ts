@@ -70,7 +70,7 @@ describe("createMessageLead", () => {
 
   it("aynı telefonla açık veli varsa mükerrer döner ve kod eklenir", async () => {
     openLead = { id: "old-lead", content_code: null, parent_name: "Ayşe Kaya", status: "yeni", first_contact_at: null,
-      created_at: "2026-11-03T09:00:00+03:00" };
+      created_at: "2026-11-03T09:00:00+03:00", source: "whatsapp", channel: "whatsapp" };
     const res = await createMessageLead({ channel: "whatsapp", phone: "05325554120", contentCode: "S-2640-B" });
     expect(res).toEqual({ id: "old-lead", duplicate: true, parentName: "Ayşe Kaya", inQueue: true });
     expect(inserts("leads")).toHaveLength(0);
@@ -88,7 +88,7 @@ describe("createMessageLead", () => {
 
   it("mükerrer veli yalnız yeni, aranmamış ve liste sınırı içindeyse listede sayılır (R25 · Imp4)", async () => {
     const base = { id: "old-lead", content_code: null, parent_name: "Ayşe Kaya", status: "yeni", first_contact_at: null,
-      created_at: "2026-11-03T09:00:00+03:00" };
+      created_at: "2026-11-03T09:00:00+03:00", source: "instagram", channel: null };
     const inQueue = async (lead: Record<string, unknown>) => {
       openLead = lead;
       const res = await createMessageLead({ channel: "ig_dm", phone: "05325554120" });
@@ -96,6 +96,9 @@ describe("createMessageLead", () => {
     };
     expect(await inQueue({ ...base, first_contact_at: "2026-11-02T10:00:00+03:00" })).toBe(false);
     expect(await inQueue({ ...base, status: "ulasildi" })).toBe(false);
+    // Ortak süzgeçle aynı kaynak kuralı: elle açılmış referans velisi (kanal yok) listede değil.
+    expect(await inQueue({ ...base, source: "referans", channel: null })).toBe(false);
+    expect(await inQueue({ ...base, source: "referans", channel: "telefon" })).toBe(true);
     settingsRows = [{ key: "aday_hatti_acilis", value: "2026-11-01T07:00:00Z" }];
     expect(await inQueue({ ...base, created_at: "2026-10-01T09:00:00+03:00" })).toBe(false);
     expect(await inQueue(base)).toBe(true);

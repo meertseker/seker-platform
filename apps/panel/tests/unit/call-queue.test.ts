@@ -5,6 +5,7 @@ import {
   followupAction,
   inQueueWindow,
   isAutoRuleKey,
+  isInQueue,
   labelFollowups,
   labelQueue,
   queueCutoff,
@@ -271,5 +272,17 @@ describe("dropClosedLeadFollowups (R27)", () => {
       row("velisiz", "takip:l1:2", null),
     ]);
     expect(kept.map((r) => r.id)).toEqual(["acik-takip", "kontenjan", "elle", "velisiz"]);
+  });
+});
+
+describe("isInQueue", () => {
+  const base = { status: "yeni", first_contact_at: null, source: "reklam", channel: null, created_at: "2026-10-20T09:00:00Z" };
+  it("applyQueueFilter ile aynı kural", () => {
+    expect(isInQueue(base, null)).toBe(true);
+    expect(isInQueue({ ...base, status: "ulasildi" }, null)).toBe(false);
+    expect(isInQueue({ ...base, first_contact_at: "2026-10-20T09:05:00Z" }, null)).toBe(false);
+    expect(isInQueue({ ...base, source: "referans" }, null)).toBe(false);
+    expect(isInQueue({ ...base, source: "referans", channel: "telefon" }, null)).toBe(true);
+    expect(isInQueue(base, new Date("2026-11-20T00:00:00Z"))).toBe(false);
   });
 });

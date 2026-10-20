@@ -55,7 +55,13 @@ export function ClaimCallButton({
   function onCall() {
     setError(null);
     startTransition(async () => {
-      const res = await claimLead(leadId);
+      let res: Awaited<ReturnType<typeof claimLead>>;
+      try {
+        res = await claimLead(leadId);
+      } catch {
+        setError("Bağlantı hatası, tekrar deneyin");
+        return;
+      }
       if (!res.ok) {
         setError(`${res.claimedBy} bu veliyi arıyor`);
         router.refresh();

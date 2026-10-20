@@ -14,7 +14,7 @@ import { callWaLink } from "@/lib/lead-flow/call-wa";
 import { closeTasksByPrefix, tasksByPrefix, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
 import { alreadyContacted, claimLeadAs, type ClaimResult } from "@/lib/lead-flow/claim";
 import { normalizeTurkishPhone } from "@/lib/phone";
-import { inQueueWindow } from "@/lib/queries/call-queue";
+import { inQueueWindow, isInQueue } from "@/lib/queries/call-queue";
 
 export type CallResult = "randevu" | "geri_ara" | "ulasilamadi" | "uygun_degil";
 export type NotFitReason = "yas_uymuyor" | "uzaklik" | "gelecek_yil" | "baska_okul";
@@ -424,7 +424,7 @@ export async function createMessageLead(
     const { launchAt } = await getLeadFlowSettings(supabase);
     const { data: existing, error: findError } = await supabase
       .from("leads")
-      .select("id, content_code, parent_name, status, first_contact_at, created_at")
+      .select("id, content_code, parent_name, status, first_contact_at, created_at, source, channel")
       .eq("phone", phone)
       .not("status", "in", "(kazanildi,kaybedildi)")
       .order("created_at", { ascending: false })
@@ -438,6 +438,8 @@ export async function createMessageLead(
       status: string;
       first_contact_at: string | null;
       created_at: string;
+      source: string;
+      channel: string | null;
     } | null;
 
     if (open) {
@@ -458,7 +460,7 @@ export async function createMessageLead(
       revalidatePath("/pipeline");
       revalidatePath(`/leads/${open.id}`);
       // Ekran mevcut kaydı anlatır: adı ve "Şimdi ara" listesinde olup olmadığı (ortak süzgeçle aynı kural).
-      const inQueue = open.status === "yeni" && !open.first_contact_at && inQueueWindow(open.created_at, launchAt);
+      const inQueue = isInQueue(open, launchAt);
       return { id: open.id, duplicate: true, parentName: open.parent_name, inQueue };
     }
 
