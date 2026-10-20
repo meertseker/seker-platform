@@ -14,6 +14,20 @@ describe("checkText", () => {
   it("Türkçe büyük İ ile yakalar", () => {
     expect(checkText("İŞTE EN İYİ", opts).ok).toBe(false);
   });
+  it("kelime ortasındaki eşleşme yasaklanmaz", () => {
+    expect(checkText("Ben iyiyim bugün", opts).ok).toBe(true);
+    expect(checkText("Sınıf düzen iyi gitti", opts).ok).toBe(true);
+  });
+  it("ek alan ifade yine yakalanır", () => {
+    expect(checkText("Garantili sonuç var", opts).ok).toBe(false);
+  });
+  it("ASCII yazılmış EN IYI yakalanır", () => {
+    expect(checkText("EN IYI okul", opts).ok).toBe(false);
+  });
+  it("fazla boşluk ve NBSP yakalanır", () => {
+    expect(checkText("en  iyi okul", opts).ok).toBe(false);
+    expect(checkText("en iyi okul", opts).ok).toBe(false);
+  });
   it("uzunluk aşımı", () => {
     expect(checkText("a".repeat(151), opts)).toEqual({ ok: false, message: "150 karakteri aştı" });
   });

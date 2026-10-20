@@ -8,11 +8,28 @@ export type CheckOptions = { max: number; min: number; banned: string[] };
 /** Varsayılan yasaklı ifadeler (ayar anahtarı `yasakli_ifadeler`). */
 export const DEFAULT_BANNED_PHRASES = ["en iyi", "bir numara", "en güvenli", "garanti"];
 
+/** Küçük harf (tr), boşluk dizileri (NBSP dahil) tek boşluk. */
+function normalize(s: string): string {
+  return s.toLocaleLowerCase("tr").replace(/\s+/g, " ").trim();
+}
+
+/** Türkçe harfleri ASCII karşılığına indirir ("EN IYI" → "en iyi" ile eşleşsin). */
+function fold(s: string): string {
+  return s.replace(/ı/g, "i").replace(/ş/g, "s").replace(/ç/g, "c").replace(/ğ/g, "g").replace(/ö/g, "o").replace(/ü/g, "u");
+}
+
+/** İfade, öncesinde harf/rakam olmadan geçiyor mu? Sonek serbest ("garantili" yakalanır). */
+function containsPhrase(haystack: string, phrase: string): boolean {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}`, "u").test(haystack);
+}
+
 export function checkText(text: string, opts: CheckOptions): CheckResult {
-  const lower = text.toLocaleLowerCase("tr");
+  const lower = normalize(text);
+  const folded = fold(lower);
   for (const phrase of opts.banned) {
-    const p = phrase.toLocaleLowerCase("tr");
-    if (p && lower.includes(p)) {
+    const p = normalize(phrase);
+    if (p && (containsPhrase(lower, p) || containsPhrase(folded, fold(p)))) {
       return { ok: false, message: `"${p}" kanıt ister, kullanılamaz` };
     }
   }
