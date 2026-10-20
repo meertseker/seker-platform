@@ -1,4 +1,4 @@
-// Arama ekranı yardımcıları (saf modül): konuşma metni ve önerilen ziyaret saatleri.
+// Arama ekranı yardımcıları (saf modül): önerilen ziyaret saatleri.
 import {
   addDaysToDateString,
   type BusinessHours,
@@ -9,21 +9,6 @@ import {
 import { DEFAULT_CONFLICT_MINUTES } from "./conflict-window";
 
 export { ageFromBirth } from "./age";
-
-export type ScriptVars = { veli: string; danisman: string; cocukYasi: string; semt: string };
-
-/** {veli}, {danisman}, {cocuk_yasi}, {semt} doldurulur; bilinmeyen yer tutucu olduğu gibi kalır. */
-export function fillScript(lines: string[], vars: ScriptVars): string[] {
-  const map: Record<string, string> = {
-    veli: vars.veli,
-    danisman: vars.danisman,
-    cocuk_yasi: vars.cocukYasi,
-    semt: vars.semt,
-  };
-  return lines.map((line) =>
-    line.replace(/\{(\w+)\}/g, (match, key: string) => (Object.hasOwn(map, key) ? map[key] : match)),
-  );
-}
 
 /** Ziyaret için önerilen saatler (İstanbul). */
 export const SLOT_CANDIDATES = ["10:00", "11:00", "16:30"] as const;

@@ -9,8 +9,6 @@ import { DEFAULT_TEMPLATES, hhmmToMinutes, type WaTemplate } from "@/lib/lead-fl
 export type LeadLineInput = {
   hours: BusinessHours;
   districts: string[];
-  callScript: string[];
-  priceAnswer: string;
   templates: WaTemplate[];
 };
 
@@ -33,14 +31,6 @@ function validate(input: LeadLineInput): { error: string } | { value: LeadLineIn
   if (districts.length === 0) return { error: "En az bir servis semti girin." };
   if (districts.length > 30) return { error: "En fazla 30 servis semti girilebilir." };
 
-  const script = (Array.isArray(input.callScript) ? input.callScript : []).map((l) => String(l).trim()).filter(Boolean);
-  if (script.length < 1 || script.length > 10) return { error: "Konuşma sırası 1–10 satır olmalı." };
-  if (script.some((l) => l.length > 300)) return { error: "Konuşma sırasındaki her satır en fazla 300 karakter olabilir." };
-
-  const price = typeof input.priceAnswer === "string" ? input.priceAnswer.trim() : "";
-  if (!price) return { error: "Fiyat cevabı boş olamaz." };
-  if (price.length > 500) return { error: "Fiyat cevabı en fazla 500 karakter olabilir." };
-
   const given = new Map((Array.isArray(input.templates) ? input.templates : []).map((t) => [t?.key, t]));
   const templates: WaTemplate[] = [];
   for (const key of REQUIRED_KEYS) {
@@ -58,8 +48,6 @@ function validate(input: LeadLineInput): { error: string } | { value: LeadLineIn
     value: {
       hours: { days, start: hours.start, end: hours.end },
       districts,
-      callScript: script,
-      priceAnswer: price,
       templates,
     },
   };
@@ -79,8 +67,6 @@ export async function saveLeadLineSettings(input: LeadLineInput): Promise<{ ok: 
       [
         { key: "mesai", value: v.hours },
         { key: "servis_semtleri", value: v.districts },
-        { key: "arama_metni", value: v.callScript },
-        { key: "fiyat_cevabi", value: v.priceAnswer },
         { key: "wa_sablonlari", value: v.templates },
       ],
       { onConflict: "key" },

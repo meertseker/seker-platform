@@ -416,8 +416,6 @@ describe("getLeadFlowSettings", () => {
     expect(s.claimMinutes).toBe(15);
     expect(s.districts).toContain("Beykent");
     expect(s.templates.map((t) => t.key)).toContain("randevu_onay");
-    expect(s.callScript).toHaveLength(4);
-    expect(s.priceAnswer).toMatch(/Aylık ücretlerimiz/);
   });
 
   it("bozuk değerlerde varsayılana döner, geçerlileri kullanır", async () => {
@@ -425,13 +423,11 @@ describe("getLeadFlowSettings", () => {
       { key: "mesai", value: { days: [1, 2], start: "18:00", end: "09:00" } },
       { key: "servis_semtleri", value: "Beykent" },
       { key: "ustlenme_dk", value: 30 },
-      { key: "fiyat_cevabi", value: "Fiyat metni" },
     ];
     const s = await getLeadFlowSettings(db());
     expect(s.hours).toEqual(DEFAULT_BUSINESS_HOURS);
     expect(s.districts).toContain("Esenyurt");
     expect(s.claimMinutes).toBe(30);
-    expect(s.priceAnswer).toBe("Fiyat metni");
 
     settingsRows = [{ key: "mesai", value: { days: [1, 9], start: "08:00", end: "17:00" } }];
     expect((await getLeadFlowSettings(db())).hours).toEqual(DEFAULT_BUSINESS_HOURS);

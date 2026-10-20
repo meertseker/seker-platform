@@ -6,7 +6,7 @@ import { clockStart } from "@/lib/lead-flow/business-hours";
 import { callWaLink } from "@/lib/lead-flow/call-wa";
 import { alreadyContacted } from "@/lib/lead-flow/claim";
 import { readConflictWindowMinutes } from "@/lib/lead-flow/conflict-window";
-import { ageFromBirth, fillScript, suggestSlots } from "@/lib/lead-flow/script";
+import { ageFromBirth, suggestSlots } from "@/lib/lead-flow/script";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { heldByOther } from "@/lib/queries/call-queue";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -105,13 +105,6 @@ export default async function CallPage({ params }: { params: Promise<{ id: strin
 
   const danisman = profile.full_name.split(" ")[0] || profile.full_name;
   const age = ageFromBirth(lead.child_birth_month, lead.child_birth_year, now);
-  const script = fillScript(settings.callScript, {
-    veli: lead.parent_name,
-    danisman,
-    cocukYasi: age !== null ? String(age) : "…",
-    semt: lead.district ?? "…",
-  });
-
   const districtOk = !!lead.district && settings.districts.some(
     (d) => d.toLocaleLowerCase("tr-TR") === lead.district!.trim().toLocaleLowerCase("tr-TR"),
   );
@@ -147,8 +140,6 @@ export default async function CallPage({ params }: { params: Promise<{ id: strin
       lead={screenLead}
       serverNow={now.getTime()}
       hours={settings.hours}
-      script={script}
-      priceAnswer={settings.priceAnswer}
       initialQuals={quals}
       slots={slots}
       waLinks={waLinks}

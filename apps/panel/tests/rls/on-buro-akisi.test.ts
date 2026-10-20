@@ -92,12 +92,11 @@ describe("ön büro akışı alanları", () => {
 
   it("diğer ayar tohumları var", async () => {
     const { data } = await admin.from("app_settings").select("key, value")
-      .in("key", ["servis_semtleri", "arama_metni", "fiyat_cevabi", "wa_sablonlari", "ustlenme_dk"]);
-    expect(data).toHaveLength(5);
+      .in("key", ["servis_semtleri", "wa_sablonlari", "ustlenme_dk"]);
+    expect(data).toHaveLength(3);
     const m = Object.fromEntries(data!.map((r) => [r.key, r.value]));
     expect(m.ustlenme_dk).toBe(15);
     expect(m.servis_semtleri).toHaveLength(6);
-    expect(m.arama_metni).toHaveLength(4);
     expect((m.wa_sablonlari as { key: string }[]).map((x) => x.key)).toEqual(
       ["ulasilamadi", "ziyaret_saatleri", "randevu_onay", "ziyaret_tesekkur", "kontenjan"]);
   });

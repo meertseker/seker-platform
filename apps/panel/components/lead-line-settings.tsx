@@ -28,8 +28,6 @@ export function LeadLineSettings({ settings }: { settings: LeadFlowSettings }) {
   const [start, setStart] = useState(settings.hours.start);
   const [end, setEnd] = useState(settings.hours.end);
   const [districts, setDistricts] = useState(settings.districts.join("\n"));
-  const [script, setScript] = useState(settings.callScript.join("\n"));
-  const [price, setPrice] = useState(settings.priceAnswer);
   const [templates, setTemplates] = useState(settings.templates);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -44,8 +42,6 @@ export function LeadLineSettings({ settings }: { settings: LeadFlowSettings }) {
       const result = await saveLeadLineSettings({
         hours: { days, start, end },
         districts: districts.split("\n"),
-        callScript: script.split("\n"),
-        priceAnswer: price,
         templates,
       });
       setMessage("error" in result ? { kind: "error", text: result.error } : { kind: "ok", text: "Kaydedildi" });
@@ -89,26 +85,6 @@ export function LeadLineSettings({ settings }: { settings: LeadFlowSettings }) {
         Servis semtleri
         <textarea value={districts} onChange={(e) => setDistricts(e.target.value)} rows={6} className={`${field} mt-2 font-normal`} />
         <span className={`${hint} block font-normal`}>Her satıra bir semt yazın (en fazla 30).</span>
-      </label>
-
-      <label className="block text-sm font-semibold text-foreground">
-        Konuşma sırası
-        <textarea
-          value={script}
-          onChange={(e) => setScript(e.target.value)}
-          rows={6}
-          placeholder="Merhaba {veli}, ..."
-          className={`${field} mt-2 font-normal`}
-        />
-        <span className={`${hint} block font-normal`}>
-          Her satır bir adım (1–10 satır). Yer tutucular: {"{veli} {danisman} {cocuk_yasi} {semt}"}
-        </span>
-      </label>
-
-      <label className="block text-sm font-semibold text-foreground">
-        Fiyat cevabı
-        <textarea value={price} onChange={(e) => setPrice(e.target.value)} rows={4} className={`${field} mt-2 font-normal`} />
-        <span className={`${hint} block font-normal`}>[ARALIK] ifadesini okulun fiyat aralığıyla değiştirin.</span>
       </label>
 
       <div className="space-y-4">

@@ -8,8 +8,6 @@ export type WaTemplate = { key: string; label: string; text: string };
 export type LeadFlowSettings = {
   hours: BusinessHours;
   districts: string[];
-  callScript: string[];
-  priceAnswer: string;
   templates: WaTemplate[];
   claimMinutes: number;
   /** Aday hattının açıldığı an (0014 tohumu). Yoksa liste/uyarı için tarih sınırı uygulanmaz. */
@@ -17,16 +15,6 @@ export type LeadFlowSettings = {
 };
 
 export const DEFAULT_DISTRICTS: string[] = ["Beykent", "Beylikdüzü", "Büyükçekmece", "Esenyurt", "Gürpınar", "Yakuplu"];
-
-export const DEFAULT_CALL_SCRIPT: string[] = [
-  "Merhaba {veli}, Şeker Anaokulu'ndan {danisman}. Formunuz için arıyorum, uygun musunuz?",
-  "Formu doğrula: \"Çocuğunuz {cocuk_yasi} yaşında, {semt}'tesiniz, doğru mu?\"",
-  "Dinle: \"Okul seçerken sizin için en önemli şey ne?\" Cevabı aşağıya not et.",
-  "Ziyarete davet et, iki saat söyle: \"Salı 10:00 mı, Perşembe 16:30 mu?\"",
-];
-
-export const DEFAULT_PRICE_ANSWER =
-  "Aylık ücretlerimiz programa göre [ARALIK] TL arasında. En doğrusu okulu görüp öğretmenimizle tanışmanız. Salı mı Perşembe mi uygun?";
 
 export const DEFAULT_TEMPLATES: WaTemplate[] = [
   { key: "ulasilamadi", label: "Ulaşamadım", text: "Merhaba {veli}, Şeker Anaokulu'ndan {danisman}. Formunuz için aradım, ulaşamadım. Size uygun bir saatte tekrar arayabilir miyim?" },
@@ -39,7 +27,7 @@ export const DEFAULT_TEMPLATES: WaTemplate[] = [
 export const DEFAULT_CLAIM_MINUTES = 15;
 
 const KEYS = [
-  "mesai", "servis_semtleri", "arama_metni", "fiyat_cevabi", "wa_sablonlari", "ustlenme_dk", "aday_hatti_acilis",
+  "mesai", "servis_semtleri", "wa_sablonlari", "ustlenme_dk", "aday_hatti_acilis",
 ] as const;
 
 export function hhmmToMinutes(value: unknown): number | null {
@@ -96,12 +84,9 @@ export async function getLeadFlowSettings(supabase: SupabaseClient): Promise<Lea
   const map = new Map<string, unknown>(
     ((data ?? []) as { key: string; value: unknown }[]).map((r) => [r.key, r.value]),
   );
-  const price = map.get("fiyat_cevabi");
   return {
     hours: parseBusinessHours(map.get("mesai")),
     districts: parseStringList(map.get("servis_semtleri"), DEFAULT_DISTRICTS),
-    callScript: parseStringList(map.get("arama_metni"), DEFAULT_CALL_SCRIPT),
-    priceAnswer: typeof price === "string" && price.trim() !== "" ? price : DEFAULT_PRICE_ANSWER,
     templates: parseTemplates(map.get("wa_sablonlari")),
     claimMinutes: parseClaimMinutes(map.get("ustlenme_dk")),
     launchAt: parseLaunchAt(map.get("aday_hatti_acilis")),

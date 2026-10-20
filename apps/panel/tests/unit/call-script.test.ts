@@ -1,28 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { ageFromBirth, fillScript, slotLabel, suggestSlots } from "@/lib/lead-flow/script";
+import { ageFromBirth, slotLabel, suggestSlots } from "@/lib/lead-flow/script";
 import { DEFAULT_BUSINESS_HOURS } from "@/lib/lead-flow/business-hours";
 
 const hours = DEFAULT_BUSINESS_HOURS; // Pzt–Cum 08:30–18:00
-const vars = { veli: "Burak Demir", danisman: "Zehra", cocukYasi: "2", semt: "Beylikdüzü" };
-
-describe("fillScript", () => {
-  it("fillScript yer tutucuları doldurur", () => {
-    const lines = [
-      "Merhaba {veli}, Şeker Anaokulu'ndan {danisman}.",
-      "Çocuğunuz {cocuk_yasi} yaşında, {semt}'tesiniz, doğru mu?",
-      "Bilinmeyen {fiyat} kalır.",
-    ];
-    expect(fillScript(lines, vars)).toEqual([
-      "Merhaba Burak Demir, Şeker Anaokulu'ndan Zehra.",
-      "Çocuğunuz 2 yaşında, Beylikdüzü'tesiniz, doğru mu?",
-      "Bilinmeyen {fiyat} kalır.",
-    ]);
-  });
-
-  it("aynı yer tutucu bir satırda birden çok kez doldurulur", () => {
-    expect(fillScript(["{veli} {veli}"], vars)).toEqual(["Burak Demir Burak Demir"]);
-  });
-});
 
 describe("ageFromBirth (script.ts üzerinden)", () => {
   it("ageFromBirth Mart 2023 doğumluya Kasım 2026'da 3 der", () => {

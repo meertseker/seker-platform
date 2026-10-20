@@ -111,8 +111,6 @@ export function CallScreen({
   lead,
   serverNow,
   hours,
-  script,
-  priceAnswer,
   initialQuals,
   slots,
   waLinks,
@@ -120,15 +118,12 @@ export function CallScreen({
   lead: CallScreenLead;
   serverNow: number;
   hours: BusinessHours;
-  script: string[];
-  priceAnswer: string;
   initialQuals: Quals;
   /** Önerilen ziyaret saatleri, "YYYY-MM-DDTHH:MM" İstanbul. */
   slots: string[];
   waLinks: Partial<Record<CallResult, string>>;
 }) {
   const router = useRouter();
-  const [priceOpen, setPriceOpen] = useState(false);
   const [quals, setQuals] = useState<Quals>(initialQuals);
   const [note, setNote] = useState("");
   const [outcome, setOutcome] = useState<CallResult | null>(null);
@@ -286,33 +281,8 @@ export function CallScreen({
       </div>
 
       <section className="flex flex-col gap-2" aria-labelledby="adim-1">
-        <h2 id="adim-1" className="text-[1.0625rem] font-bold">1 · Ne söyleyeceğim</h2>
-        <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3.5 text-[0.9375rem] leading-[1.45]">
-          <ol className="flex flex-col gap-2.5">
-            {script.map((line, i) => (
-              <li key={i} className="flex gap-2.5">
-                <b className="text-primary" aria-hidden>{i + 1}</b>
-                <span>{line}</span>
-              </li>
-            ))}
-          </ol>
-          <button
-            type="button"
-            onClick={() => setPriceOpen((v) => !v)}
-            aria-expanded={priceOpen}
-            className="inline-flex min-h-11 items-center self-start rounded-[0.625rem] border border-warning/30 bg-warning-soft px-3 text-sm font-semibold text-warning focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Fiyat sorarsa ne diyeceğim?
-          </button>
-          {priceOpen ? (
-            <p className="rounded-[0.625rem] bg-warning-soft px-3 py-2.5 text-sm">&quot;{priceAnswer}&quot;</p>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-2" aria-labelledby="adim-2">
         <div className="flex items-baseline justify-between gap-2">
-          <h2 id="adim-2" className="text-[1.0625rem] font-bold">2 · Uygun mu?</h2>
+          <h2 id="adim-1" className="text-[1.0625rem] font-bold">1 · Uygun mu?</h2>
           <span
             className={`rounded-full px-2.5 py-0.5 text-[0.78125rem] font-bold ${
               qualified ? "bg-accent-soft text-accent" : "bg-warning-soft text-warning"
@@ -347,9 +317,9 @@ export function CallScreen({
         />
       </section>
 
-      <section className="flex flex-col gap-2" aria-labelledby="adim-3">
-        <h2 id="adim-3" className="text-[1.0625rem] font-bold">3 · Sonuç</h2>
-        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="adim-3">
+      <section className="flex flex-col gap-2" aria-labelledby="adim-2">
+        <h2 id="adim-2" className="text-[1.0625rem] font-bold">2 · Sonuç</h2>
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="adim-2">
           {OUTCOMES.map((o) => (
             <button
               key={o.key}

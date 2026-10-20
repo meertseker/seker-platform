@@ -21,10 +21,9 @@ Hedef: Gelen her veli, kanalı ne olursa olsun, panelde bir kayıt olur ve 5 dak
 
 ## Veli aradığımda
 
-- "Ara" düğmesine basın. Arama ekranı açılır ve 3 adımı vardır.
-- 1. Ne söyleyeceğim: konuşma sırası ekranda yazar. Veli fiyat sorarsa "Fiyat sorarsa ne diyeceğim?" bölümünü okuyun.
-- 2. Uygun mu?: 4 işaret var. Formdan gelen bilgiyle dolar, eksikse siz işaretlersiniz. Dördü de uygunsa veli nitelikli sayılır.
-- 3. Sonuç: "Randevu verildi" (önerilen boş saatlerden birini seçin ya da "Başka saat"), "Geri aranacak", "Ulaşılamadı" veya "Uygun değil". "Uygun değil" için neden yazmak zorunludur.
+- "Ara" düğmesine basın. Arama ekranı açılır ve 2 adımı vardır.
+- 1. Uygun mu?: 4 işaret var. Formdan gelen bilgiyle dolar, eksikse siz işaretlersiniz. Dördü de uygunsa veli nitelikli sayılır.
+- 2. Sonuç: "Randevu verildi" (önerilen boş saatlerden birini seçin ya da "Başka saat"), "Geri aranacak", "Ulaşılamadı" veya "Uygun değil". "Uygun değil" için neden yazmak zorunludur.
 - Kaydedince "Panel şunları yaptı" listesi çıkar. Sonra "WhatsApp mesajını gönder" düğmesine basın, ardından "Sıradaki işe geç".
 - Hiç aranmamış veli için her "Ara" düğmesi (lead kartı, veli sayfası, Bugün) arama ekranını açar. "Görüşme nasıl geçti?" paneli yalnız daha önce aranmış velide açılır. Orada "Ulaştım" derseniz açık takip ve geri arama görevleri kapanır.
 - Not en fazla 2000 karakter olabilir.
