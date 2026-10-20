@@ -99,5 +99,6 @@ describe('lisanssız stok görsel yasağı', () => {
 
     for (const root of roots) walk(path.join(process.cwd(), root));
     expect(offenders).toEqual([]);
-  });
+    // Kaynak ağacını gezer; turbo'nun tam paralel koşusunda 5 sn varsayılanı yetmiyor.
+  }, 30_000);
 });

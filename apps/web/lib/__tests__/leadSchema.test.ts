@@ -137,10 +137,10 @@ describe('leadSchema qualify alanları', () => {
 });
 
 describe('leadSchema meta alanları', () => {
-  it('fbc ve olay kimliğini kabul eder, 200 karakterde keser', () => {
+  it('fbc ve olay kimliğini kabul eder; olay kimliği 200, fbclid 500 karakterde kesilir', () => {
     const r = leadSchema.safeParse({
       ...valid,
-      fbclid: 'x'.repeat(300),
+      fbclid: 'x'.repeat(600),
       fbc: 'fb.1.1.abc',
       fbp: 'fb.1.2.3',
       metaEventId: 'e'.repeat(300),
@@ -148,7 +148,7 @@ describe('leadSchema meta alanları', () => {
     });
     expect(r.success).toBe(true);
     if (r.success) {
-      expect(r.data.fbclid.length).toBe(200);
+      expect(r.data.fbclid.length).toBe(500);
       expect(r.data.fbc).toBe('fb.1.1.abc');
       expect(r.data.metaEventId.length).toBe(200);
       expect(r.data.adCookieConsent).toBe(true);
@@ -158,5 +158,50 @@ describe('leadSchema meta alanları', () => {
   it('verilmezse varsayılan boş / false', () => {
     const r = leadSchema.parse(valid);
     expect([r.fbclid, r.fbc, r.fbp, r.metaEventId, r.adCookieConsent]).toEqual(['', '', '', '', false]);
+  });
+});
+
+describe('leadSchema uzun Meta kimlikleri (I-4)', () => {
+  it('300 karakterlik fbclid ve ondan üretilen fbc değişmeden geçer', () => {
+    const fbclid = 'IwAR' + 'aB9_-'.repeat(59) + 'Zz'; // 301 karakter, büyük/küçük harf karışık
+    const fbc = `fb.1.1700000000000.${fbclid}`;
+    const r = leadSchema.parse({ ...valid, fbclid, fbc });
+    expect(r.fbclid).toBe(fbclid);
+    expect(r.fbc).toBe(fbc);
+  });
+
+  it('fbc de 500 karakterde kesilir; diğer gizli alanlar 200de kalır', () => {
+    const r = leadSchema.parse({ ...valid, fbc: 'f'.repeat(700), fbp: 'p'.repeat(700), gclid: 'g'.repeat(700) });
+    expect(r.fbc.length).toBe(500);
+    expect(r.fbp.length).toBe(200);
+    expect(r.gclid.length).toBe(200);
+  });
+});
+
+describe('leadSchema adCookieConsent (T8a)', () => {
+  it.each([['true'], ['evet'], [1], [null], [{}]])('beklenmeyen değer (%s) başvuruyu reddettirmez, false olur', (value) => {
+    const r = leadSchema.safeParse({ ...valid, adCookieConsent: value });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.adCookieConsent).toBe(false);
+  });
+
+  it('gerçek true korunur', () => {
+    expect(leadSchema.parse({ ...valid, adCookieConsent: true }).adCookieConsent).toBe(true);
+  });
+});
+
+describe('leadSchema consentVersion (T8b)', () => {
+  it.each([
+    [undefined, 1],
+    [1, 1],
+    [2, 2],
+    ['2', 1],
+    [3, 1],
+    ['x', 1],
+    [null, 1],
+  ])('formun gönderdiği %s → %s (eksik ya da geçersizse 1)', (value, expected) => {
+    const r = leadSchema.safeParse({ ...valid, consentVersion: value });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.consentVersion).toBe(expected);
   });
 });

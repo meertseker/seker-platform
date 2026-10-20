@@ -39,7 +39,8 @@ export async function POST(request: Request) {
   }
 
   // Kayıt önce, e-posta sonra.
-  const saved = await createWebLead(lead);
+  // Tarayıcı bilgisi CAPI Lead olayı içindir; createWebLead yalnız çerez onayı varsa yazar.
+  const saved = await createWebLead(lead, undefined, { userAgent: request.headers.get('user-agent') });
   const emailed = await sendLeadEmail(lead, saved);
 
   if (saved.status === 'saved' || emailed) {

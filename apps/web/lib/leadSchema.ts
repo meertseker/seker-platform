@@ -18,7 +18,10 @@ export const START_WINDOWS = ['hemen', '1_3_ay', '3_6_ay', 'gelecek_yil'] as con
 export const PHONE_ERROR = 'Lütfen 05 ile başlayan cep telefonu numaranızı girin';
 
 const MAX_HIDDEN = 200;
+/** fbclid/fbc daha uzun olabilir; kırpılırsa Meta eşleşmesi bozulur (attribution.ts ve create_web_lead ile aynı sınır). */
+const MAX_META_CLICK = 500;
 const hidden = z.string().trim().transform((v) => v.slice(0, MAX_HIDDEN));
+const metaClick = z.string().trim().transform((v) => v.slice(0, MAX_META_CLICK));
 
 const base = z.object({
   parentName: z.string().trim().min(2, 'Ad soyad en az 2 karakter olmalı').max(80),
@@ -33,11 +36,14 @@ const base = z.object({
   gclid: hidden.optional().default(''),
   landingPath: hidden.optional().default(''),
   // Meta (Instagram) tıklama/olay verisi: gizli alanlar, kırpılır; adCookieConsent çerez bandı seçimidir.
-  fbclid: hidden.optional().default(''),
-  fbc: hidden.optional().default(''),
+  fbclid: metaClick.optional().default(''),
+  fbc: metaClick.optional().default(''),
   fbp: hidden.optional().default(''),
   metaEventId: hidden.optional().default(''),
-  adCookieConsent: z.boolean().optional().default(false),
+  // Çerez seçimi hiçbir zaman başvuruyu reddettirmez: beklenmeyen değer onay yok sayılır.
+  adCookieConsent: z.boolean().catch(false),
+  // Formun gösterdiği onay metninin sürümü; eksik ya da geçersizse 1. Sunucu sürümüyle küçüğü kaydedilir.
+  consentVersion: z.union([z.literal(1), z.literal(2)]).catch(1),
   utm: z
     .object({
       utm_source: hidden.optional(),

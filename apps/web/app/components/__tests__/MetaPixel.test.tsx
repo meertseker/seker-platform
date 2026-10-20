@@ -13,6 +13,7 @@ beforeEach(() => {
   document.head.innerHTML = '';
   delete (window as unknown as { fbq?: unknown }).fbq;
   appended = [];
+  vi.stubEnv('NEXT_PUBLIC_CONSENT_VERSION', '2');
   vi.spyOn(document.head, 'appendChild').mockImplementation(((node: Node) => {
     appended.push(node as HTMLScriptElement);
     return node;
@@ -46,7 +47,17 @@ describe('MetaPixel', () => {
     });
     expect(pixelScripts().length).toBe(1);
     const fbq = (window as unknown as { fbq: { queue: unknown[][] } }).fbq;
-    expect(fbq.queue).toEqual([['init', '12345'], ['track', 'PageView']]);
+    // Otomatik Gelişmiş Eşleştirme init'ten önce kapatılır: piksel form alanlarını okumaz.
+    expect(fbq.queue).toEqual([['set', 'autoConfig', false, '12345'], ['init', '12345'], ['track', 'PageView']]);
+  });
+
+  it('onay metni v1 iken kimlik dolu ve onay verilmiş olsa da yüklemez', () => {
+    vi.stubEnv('NEXT_PUBLIC_CONSENT_VERSION', '1');
+    vi.stubEnv('NEXT_PUBLIC_META_PIXEL_ID', '12345');
+    window.localStorage.setItem(CONSENT_KEY, 'granted');
+    render(<MetaPixel />);
+    expect(pixelScripts().length).toBe(0);
+    expect((window as unknown as { fbq?: unknown }).fbq).toBeUndefined();
   });
 
   it('red olayında yüklemez', () => {

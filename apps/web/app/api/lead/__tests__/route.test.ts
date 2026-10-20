@@ -12,10 +12,10 @@ vi.mock('resend', () => ({ Resend: class { emails = { send }; } }));
 const valid = { parentName: 'Ayşe Yılmaz', phone: '05301018875', kvkkConsent: true };
 
 let ipSeq = 0;
-function makeRequest(body: string, ip = `198.51.100.${++ipSeq}`) {
+function makeRequest(body: string, ip = `198.51.100.${++ipSeq}`, extraHeaders: Record<string, string> = {}) {
   return new Request('http://localhost/api/lead', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-forwarded-for': ip },
+    headers: { 'Content-Type': 'application/json', 'x-forwarded-for': ip, ...extraHeaders },
     body,
   });
 }
@@ -117,5 +117,23 @@ describe('POST /api/lead', () => {
     delete missing.district;
     const bad = await POST(makeRequest(JSON.stringify(missing)));
     expect(bad.status).toBe(400);
+  });
+
+  it('isteğin tarayıcı bilgisini (user-agent) kayda iletir (I-2)', async () => {
+    vi.stubEnv('RESEND_API_KEY', undefined);
+    const ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)';
+    const res = await POST(
+      makeRequest(JSON.stringify({ ...valid, adCookieConsent: true }), undefined, { 'user-agent': ua }),
+    );
+    expect(res.status).toBe(200);
+    const call = vi.mocked(createWebLead).mock.calls[0];
+    expect(call[2]).toEqual({ userAgent: ua });
+  });
+
+  it('adCookieConsent dizge gelse de başvuru kabul edilir (T8a)', async () => {
+    vi.stubEnv('RESEND_API_KEY', undefined);
+    const res = await POST(makeRequest(JSON.stringify({ ...valid, adCookieConsent: 'true' })));
+    expect(res.status).toBe(200);
+    expect(vi.mocked(createWebLead).mock.calls[0][0].adCookieConsent).toBe(false);
   });
 });

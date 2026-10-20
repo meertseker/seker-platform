@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const rpc = vi.fn();
 vi.mock('@seker/auth/admin', () => ({ createAdminSupabase: () => ({ rpc }) }));
@@ -19,6 +19,7 @@ const lead: Lead = {
   fbp: '',
   metaEventId: '',
   adCookieConsent: false,
+  consentVersion: 1,
 };
 
 describe('createWebLead', () => {
@@ -96,5 +97,56 @@ describe('createWebLead', () => {
       fbp: 'fb.1.2.3',
       meta_event_id: 'ev-1',
     });
+  });
+
+  it('tarayıcı bilgisi yalnız çerez onayı varsa client_user_agent olarak gider, 400 karakterde kesilir (I-2)', async () => {
+    rpc.mockResolvedValue({ data: { lead_id: 'L1', duplicate: false }, error: null });
+    const ua = 'Mozilla/5.0 ' + 'x'.repeat(500);
+    await createWebLead({ ...lead, adCookieConsent: true }, undefined, { userAgent: ua });
+    expect(rpc.mock.calls[0][1].p_meta.client_user_agent).toBe(ua.slice(0, 400));
+
+    await createWebLead({ ...lead, adCookieConsent: false }, undefined, { userAgent: ua });
+    expect(rpc.mock.calls[1][1].p_meta).not.toHaveProperty('client_user_agent');
+
+    await createWebLead({ ...lead, adCookieConsent: true }, undefined, { userAgent: '   ' });
+    expect(rpc.mock.calls[2][1].p_meta).not.toHaveProperty('client_user_agent');
+
+    await createWebLead({ ...lead, adCookieConsent: true });
+    expect(rpc.mock.calls[3][1].p_meta).not.toHaveProperty('client_user_agent');
+  });
+});
+
+describe('createWebLead onay sürümü (T8b)', () => {
+  beforeEach(() => {
+    rpc.mockReset();
+    rpc.mockResolvedValue({ data: { lead_id: 'L1', duplicate: false }, error: null });
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  async function load(serverVersion: '' | '2') {
+    vi.stubEnv('NEXT_PUBLIC_CONSENT_VERSION', serverVersion);
+    vi.resetModules();
+    return (await import('../websiteLeads')).createWebLead;
+  }
+
+  it('sunucu v2, form v1 metnini gösterdiyse 1 kaydedilir', async () => {
+    const create = await load('2');
+    await create({ ...lead, consentVersion: 1 });
+    expect(rpc.mock.calls[0][1].p_meta.consent_version).toBe(1);
+  });
+
+  it('sunucu v1, form v2 gönderse de 1 kaydedilir', async () => {
+    const create = await load('');
+    await create({ ...lead, consentVersion: 2 });
+    expect(rpc.mock.calls[0][1].p_meta.consent_version).toBe(1);
+  });
+
+  it('ikisi de v2 ise 2 kaydedilir', async () => {
+    const create = await load('2');
+    await create({ ...lead, consentVersion: 2 });
+    expect(rpc.mock.calls[0][1].p_meta.consent_version).toBe(2);
   });
 });
