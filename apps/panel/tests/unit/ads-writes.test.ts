@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { googleSetBudget, googleSetStatus } from "@/lib/ads/google-writes";
-import { metaSetDailyBudget, metaSetStatus } from "@/lib/ads/meta/writes";
+import { googleGetBudgetMicros, googleSetBudget, googleSetStatus } from "@/lib/ads/google-writes";
+import { metaGetDailyBudget, metaSetDailyBudget, metaSetStatus } from "@/lib/ads/meta/writes";
 import {
   adsWriteEnabled,
   executeAdChange,
@@ -143,9 +143,13 @@ describe("Meta yazma gövdeleri", () => {
 
 type Logged = AdChangeLogRow & { id: string };
 
-function fakeStore(objects: AdObjectRow[], opts: { baselineTl?: number | null; insertFails?: boolean } = {}) {
+function fakeStore(
+  objects: AdObjectRow[],
+  opts: { baselineTl?: number | null; insertFails?: boolean; updateLogFails?: boolean } = {},
+) {
   const logs: Logged[] = [];
   const objectUpdates: { key: [string, string, string]; patch: Record<string, unknown> }[] = [];
+  const budgetUpdates: { platform: string; budgetResource: string; micros: number }[] = [];
   const store: AdChangeStore = {
     loadObject: vi.fn(async (platform, level, objectId) =>
       objects.find((o) => o.platform === platform && o.level === level && o.objectId === objectId) ?? null,
@@ -158,14 +162,18 @@ function fakeStore(objects: AdObjectRow[], opts: { baselineTl?: number | null; i
       return id;
     }),
     updateLog: vi.fn(async (id: string, patch: Partial<AdChangeLogRow>) => {
+      if (opts.updateLogFails) throw new Error("db");
       const row = logs.find((l) => l.id === id);
       if (row) Object.assign(row, patch);
     }),
     updateObject: vi.fn(async (platform, level, objectId, patch) => {
       objectUpdates.push({ key: [platform, level, objectId], patch });
     }),
+    updateBudgetRows: vi.fn(async (platform, budgetResource, micros) => {
+      budgetUpdates.push({ platform, budgetResource, micros });
+    }),
   };
-  return { store, logs, objectUpdates };
+  return { store, logs, objectUpdates, budgetUpdates };
 }
 
 const META_AD: AdObjectRow = {
@@ -365,10 +373,20 @@ describe("executeAdChange · doğrulama", () => {
     expect(logs).toHaveLength(0);
   });
 
-  it("zaten durmuş reklam yeniden durdurulmaz; Google'da yalnız kampanya düzeyi", async () => {
-    const { store } = fakeStore([{ ...META_AD, status: "PAUSED" }, { ...GOOGLE_CAMPAIGN, level: "adset" }]);
-    expect(await executeAdChange(deps(store), pause())).toHaveProperty("error");
+  it("Google'da yalnız kampanya düzeyi", async () => {
+    const { store } = fakeStore([{ ...GOOGLE_CAMPAIGN, level: "adset" }]);
     expect(await executeAdChange(deps(store), pause({ ...GOOGLE_CAMPAIGN, level: "adset" }))).toHaveProperty("error");
+  });
+
+  it("satırdaki eski durum durdurma/başlatmayı engellemez (platformda tekrar zararsız)", async () => {
+    const { store } = fakeStore([{ ...META_AD, status: "PAUSED" }]);
+    const fetchFn = vi.fn(async () => json({ success: true }));
+    const d = deps(store, { env: { ...META_ENV, ADS_WRITE_ENABLED: "true" }, fetchFn: fetchFn as unknown as typeof fetch });
+    expect(await executeAdChange(d, pause())).toMatchObject({ ok: true, status: "uygulandi" });
+    const { store: s2 } = fakeStore([{ ...META_AD, status: "ACTIVE" }]);
+    const d2 = deps(s2, { env: { ...META_ENV, ADS_WRITE_ENABLED: "true" }, fetchFn: fetchFn as unknown as typeof fetch });
+    expect(await executeAdChange(d2, { ...pause(), kind: "resume" })).toMatchObject({ ok: true, status: "uygulandi" });
+    expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 
   it("bütçesi olmayan nesnede bütçe değiştirilmez", async () => {
@@ -401,11 +419,13 @@ describe("executeAdChange · canlı yazım açık", () => {
     expect(objectUpdates).toEqual([{ key: ["google", "campaign", "55"], patch: { status: "PAUSED" } }]);
   });
 
-  it("Google bütçe: kaynak adıyla campaignBudgets:mutate, mesaj eski → yeni TL", async () => {
-    const { store, objectUpdates } = fakeStore([GOOGLE_CAMPAIGN]);
-    const fetchFn = vi.fn(async (url: string) =>
-      url.includes("oauth2") ? json({ access_token: "erisim" }) : json({ results: [{}] }),
-    );
+  it("Google bütçe: canlı bütçe okunur, kaynak adıyla campaignBudgets:mutate, aynı bütçeli tüm satırlar güncellenir", async () => {
+    const { store, objectUpdates, budgetUpdates } = fakeStore([GOOGLE_CAMPAIGN]);
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.includes("oauth2")) return json({ access_token: "erisim" });
+      if (url.includes("searchStream")) return json([{ results: [{ campaignBudget: { amountMicros: "150000000" } }] }]);
+      return json({ results: [{}] });
+    });
     const res = await executeAdChange(
       deps(store, { env: { ...GOOGLE_ENV, ADS_WRITE_ENABLED: "true" }, fetchFn: fetchFn as unknown as typeof fetch }),
       budget(180, GOOGLE_CAMPAIGN),
@@ -416,7 +436,14 @@ describe("executeAdChange · canlı yazım açık", () => {
       resourceName: "customers/1234567890/campaignBudgets/77",
       amountMicros: "180000000",
     });
-    expect(objectUpdates[0].patch).toEqual({ daily_budget_micros: 180_000_000 });
+    const search = fetchFn.mock.calls.find((c) => String(c[0]).includes("searchStream")) as unknown as [string, RequestInit];
+    expect(JSON.parse(String(search[1].body)).query).toBe(
+      "SELECT campaign_budget.amount_micros FROM campaign_budget WHERE campaign_budget.resource_name = 'customers/1234567890/campaignBudgets/77'",
+    );
+    // Tek OAuth: okuma ve yazma aynı erişim anahtarıyla.
+    expect(fetchFn.mock.calls.filter((c) => String(c[0]).includes("oauth2"))).toHaveLength(1);
+    expect(budgetUpdates).toEqual([{ platform: "google", budgetResource: "customers/1234567890/campaignBudgets/77", micros: 180_000_000 }]);
+    expect(objectUpdates).toEqual([]);
   });
 
   it("Meta durdurma status=PAUSED; başlatma ACTIVE ve mesajı", async () => {
@@ -434,12 +461,20 @@ describe("executeAdChange · canlı yazım açık", () => {
 
   it("Meta bütçe kuruşla bütçenin durduğu nesneye gider", async () => {
     const { store } = fakeStore([{ ...META_AD, budgetResource: "120000999" }]);
-    const fetchFn = vi.fn(async () => json({ success: true }));
+    const fetchFn = vi.fn(async (_url: string, init?: RequestInit) =>
+      init?.method === "POST" ? json({ success: true }) : json({ id: "120000999", daily_budget: "15000" }),
+    );
     await executeAdChange(
       deps(store, { env: { ...META_ENV, ADS_WRITE_ENABLED: "true" }, fetchFn: fetchFn as unknown as typeof fetch }),
       budget(172.5),
     );
-    const [url, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    const [getUrl, getInit] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(getInit.method ?? "GET").toBe("GET");
+    expect(getUrl.startsWith("https://graph.facebook.com/v26.0/120000999?")).toBe(true);
+    expect(new URL(getUrl).searchParams.get("fields")).toBe("daily_budget");
+    expect(new URL(getUrl).searchParams.get("appsecret_proof")).toMatch(/^[0-9a-f]{64}$/);
+    expect(getUrl).not.toContain("META-GIZLI-ANAHTAR");
+    const [url, init] = fetchFn.mock.calls[1] as unknown as [string, RequestInit];
     expect(url).toBe("https://graph.facebook.com/v26.0/120000999");
     expect(new URLSearchParams(String(init.body)).get("daily_budget")).toBe("17250");
   });
@@ -493,5 +528,128 @@ describe("executeAdChange · canlı yazım açık", () => {
     expect(res).toHaveProperty("error");
     expect(d.fetchFn).not.toHaveBeenCalled();
     expect(logs[0].status).toBe("hata");
+  });
+});
+
+describe("executeAdChange · canlı bütçe (bayat satır artışı gizleyemez)", () => {
+  const ENABLED_META = { ...META_ENV, ADS_WRITE_ENABLED: "true" };
+  // Satır 200 TL der; Reklam Yöneticisi'nde 100 TL'ye indirilmiş.
+  const STALE = { ...META_AD, dailyBudgetMicros: 200_000_000 };
+  const liveMeta = (kurus: string | null, status = 200) =>
+    vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") return json({ success: true });
+      if (kurus === null) return json({ error: { message: "boom" } }, status);
+      return json({ id: "120000111", daily_budget: kurus });
+    });
+
+  it("bayat satırda 200→190 görünen ama canlıda 100→190 olan artış kırmızı kapıda gerekçe ister", async () => {
+    const { store, logs } = fakeStore([STALE]);
+    const fetchFn = liveMeta("10000");
+    const res = await executeAdChange(deps(store, { red: true, env: ENABLED_META, fetchFn: fetchFn as unknown as typeof fetch }), budget(190));
+    expect(res).toMatchObject({ needsReason: true });
+    expect(logs).toHaveLength(0);
+    expect(fetchFn.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "POST")).toBe(false);
+  });
+
+  it("canlı bütçeye göre büyütme sınırı (100→190 = +%90) kapılar yeşilken de gerekçe ister", async () => {
+    const { store } = fakeStore([STALE]);
+    const res = await executeAdChange(deps(store, { env: ENABLED_META, fetchFn: liveMeta("10000") as unknown as typeof fetch }), budget(190));
+    expect(res).toMatchObject({ needsReason: true });
+  });
+
+  it("eski değer platformdaki canlı tutar: satırdan yüksekse de o kullanılır ve kayda geçer", async () => {
+    const { store, logs } = fakeStore([META_AD]);
+    const res = await executeAdChange(
+      deps(store, { red: true, env: ENABLED_META, fetchFn: liveMeta("20000") as unknown as typeof fetch }),
+      budget(190),
+    );
+    // 200 → 190 azaltma: gerekçesiz geçer.
+    expect(res).toMatchObject({ ok: true, message: "✓ Bütçe 200 TL → 190 TL · kayda geçti" });
+    expect(logs[0].oldValue).toMatchObject({ daily_budget_tl: 200, live_budget_tl: 200, budget_resource: "120000111" });
+  });
+
+  it("canlı okuma başarısızsa değişiklik artış sayılır: kırmızı kapıda gerekçe ister, gerekçeyle uygulanır", async () => {
+    const { store, logs } = fakeStore([STALE]);
+    const fetchFn = liveMeta(null, 500);
+    const d = deps(store, { red: true, env: ENABLED_META, fetchFn: fetchFn as unknown as typeof fetch });
+    expect(await executeAdChange(d, budget(150))).toMatchObject({ needsReason: true });
+    const ok = await executeAdChange(d, budget(150, META_AD, "Kayıt dönemi son haftası"));
+    expect(ok).toMatchObject({ ok: true, status: "uygulandi" });
+    expect(logs[0].oldValue).toMatchObject({ live_budget_tl: null, canli_okuma: "basarisiz" });
+  });
+
+  it("canlı yazım kapalıyken canlı okuma yapılmaz, satır kullanılır", async () => {
+    const { store } = fakeStore([STALE]);
+    const d = deps(store, { red: true });
+    expect(await executeAdChange(d, budget(190))).toMatchObject({ ok: true, status: "uygulanmadi_kapali" });
+    expect(d.fetchFn).not.toHaveBeenCalled();
+  });
+});
+
+describe("executeAdChange · haftalık sınır bütçe kaynağına göre", () => {
+  it("taban bütçe kaynağıyla sorulur; aynı bütçeyi paylaşan ikinci satırdan aşma gerekçe ister", async () => {
+    const SHARED = "120000999";
+    const a = { ...META_AD, objectId: "120000111", budgetResource: SHARED, dailyBudgetMicros: 180_000_000 };
+    const b = { ...META_AD, objectId: "120000222", budgetResource: SHARED, dailyBudgetMicros: 180_000_000 };
+    const { store } = fakeStore([a, b], { baselineTl: 150 });
+    const res = await executeAdChange(deps(store), budget(200, b));
+    expect(res).toMatchObject({ needsReason: true });
+    expect(store.weekBudgetBaselineTl).toHaveBeenCalledWith("meta", SHARED, expect.any(String));
+  });
+
+  it("kayıtta eski ve yeni değer bütçe kaynağını taşır", async () => {
+    const { store, logs } = fakeStore([META_AD]);
+    await executeAdChange(deps(store), budget(160));
+    expect(logs[0].oldValue).toMatchObject({ daily_budget_tl: 150, budget_resource: "120000111" });
+    expect(logs[0].newValue).toMatchObject({ daily_budget_tl: 160, budget_resource: "120000111" });
+  });
+});
+
+describe("executeAdChange · küçük düzeltmeler", () => {
+  it("kapı hesaplanamazsa durdurma kaydında not düşülür", async () => {
+    const { store, logs } = fakeStore([META_AD]);
+    const failing = vi.fn(async () => {
+      throw new Error("db");
+    });
+    await executeAdChange(deps(store, { gateStatus: failing }), pause());
+    expect(logs[0].newValue).toMatchObject({ kapi: "hesaplanamadı" });
+  });
+
+  it("kayıt güncellenemese de ad_objects güncellenir", async () => {
+    const { store, objectUpdates } = fakeStore([META_AD], { updateLogFails: true });
+    const fetchFn = vi.fn(async () => json({ success: true }));
+    const res = await executeAdChange(
+      deps(store, { env: { ...META_ENV, ADS_WRITE_ENABLED: "true" }, fetchFn: fetchFn as unknown as typeof fetch }),
+      pause(),
+    );
+    expect(res).toMatchObject({ ok: true, status: "uygulandi" });
+    expect(objectUpdates).toEqual([{ key: ["meta", "adset", "120000111"], patch: { status: "PAUSED" } }]);
+  });
+});
+
+describe("canlı bütçe okuma", () => {
+  it("Google: campaign_budget sorgusu; yabancı kaynakta istek yok", async () => {
+    const fetchFn = vi.fn(async () => json([{ results: [{ campaignBudget: { amountMicros: "120000000" } }] }]));
+    expect(
+      await googleGetBudgetMicros(GOOGLE_CFG, "erisim", "customers/1234567890/campaignBudgets/77", fetchFn as unknown as typeof fetch),
+    ).toBe(120_000_000);
+    const none = vi.fn();
+    await expect(
+      googleGetBudgetMicros(GOOGLE_CFG, "erisim", "customers/1/campaignBudgets/77", none as unknown as typeof fetch),
+    ).rejects.toThrow();
+    expect(none).not.toHaveBeenCalled();
+    const empty = vi.fn(async () => json([{ results: [] }]));
+    await expect(
+      googleGetBudgetMicros(GOOGLE_CFG, "erisim", "customers/1234567890/campaignBudgets/77", empty as unknown as typeof fetch),
+    ).rejects.toThrow();
+  });
+
+  it("Meta: daily_budget kuruş; yoksa hata", async () => {
+    const fetchFn = vi.fn(async () => json({ id: "1", daily_budget: "15000" }));
+    expect(await metaGetDailyBudget(META_CFG, "1", fetchFn as unknown as typeof fetch)).toBe(15_000);
+    const init = (fetchFn.mock.calls[0] as unknown as [string, RequestInit])[1];
+    expect((init.headers as Record<string, string>).authorization).toBe("Bearer META-GIZLI-ANAHTAR");
+    const missing = vi.fn(async () => json({ id: "1" }));
+    await expect(metaGetDailyBudget(META_CFG, "1", missing as unknown as typeof fetch)).rejects.toThrow();
   });
 });

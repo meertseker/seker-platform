@@ -7,12 +7,12 @@ import { istanbulDateString } from "@/lib/lead-flow/business-hours";
 import { loadWeeklyData } from "@/lib/queries/weekly";
 import { formatTl } from "@/lib/content/board";
 import type { AdSettings } from "./ad-settings";
-import { readAdsConfig } from "./config";
+import { readAdsConfig, type AdsConfig } from "./config";
 import { getAccessToken, GoogleApiError } from "./googleAds";
-import { googleSetBudget, googleSetStatus } from "./google-writes";
+import { googleGetBudgetMicros, googleSetBudget, googleSetStatus } from "./google-writes";
 import { readMetaConfig } from "./meta/config";
 import { MetaApiError } from "./meta/insights";
-import { metaSetDailyBudget, metaSetStatus } from "./meta/writes";
+import { metaGetDailyBudget, metaSetDailyBudget, metaSetStatus } from "./meta/writes";
 import type { FetchFn } from "./types";
 import { anyGateRed, computeWeekGates, lastCompletedWeekStart, mondayOf, weekRange } from "./weekly";
 
@@ -67,11 +67,13 @@ export type AdChangeLogRow = {
 
 export interface AdChangeStore {
   loadObject(platform: string, level: string, objectId: string): Promise<AdObjectRow | null>;
-  /** Bu hafta (sinceIso'dan beri) platforma uygulanmış ilk bütçe değişikliğinin eski değeri; yoksa null. */
-  weekBudgetBaselineTl(platform: string, level: string, objectId: string, sinceIso: string): Promise<number | null>;
+  /** Bu bütçe kaynağına bu hafta (sinceIso'dan beri) uygulanmış ilk bütçe değişikliğinin eski değeri; yoksa null. */
+  weekBudgetBaselineTl(platform: string, budgetResource: string, sinceIso: string): Promise<number | null>;
   insertLog(row: AdChangeLogRow): Promise<string>;
   updateLog(id: string, patch: Pick<AdChangeLogRow, "status" | "error">): Promise<void>;
   updateObject(platform: string, level: string, objectId: string, patch: Record<string, unknown>): Promise<void>;
+  /** Aynı bütçe kaynağını taşıyan tüm satırların günlük bütçesi (paylaşılan / üst düzey bütçe). */
+  updateBudgetRows(platform: string, budgetResource: string, micros: number): Promise<void>;
 }
 
 export type GateStatus = { red: boolean; labels: string[] };
@@ -94,8 +96,6 @@ const MAX_NAME = 200;
 const MAX_BUDGET_TL = 1_000_000;
 const DIGITS = /^\d{1,30}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const PAUSED = new Set(["PAUSED"]);
-const RUNNING = new Set(["ENABLED", "ACTIVE"]);
 
 /** Canlı yazım yalnız `ADS_WRITE_ENABLED === "true"` iken açık. */
 export function adsWriteEnabled(env: Record<string, string | undefined> = process.env): boolean {
@@ -167,38 +167,57 @@ type Plan =
   | { kind: "pause" | "resume"; oldStatus: string | null; newStatus: string }
   | { kind: "budget"; target: string; oldTl: number | null; newTl: number };
 
-/** Platform çağrısı; başarıda ad_objects'e yazılacak yamayı döner. Başarısızlıkta fırlatır. */
-async function callPlatform(
-  input: AdChangeInput,
-  plan: Plan,
-  deps: AdChangeDeps,
-  secrets: string[],
-): Promise<Record<string, unknown>> {
-  if (input.platform === "google") {
-    const cfg = readAdsConfig(deps.env);
-    if (!cfg) throw new GoogleApiError("Google Ads yapılandırılmamış", 400);
-    const token = await getAccessToken(cfg, deps.fetchFn);
-    secrets.push(token);
-    if (plan.kind === "budget") {
-      const micros = Math.round(plan.newTl * 1_000_000);
-      await googleSetBudget(cfg, token, plan.target, micros, deps.fetchFn);
-      return { daily_budget_micros: micros };
-    }
-    const status = plan.kind === "pause" ? "PAUSED" : "ENABLED";
-    await googleSetStatus(cfg, token, input.objectId, status, deps.fetchFn);
-    return { status };
-  }
+/** Tek işlem boyunca platform bağlantısı: yapılandırma bir kez okunur, Google erişim anahtarı bir kez alınır. */
+type PlatformSession = {
+  readBudgetTl(target: string): Promise<number>;
+  apply(input: AdChangeInput, plan: Plan): Promise<void>;
+};
 
-  const cfg = readMetaConfig(deps.env);
-  if (!cfg) throw new MetaApiError("Meta yapılandırılmamış", 400);
-  if (plan.kind === "budget") {
-    // TRY ×100 (kuruş) — TEYİTSİZ (meta/writes.ts).
-    await metaSetDailyBudget(cfg, plan.target, Math.round(plan.newTl * 100), deps.fetchFn);
-    return { daily_budget_micros: Math.round(plan.newTl * 1_000_000) };
+function platformSession(platform: "google" | "meta", deps: AdChangeDeps, secrets: string[]): PlatformSession {
+  if (platform === "google") {
+    let tokenPromise: Promise<{ cfg: AdsConfig; token: string }> | null = null;
+    const auth = () =>
+      (tokenPromise ??= (async () => {
+        const cfg = readAdsConfig(deps.env);
+        if (!cfg) throw new GoogleApiError("Google Ads yapılandırılmamış", 400);
+        const token = await getAccessToken(cfg, deps.fetchFn);
+        secrets.push(token);
+        return { cfg, token };
+      })());
+    return {
+      async readBudgetTl(target) {
+        const { cfg, token } = await auth();
+        return (await googleGetBudgetMicros(cfg, token, target, deps.fetchFn)) / 1_000_000;
+      },
+      async apply(input, plan) {
+        const { cfg, token } = await auth();
+        if (plan.kind === "budget") {
+          await googleSetBudget(cfg, token, plan.target, Math.round(plan.newTl * 1_000_000), deps.fetchFn);
+        } else {
+          await googleSetStatus(cfg, token, input.objectId, plan.kind === "pause" ? "PAUSED" : "ENABLED", deps.fetchFn);
+        }
+      },
+    };
   }
-  const status = plan.kind === "pause" ? "PAUSED" : "ACTIVE";
-  await metaSetStatus(cfg, input.objectId, status, deps.fetchFn);
-  return { status };
+  const metaCfg = () => {
+    const cfg = readMetaConfig(deps.env);
+    if (!cfg) throw new MetaApiError("Meta yapılandırılmamış", 400);
+    return cfg;
+  };
+  return {
+    async readBudgetTl(target) {
+      // TRY ×100 (kuruş) — TEYİTSİZ (meta/writes.ts).
+      return (await metaGetDailyBudget(metaCfg(), target, deps.fetchFn)) / 100;
+    },
+    async apply(input, plan) {
+      const cfg = metaCfg();
+      if (plan.kind === "budget") {
+        await metaSetDailyBudget(cfg, plan.target, Math.round(plan.newTl * 100), deps.fetchFn);
+      } else {
+        await metaSetStatus(cfg, input.objectId, plan.kind === "pause" ? "PAUSED" : "ACTIVE", deps.fetchFn);
+      }
+    },
+  };
 }
 
 function successMessage(name: string, plan: Plan): string {
@@ -210,10 +229,11 @@ function successMessage(name: string, plan: Plan): string {
 }
 
 /**
- * Değişiklik kapısı. Sıra: doğrula → ad_objects'ten eski değer → (artışta) kapı ve büyütme sınırı →
- * ad_change_log → canlı yazım açıksa platform → kayıt sonucu (+ ad_objects).
+ * Değişiklik kapısı. Sıra: doğrula → ad_objects'ten eski değer (canlı yazım açıksa bütçe platformdan da okunur,
+ * eski değer platformdaki tutar) → (artışta) kapı ve büyütme sınırı → ad_change_log → canlı yazım açıksa platform →
+ * kayıt sonucu (+ ad_objects).
  * Kırmızı kapıda ya da haftalık büyütme sınırını aşan artışta en az 10 karakter gerekçe zorunlu;
- * durdurma, başlatma ve azaltma gerekçesiz.
+ * durdurma, başlatma ve azaltma gerekçesiz. Canlı bütçe okunamazsa değişiklik artış sayılır.
  */
 export async function executeAdChange(deps: AdChangeDeps, input: AdChangeInput): Promise<AdChangeResult> {
   const invalid = validate(input);
@@ -225,44 +245,65 @@ export async function executeAdChange(deps: AdChangeDeps, input: AdChangeInput):
   const reason = typeof input.reason === "string" && input.reason.trim() ? input.reason.trim().slice(0, MAX_REASON) : null;
   const hasReason = (reason?.length ?? 0) >= MIN_REASON;
   const now = deps.now?.() ?? new Date();
+  const enabled = adsWriteEnabled(deps.env);
+  const secrets: string[] = [];
+  const session = platformSession(input.platform, deps, secrets);
 
   let plan: Plan;
+  // Bütçe için kayda geçen ek bilgi (canlı okuma).
+  let liveNote: Record<string, unknown> = {};
+  let liveFailed = false;
   if (input.kind === "budget") {
     if (!obj.budgetResource) return { error: "Bu nesnenin günlük bütçesi yok; bütçe başka düzeyde olabilir." };
-    const oldTl = obj.dailyBudgetMicros === null ? null : roundKurus(obj.dailyBudgetMicros / 1_000_000);
+    const rowTl = obj.dailyBudgetMicros === null ? null : roundKurus(obj.dailyBudgetMicros / 1_000_000);
+    let oldTl = rowTl;
+    if (enabled) {
+      // Satır bayat olabilir (ör. Reklam Yöneticisi'nde 200→100 indirilmiş): eski değer platformdaki tutardır,
+      // böylece 100→190 artışı satıra göre "200→190 azaltma" gibi görünüp kapıyı atlatamaz.
+      try {
+        const liveTl = roundKurus(await session.readBudgetTl(obj.budgetResource));
+        oldTl = liveTl;
+        liveNote = { live_budget_tl: liveTl };
+      } catch {
+        liveFailed = true;
+        liveNote = { live_budget_tl: null, canli_okuma: "basarisiz" };
+      }
+    }
     const newTl = roundKurus(input.newDailyBudgetTl as number);
-    if (oldTl !== null && newTl === oldTl) return { error: "Bütçe değişmedi." };
+    if (!liveFailed && oldTl !== null && newTl === oldTl) return { error: "Bütçe değişmedi." };
     plan = { kind: "budget", target: obj.budgetResource, oldTl, newTl };
-  } else if (input.kind === "pause") {
-    if (obj.status && PAUSED.has(obj.status)) return { error: "Bu reklam zaten durdurulmuş." };
-    plan = { kind: "pause", oldStatus: obj.status, newStatus: "PAUSED" };
   } else {
-    if (obj.status && RUNNING.has(obj.status)) return { error: "Bu reklam zaten çalışıyor." };
-    plan = { kind: "resume", oldStatus: obj.status, newStatus: input.platform === "google" ? "ENABLED" : "ACTIVE" };
+    // Satırdaki durum bayat olabilir; durdurma/başlatma platformda tekrar edilse de zararsız, engellenmez.
+    plan =
+      input.kind === "pause"
+        ? { kind: "pause", oldStatus: obj.status, newStatus: "PAUSED" }
+        : { kind: "resume", oldStatus: obj.status, newStatus: input.platform === "google" ? "ENABLED" : "ACTIVE" };
   }
 
-  const isIncrease = plan.kind === "budget" ? plan.oldTl === null || plan.newTl > plan.oldTl : false;
+  const isIncrease = plan.kind === "budget" ? liveFailed || plan.oldTl === null || plan.newTl > plan.oldTl : false;
 
   // Kapılar her işlemde kayda geçmek için hesaplanır; yalnız artışta engeller (Review Focus 1-2).
   let gate: GateStatus = { red: false, labels: [] };
+  let gateFailed = false;
   try {
     gate = await deps.gateStatus();
   } catch {
     if (isIncrease) return { error: "Bu haftanın kapıları hesaplanamadı; bütçe artışı şimdilik yapılamaz." };
+    gateFailed = true;
   }
 
   if (isIncrease && plan.kind === "budget") {
-    // Sınır haftanın başındaki bütçeye göre: 150→180→216 gibi basamaklı artış da yakalanır.
     if (gate.red && !hasReason) {
       return {
         error: `Bu hafta bir kapı kırmızı (${gate.labels.join(", ")}). Bütçe artışı önerilmiyor. Yine de yapacaksanız nedenini yazın (en az ${MIN_REASON} karakter).`,
         needsReason: true,
       };
     }
+    // Sınır haftanın başındaki bütçeye göre ve bütçe kaynağı başına: 150→180→216 gibi basamaklı artış da,
+    // aynı bütçeyi paylaşan satırlardan ayrı ayrı artış da yakalanır.
     const settings = await deps.settings();
-    const base =
-      (await deps.store.weekBudgetBaselineTl(input.platform, input.level, input.objectId, weekRange(mondayOf(istanbulDateString(now))).from)) ??
-      plan.oldTl;
+    const since = weekRange(mondayOf(istanbulDateString(now))).from;
+    const base = (await deps.store.weekBudgetBaselineTl(input.platform, plan.target, since)) ?? plan.oldTl;
     const pct = base && base > 0 ? ((plan.newTl - base) / base) * 100 : Number.POSITIVE_INFINITY;
     if (pct > settings.scaleMaxPct + 1e-9 && !hasReason) {
       const detail = Number.isFinite(pct) ? ` (bu hafta +%${Math.round(pct)})` : " (eski bütçe bilinmiyor)";
@@ -273,15 +314,21 @@ export async function executeAdChange(deps: AdChangeDeps, input: AdChangeInput):
     }
   }
 
-  const enabled = adsWriteEnabled(deps.env);
+  const gateNote = gateFailed ? { kapi: "hesaplanamadı" } : {};
   const row: AdChangeLogRow = {
     platform: input.platform,
     level: input.level,
     objectId: input.objectId,
     objectName: name,
     action: input.kind,
-    oldValue: plan.kind === "budget" ? { daily_budget_tl: plan.oldTl } : { status: plan.oldStatus },
-    newValue: plan.kind === "budget" ? { daily_budget_tl: plan.newTl } : { status: plan.newStatus },
+    oldValue:
+      plan.kind === "budget"
+        ? { daily_budget_tl: plan.oldTl, budget_resource: plan.target, ...liveNote }
+        : { status: plan.oldStatus },
+    newValue:
+      plan.kind === "budget"
+        ? { daily_budget_tl: plan.newTl, budget_resource: plan.target, ...gateNote }
+        : { status: plan.newStatus, ...gateNote },
     reason,
     gateRed: gate.red,
     source: input.source,
@@ -301,22 +348,28 @@ export async function executeAdChange(deps: AdChangeDeps, input: AdChangeInput):
 
   if (!enabled) return { ok: true, status: "uygulanmadi_kapali", message: CLOSED_MESSAGE };
 
-  const secrets: string[] = [];
-  let patch: Record<string, unknown>;
   try {
-    patch = await callPlatform(input, plan, deps, secrets);
+    await session.apply(input, plan);
   } catch (err) {
     const text = platformErrorText(err, deps.env, secrets);
     await deps.store.updateLog(logId, { status: "hata", error: text }).catch(() => undefined);
     return { error: `Uygulanamadı: ${text} · kayda geçti` };
   }
 
+  // Platformda uygulandı. İki güncelleme ayrı: biri başarısız olsa da öteki yapılır; sabah eşitlemesi düzeltir.
   try {
     await deps.store.updateLog(logId, { status: "uygulandi", error: null });
-    await deps.store.updateObject(input.platform, input.level, input.objectId, patch);
   } catch {
-    // Platformda uygulandı; kayıt güncellenemezse sabah eşitlemesi ad_objects'i düzeltir.
     console.error("[ads] değişiklik kaydı güncellenemedi");
+  }
+  try {
+    if (plan.kind === "budget") {
+      await deps.store.updateBudgetRows(input.platform, plan.target, Math.round(plan.newTl * 1_000_000));
+    } else {
+      await deps.store.updateObject(input.platform, input.level, input.objectId, { status: plan.newStatus });
+    }
+  } catch {
+    console.error("[ads] reklam nesnesi güncellenemedi");
   }
   return { ok: true, status: "uygulandi", message: successMessage(name, plan) };
 }
@@ -361,14 +414,13 @@ export function supabaseAdChangeStore(db: SupabaseClient): AdChangeStore & {
         budgetResource: r.budget_resource,
       };
     },
-    async weekBudgetBaselineTl(platform, level, objectId, sinceIso) {
+    async weekBudgetBaselineTl(platform, budgetResource, sinceIso) {
       const { data, error } = await db
         .from("ad_change_log")
         .select("old_value")
         .eq("platform", platform)
-        .eq("level", level)
-        .eq("object_id", objectId)
         .eq("action", "budget")
+        .eq("new_value->>budget_resource", budgetResource)
         .eq("status", "uygulandi")
         .gte("created_at", sinceIso)
         .order("created_at", { ascending: true })
@@ -412,6 +464,14 @@ export function supabaseAdChangeStore(db: SupabaseClient): AdChangeStore & {
         .eq("platform", platform)
         .eq("level", level)
         .eq("object_id", objectId);
+      must(error);
+    },
+    async updateBudgetRows(platform, budgetResource, micros) {
+      const { error } = await db
+        .from("ad_objects")
+        .update({ daily_budget_micros: micros })
+        .eq("platform", platform)
+        .eq("budget_resource", budgetResource);
       must(error);
     },
     async linkContent(platform, adId, code, actorId) {

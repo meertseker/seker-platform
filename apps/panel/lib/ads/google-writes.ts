@@ -1,11 +1,19 @@
 // Google Ads'e yazma: kampanya durumu ve günlük bütçe. Yalnız değişiklik kapısı (lib/ads/writes.ts) çağırır.
 import { GOOGLE_ADS_API_VERSION, type AdsConfig } from "./config";
-import { GoogleApiError } from "./googleAds";
+import { GoogleApiError, searchStream } from "./googleAds";
 import type { FetchFn } from "./types";
 
 const MUTATE_TIMEOUT_MS = 30_000;
 const MAX_ERROR_LENGTH = 500;
 const DIGITS = /^\d{1,30}$/;
+
+/** Yalnız bu müşterinin bütçe kaynağı: `customers/<cid>/campaignBudgets/<rakam>`. Sorguya da girdiği için katı. */
+function assertBudgetResource(cfg: AdsConfig, budgetResource: string): void {
+  const prefix = `customers/${cfg.customerId}/campaignBudgets/`;
+  if (!budgetResource.startsWith(prefix) || !DIGITS.test(budgetResource.slice(prefix.length))) {
+    throw new GoogleApiError("Geçersiz bütçe kaynağı", 400);
+  }
+}
 
 function baseUrl(cfg: AdsConfig): string {
   return `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${cfg.customerId}`;
@@ -86,10 +94,7 @@ export async function googleSetBudget(
   amountMicros: number,
   fetchFn: FetchFn = fetch,
 ): Promise<void> {
-  const prefix = `customers/${cfg.customerId}/campaignBudgets/`;
-  if (!budgetResource.startsWith(prefix) || !DIGITS.test(budgetResource.slice(prefix.length))) {
-    throw new GoogleApiError("Geçersiz bütçe kaynağı", 400);
-  }
+  assertBudgetResource(cfg, budgetResource);
   if (!Number.isSafeInteger(amountMicros) || amountMicros <= 0) throw new GoogleApiError("Geçersiz bütçe tutarı", 400);
   await mutate(
     cfg,
@@ -99,4 +104,24 @@ export async function googleSetBudget(
     "Google bütçesi değiştirilemedi",
     fetchFn,
   );
+}
+
+/**
+ * Bütçenin platformdaki güncel günlük tutarı (mikro). Satır bayat olabileceği için yazmadan önce okunur.
+ * GAQL `campaign_budget.amount_micros`; kaynak: https://developers.google.com/google-ads/api/fields/v25/campaign_budget
+ */
+export async function googleGetBudgetMicros(
+  cfg: AdsConfig,
+  token: string,
+  budgetResource: string,
+  fetchFn: FetchFn = fetch,
+): Promise<number> {
+  assertBudgetResource(cfg, budgetResource);
+  const query =
+    "SELECT campaign_budget.amount_micros FROM campaign_budget " +
+    `WHERE campaign_budget.resource_name = '${budgetResource}'`;
+  const rows = (await searchStream(cfg, token, query, fetchFn)) as { campaignBudget?: { amountMicros?: string | number } }[];
+  const micros = Number(rows[0]?.campaignBudget?.amountMicros);
+  if (!Number.isSafeInteger(micros) || micros <= 0) throw new GoogleApiError("Google bütçesi okunamadı", 502);
+  return micros;
 }
