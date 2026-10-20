@@ -55,9 +55,12 @@ describe("compare72h", () => {
   });
 });
 
-function fakeDb(items: { id: string; ig_permalink: string | null; ig_media_id: string | null; ig_published_at?: string | null }[]) {
+function fakeDb(
+  items: { id: string; ig_permalink: string | null; ig_media_id: string | null; ig_published_at?: string | null }[],
+  relinked: string[] = [],
+) {
   const upserts: unknown[] = [];
-  const updates: { patch: unknown; id: unknown }[] = [];
+  const updates: { patch: unknown; id: unknown; filters?: unknown[][] }[] = [];
   const db = {
     from: (table: string) => {
       if (table === "content_items") {
@@ -66,12 +69,20 @@ function fakeDb(items: { id: string; ig_permalink: string | null; ig_media_id: s
           eq: () => q,
           not: () => q,
           then: (res: (v: unknown) => void) => res({ data: items, error: null }),
-          update: (patch: unknown) => ({
-            eq: (_c: string, id: unknown) => {
-              updates.push({ patch, id });
-              return Promise.resolve({ error: null });
-            },
-          }),
+          update: (patch: unknown) => {
+            const filters: unknown[][] = [];
+            const u: Record<string, unknown> = {
+              eq: (c: string, v: unknown) => (filters.push([c, v]), u),
+              select: () => u,
+              then: (res: (v: unknown) => void) => {
+                const id = filters.find((f) => f[0] === "id")?.[1];
+                updates.push({ patch, id, filters });
+                // Senkron sırasında bağlantısı değişen kart eşleşmez.
+                res({ data: relinked.includes(id as string) ? [] : [{ id }], error: null });
+              },
+            };
+            return u;
+          },
         };
         return q;
       }
@@ -123,8 +134,23 @@ describe("syncOrganicStats", () => {
     const { db, upserts, updates } = fakeDb([{ id: "c1", ig_permalink: "https://www.instagram.com/reel/X/", ig_media_id: null }]);
     const n = await syncOrganicStats({ cfg, db: db as never, fetchFn: fetchFn as never, now: NOW });
     expect(n).toBe(1);
-    expect(updates[0]).toEqual({ patch: { ig_media_id: "99", ig_published_at: "2026-10-13T09:30:00.000Z" }, id: "c1" });
+    expect(updates[0]).toMatchObject({ patch: { ig_media_id: "99", ig_published_at: "2026-10-13T09:30:00.000Z" }, id: "c1" });
     expect(upserts[0]).toMatchObject({ content_id: "c1", day: "2026-10-20", views: 7, avg_watch_ms: 1500 });
+  });
+});
+
+describe("syncOrganicStats bağlantı yarışı", () => {
+  it("senkron sırasında bağlantı değişirse eski medya kimliği yazılmaz, eski sayılar eklenmez", async () => {
+    const fetchFn = vi.fn(async (url: string) =>
+      url.includes("/media?")
+        ? new Response(JSON.stringify({ data: [{ id: "99", permalink: "https://www.instagram.com/reel/X/", timestamp: "2026-10-13T09:30:00+0000" }] }))
+        : new Response(JSON.stringify({ data: [{ name: "views", values: [{ value: 7 }] }] })),
+    );
+    const { db, upserts, updates } = fakeDb([{ id: "c1", ig_permalink: "https://www.instagram.com/reel/X/", ig_media_id: null }], ["c1"]);
+    const n = await syncOrganicStats({ cfg, db: db as never, fetchFn: fetchFn as never, now: NOW });
+    expect(updates[0].filters).toContainEqual(["ig_permalink", "https://www.instagram.com/reel/X/"]);
+    expect(n).toBe(0);
+    expect(upserts).toHaveLength(0);
   });
 });
 

@@ -56,8 +56,15 @@ export async function syncOrganicStats(deps: { cfg: MetaConfig; db: SupabaseClie
           if (published) patch.ig_published_at = published;
           mediaId = hit.id;
           if (Object.keys(patch).length > 0) {
-            const { error: upErr } = await db.from("content_items").update(patch).eq("id", item.id);
+            // Senkron sürerken bağlantı değiştiyse eski gönderinin kimliği yeni bağlantıya yazılmaz.
+            const { data: hitRows, error: upErr } = await db
+              .from("content_items")
+              .update(patch)
+              .eq("id", item.id)
+              .eq("ig_permalink", item.ig_permalink)
+              .select("id");
             if (upErr) throw new Error("medya kimliği yazılamadı");
+            if (!hitRows || hitRows.length === 0) continue; // yeni bağlantı yarınki senkronda çözülür
           }
         }
       }
