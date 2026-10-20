@@ -2,7 +2,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ageFromBirth } from "@/lib/lead-flow/age";
 import { type BusinessHours, businessMinutesBetween, clockStart } from "@/lib/lead-flow/business-hours";
-import { FOLLOWUP_STEPS } from "@/lib/lead-flow/followups";
+import { FOLLOWUP_STEPS, LEAD_TASK_KINDS } from "@/lib/lead-flow/followups";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 
 /** Listeye düşen kaynaklar; `channel` doluysa (mesajdan / formdan gelen) kaynak fark etmez. */
@@ -202,7 +202,7 @@ export type FollowupRow = {
 };
 
 /** Otomatik görev kurallarının önekleri (followups.ts, recordCall). */
-const AUTO_RULE_KINDS = new Set(["takip", "geri", "noshow", "hatirlat", "ziyaret", "kontenjan"]);
+const AUTO_RULE_KINDS = new Set<string>(LEAD_TASK_KINDS);
 
 export function isAutoRuleKey(ruleKey: string | null): boolean {
   return !!ruleKey && AUTO_RULE_KINDS.has(ruleKey.split(":")[0]);
@@ -296,13 +296,14 @@ export function labelFollowups(rows: FollowupRow[], now: Date): FollowupItem[] {
 }
 
 /**
- * Saf (R27): kapanmış (kazanıldı/kaybedildi) ya da öğrenciye dönmüş velinin arama takibi (takip:, geri:)
- * listelenmez; eski kalmış açık satırlar da böylece düşer. Velisiz ve diğer görevler (kontenjan dahil) kalır.
+ * Saf (R27): kapanmış (kazanıldı/kaybedildi) ya da öğrenciye dönmüş velinin otomatik görevleri (takip, geri,
+ * gelmedi, hatırlatma, ziyaret) listelenmez; eski kalmış açık satırlar da böylece düşer. Velisiz, elle açılmış
+ * ve kontenjan görevleri (kayıp sonrası mesaj) kalır.
  */
 export function dropClosedLeadFollowups(rows: FollowupRow[]): FollowupRow[] {
   return rows.filter((r) => {
     const kind = (r.rule_key ?? "").split(":")[0];
-    if (kind !== "takip" && kind !== "geri") return true;
+    if (!AUTO_RULE_KINDS.has(kind) || kind === "kontenjan") return true;
     const lead = Array.isArray(r.lead) ? (r.lead[0] ?? null) : (r.lead ?? null);
     if (!lead) return true;
     return !lead.converted_student_id && lead.status !== "kazanildi" && lead.status !== "kaybedildi";

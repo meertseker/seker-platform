@@ -49,8 +49,16 @@ beforeEach(() => {
   logEvent.mockClear();
 });
 
-const closes = (prefix: string) =>
-  ops.filter((o) => o.table === "tasks" && o.op === "update" && o.filters.some((f) => f[0] === "like" && f[2] === `${prefix}%`));
+/** Velinin (lead_id) görevlerini `pattern` like deseniyle kapatan güncellemeler. */
+const closesLike = (pattern: string) =>
+  ops.filter(
+    (o) =>
+      o.table === "tasks" &&
+      o.op === "update" &&
+      o.filters.some((f) => f[0] === "like" && f[2] === pattern) &&
+      o.filters.some((f) => f[0] === "eq" && f[1] === "lead_id" && f[2] === "L1"),
+  );
+const closes = (prefix: string) => closesLike(`${prefix}%`);
 
 describe("updateLeadStatus · kontenjan görevi", () => {
   it("yeniden açılan (kaybedildi'den çıkan) velide açık kontenjan görevi kapanır", async () => {
@@ -97,39 +105,49 @@ describe("logCallOutcome (eski arama paneli, R24)", () => {
     expect(leadPatch()).not.toHaveProperty("first_contact_at");
   });
 
-  it("Ulaştım takip ve geri arama görevlerini kapatır; Açmadı kapatmaz", async () => {
+  it("Ulaştım açık arama görevlerini (takip, geri, gelmedi, ziyaret araması) kapatır; Açmadı kapatmaz", async () => {
     leadRow = { status: "ulasildi", converted_student_id: null, first_contact_at: "2026-10-01T08:00:00Z" };
     await logCallOutcome({ leadId: "L1", outcome: "acmadi" });
-    expect(closes("takip:L1:")).toHaveLength(0);
-    expect(closes("geri:L1")).toHaveLength(0);
+    expect(closes("takip:")).toHaveLength(0);
+    expect(closes("geri:")).toHaveLength(0);
     await logCallOutcome({ leadId: "L1", outcome: "ulastim", next: "sonra" });
-    expect(closes("takip:L1:")).toHaveLength(1);
-    expect(closes("geri:L1")).toHaveLength(1);
+    expect(closes("takip:")).toHaveLength(1);
+    expect(closes("geri:")).toHaveLength(1);
+    expect(closes("noshow:")).toHaveLength(1);
+    expect(closesLike("ziyaret:%:2")).toHaveLength(1);
+    expect(closesLike("ziyaret:%:3")).toHaveLength(1);
+    // Teşekkür mesajı ve hatırlatma arama değildir; kontenjan kayıp sonrası mesajdır.
+    expect(closesLike("ziyaret:%:1")).toHaveLength(0);
+    expect(closes("ziyaret:")).toHaveLength(0);
+    expect(closes("hatirlat:")).toHaveLength(0);
+    expect(closes("kontenjan:")).toHaveLength(0);
   });
 });
 
 describe("updateLeadStatus · kapanışta arama takibi (R27)", () => {
-  it("kazanıldı takip ve geri arama görevlerini kapatır", async () => {
+  it("kazanıldı velinin tüm açık otomatik görevlerini kapatır", async () => {
     leadRow = { status: "teklif", converted_student_id: null };
     expect(await updateLeadStatus("L1", "kazanildi")).toEqual({});
-    expect(closes("takip:L1:")).toHaveLength(1);
-    expect(closes("geri:L1")).toHaveLength(1);
-    expect(closes("takip:L1:")[0].payload).toEqual({ status: "tamamlandi" });
+    for (const kind of ["takip", "geri", "noshow", "hatirlat", "ziyaret", "kontenjan"]) {
+      expect(closes(`${kind}:`), kind).toHaveLength(1);
+    }
+    expect(closes("takip:")[0].payload).toEqual({ status: "tamamlandi" });
   });
 
-  it("kaybedildi takip ve geri aramayı kapatır, kontenjan görevine dokunmaz", async () => {
+  it("kaybedildi kontenjan dışındaki tüm görevleri kapatır", async () => {
     leadRow = { status: "ulasildi", converted_student_id: null };
     await updateLeadStatus("L1", "kaybedildi", "fiyat");
-    expect(closes("takip:L1:")).toHaveLength(1);
-    expect(closes("geri:L1")).toHaveLength(1);
+    for (const kind of ["takip", "geri", "noshow", "hatirlat", "ziyaret"]) {
+      expect(closes(`${kind}:`), kind).toHaveLength(1);
+    }
     expect(kontenjanCloses()).toHaveLength(0);
+    expect(closes("kontenjan:")).toHaveLength(0);
   });
 
   it("açık durumlar arası geçişte kapatmaz", async () => {
     leadRow = { status: "ulasildi", converted_student_id: null };
     await updateLeadStatus("L1", "randevu");
-    expect(closes("takip:L1:")).toHaveLength(0);
-    expect(closes("geri:L1")).toHaveLength(0);
+    expect(ops.filter((o) => o.table === "tasks" && o.op === "update")).toHaveLength(0);
   });
 
   it("kapanış hata verirse durum olayı yine yazılır", async () => {

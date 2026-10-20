@@ -261,17 +261,21 @@ describe("dropClosedLeadFollowups (R27)", () => {
     id: "l1", parent_name: "Veli", phone: "+905005550001", status, converted_student_id,
   });
 
-  it("kapanmış ya da öğrenciye dönmüş velinin takip ve geri arama satırı düşer", () => {
+  it("kapanmış ya da öğrenciye dönmüş velinin arama/hatırlatma/ziyaret satırları düşer; kontenjan kalır", () => {
     const kept = dropClosedLeadFollowups([
       row("acik-takip", "takip:l1:2", lead("ulasildi")),
+      row("acik-noshow", "noshow:a1", lead("randevu")),
       row("kazanildi-takip", "takip:l1:2", lead("kazanildi")),
       row("kaybedildi-geri", "geri:l1", lead("kaybedildi")),
+      row("kaybedildi-noshow", "noshow:a1", lead("kaybedildi")),
+      row("kaybedildi-hatirlat", "hatirlat:a1:sabah", lead("kaybedildi")),
+      row("donmus-ziyaret", "ziyaret:a1:2", lead("teklif", "s1")),
       row("donmus-geri", "geri:l1", lead("teklif", "s1")),
       row("kontenjan", "kontenjan:l1", lead("kaybedildi")),
       row("elle", null, lead("kazanildi")),
       row("velisiz", "takip:l1:2", null),
     ]);
-    expect(kept.map((r) => r.id)).toEqual(["acik-takip", "kontenjan", "elle", "velisiz"]);
+    expect(kept.map((r) => r.id)).toEqual(["acik-takip", "acik-noshow", "kontenjan", "elle", "velisiz"]);
   });
 });
 

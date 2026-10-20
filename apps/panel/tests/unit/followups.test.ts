@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_BUSINESS_HOURS as H, istanbulAt } from "@/lib/lead-flow/business-hours";
 import {
+  CALL_TASK_KINDS,
   FOLLOWUP_STEPS,
+  LEAD_TASK_KINDS,
+  LOST_LEAD_TASK_KINDS,
+  VISIT_CALL_STEPS,
   afterVisitTasks,
   appointmentTasks,
   followupAfterAttempt,
@@ -146,5 +150,28 @@ describe("kontenjanTask", () => {
   it("hafta sonuna düşerse sonraki mesai gününe kayar", () => {
     // 2026-11-06 Cuma + 30 gün = 2026-12-06 Pazar -> Pazartesi
     expect(kontenjanTask("L1", "A", at("2026-11-06", "10:00"), H).dueAt).toEqual(at("2026-12-07", "10:00"));
+  });
+});
+
+describe("görev türü listeleri", () => {
+  it("veliye bağlı otomatik görev türleri tek listede", () => {
+    expect([...LEAD_TASK_KINDS]).toEqual(["takip", "geri", "noshow", "hatirlat", "ziyaret", "kontenjan"]);
+  });
+
+  it("arama kaydı takip, geri arama ve gelmedi görevlerini karşılar; mesaj adımları kalır", () => {
+    expect([...CALL_TASK_KINDS]).toEqual(["takip", "geri", "noshow"]);
+    expect(CALL_TASK_KINDS).not.toContain("hatirlat");
+    expect(CALL_TASK_KINDS).not.toContain("kontenjan");
+  });
+
+  it("ziyaret sonrası arama adımları afterVisitTasks ile aynı", () => {
+    const steps = afterVisitTasks("A1", "Ayşe", at("2026-11-05", "16:30"), H)
+      .filter((t) => t.kind === "arama")
+      .map((t) => Number(t.ruleKey.split(":").pop()));
+    expect(steps).toEqual([...VISIT_CALL_STEPS]);
+  });
+
+  it("kayıpta kontenjan dışındaki tüm görevler kapanır", () => {
+    expect([...LOST_LEAD_TASK_KINDS]).toEqual(["takip", "geri", "noshow", "hatirlat", "ziyaret"]);
   });
 });

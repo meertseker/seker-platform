@@ -70,6 +70,11 @@ function defaultRespond(o: Op) {
 
 const inserts = (table: string) => ops.filter((o) => o.table === table && o.op === "insert").map((o) => o.payload as Record<string, unknown>);
 const updates = (table: string) => ops.filter((o) => o.table === table && o.op === "update");
+/** Kapatılan görev desenleri (like); velinin görevleri lead_id ile seçilir. */
+const closedPatterns = () =>
+  updates("tasks")
+    .filter((u) => u.filters.some((f) => f[0] === "eq" && f[1] === "lead_id" && f[2] === "L1"))
+    .flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
 /** Üstlenme dışındaki ortak lead güncellemeleri. */
 const leadPatches = () => updates("leads").filter((o) => !isClaim(o));
 
@@ -127,9 +132,10 @@ describe("recordCall", () => {
     if (!("done" in r)) throw new Error("done bekleniyordu");
     expect(r.done[0]).toBe("Sonraki arama görevi açıldı: Salı 3 Kasım 18:30");
     expect(inserts("tasks")[0]).toMatchObject({ rule_key: "takip:L1:4" });
-    const close = updates("tasks").find((u) => u.filters.some((f) => f[0] === "like" && f[2] === "takip:L1:%"));
+    const close = updates("tasks").find((u) => u.filters.some((f) => f[0] === "like" && f[2] === "takip:%"));
     expect(close?.payload).toEqual({ status: "tamamlandi" });
     expect(close?.filters).toContainEqual(["eq", "status", "acik"]);
+    expect(close?.filters).toContainEqual(["eq", "lead_id", "L1"]);
     expect((leadPatches()[0].payload as Record<string, unknown>).first_contact_at).toBeUndefined();
   });
 
@@ -148,9 +154,9 @@ describe("recordCall", () => {
     });
     expect((leadPatches()[0].payload as Record<string, unknown>).q_reached).toBe(true);
     expect(leadPatches()[0].payload).toMatchObject({ q_age_ok: true, q_area_ok: true, q_timing_ok: true });
-    const closed = updates("tasks").flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
-    expect(closed).toContain("takip:L1:%");
-    expect(closed).toContain("kontenjan:L1%");
+    expect(closedPatterns()).toContain("takip:%");
+    const all = updates("tasks").flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
+    expect(all).toContain("kontenjan:L1%");
     // Hatırlatmaları createAppointment kurar; recordCall yeni randevuda tekrar yazmaz.
     expect(inserts("tasks")).toEqual([]);
   });
@@ -237,8 +243,19 @@ describe("recordCall", () => {
     const r = await recordCall({ leadId: "L1", result: "uygun_degil", quals, notFitReason: "yas_uymuyor" });
     expect(updateLeadStatus).toHaveBeenCalledWith("L1", "kaybedildi", "yas_uymuyor");
     expect(r).toEqual({ done: ["Kayıt kapatıldı · neden: Yaş uymuyor", "Açık takip görevleri kapandı"], closed: true });
-    const closed = updates("tasks").flatMap((u) => u.filters.filter((f) => f[0] === "like").map((f) => f[2]));
-    expect(closed).toContain("takip:L1:%");
+    expect(closedPatterns()).toContain("takip:%");
+  });
+
+  it("her arama kaydı velinin açık arama görevlerini kapatır: takip, geri, gelmedi, ziyaret 2-3", async () => {
+    lead.first_contact_at = "2026-11-02T07:00:00Z";
+    lead.status = "randevu";
+    await recordCall({ leadId: "L1", result: "geri_ara", quals, callbackAt: "2026-11-04T15:00" });
+    const closed = closedPatterns();
+    expect(closed).toEqual(expect.arrayContaining(["takip:%", "geri:%", "noshow:%", "ziyaret:%:2", "ziyaret:%:3"]));
+    // Teşekkür mesajı (ziyaret:1) ve hatırlatmalar arama değildir, kalır.
+    expect(closed).not.toContain("ziyaret:%:1");
+    expect(closed).not.toContain("ziyaret:%");
+    expect(closed).not.toContain("hatirlat:%");
   });
 
   it("ilk temastan önce başkası üstlendiyse hiçbir şey yazmadan reddeder", async () => {

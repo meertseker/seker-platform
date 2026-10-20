@@ -2,7 +2,7 @@
 // (one_open_auto_task_per_rule); aynı kural ikinci kez açılmaz.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { istanbulDateString } from "./business-hours";
-import type { PlannedTask } from "./followups";
+import { CALL_TASK_KINDS, LEAD_TASK_KINDS, type LeadTaskKind, type PlannedTask, VISIT_CALL_STEPS } from "./followups";
 
 /** LIKE desenindeki özel karakterleri kaçırır. */
 function likePrefix(prefix: string): string {
@@ -49,17 +49,53 @@ export async function closeTasksByPrefix(supabase: SupabaseClient, prefix: strin
   if (error) throw new Error(`Görevler kapatılamadı: ${error.message}`);
 }
 
+/** Velinin rule_key'i `<tür>:` ile başlayan açık görevlerini tamamlar; tek güncelleme. */
+async function closeLeadTasksLike(supabase: SupabaseClient, leadId: string, pattern: string): Promise<void> {
+  const { error } = await supabase
+    .from("tasks")
+    .update({ status: "tamamlandi" })
+    .eq("status", "acik")
+    .eq("lead_id", leadId)
+    .like("rule_key", pattern);
+  if (error) throw new Error(`Görevler kapatılamadı: ${error.message}`);
+}
+
 /**
- * R27: veli kapandı (kazanıldı/kaybedildi) ya da öğrenciye döndü; arama takibi (takip:, geri:) artık geçersizdir.
- * Kontenjan görevine dokunulmaz (7 gün sonu kaybedildi'de kurulur). Hata yutulur ve loglanır: çağıran
- * asıl yazısını yapmıştır, açık kalan satırı Bugün ekranı zaten göstermez (loadFollowupTasks).
+ * Velinin verilen türlerdeki açık görevlerini kapatır. lead_id ile seçilir: randevu anahtarlı görevler
+ * (hatirlat:<randevu>, noshow:<randevu>, ziyaret:<randevu>:n) de kapsanır.
  */
-export async function closeCallFollowups(supabase: SupabaseClient, leadId: string, context: string): Promise<void> {
+export async function closeLeadTasks(
+  supabase: SupabaseClient,
+  leadId: string,
+  kinds: readonly LeadTaskKind[],
+): Promise<void> {
+  for (const kind of kinds) await closeLeadTasksLike(supabase, leadId, likePrefix(`${kind}:`));
+}
+
+/**
+ * Arama kaydı: veli arandı, bekleyen arama görevleri (takip:, geri:, noshow:, ziyaret:n arama adımları)
+ * karşılandı. Mesaj adımları (teşekkür, hatırlatma, kontenjan) arama değildir, kalır.
+ */
+export async function closeCallTasks(supabase: SupabaseClient, leadId: string): Promise<void> {
+  await closeLeadTasks(supabase, leadId, CALL_TASK_KINDS);
+  for (const step of VISIT_CALL_STEPS) await closeLeadTasksLike(supabase, leadId, `ziyaret:%:${step}`);
+}
+
+/**
+ * R27: veli kapandı (kazanıldı/kaybedildi) ya da öğrenciye döndü; verilen türlerdeki görevler geçersizdir
+ * (varsayılan hepsi). Hata yutulur ve loglanır: çağıran asıl yazısını yapmıştır, açık kalan satırı
+ * Bugün ekranı zaten göstermez (dropClosedLeadFollowups).
+ */
+export async function closeLeadTasksQuietly(
+  supabase: SupabaseClient,
+  leadId: string,
+  context: string,
+  kinds: readonly LeadTaskKind[] = LEAD_TASK_KINDS,
+): Promise<void> {
   try {
-    await closeTasksByPrefix(supabase, `takip:${leadId}:`);
-    await closeTasksByPrefix(supabase, `geri:${leadId}`);
+    await closeLeadTasks(supabase, leadId, kinds);
   } catch (e) {
-    console.error(`${context} takip/geri:`, e);
+    console.error(`${context} görev kapatma:`, e);
   }
 }
 

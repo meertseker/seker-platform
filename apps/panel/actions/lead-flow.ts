@@ -11,7 +11,7 @@ import { formatDayTime, parseIstanbulDateTime } from "@/lib/lead-flow/business-h
 import { appointmentTasks, followupAfterAttempt, kontenjanTask, type PlannedTask } from "@/lib/lead-flow/followups";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { callWaLink } from "@/lib/lead-flow/call-wa";
-import { closeTasksByPrefix, tasksByPrefix, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
+import { closeCallTasks, closeTasksByPrefix, tasksByPrefix, upsertPlannedTasks } from "@/lib/lead-flow/tasks-store";
 import { alreadyContacted, claimLeadAs, type ClaimResult } from "@/lib/lead-flow/claim";
 import { normalizeTurkishPhone } from "@/lib/phone";
 import { inQueueWindow, isInQueue } from "@/lib/queries/call-queue";
@@ -304,9 +304,8 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
       },
     });
 
-    // Bu arama yapıldı: bekleyen geri arama ve takip görevleri karşılandı.
-    await closeTasksByPrefix(supabase, `geri:${leadId}`);
-    await closeTasksByPrefix(supabase, `takip:${leadId}:`);
+    // Bu arama yapıldı: bekleyen arama görevleri (geri, takip, gelmedi, ziyaret sonrası arama) karşılandı.
+    await closeCallTasks(supabase, leadId);
     // Ulaşıldı: kayıp sonrası "1 ay sonra kontenjan" denemesine gerek kalmadı.
     if (result === "randevu" || result === "geri_ara") await closeTasksByPrefix(supabase, `kontenjan:${leadId}`);
 

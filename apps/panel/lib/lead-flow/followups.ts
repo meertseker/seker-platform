@@ -19,6 +19,22 @@ export type PlannedTask = {
 
 export const FOLLOWUP_STEPS = 5;
 
+/**
+ * Veliye bağlı otomatik görev türleri (rule_key öneki). Bugün ekranı (isAutoRuleKey), kapanış ve arama
+ * kaydı kuralları bu listeden türetilir; yeni tür buraya eklenir, dize sabitleri başka yere yazılmaz.
+ */
+export const LEAD_TASK_KINDS = ["takip", "geri", "noshow", "hatirlat", "ziyaret", "kontenjan"] as const;
+export type LeadTaskKind = (typeof LEAD_TASK_KINDS)[number];
+
+/** Bir arama kaydının karşıladığı görev türleri: veli arandı, bekleyen arama görevleri bitti. Mesaj adımları kalır. */
+export const CALL_TASK_KINDS: readonly LeadTaskKind[] = ["takip", "geri", "noshow"];
+
+/** afterVisitTasks'ın arama adımları; 1 teşekkür mesajıdır, arama kaydı onu kapatmaz. */
+export const VISIT_CALL_STEPS = [2, 3] as const;
+
+/** Veli kaybedilince geçersizleşen görevler. Kontenjan kayıpta kurulur, kalır. */
+export const LOST_LEAD_TASK_KINDS: readonly LeadTaskKind[] = ["takip", "geri", "noshow", "hatirlat", "ziyaret"];
+
 const HOUR_MS = 60 * 60 * 1000;
 const MAX_SHIFT = 14;
 
@@ -138,8 +154,8 @@ export function afterVisitTasks(
       templateKey: "ziyaret_tesekkur",
       dueAt: at(1),
     },
-    { ruleKey: `ziyaret:${apptId}:2`, title: `Ziyaret sonrası arama · ${leadName}`, kind: "arama", dueAt: at(2) },
-    { ruleKey: `ziyaret:${apptId}:3`, title: `Ziyaret sonrası arama · ${leadName}`, kind: "arama", dueAt: at(7) },
+    { ruleKey: `ziyaret:${apptId}:${VISIT_CALL_STEPS[0]}`, title: `Ziyaret sonrası arama · ${leadName}`, kind: "arama", dueAt: at(2) },
+    { ruleKey: `ziyaret:${apptId}:${VISIT_CALL_STEPS[1]}`, title: `Ziyaret sonrası arama · ${leadName}`, kind: "arama", dueAt: at(7) },
   ];
 }
 
