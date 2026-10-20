@@ -98,7 +98,7 @@ create trigger content_items_touch before update on public.content_items
   for each row execute function public.touch_updated_at();
 
 -- Video yolu, MEB teslim kuralı, teslim damgası ve öğretmenin durum kuralı.
--- (a), (b) ve (d) service_role dahil herkese uygulanır; (c) yalnız içeriğin sahibi öğretmene
+-- (a), (b) ve (d) service_role dahil herkese uygulanır; (c) ve (e) yalnız içeriğin sahibi öğretmene
 -- (service_role: auth.uid() boş; yönetici: is_ogretmen() yanlış → kısıtsız).
 create or replace function public.content_items_guard() returns trigger
 language plpgsql set search_path = '' as $$
@@ -130,6 +130,17 @@ begin
      and public.is_ogretmen()
      and (old.status not in ('taslak','duzeltme') or new.status is distinct from old.status) then
     raise exception 'Bu içerik şu an değiştirilemez' using errcode = '42501';
+  end if;
+
+  -- (e) MEB: öğretmen videoyu değiştirip yüz cevabını aynı güncellemede değiştirmezse eski cevap
+  -- yeni videoyu kapsamaz; soru yeniden sorulur (sunucu eylemi atlansa da).
+  if tg_op = 'UPDATE'
+     and (select auth.uid()) is not null
+     and (select auth.uid()) = old.owner_id
+     and public.is_ogretmen()
+     and new.media_path is distinct from old.media_path
+     and new.face_answer is not distinct from old.face_answer then
+    new.face_answer := null;
   end if;
 
   -- (d) Teslime geçişte zaman ve Kontrol aşaması burada damgalanır; istemcinin değeri geçersizdir.

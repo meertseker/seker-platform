@@ -283,6 +283,24 @@ describe("öğretmen rolü: içerik", () => {
     }
   });
 
+  it("öğretmen videoyu doğrudan değiştirirse eski yüz cevabı silinir", async () => {
+    const fresh = await newReels(OGR_ID, { face_answer: null });
+    const first = `${OGR_ID}/${fresh.id}/ilk.mp4`;
+    // Video ve cevap aynı güncellemede değişirse cevap korunur.
+    const both = await ogr.from("content_items").update({ media_path: first, face_answer: false }).eq("id", fresh.id).select("face_answer").single();
+    expect(both.error).toBeNull();
+    expect(both.data!.face_answer).toBe(false);
+    // Yalnız video değişirse "Hayır" yeni videoyu kapsamaz.
+    const only = await ogr.from("content_items").update({ media_path: `${OGR_ID}/${fresh.id}/yeni.mp4` })
+      .eq("id", fresh.id).select("face_answer").single();
+    expect(only.error).toBeNull();
+    expect(only.data!.face_answer).toBeNull();
+    // Yazı kaydı cevabı silmez.
+    await admin.from("content_items").update({ face_answer: false }).eq("id", fresh.id);
+    const text = await ogr.from("content_items").update({ caption: "x" }).eq("id", fresh.id).select("face_answer").single();
+    expect(text.data!.face_answer).toBe(false);
+  });
+
   it("kod, tür ve platform tutarlı olmalı", async () => {
     const base = { week_start: WEEK, topic: "x", owner_id: OGR_ID };
     const bad = [
