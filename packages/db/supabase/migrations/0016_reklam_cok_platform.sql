@@ -9,7 +9,9 @@ alter table public.leads
   add column fbp text,
   add column meta_event_id text,
   add column consent_version smallint,
-  add column ad_cookie_consent boolean;
+  add column ad_cookie_consent boolean,
+  -- Başvuru isteğinin tarayıcı bilgisi: CAPI 'website' Lead olayında zorunlu; yalnız çerez onayıyla yazılır.
+  add column client_user_agent text;
 
 -- Geri doldurma: gclid dolu ya da source='reklam' olanlar Google.
 update public.leads set ad_platform = 'google'
@@ -98,7 +100,8 @@ begin
   end if;
 
   v_google := not (coalesce(new.gclid, '') = '' and new.source <> 'reklam');
-  v_meta := new.ad_platform = 'meta';
+  -- gclid kazanır: sonradan gclid alan Meta velisi yalnız Google'a bildirilir (K10 ile tutarlı).
+  v_meta := coalesce(new.ad_platform, '') = 'meta' and not v_google;
   if not v_google and not v_meta then
     return new;
   end if;
@@ -159,6 +162,10 @@ begin
        or coalesce(new.web_payload, '{}'::jsonb)->>'consent_scope' = 'arama' then
       v_meta_status := 'atlandi';
       v_meta_error := 'onay yalnızca arama için';
+    elsif coalesce(new.consent_version, 0) < 2 then
+      -- v1 onay metni Meta'yı kapsamaz; satır kalıcı "bekliyor" görünmesin diye baştan atlanır (TS K9 ile aynı neden).
+      v_meta_status := 'atlandi';
+      v_meta_error := 'onay sürümü eski (Meta yok)';
     end if;
 
     foreach v_action in array v_actions loop
@@ -223,13 +230,15 @@ declare
   v_birth_month smallint := case when (v_meta->>'child_birth_month') ~ '^\d{1,2}$'
                                   and (v_meta->>'child_birth_month')::int between 1 and 12
                                  then (v_meta->>'child_birth_month')::smallint end;
-  v_fbclid text := nullif(left(btrim(coalesce(v_meta->>'fbclid', '')), 200), '');
-  v_fbc text := nullif(left(btrim(coalesce(v_meta->>'fbc', '')), 200), '');
+  -- fbclid/fbc uzun olabilir; kırpılırsa Meta eşleşmesi bozulur (web katmanıyla aynı 500 sınırı).
+  v_fbclid text := nullif(left(btrim(coalesce(v_meta->>'fbclid', '')), 500), '');
+  v_fbc text := nullif(left(btrim(coalesce(v_meta->>'fbc', '')), 500), '');
   v_fbp text := nullif(left(btrim(coalesce(v_meta->>'fbp', '')), 200), '');
   v_event_id text := nullif(left(btrim(coalesce(v_meta->>'meta_event_id', '')), 200), '');
   v_consent_version smallint := case when (v_meta->>'consent_version') ~ '^[1-9]$'
                                      then (v_meta->>'consent_version')::smallint end;
   v_cookie_consent boolean := case v_meta->>'ad_cookie_consent' when 'true' then true when 'false' then false end;
+  v_user_agent text := nullif(left(btrim(coalesce(v_meta->>'client_user_agent', '')), 400), '');
   v_ad_platform text;
   v_birth_year smallint := case when (v_meta->>'child_birth_year') ~ '^\d{4}$'
                                  and (v_meta->>'child_birth_year')::int between 2010 and 2035
@@ -256,7 +265,7 @@ begin
   v_campaign := v_utm->>'utm_campaign';
   v_payload := jsonb_build_object('gclid', v_gclid, 'landing_path', v_path, 'utm', v_utm,
                                   'consent_at', p_consent_at)
-               || (v_meta - 'silent');
+               || (v_meta - 'silent' - 'client_user_agent');
 
   -- Aynı telefondan eşzamanlı iki istek iki kart açmasın.
   perform pg_advisory_xact_lock(hashtext('create_web_lead:' || p_phone));
@@ -292,6 +301,7 @@ begin
            meta_event_id = coalesce(meta_event_id, v_event_id),
            consent_version = coalesce(consent_version, v_consent_version),
            ad_cookie_consent = coalesce(ad_cookie_consent, v_cookie_consent),
+           client_user_agent = coalesce(client_user_agent, v_user_agent),
            -- İçe aktarma (consent_scope var) onayı yükseltmez; yalnızca canlı form onayı yazılır.
            consent_at = case when v_meta ? 'consent_scope' then consent_at
                              else coalesce(consent_at, p_consent_at) end
@@ -346,7 +356,7 @@ begin
     landing_path, consent_at, web_payload,
     channel, content_code, district, start_window, wants_whatsapp,
     child_birth_month, child_birth_year,
-    ad_platform, fbclid, fbc, fbp, meta_event_id, consent_version, ad_cookie_consent
+    ad_platform, fbclid, fbc, fbp, meta_event_id, consent_version, ad_cookie_consent, client_user_agent
   ) values (
     v_name, p_phone, v_source, coalesce(v_campaign, v_path), 'yeni', v_assignee,
     v_gclid, v_utm->>'utm_source', v_utm->>'utm_medium', v_campaign,
@@ -354,18 +364,21 @@ begin
     v_path, p_consent_at, v_payload,
     'form', v_content_code, v_district, v_start_window, v_wants_wa,
     v_birth_month, v_birth_year,
-    v_ad_platform, v_fbclid, v_fbc, v_fbp, v_event_id, v_consent_version, v_cookie_consent
+    v_ad_platform, v_fbclid, v_fbc, v_fbp, v_event_id, v_consent_version, v_cookie_consent, v_user_agent
   ) returning id into v_lead_id;
 
   insert into public.events (entity_type, entity_id, event_type, actor_id, payload)
   values ('lead', v_lead_id, 'web_basvuru', null, v_payload);
 
   -- Meta reklam velisi: form 'Lead' olayı kuyruğa girer (gönderim uygunluğu TS'te).
+  -- v2 olmayan onay Meta'yı kapsamaz: satır baştan atlandi (kalıcı "bekliyor" görünmesin).
   if v_ad_platform = 'meta' then
     insert into public.conversion_uploads
-      (lead_id, conversion_action, conversion_at, status, platform, click_id_type, event_id)
-    values (v_lead_id, 'lead', now(), 'bekliyor', 'meta',
-            case when v_fbc is not null then 'fbc' end, v_event_id)
+      (lead_id, conversion_action, conversion_at, status, error, platform, click_id_type, event_id)
+    values (v_lead_id, 'lead', now(),
+            case when coalesce(v_consent_version, 0) < 2 then 'atlandi' else 'bekliyor' end,
+            case when coalesce(v_consent_version, 0) < 2 then 'onay sürümü eski (Meta yok)' end,
+            'meta', case when v_fbc is not null then 'fbc' end, v_event_id)
     on conflict (lead_id, conversion_action, platform) do nothing;
   end if;
 
