@@ -224,26 +224,44 @@ describe("öğretmen rolü: içerik", () => {
     expect(r.error).not.toBeNull();
   });
 
-  it("düzeltme istenen içeriği öğretmen yeniden teslim eder", async () => {
-    const item = await newReels(OGR_ID, { status: "duzeltme" });
-    const r = await ogr.from("content_items").update({
-      status: "teslim", face_answer: false, media_path: `${OGR_ID}/${item.id}/v2.mp4`,
-      submitted_at: new Date().toISOString(),
-    }).eq("id", item.id).select();
-    expect(r.error).toBeNull();
-    expect(r.data).toHaveLength(1);
+  it("öğretmen durumu ve teslim zamanını doğrudan değiştiremez (teslim yalnız submitContent ile)", async () => {
+    for (const status of ["taslak", "duzeltme"]) {
+      const item = await newReels(OGR_ID, { status, face_answer: false, media_path: null });
+      const path = `${OGR_ID}/${item.id}/v.mp4`;
+      const r = await ogr.from("content_items")
+        .update({ status: "teslim", face_answer: false, media_path: path }).eq("id", item.id).select();
+      expect(r.error, status).not.toBeNull();
+      const t = await ogr.from("content_items")
+        .update({ submitted_at: "2020-01-01T00:00:00Z" }).eq("id", item.id).select();
+      expect(t.error, status).not.toBeNull();
+      const { data } = await admin.from("content_items").select("status, submitted_at").eq("id", item.id).single();
+      expect(data).toEqual({ status, submitted_at: null });
+    }
   });
 
-  it("öğretmen doğrudan PATCH ile yüz Evet iken teslim edemez", async () => {
+  it("teslimde tetikleyici zamanı ve kontrol aşamasını damgalar", async () => {
+    const item = await newReels(OGR_ID, { status: "duzeltme" });
+    const before = Date.now();
+    const r = await admin.from("content_items").update({
+      status: "teslim", face_answer: false, media_path: `${OGR_ID}/${item.id}/v2.mp4`,
+      submitted_at: "2020-01-01T00:00:00Z", stage: "gorev",
+    }).eq("id", item.id).select("status, stage, submitted_at, stage_changed_at").single();
+    expect(r.error).toBeNull();
+    expect(r.data).toMatchObject({ status: "teslim", stage: "kontrol" });
+    expect(Date.parse(r.data!.submitted_at as string)).toBeGreaterThan(before - 60_000);
+    expect(Date.parse(r.data!.stage_changed_at as string)).toBeGreaterThan(before - 60_000);
+  });
+
+  it("Reels teslimi yüz Evet, cevapsız ya da videosuzken veritabanında da reddedilir", async () => {
     const item = await newReels(OGR_ID);
     const path = `${OGR_ID}/${item.id}/v.mp4`;
-    const yes = await ogr.from("content_items").update({ status: "teslim", face_answer: true, media_path: path }).eq("id", item.id);
+    const yes = await admin.from("content_items").update({ status: "teslim", face_answer: true, media_path: path }).eq("id", item.id);
     expect(yes.error?.code).toBe("23514");
-    const none = await ogr.from("content_items").update({ status: "teslim", media_path: path }).eq("id", item.id);
+    const none = await admin.from("content_items").update({ status: "teslim", media_path: path }).eq("id", item.id);
     expect(none.error?.code).toBe("23514");
-    const noVideo = await ogr.from("content_items").update({ status: "teslim", face_answer: false }).eq("id", item.id);
+    const noVideo = await admin.from("content_items").update({ status: "teslim", face_answer: false, media_path: null }).eq("id", item.id);
     expect(noVideo.error?.code).toBe("23514");
-    const no = await ogr.from("content_items")
+    const no = await admin.from("content_items")
       .update({ status: "teslim", face_answer: false, media_path: path }).eq("id", item.id).select();
     expect(no.error).toBeNull();
     expect(no.data).toHaveLength(1);

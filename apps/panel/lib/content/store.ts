@@ -81,14 +81,15 @@ function foldTr(s: string): string {
     .replace(/[̀-ͯ]/g, "");
 }
 
-/** Depo dosya adı: yalnız [a-z0-9._-], klasör ve ".." içermez; uzantı türden gelir. */
-export function safeVideoFileName(fileName: string, mime: string): string {
+/** Depo dosya adı: yalnız [a-z0-9._-], klasör ve ".." içermez; uzantı türden gelir, sonuna tekil ek konur. */
+export function safeVideoFileName(fileName: string, mime: string, suffix: string): string {
   const base = fileName.split(/[\\/]/).pop() ?? "";
   const dot = base.lastIndexOf(".");
   const stem = dot > 0 ? base.slice(0, dot) : base;
   const ext = mime === "video/quicktime" ? "mov" : "mp4";
   const clean = foldTr(stem).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60).replace(/-+$/, "");
-  return `${clean || "video"}.${ext}`;
+  const tail = suffix.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return `${clean || "video"}${tail ? `-${tail}` : ""}.${ext}`;
 }
 
 /** Yol yalnız <owner_id>/<content_id>/<dosya-adı> (DB tetikleyicisiyle aynı kural). */
