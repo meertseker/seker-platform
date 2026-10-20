@@ -5,6 +5,10 @@ let notifs: Notif[] = [];
 let yoneticiler: Array<{ id: string }> = [];
 let appts: Array<Record<string, unknown>> = [];
 let installments: Array<{ amount: number }> = [];
+// #4: günlük cron, takipsiz listesinden ileri tarihli ziyareti olan veliyi düşürür (loadFutureVisitLeadIds).
+let futureAppts: Array<{ lead_id: string | null; scheduled_at: string }> = [];
+let staleLeads: Array<{ id: string; parent_name: string; assigned_to: string }> = [];
+let taskInserts: Array<Record<string, unknown>> = [];
 let updateError: { message: string } | null = null;
 let insertFailFor = new Set<string>();
 let seq = 0;
@@ -17,6 +21,8 @@ function query(table: string) {
   type Pred = (n: Notif) => boolean;
   const preds: Pred[] = [];
   let patch: Record<string, unknown> | null = null;
+  // appointments iki sorguda okunur: bugünkü randevular (gte/lte) ve ileri tarihli ziyaretler (gt).
+  let futureQuery = false;
   const q: Record<string, unknown> = {
     select: () => q,
     update: (p: Record<string, unknown>) => {
@@ -31,6 +37,7 @@ function query(table: string) {
     not: () => q,
     gte: () => q,
     lte: () => q,
+    gt: () => ((futureQuery = true), q),
     limit: () => q,
     maybeSingle: () => Promise.resolve({ data: null, error: null }),
     single: () => Promise.resolve({ data: { value: 3 }, error: null }),
@@ -40,6 +47,7 @@ function query(table: string) {
         if (list.some((r) => insertFailFor.has(r.user_id))) return Promise.resolve({ error: { message: "insert boom" } });
         for (const r of list) notifs.push({ ...r, id: `n${++seq}`, read_at: null });
       }
+      if (table === "tasks") taskInserts.push(rows as Record<string, unknown>);
       return Promise.resolve({ error: null });
     },
     then: (resolve: (v: unknown) => void) => {
@@ -53,7 +61,8 @@ function query(table: string) {
         return resolve({ data: hit.map((n) => ({ id: n.id })), error: null });
       }
       if (table === "profiles") return resolve({ data: yoneticiler, error: null });
-      if (table === "appointments") return resolve({ data: appts, error: null });
+      if (table === "appointments") return resolve({ data: futureQuery ? futureAppts : appts, error: null });
+      if (table === "leads") return resolve({ data: staleLeads, error: null });
       if (table === "installments") return resolve({ data: installments, error: null });
       return resolve({ data: [], error: null });
     },
@@ -80,6 +89,9 @@ beforeEach(() => {
   yoneticiler = [{ id: "y1" }];
   appts = [];
   installments = [];
+  futureAppts = [];
+  staleLeads = [];
+  taskInserts = [];
   vi.stubEnv("CRON_SECRET", "s3cret");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://x");
   vi.stubEnv("SUPABASE_SECRET_KEY", "k");
@@ -99,6 +111,17 @@ describe("GET /api/cron/daily", () => {
     expect((await GET(request())).status).toBe(401);
     expect((await GET(request("Bearer yanlis"))).status).toBe(401);
     expect(notifs).toHaveLength(0);
+  });
+
+  it("ileri tarihli ziyareti olan veliye takipsiz görevi açılmaz", async () => {
+    staleLeads = [
+      { id: "l1", parent_name: "Ayşe", assigned_to: "c1" },
+      { id: "l2", parent_name: "Fatma", assigned_to: "c1" },
+    ];
+    futureAppts = [{ lead_id: "l1", scheduled_at: "2026-10-25T10:00:00+03:00" }];
+    const res = await GET(request(OK));
+    expect(res.status).toBe(200);
+    expect(taskInserts.map((t) => t.rule_key)).toEqual(["takipsiz:l2"]);
   });
 
   it("randevu_bugun payload'ı parentName taşır (nesne ve dizi join'i)", async () => {

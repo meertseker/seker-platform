@@ -11,8 +11,9 @@ function query(table: string) {
     select: () => q,
     eq: () => q,
     limit: () => q,
-    insert: (row: Record<string, unknown>) => {
-      inserts.push(row);
+    // insertNotifications satırları dizi olarak yazar; tek satır da kabul edilir.
+    insert: (rows: Record<string, unknown> | Array<Record<string, unknown>>) => {
+      inserts.push(...(Array.isArray(rows) ? rows : [rows]));
       return Promise.resolve({ error: null });
     },
     then: (resolve: (value: unknown) => void) => {
