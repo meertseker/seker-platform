@@ -120,7 +120,7 @@ export default function NewLeadPage() {
         className="flex min-h-14 items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-input/60 bg-surface px-4 text-[15px] font-semibold text-foreground transition-colors hover:border-primary hover:text-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <MessageCirclePlus aria-hidden className="size-5" />
-        Instagram / WhatsApp'tan mı yazdı? Hızlı ekle
+        {"Instagram / WhatsApp'tan mı yazdı? Hızlı ekle"}
       </Link>
 
       <form
