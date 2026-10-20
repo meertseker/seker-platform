@@ -4,12 +4,14 @@ import { tlToKurus } from "./money";
 /** Kural §8.1: takipsizlik kontrolüne giren açık lead durumları. */
 export type StaleLeadStatus = Extract<
   LeadStatus,
-  "yeni" | "ulasildi" | "gorusme_yapildi" | "teklif"
+  "yeni" | "ulasildi" | "randevu" | "gorusme_yapildi" | "teklif"
 >;
 
+// randevu da listede (H1/H7): ziyareti sonuçlanmamış ya da iptal edilmiş veli sessiz kalınca görünsün.
 export const STALE_LEAD_STATUSES: StaleLeadStatus[] = [
   "yeni",
   "ulasildi",
+  "randevu",
   "gorusme_yapildi",
   "teklif",
 ];

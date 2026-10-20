@@ -9,9 +9,11 @@ import {
 
 describe("STALE_LEAD_STATUSES (spec §8.1)", () => {
   it("takipsizlik kuralına giren açık lead durumlarını listeler", () => {
+    // randevu da listede: ziyaret sonrası ya da iptal sonrası sessiz kalan veli görünsün (H1/H7).
     expect(STALE_LEAD_STATUSES).toEqual([
       "yeni",
       "ulasildi",
+      "randevu",
       "gorusme_yapildi",
       "teklif",
     ]);

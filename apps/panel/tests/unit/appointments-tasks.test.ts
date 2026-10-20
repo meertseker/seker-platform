@@ -61,6 +61,7 @@ beforeEach(() => {
   failTaskInsert = false;
   vi.clearAllMocks();
   getSessionProfile.mockResolvedValue({ id: "caller" });
+  updateLeadStatus.mockResolvedValue({});
   tables = {
     "leads:select": { id: "L1", status: "yeni", parent_name: "Ayşe Hanım", assigned_to: "agent" },
     "appointments:insert": { id: "A1" },
@@ -98,20 +99,63 @@ describe("randevu görevleri", () => {
     expect(taskInserts().every((x) => x.assigned_to === "creator")).toBe(true);
   });
 
-  it("gelmedi işaretlenince hatırlatmalar kapanır, aynı gün noshow görevi kurulur", async () => {
-    await setAppointmentOutcome("A1", "gelmedi");
+  it("geldi: randevu durumundaki veli görüşme yapıldı olur ve yapılanlar listelenir (B1)", async () => {
+    (tables["appointments:update"] as { lead: Record<string, unknown> }).lead.status = "randevu";
+    const res = await setAppointmentOutcome("A1", "geldi");
+    expect(res.error).toBeUndefined();
+    expect(updateLeadStatus).toHaveBeenCalledWith("L1", "gorusme_yapildi");
+    // Pazartesi 2 Kasım ziyareti: +1 Salı, +2 Çarşamba, +7 Pazartesi 9 Kasım, hepsi 10:00.
+    expect(res.done).toEqual([
+      "Veli \"Görüşme yapıldı\" durumuna geçti",
+      "Teşekkür mesajı görevi: Salı 3 Kasım 10:00",
+      "Ziyaret sonrası arama görevi: Çarşamba 4 Kasım 10:00",
+      "Son arama görevi: Pazartesi 9 Kasım 10:00",
+    ]);
+  });
+
+  it("geldi: yeni ve ulaşıldı da görüşme yapıldıya geçer; teklif ve sonrası değişmez", async () => {
+    const lead = (tables["appointments:update"] as { lead: Record<string, unknown> }).lead;
+    for (const status of ["yeni", "ulasildi"]) {
+      updateLeadStatus.mockClear();
+      lead.status = status;
+      await setAppointmentOutcome("A1", "geldi");
+      expect(updateLeadStatus).toHaveBeenCalledWith("L1", "gorusme_yapildi");
+    }
+    for (const status of ["gorusme_yapildi", "teklif", "beklemede", "kazanildi"]) {
+      updateLeadStatus.mockClear();
+      lead.status = status;
+      const res = await setAppointmentOutcome("A1", "geldi");
+      expect(updateLeadStatus).not.toHaveBeenCalled();
+      expect(res.done?.[0]).toBe("Teşekkür mesajı görevi: Salı 3 Kasım 10:00");
+    }
+  });
+
+  it("geldi: durum güncellenemezse sonuç kaydedildi, tekrar bas hatası döner", async () => {
+    (tables["appointments:update"] as { lead: Record<string, unknown> }).lead.status = "randevu";
+    updateLeadStatus.mockResolvedValue({ error: "Durum güncellenemedi" });
+    const res = await setAppointmentOutcome("A1", "geldi");
+    expect(res.error).toBe("Sonuç kaydedildi ama veli durumu güncellenemedi, lütfen tekrar basın");
+  });
+
+  it("gelmedi işaretlenince hatırlatmalar kapanır, aynı gün noshow görevi kurulur, durum değişmez", async () => {
+    (tables["appointments:update"] as { lead: Record<string, unknown> }).lead.status = "randevu";
+    const res = await setAppointmentOutcome("A1", "gelmedi");
     expect(closes().map((c) => c.likes[0])).toEqual(["hatirlat:A1:%"]);
     const t = taskInserts();
     expect(t.map((x) => x.rule_key)).toEqual(["noshow:A1"]);
     expect(t[0].due_date).toBe("2026-11-02");
+    expect(updateLeadStatus).not.toHaveBeenCalled();
+    expect(res.done).toEqual(["Tekrar arama görevi açıldı: Pazartesi 2 Kasım 10:00"]);
   });
 
   it("iptal ya da ertelendi olunca hatırlatmalar kapanır, yeni görev kurulmaz", async () => {
     for (const o of ["iptal", "ertelendi"] as const) {
       ops = [];
-      await setAppointmentOutcome("A1", o);
+      const res = await setAppointmentOutcome("A1", o);
       expect(closes().map((c) => c.likes[0])).toEqual(["hatirlat:A1:%"]);
       expect(taskInserts()).toEqual([]);
+      expect(res.done).toEqual(["Ziyaret hatırlatmaları kapatıldı"]);
+      expect(updateLeadStatus).not.toHaveBeenCalled();
     }
   });
 
