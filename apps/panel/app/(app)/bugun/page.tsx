@@ -27,10 +27,12 @@ import {
 } from "@/lib/constants";
 import {
   STALE_LEAD_STATUSES,
+  dropLeadsWithFutureVisit,
   staleCutoffIso,
   istanbulDateString,
   overdueTotalKurus,
 } from "@/lib/cron-rules";
+import { loadFutureVisitLeadIds } from "@/lib/queries/stale-leads";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { fillTemplate } from "@/lib/lead-flow/template";
 import { reminderMessage } from "@/lib/overdue";
@@ -416,6 +418,7 @@ export default async function Home({
     pendingOffersResult,
     funnel,
     paymentSummary,
+    futureVisitIds,
   ] = await Promise.all([
     staleLeadsQuery,
     supabase
@@ -435,6 +438,8 @@ export default async function Home({
           .then((result) => ({ offers: [], count: result.count ?? 0, error: Boolean(result.error) })),
     getFunnel(month),
     getPaymentSummary(month),
+    // Listeler yüklenemedi uyarısı diğerleriyle aynı yoldan: hata boş kümeye düşer, veli listede kalır.
+    loadFutureVisitLeadIds(supabase, now).catch(() => new Set<string>()),
   ]);
 
   const queue = queueResult.leads;
@@ -450,7 +455,11 @@ export default async function Home({
   const visitsLoadFailed = Boolean(appointmentsResult.error || pastAppointmentsResult.error);
   // Otomatik görevler vakti gelince "Takip aramaları"nda çıkar; burada ✓ ile kapatılıp sırayı durdurmasın (R24).
   const laterTasks = ((laterTasksResult.data ?? []) as unknown as TaskRow[]).filter((t) => !isAutoRuleKey(t.rule_key));
-  const staleLeads = (staleLeadsResult.data ?? []) as unknown as StaleLeadRow[];
+  // İleri tarihli ziyareti olan veli takipsiz değildir (randevu durumu listede olduğu için).
+  const staleLeads = dropLeadsWithFutureVisit(
+    (staleLeadsResult.data ?? []) as unknown as StaleLeadRow[],
+    futureVisitIds,
+  );
   const dueInstallments = (dueInstallmentsResult.data ??
     []) as unknown as DueInstallmentRow[];
   const pendingOfferItems = pendingOffersResult.offers;

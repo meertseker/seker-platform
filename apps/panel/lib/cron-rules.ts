@@ -16,6 +16,27 @@ export const STALE_LEAD_STATUSES: StaleLeadStatus[] = [
   "teklif",
 ];
 
+/** Bekleyen ve ileri tarihli (scheduled_at > now) randevusu olan velilerin kimlikleri. */
+export function futureVisitLeadIds(
+  appointments: { lead_id: string | null; scheduled_at: string }[],
+  now: Date | string,
+): Set<string> {
+  const nowMs = typeof now === "string" ? new Date(now).getTime() : now.getTime();
+  const ids = new Set<string>();
+  for (const a of appointments) {
+    if (a.lead_id && Date.parse(a.scheduled_at) > nowMs) ids.add(a.lead_id);
+  }
+  return ids;
+}
+
+/**
+ * Saf: ileri tarihli bekleyen ziyareti olan veli takipsiz sayılmaz; iş yapılmış, ziyaret günü bekleniyor
+ * (randevu durumu takipsizlik listesine girdiği için). Geçmiş ama sonuçlanmamış randevu korumaz.
+ */
+export function dropLeadsWithFutureVisit<T extends { id: string }>(leads: T[], futureVisitIds: Set<string>): T[] {
+  return leads.filter((l) => !futureVisitIds.has(l.id));
+}
+
 /** `days` gün önceye denk gelen ISO zaman damgasını üretir (spec §8.1 son işlem eşiği). */
 export function staleCutoffIso(now: Date | string, days: number): string {
   const nowMs = typeof now === "string" ? new Date(now).getTime() : now.getTime();

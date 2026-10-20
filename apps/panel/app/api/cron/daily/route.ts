@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   STALE_LEAD_STATUSES,
+  dropLeadsWithFutureVisit,
   staleCutoffIso,
   istanbulDateString,
   isIstanbulMonday,
   overdueTotalKurus,
 } from "@/lib/cron-rules";
 import { formatTRY } from "@/lib/money";
+import { loadFutureVisitLeadIds } from "@/lib/queries/stale-leads";
 
 type StaleLead = {
   id: string;
@@ -69,12 +71,17 @@ export async function GET(req: NextRequest) {
   // Kural 1 (spec §8.1): takipsiz lead görevleri
   const { data: settings } = await db.from("app_settings").select("value").eq("key", "takipsizlik_gun").single();
   const days = Number(settings?.value ?? 3);
-  const cutoff = staleCutoffIso(new Date(), days);
-  const { data: staleLeads } = await db.from("leads")
-    .select("id, parent_name, assigned_to")
-    .in("status", STALE_LEAD_STATUSES)
-    .lt("last_activity_at", cutoff).not("assigned_to", "is", null);
-  for (const l of (staleLeads ?? []) as StaleLead[]) {
+  const now = new Date();
+  const cutoff = staleCutoffIso(now, days);
+  const [{ data: staleLeads }, futureVisitIds] = await Promise.all([
+    db.from("leads")
+      .select("id, parent_name, assigned_to")
+      .in("status", STALE_LEAD_STATUSES)
+      .lt("last_activity_at", cutoff).not("assigned_to", "is", null),
+    loadFutureVisitLeadIds(db, now),
+  ]);
+  // İleri tarihli ziyareti olan veli takipsiz değildir (randevu durumu listede olduğu için).
+  for (const l of dropLeadsWithFutureVisit((staleLeads ?? []) as StaleLead[], futureVisitIds)) {
     await createStaleLeadTask(l, today, days);
   }
 
