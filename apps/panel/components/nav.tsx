@@ -10,6 +10,7 @@ import {
   CalendarCheck,
   CalendarDays,
   ClipboardList,
+  ClipboardPen,
   FileVideo,
   GraduationCap,
   LineChart,
@@ -54,9 +55,13 @@ const mainItems = [
 // Takvim kenar çubuğunda ana menüde; telefonda alt çubuk dolu olduğundan Menü'nün başında.
 const teacherItem = { href: "/gorevim", label: "Görevim", icon: ClipboardList } as const;
 
+// Öğretmene içerik görevi verme: yöneticide Reklam grubunda, danışmanda ana menüde.
+const taskAssignItem = { href: "/reklam/gorev-ver", label: "Görev ver", icon: ClipboardPen } as const;
+
 // Yönetici için "Reklam" grubu.
 const adItems = [
   { href: "/reklam/hafta", label: "Bu hafta", icon: CalendarCheck },
+  taskAssignItem,
   { href: "/reklam/icerik", label: "İçerik panosu", icon: FileVideo },
   { href: "/reklam/kampanyalar", label: "Kampanyalar", icon: LineChart },
   { href: "/reklam/ayarlar", label: "Ayarlar ve hedefler", icon: SlidersHorizontal },
@@ -216,10 +221,10 @@ export function Nav({ fullName, role, notifications, unreadCount, siteEditUrl }:
   const homeHref = isTeacher ? teacherItem.href : HOME_HREF;
   const sideItems: readonly { href: string; label: string; icon: LucideIcon }[] = isTeacher
     ? [teacherItem]
-    : [...mainItems, calendarItem];
+    : [...mainItems, calendarItem, ...(role === "danisman" ? [taskAssignItem] : [])];
   const phoneMenuLinks: readonly ProfileLink[] = isTeacher
     ? []
-    : [calendarItem, ...(role === "yonetici" ? adItems : []), ...visibleProfileLinks];
+    : [calendarItem, ...(role === "yonetici" ? adItems : [taskAssignItem]), ...visibleProfileLinks];
 
   return (
     <>

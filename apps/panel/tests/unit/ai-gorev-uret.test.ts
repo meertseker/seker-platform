@@ -22,7 +22,7 @@ function fakeDb(tables: Tables) {
     b.eq = (c: string, v: unknown) => (filters.push((r) => r[c] === v), b);
     b.in = (c: string, v: unknown[]) => (filters.push((r) => v.includes(r[c])), b);
     b.gte = (c: string, v: string) => (filters.push((r) => String(r[c]) >= v), b);
-    b.not = (c: string, _o: string, _v: null) => (filters.push((r) => r[c] !== null && r[c] !== undefined), b);
+    b.not = (c: string) => (filters.push((r) => r[c] !== null && r[c] !== undefined), b);
     b.order = () => b;
     b.limit = (n: number) => ((limit = n), b);
     b.update = (p: Row) => ((op = "update"), (payload = p), b);

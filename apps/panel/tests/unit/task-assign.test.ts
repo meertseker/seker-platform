@@ -14,7 +14,7 @@ vi.mock("@/lib/auth", () => ({ requireRole: (...r: string[]) => requireRole(...r
 vi.mock("@/actions/content", () => ({ createContentTask: (i: unknown) => createContentTask(i) }));
 
 import { assignContentTasks } from "@/actions/task-assign";
-import { allowedTaskWeeks } from "@/lib/content/slots";
+import { allowedTaskWeeks, defaultTaskDue } from "@/lib/content/slots";
 
 const DAN: Me = { id: "00000000-0000-0000-0000-000000000002", full_name: "Zehra Hanım", role: "danisman", can_edit_site: false };
 const OGR: Me = { id: "00000000-0000-0000-0000-000000000004", full_name: "Rüya Yılmaz", role: "ogretmen", can_edit_site: false };
@@ -35,6 +35,14 @@ describe("allowedTaskWeeks", () => {
     expect(allowedTaskWeeks(new Date("2026-10-21T10:00:00+03:00"))).toEqual(["2026-10-19", "2026-10-26"]);
     // Pazar gecesi İstanbul'da hâlâ önceki hafta.
     expect(allowedTaskWeeks(new Date("2026-10-25T23:30:00+03:00"))).toEqual(["2026-10-19", "2026-10-26"]);
+  });
+});
+
+describe("defaultTaskDue", () => {
+  it("haftanın Perşembesi 17:00; geçtiyse yarın 17:00", () => {
+    expect(defaultTaskDue("2026-10-19", new Date("2026-10-21T10:00:00+03:00"))).toBe("2026-10-22T17:00");
+    expect(defaultTaskDue("2026-10-26", new Date("2026-10-21T10:00:00+03:00"))).toBe("2026-10-29T17:00");
+    expect(defaultTaskDue("2026-10-19", new Date("2026-10-23T09:00:00+03:00"))).toBe("2026-10-24T17:00");
   });
 });
 
