@@ -86,6 +86,13 @@ export async function GET(req: NextRequest) {
     await createStaleLeadTask(l, today, days);
   }
 
+  // Gürültü kontrolü: dünden kalan okunmamış "randevu_bugun" bildirimleri bayatlar; bugünün satırları oluşmadan önce okundu yapılır.
+  // tarih YYYY-MM-DD olduğundan sözcük sırası tarih sırasıyla aynıdır. Hata loglanır, akışı durdurmaz.
+  const { error: staleApptError } = await db.from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("type", "randevu_bugun").is("read_at", null).lt("payload->>tarih", today);
+  if (staleApptError) console.error(`Bayat randevu bildirimleri temizlenemedi: ${staleApptError.message}`);
+
   // Kural 2 (spec §8.2): bugünkü randevu bildirimleri
   const dayStart = `${today}T00:00:00+03:00`, dayEnd = `${today}T23:59:59+03:00`;
   const { data: appts } = await db.from("appointments")
@@ -93,13 +100,19 @@ export async function GET(req: NextRequest) {
     .eq("outcome", "bekliyor").gte("scheduled_at", dayStart).lte("scheduled_at", dayEnd);
   const { data: yoneticiler } = await db.from("profiles").select("id").eq("role", "yonetici").eq("is_active", true);
   for (const a of appts ?? []) {
+    // Supabase join'i nesne ya da dizi döndürebilir.
+    const lead = Array.isArray(a.leads) ? a.leads[0] : a.leads;
+    const parentName: string | null = lead?.parent_name ?? null;
     const targets = new Set([a.created_by, ...(yoneticiler ?? []).map((y) => y.id)]);
     for (const uid of targets) {
       // Cron her tetiklendiğinde aynı randevu için tekrar bildirim atmamak üzere randevu+gün bazında kontrol edilir.
       if (await notificationExists(db, uid, "randevu_bugun", { appointmentId: a.id, tarih: today })) continue;
       const { error } = await insertNotifications(db, [{
         user_id: uid, type: "randevu_bugun",
-        payload: { appointmentId: a.id, leadId: a.lead_id, at: a.scheduled_at, tarih: today },
+        payload: {
+          appointmentId: a.id, leadId: a.lead_id, at: a.scheduled_at, tarih: today,
+          ...(parentName ? { parentName } : {}),
+        },
       }]);
       if (error) console.error(`Bildirim yazılamadı: ${error.message}`);
     }
@@ -123,6 +136,13 @@ export async function GET(req: NextRequest) {
         },
       }]);
       if (error) console.error(`Bildirim yazılamadı: ${error.message}`);
+    }
+    // Yeni özet eskisinin yerini alır: bugünden önceki okunmamış özetler okundu olur (bugünküne dokunulmaz).
+    if (totalKurus > 0) {
+      const { error } = await db.from("notifications")
+        .update({ read_at: new Date().toISOString() })
+        .eq("type", "geciken_ozet").is("read_at", null).lt("payload->>tarih", today);
+      if (error) console.error(`Eski geciken özetler temizlenemedi: ${error.message}`);
     }
   }
   return NextResponse.json({ ok: true, staleLeads: staleLeads?.length ?? 0, appts: appts?.length ?? 0 });
