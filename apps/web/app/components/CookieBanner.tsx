@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { CONSENT_EVENT } from '@/lib/metaPixel';
 import { CONSENT_KEY, readConsent, buildConsentUpdate, type ConsentChoice } from '@/lib/consent';
 
 export default function CookieBanner() {
@@ -22,6 +23,8 @@ export default function CookieBanner() {
   function choose(choice: ConsentChoice) {
     window.localStorage.setItem(CONSENT_KEY, choice);
     window.gtag?.('consent', 'update', buildConsentUpdate(choice));
+    // Meta pikseli gibi onaya bağlı yükleyiciler seçimi buradan öğrenir.
+    window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: choice }));
     setVisible(false);
   }
 

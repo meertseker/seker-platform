@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Fredoka, Nunito, Martian_Mono } from "next/font/google";
 import "./globals.css";
 import Analytics from "./components/Analytics";
+import MetaPixelGate from "./components/MetaPixelGate";
 import ConsentDefaults from "./components/ConsentDefaults";
 import CookieBanner from "./components/CookieBanner";
 import VisitBeacon from "./components/VisitBeacon";
@@ -69,6 +70,7 @@ export default function RootLayout({
       >
         <ConsentDefaults />
         <Analytics />
+        <MetaPixelGate />
         {/* fallback={null} yalnızca altındaki tüm sayfalar önbellekli/önceden üretilmiş olduğu sürece güvenlidir;
             dinamik (istek anında) bir sayfa eklenirse boş kabuk akıtılır ve notFound()/durum kodları bozulur. */}
         <Suspense fallback={null}>
