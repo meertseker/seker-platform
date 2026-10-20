@@ -8,17 +8,23 @@ insert into auth.users (
 values
   ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000000','yonetici@test.local', crypt('sifre123', gen_salt('bf')), now(), 'authenticated','authenticated','{"provider":"email","providers":["email"]}','{}', now(), now(), '', '', '', '', '', '', ''),
   ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000000','danisman@test.local', crypt('sifre123', gen_salt('bf')), now(), 'authenticated','authenticated','{"provider":"email","providers":["email"]}','{}', now(), now(), '', '', '', '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000000','danisman2@test.local', crypt('sifre123', gen_salt('bf')), now(), 'authenticated','authenticated','{"provider":"email","providers":["email"]}','{}', now(), now(), '', '', '', '', '', '', '');
+  ('00000000-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000000','danisman2@test.local', crypt('sifre123', gen_salt('bf')), now(), 'authenticated','authenticated','{"provider":"email","providers":["email"]}','{}', now(), now(), '', '', '', '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000000','ogretmen@test.local', crypt('sifre123', gen_salt('bf')), now(), 'authenticated','authenticated','{"provider":"email","providers":["email"]}','{}', now(), now(), '', '', '', '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000005','00000000-0000-0000-0000-000000000000','ogretmen2@test.local', crypt('sifre123', gen_salt('bf')), now(), 'authenticated','authenticated','{"provider":"email","providers":["email"]}','{}', now(), now(), '', '', '', '', '', '', '');
 insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 values
   (gen_random_uuid(),'00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001','{"sub":"00000000-0000-0000-0000-000000000001","email":"yonetici@test.local"}','email',now(),now(),now()),
   (gen_random_uuid(),'00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000002','{"sub":"00000000-0000-0000-0000-000000000002","email":"danisman@test.local"}','email',now(),now(),now()),
-  (gen_random_uuid(),'00000000-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000003','{"sub":"00000000-0000-0000-0000-000000000003","email":"danisman2@test.local"}','email',now(),now(),now());
+  (gen_random_uuid(),'00000000-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000003','{"sub":"00000000-0000-0000-0000-000000000003","email":"danisman2@test.local"}','email',now(),now(),now()),
+  (gen_random_uuid(),'00000000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000004','{"sub":"00000000-0000-0000-0000-000000000004","email":"ogretmen@test.local"}','email',now(),now(),now()),
+  (gen_random_uuid(),'00000000-0000-0000-0000-000000000005','00000000-0000-0000-0000-000000000005','{"sub":"00000000-0000-0000-0000-000000000005","email":"ogretmen2@test.local"}','email',now(),now(),now());
 
 insert into public.profiles (id, full_name, role) values
   ('00000000-0000-0000-0000-000000000001','Mehtap Hanım (Test)','yonetici'),
   ('00000000-0000-0000-0000-000000000002','Danışman (Test)','danisman'),
-  ('00000000-0000-0000-0000-000000000003','Danışman 2 (Test)','danisman');
+  ('00000000-0000-0000-0000-000000000003','Danışman 2 (Test)','danisman'),
+  ('00000000-0000-0000-0000-000000000004','Ayşe Öğretmen (Test)','ogretmen'),
+  ('00000000-0000-0000-0000-000000000005','Derya Öğretmen (Test)','ogretmen');
 
 insert into public.price_lists (id, season, is_active) values
   ('00000000-0000-0000-0000-00000000000a','2026-2027', true);
