@@ -126,6 +126,7 @@ export default async function CallPage({ params }: { params: Promise<{ id: strin
   const screenLead: CallScreenLead = {
     id: lead.id,
     parentName: lead.parent_name,
+    phone: lead.phone,
     source: lead.source,
     channel: lead.channel,
     sourceDetail: lead.content_code ?? lead.source_detail,
