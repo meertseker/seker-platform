@@ -9,6 +9,8 @@ export interface ReportLead {
   status: LeadStatus;
   converted_student_id: string | null;
   ad_platform?: AdPlatform | null;
+  /** Nitelik sorularından sonra nitelikli işaretlenmiş veli. */
+  is_qualified?: boolean | null;
 }
 
 export interface ReportSpend {
@@ -29,8 +31,11 @@ export interface ReportRow {
   leads: number;
   randevu: number;
   kayit: number;
+  /** Nitelikli veli sayısı. */
+  qualified: number;
   costPerLeadKurus: number | null;
   costPerKayitKurus: number | null;
+  costPerQualifiedKurus: number | null;
 }
 
 export interface MarketingReport {
@@ -47,7 +52,7 @@ const MAX_RANGE_DAYS = 366;
 const DEFAULT_RANGE_DAYS = 29;
 
 function emptyRow(key: string, kind: ReportRow["kind"], rowLabel: string, platform?: AdPlatform): ReportRow {
-  return { key, kind, ...(platform === "meta" ? { platform } : {}), label: rowLabel, spendKurus: 0, leads: 0, randevu: 0, kayit: 0, costPerLeadKurus: null, costPerKayitKurus: null };
+  return { key, kind, ...(platform === "meta" ? { platform } : {}), label: rowLabel, spendKurus: 0, leads: 0, randevu: 0, kayit: 0, qualified: 0, costPerLeadKurus: null, costPerKayitKurus: null, costPerQualifiedKurus: null };
 }
 
 function withCosts(row: ReportRow): ReportRow {
@@ -55,6 +60,7 @@ function withCosts(row: ReportRow): ReportRow {
     ...row,
     costPerLeadKurus: row.spendKurus > 0 && row.leads > 0 ? Math.round(row.spendKurus / row.leads) : null,
     costPerKayitKurus: row.spendKurus > 0 && row.kayit > 0 ? Math.round(row.spendKurus / row.kayit) : null,
+    costPerQualifiedKurus: row.spendKurus > 0 && row.qualified > 0 ? Math.round(row.spendKurus / row.qualified) : null,
   };
 }
 
@@ -103,6 +109,7 @@ export function buildMarketingReport(
     row.leads += 1;
     if (appointmentLeadIds.has(lead.id) || REACHED_RANDEVU.includes(lead.status)) row.randevu += 1;
     if (lead.status === "kazanildi" || lead.converted_student_id) row.kayit += 1;
+    if (lead.is_qualified === true) row.qualified += 1;
     rows.set(key, row);
   }
 
@@ -115,14 +122,17 @@ export function buildMarketingReport(
   // Harcama yalnızca reklamdan gelir: aday/kayıt başı maliyet reklam (kampanya) satırlarına bölünür.
   const adLeads = sum(campaigns, (r) => r.leads);
   const adKayit = sum(campaigns, (r) => r.kayit);
+  const adQualified = sum(campaigns, (r) => r.qualified);
   const total: ReportRow = {
     ...emptyRow("toplam", "kaynak", "Toplam"),
     spendKurus,
     leads: sum(all, (r) => r.leads),
     randevu: sum(all, (r) => r.randevu),
     kayit: sum(all, (r) => r.kayit),
+    qualified: sum(all, (r) => r.qualified),
     costPerLeadKurus: spendKurus > 0 && adLeads > 0 ? Math.round(spendKurus / adLeads) : null,
     costPerKayitKurus: spendKurus > 0 && adKayit > 0 ? Math.round(spendKurus / adKayit) : null,
+    costPerQualifiedKurus: spendKurus > 0 && adQualified > 0 ? Math.round(spendKurus / adQualified) : null,
   };
 
   return { rows: [...campaigns, ...sources], total };
