@@ -209,7 +209,7 @@ export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef
                 className={btnPrimary}
                 disabled={pending || !canApprove}
                 onClick={() =>
-                  run(() => approveContent(item.id, { noStudentFaceOrName: faceChecked }), `${item.code} onaylandı`)
+                  run(() => approveContent(item.id, { noStudentFaceOrName: faceChecked, submittedAt: item.submittedAt }), `${item.code} onaylandı`)
                 }
               >
                 Onayla

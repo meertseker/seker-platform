@@ -50,9 +50,13 @@ type ItemRow = SubmittableRow & {
   owner_id: string;
   status: string;
   stage: string;
+  submitted_at: string | null;
+  updated_at: string;
 };
 
-const ITEM_COLUMNS = "id, code, kind, owner_id, status, stage, caption, page_fields, media_path, face_answer";
+const ITEM_COLUMNS =
+  "id, code, kind, owner_id, status, stage, caption, page_fields, media_path, face_answer, submitted_at, updated_at";
+const CHANGED = "İçerik değişti, sayfayı yenileyin";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -168,11 +172,19 @@ async function loadForManager(contentId: string) {
   return { admin, row: data as ItemRow | null };
 }
 
-export async function approveContent(contentId: string, confirm: { noStudentFaceOrName: boolean }): Promise<Ok> {
+export async function approveContent(
+  contentId: string,
+  confirm: { noStudentFaceOrName: boolean; submittedAt: string | null },
+): Promise<Ok> {
   const profile = await requireRole("yonetici");
   const { admin, row } = await loadForManager(contentId);
   if (!row) return { error: NOT_FOUND };
   if (row.status !== "teslim") return { error: "Yalnız teslim edilmiş içerik onaylanır" };
+  // Onay, yöneticinin incelediği teslime bağlıdır: arada yeniden teslim edildiyse onaylanmaz.
+  const seen = confirm?.submittedAt;
+  if (typeof seen !== "string" || !row.submitted_at || new Date(seen).getTime() !== new Date(row.submitted_at).getTime()) {
+    return { error: CHANGED };
+  }
   const confirmed = confirm?.noStudentFaceOrName === true;
   if (row.kind === "reels") {
     // MEB Ek Madde 4: onaylayan da videoyu izleyip ikinci kontrolü yapar.
@@ -193,8 +205,10 @@ export async function approveContent(contentId: string, confirm: { noStudentFace
     })
     .eq("id", row.id)
     .eq("status", "teslim")
+    .eq("submitted_at", row.submitted_at)
     .select("id");
-  if (error || !data || data.length === 0) return { error: "Onay kaydedilemedi, sayfayı yenileyin" };
+  if (error) return { error: "Onay kaydedilemedi, sayfayı yenileyin" };
+  if (!data || data.length === 0) return { error: CHANGED };
 
   await notify(admin, row.owner_id, "icerik_onay", { contentId: row.id, code: row.code });
   revalidatePath(BOARD);
@@ -421,15 +435,18 @@ export async function submitContent(
 
   // Öğretmenin oturumu durumu değiştiremez (kolon yetkisi yok); teslim kontrollerden sonra burada yazılır.
   // submitted_at, stage='kontrol' ve stage_changed_at aynı güncellemede DB tetikleyicisinde damgalanır.
+  // updated_at eşleşmesi: kontrol edilen sürüm teslim edilir; arada yazı kaydedildiyse satır eşleşmez.
   const { data, error } = await admin
     .from("content_items")
     .update({ status: "teslim" })
     .eq("id", row.id)
     .eq("owner_id", profile.id)
     .in("status", ["taslak", "duzeltme"])
+    .eq("updated_at", row.updated_at)
     .select("id");
   if (error?.code === "23514") return { error: "Öğrenci yüzü ya da adı olan içerik teslim edilemez" };
-  if (error || !data || data.length === 0) return { error: "Teslim edilemedi, sayfayı yenile" };
+  if (error) return { error: "Teslim edilemedi, sayfayı yenile" };
+  if (!data || data.length === 0) return { error: "Yazı değişti, tekrar dene" };
 
   const managers = await activeManagerIds(admin);
   for (const id of managers) {
