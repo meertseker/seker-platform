@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { CONSENT_KEY } from '@/lib/consent';
+import { CONSENT_EVENT } from '@/lib/metaPixel';
 import CookieBanner from '../CookieBanner';
 
 /**
@@ -101,5 +102,21 @@ describe('CookieBanner', () => {
       analytics_storage: 'denied',
     });
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it.each([
+    ['Kabul Et', 'granted'],
+    ['Reddet', 'denied'],
+  ])('"%s" tıklanınca onay olayı %s ayrıntısıyla yayılır', (label, choice) => {
+    Object.defineProperty(window, 'localStorage', { value: storageWith(null), configurable: true });
+    const received: unknown[] = [];
+    const listener = (e: Event) => received.push((e as CustomEvent).detail);
+    window.addEventListener(CONSENT_EVENT, listener);
+
+    render(<CookieBanner />);
+    fireEvent.click(screen.getByRole('button', { name: label }));
+
+    window.removeEventListener(CONSENT_EVENT, listener);
+    expect(received).toEqual([choice]);
   });
 });

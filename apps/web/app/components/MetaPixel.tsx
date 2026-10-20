@@ -39,6 +39,8 @@ function loadPixel(id: string) {
 
 /**
  * Onaya bağlı Meta pikseli. Kimlik boşsa hiçbir şey çizmez; onay yokken ağ isteği yapmaz.
+ * Onay sonradan geri alınırsa (granted -> denied) ele alınmaz: arayüz seçimi sonradan değiştirmeye izin vermiyor.
+ * Tercih değiştirme kontrolü eklenirse fbq('consent','revoke') çağrılmalıdır.
  * Düzenleme modu dışlaması sunucu sarmalayıcıda (MetaPixelGate).
  */
 export default function MetaPixel() {

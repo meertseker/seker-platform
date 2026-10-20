@@ -4,15 +4,23 @@ import { CONSENT_KEY } from '@/lib/consent';
 import { CONSENT_EVENT } from '@/lib/metaPixel';
 import MetaPixel from '../MetaPixel';
 
-const pixelScripts = () => document.querySelectorAll('script[src*="fbevents.js"]');
+// Betik gerçekten DOM'a girmez (ağ isteği hiç denenmez); eklenmek istenen öğeler burada toplanır.
+let appended: HTMLScriptElement[] = [];
+const pixelScripts = () => appended.filter((el) => el.src.includes('fbevents.js'));
 
 beforeEach(() => {
   window.localStorage.clear();
   document.head.innerHTML = '';
   delete (window as unknown as { fbq?: unknown }).fbq;
+  appended = [];
+  vi.spyOn(document.head, 'appendChild').mockImplementation(((node: Node) => {
+    appended.push(node as HTMLScriptElement);
+    return node;
+  }) as typeof document.head.appendChild);
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
 
