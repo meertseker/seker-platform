@@ -136,3 +136,54 @@ unset GOOGLE_ADS_CLIENT_ID GOOGLE_ADS_CLIENT_SECRET GOOGLE_ADS_REFRESH_TOKEN \
 ## Explorer onayı beklerken
 - Google Ads → Raporlar → Kampanyalar raporu; segment "Gün"; kolonlar: Gün, Kampanya kimliği, Kampanya, Maliyet,
   Tıklamalar, Gösterimler → İndir → CSV. Panel → Pazarlama → "Harcama CSV'si yükle".
+
+## Instagram (Meta)
+Meta tarafı Google ile aynı mantıkla çalışır: değerler girilene kadar her şey "yapılandırılmamış" der, hata vermez, hiçbir şey gönderilmez ya da çekilmez. Meta hesap düzenini (7 adım) tamamlamadan bu bölümü uygulama.
+
+### Ortam değişkenleri (`/opt/seker/.env`)
+| Değişken | Ne işe yarar | Boşsa |
+|---|---|---|
+| `META_ACCESS_TOKEN` | Marketing API erişim belirteci (harcama okuma) | Harcama çekilmez, "yapılandırılmamış" |
+| `META_APP_SECRET` | `appsecret_proof` üretimi (Graph isteklerini imzalar) | Aynı |
+| `META_AD_ACCOUNT_ID` | Reklam hesabı (`act_` önekli ya da değil) | Aynı |
+| `META_PIXEL_ID` | Conversions API'nin olay göndereceği piksel | CAPI gönderimi atlanır |
+| `META_CAPI_TEST_CODE` | Olay Yöneticisi "Test Olayları" kodu (isteğe bağlı) | Gönderimler gerçek veriye yazılır |
+| `META_CAPI_ENABLED` | CAPI ana anahtarı; yalnız `true` ise açık | Kapalı: kuyruk birikir, satırlar `bekliyor` kalır |
+| `NEXT_PUBLIC_META_PIXEL_ID` | Sitedeki piksel; yalnız çerez bandında "Kabul Et" seçilirse yüklenir | Hiçbir Meta betiği yüklenmez |
+| `NEXT_PUBLIC_CONSENT_VERSION` | Form onay metni sürümü; `2` değilse 1 | 1 (hukuk onayı gelene kadar böyle kalır) |
+| `SITE_PUBLIC_URL` | Sitenin açık adresi (CAPI `Lead` olayında `event_source_url`) | `https://yeni.sekeranaokulu.com` kullanılır |
+
+`NEXT_PUBLIC_*` değerleri derleme sırasında gömülür; değiştirince paneli yeniden derle. Yönetilen Meta sürümü Graph API **v26.0**.
+
+### Ne ne zaman çalışır
+- Her gün 06:00 cron'u (`/api/cron/ads`) Google'ın yanında Meta'dan son 7 günün harcamasını **reklam düzeyinde** çeker. 7 gün geriye bakmak Meta'nın geç düzelttiği rakamları yakalar; aynı gün tekrar çalışırsa satırlar güncellenir, çoğalmaz.
+- Meta yapılandırılmamışsa cron yanıtı Meta'sız halle birebir aynıdır.
+- CAPI gönderimi `META_CAPI_ENABLED=true` olmadan hiç çalışmaz. Açıldığında 7 günden eski bekleyen olaylar gönderilmez (`atlandi · olay 7 günden eski`).
+
+### Reklam bağlantı soneki
+Her Instagram reklamının "URL parametreleri" alanına (ya da `meta-apply.mjs` kurulumunda `url_tags` olarak otomatik) şu yazılır:
+```
+utm_source=instagram&utm_medium=paid_social&utm_campaign={{campaign.id}}&utm_content=<içerik kodu>
+```
+`<içerik kodu>` reklam adının başındaki kod (örn. `R-2645-A`). Panel reklamı `utm_medium=paid_social` ile tanır; `fbclid` tek başına reklam sayılmaz (Meta organik bağlantılara da ekler). Reklam adı içerik koduyla başlamazsa kod boş kalır ve rapor o reklamı içerik bazında eşleştiremez.
+
+### CAPI'yi açma adımları
+Sırayla, atlamadan:
+1. **Hukuk onayı:** v2 onay metni (reklam amaçlı veri paylaşımı) hukuk tarafından onaylanır.
+2. **Onay sürümü v2:** `NEXT_PUBLIC_CONSENT_VERSION=2`, paneli yeniden derle. Yalnız v2 onaylı ve çerez bandında reklam çerezini kabul etmiş adaylar `Lead`; v2 onaylılar `Schedule`/`Enrolled` için gönderilir. Eski onaylılar (v1, içe aktarılan, telefon onaylı) Meta'ya hiç gitmez.
+3. **Test kodu haftası:** `META_CAPI_TEST_CODE` doldur. Masaüstünden `node meta-capi-test.mjs` ile tek `Lead` test olayı gönder; Olay Yöneticisi > Test Olayları'nda görünmesini, piksel ile sunucu olayının tekilleştiğini (aynı `event_id`) ve eşleşme kalitesini bir hafta izle.
+4. **Aç:** sorun yoksa `META_CAPI_TEST_CODE`'u boşalt, `META_CAPI_ENABLED=true` yap, `docker compose up -d panel`. Ertesi sabah `/pazarlama` listesinde Meta satırlarının "Gönderildi" olduğunu doğrula.
+
+Çocuğa ait hiçbir veri (ad, yaş, doğum tarihi, semt, not) Meta'ya gitmez; yalnız SHA-256'lı telefon ve lead kimliği, onay varsa `fbc`/`fbp`.
+
+### Masaüstü betikleri
+`C:\Users\meert\Desktop\seker-reklam-araclar\` içinde (repo dışı, anahtar dosyası `seker-meta-ads-anahtarlar.txt`):
+- `meta-read.mjs`: yalnız okur (hesap, kampanyalar, reklam setleri, reklamlar, son 7 gün özeti).
+- `meta-capi-test.mjs`: test koduyla tek `Lead` olayı.
+- `meta-apply.mjs <plan.json> [--apply]`: kampanya, reklam seti ve reklamı **duraklatılmış** kurar; `--apply` yoksa yalnız doğrulama. Bütçeyi (kuruş çarpanı henüz teyitsiz) Reklam Yöneticisi'nde kontrol edip açmak sana kalır.
+
+### Masaüstü anahtar dosyasındaki isteğe bağlı satırlar
+`seker-meta-ads-anahtarlar.txt` içinde zorunlu üç satırın (`META_ACCESS_TOKEN`, `META_APP_SECRET`, `META_AD_ACCOUNT_ID`) yanında isteğe bağlı olarak:
+- `META_SITE_URL`: `meta-capi-test.mjs` için gerekli (test `Lead` olayının `event_source_url` değeri).
+- `META_PAGE_ID`: `meta-apply.mjs` ile sıfırdan kreatif kurulacaksa Facebook sayfası.
+- `META_INSTAGRAM_USER_ID`: aynı kreatifte kullanılacak Instagram hesabı.
