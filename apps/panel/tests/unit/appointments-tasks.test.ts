@@ -85,6 +85,37 @@ describe("randevu görevleri", () => {
     expect(res.reminders?.map((r) => r.ruleKey)).toEqual(["hatirlat:A1:once", "hatirlat:A1:sabah"]);
   });
 
+  it("kaybedilmiş veliye randevu verilince önce yeniden açılır (ulaşıldı), sonra randevuya geçer (B8)", async () => {
+    tables["leads:select"] = { id: "L1", status: "kaybedildi", parent_name: "Ayşe", assigned_to: "agent" };
+    const res = await createAppointment("L1", "2026-11-05T10:00", "okul_ziyareti", true);
+    expect(res.id).toBe("A1");
+    expect(updateLeadStatus.mock.calls).toEqual([["L1", "ulasildi"], ["L1", "randevu"]]);
+  });
+
+  it("yeniden açma başarısızsa randevu yine yazılır, durum zorlanmaz", async () => {
+    tables["leads:select"] = { id: "L1", status: "kaybedildi", parent_name: "Ayşe", assigned_to: "agent" };
+    updateLeadStatus.mockResolvedValueOnce({ error: "Durum güncellenemedi" });
+    const res = await createAppointment("L1", "2026-11-05T10:00", "okul_ziyareti", true);
+    expect(res.id).toBe("A1");
+    expect(updateLeadStatus.mock.calls).toEqual([["L1", "ulasildi"]]);
+  });
+
+  it("geldi tekrar basılınca (durum zaten ilerlemiş) durum tekrar değişmez, görevler yine kurulur", async () => {
+    tables["appointments:update"] = null; // koşullu update satır bulamaz: zaten geldi
+    tables["appointments:select"] = {
+      outcome: "geldi",
+      id: "A1",
+      lead_id: "L1",
+      created_by: "creator",
+      lead: { parent_name: "Ayşe Hanım", assigned_to: null, status: "gorusme_yapildi" },
+    };
+    const res = await setAppointmentOutcome("A1", "geldi");
+    expect(res.error).toBeUndefined();
+    expect(updateLeadStatus).not.toHaveBeenCalled();
+    expect(taskInserts().map((x) => x.rule_key)).toEqual(["ziyaret:A1:1", "ziyaret:A1:2", "ziyaret:A1:3"]);
+    expect(res.done?.[0]).toBe("Teşekkür mesajı görevi: Salı 3 Kasım 10:00");
+  });
+
   it("veli atanmamışsa görev oluşturana, o da yoksa çağırana atanır", async () => {
     tables["leads:select"] = { id: "L1", status: "yeni", parent_name: "Ayşe", assigned_to: null };
     await createAppointment("L1", "2026-11-05T10:00", "okul_ziyareti", true);

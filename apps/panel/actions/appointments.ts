@@ -159,7 +159,14 @@ export async function createAppointment(
     .update({ last_activity_at: new Date().toISOString() })
     .eq("id", leadId);
 
-  if (["yeni", "ulasildi"].includes(lead.status as LeadStatus)) {
+  // B8: kaybedilmiş veliye randevu verilmesi onu yeniden açar (ulaşıldı; kontenjan görevi de kapanır), sonra randevu.
+  let status = lead.status as LeadStatus;
+  if (status === "kaybedildi") {
+    const reopened = await updateLeadStatus(leadId, "ulasildi");
+    if (reopened.error) console.error("createAppointment yeniden açma:", reopened.error);
+    else status = "ulasildi";
+  }
+  if (["yeni", "ulasildi"].includes(status)) {
     await updateLeadStatus(leadId, "randevu");
   }
 

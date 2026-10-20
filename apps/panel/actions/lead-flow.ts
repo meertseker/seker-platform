@@ -302,7 +302,8 @@ export async function recordCall(input: RecordCallInput): Promise<RecordCallResu
 
     // Durum değişikliği not ve olaydan önce: hata olursa tekrar denemede yinelenen not/olay kalmaz.
     let statusChange: { to: LeadStatus; reason?: LostReason } | null = null;
-    if (result === "geri_ara" && lead.status === "yeni") statusChange = { to: "ulasildi" };
+    // B8: kaybedilmiş veli geri aranacak derse yeniden açılır (updateLeadStatus kontenjan görevini kapatır).
+    if (result === "geri_ara" && (lead.status === "yeni" || lead.status === "kaybedildi")) statusChange = { to: "ulasildi" };
     if (result === "ulasilamadi" && !next && lead.status !== "kaybedildi") {
       statusChange = { to: "kaybedildi", reason: "ulasilamadi" };
     }
