@@ -1,5 +1,7 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
 import MobileActionBar from '@/app/components/MobileActionBar';
@@ -57,6 +59,22 @@ describe('site geneli kabuk ziyaretçi HTML', () => {
     expect(footer.querySelector('[data-edit-list="chrome.footer.links"]')).not.toBeNull();
     expect(footer.querySelector('a[data-edit-key="site.phone"]')).not.toBeNull();
     expect(footer.querySelector('span[data-edit-key]')).toBeNull();
+  });
+
+  it('Randevu düğmesi varsayılan olarak /kayit sayfasına gider', () => {
+    const bar = render(<MobileActionBar data={defaultData(P)} />).container;
+    expect(bar.querySelector('nav > a:last-child')?.getAttribute('href')).toBe('/kayit');
+  });
+
+  it('reklam sayfasında Randevu düğmesi sayfadaki #form bölümüne kaydırır', () => {
+    const bar = render(<MobileActionBar data={defaultData(P)} bookHref="#form" />).container;
+    expect(bar.querySelector('nav > a:last-child')?.getAttribute('href')).toBe('#form');
+  });
+
+  it('yalnız /lp/* düzeni Randevu düğmesini #form a yönlendirir', () => {
+    const src = (p: string) => readFileSync(path.join(__dirname, '..', '..', p), 'utf8');
+    expect(src('(lp)/layout.tsx')).toMatch(/<MobileActionBar[^>]*bookHref="#form"/);
+    expect(src('(site)/layout.tsx')).not.toContain('bookHref');
   });
 
   it('telefon düzenlenince tel: ve wa.me bağlantıları geçerli kalır; geçersizse varsayılana düşer', () => {

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const db = createAdminSupabase();
   const now = new Date();
-  const { hours, launchAt } = await getLeadFlowSettings(db);
+  const { hours, launchAt, claimMinutes } = await getLeadFlowSettings(db);
 
   // Mesai dışında hiçbir şey gönderilmez.
   if (nextBusinessMoment(now, hours).getTime() !== now.getTime()) {
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { data: leads, error } = await applyQueueFilter(
-    db.from("leads").select("id, parent_name, created_at"),
+    db.from("leads").select("id, parent_name, created_at, claimed_at"),
     queueCutoff(launchAt),
   )
     .order("created_at", { ascending: true })
@@ -36,6 +36,8 @@ export async function GET(req: NextRequest) {
   for (const l of leads ?? []) {
     // R23: açılıştan önce gelen veliler listede görünür ama yöneticiye uyarı üretmez.
     if (launchAt && Date.parse(l.created_at) < launchAt.getTime()) continue;
+    // Danışman "Ara"ya basıp üstlendiyse (büyük olasılıkla telefonda) üstlenme süresince uyarı gitmez.
+    if (l.claimed_at && Date.parse(l.claimed_at) >= now.getTime() - claimMinutes * 60_000) continue;
     const minutes = businessMinutesBetween(clockStart(new Date(l.created_at), hours), now, hours);
     if (minutes > ALERT_AFTER_MINUTES) due.push({ id: l.id, parentName: l.parent_name, minutes });
   }

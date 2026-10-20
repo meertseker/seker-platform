@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const inserts: Array<Record<string, unknown>> = [];
 const notified = new Set<string>(); // leadId
-let leads: Array<{ id: string; parent_name: string; created_at: string }> = [];
+let leads: Array<{ id: string; parent_name: string; created_at: string; claimed_at?: string | null }> = [];
 let yoneticiler: Array<{ id: string }> = [];
 const filtersSeen: string[] = [];
 let insertError: { message: string } | null = null;
@@ -178,6 +178,28 @@ describe("GET /api/cron/leads", () => {
     expect(inserts.map((i) => (i.payload as { leadId: string }).leadId)).toEqual(["yeni", "yeni"]);
     const cutoff = new Date(at("10:05").getTime() - 14 * 86_400_000).toISOString();
     expect(filtersSeen).toContain(`leads.gte.created_at=${cutoff}`);
+  });
+
+  it("danışman son 15 dakikada üstlendiyse (telefonda) bildirilmez", async () => {
+    vi.setSystemTime(at("10:30"));
+    leads = [{ id: "l1", parent_name: "A", created_at: at("10:00").toISOString(), claimed_at: at("10:20").toISOString() }];
+    await GET(request("Bearer s3cret"));
+    expect(inserts).toHaveLength(0);
+  });
+
+  it("üstlenme süresi dolmuşsa yine bildirilir", async () => {
+    vi.setSystemTime(at("10:40"));
+    leads = [{ id: "l1", parent_name: "A", created_at: at("10:00").toISOString(), claimed_at: at("10:20").toISOString() }];
+    await GET(request("Bearer s3cret"));
+    expect(inserts).toHaveLength(2);
+  });
+
+  it("üstlenme süresi ustlenme_dk ayarından okunur", async () => {
+    vi.setSystemTime(at("10:40"));
+    settingsRows = [{ key: "ustlenme_dk", value: 30 }];
+    leads = [{ id: "l1", parent_name: "A", created_at: at("10:00").toISOString(), claimed_at: at("10:20").toISOString() }];
+    await GET(request("Bearer s3cret"));
+    expect(inserts).toHaveLength(0);
   });
 
   it("veli sorgusu hata verirse 500", async () => {

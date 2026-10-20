@@ -35,7 +35,15 @@ export function runWaFlush(): Promise<FlushResult | { skipped: string }> {
     const result = await flushOutbox({
       store: supabaseWaStore(db),
       sender: {
-        isReady: async () => (await getSession(cfg)).status === "WORKING",
+        // Konteyner kapalıyken getSession hata fırlatır; bunu da "hazır değil" say ki yönetici bildirimi gitsin.
+        isReady: async () => {
+          try {
+            return (await getSession(cfg)).status === "WORKING";
+          } catch (e) {
+            console.error("[wa] WAHA'ya ulaşılamadı", (e as Error).message);
+            return false;
+          }
+        },
         send: (chatId, text) => sendText(cfg, chatId, text),
       },
     });

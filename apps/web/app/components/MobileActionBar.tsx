@@ -6,9 +6,15 @@ import type { ReaderData } from '@/lib/content/types';
 import { trackEvent, type TrackedEvent } from '@/lib/analytics';
 
 // İstemci bileşen: sunucu ebeveyn pickData(data, ['chrome.mobile.', 'site.']) geçirir.
-export default function MobileActionBar({ data }: { data: ReaderData }) {
+// bookHref: reklam sayfaları (/lp/*) "#form" verir; aday nitelik sorularıyla sayfadaki formu doldurur.
+export default function MobileActionBar({ data, bookHref = '/kayit' }: { data: ReaderData; bookHref?: string }) {
   const c = makeReader(data);
   const track = (event: TrackedEvent) => () => trackEvent(event, { location: 'mobile_bar' });
+  const bookProps = {
+    onClick: track('cta_click'),
+    className: 'bg-grape py-3.5 text-center text-sm font-semibold text-white',
+    ...c.attrs('chrome.mobile.book'),
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-3 border-t border-rule bg-white shadow-[0_-2px_12px_rgba(0,0,0,0.08)] md:hidden">
@@ -30,14 +36,15 @@ export default function MobileActionBar({ data }: { data: ReaderData }) {
       >
         {c.text('chrome.mobile.whatsapp')}
       </a>
-      <Link
-        href="/kayit"
-        onClick={track('cta_click')}
-        className="bg-grape py-3.5 text-center text-sm font-semibold text-white"
-        {...c.attrs('chrome.mobile.book')}
-      >
-        {c.text('chrome.mobile.book')}
-      </Link>
+      {bookHref.startsWith('#') ? (
+        <a href={bookHref} {...bookProps}>
+          {c.text('chrome.mobile.book')}
+        </a>
+      ) : (
+        <Link href={bookHref} {...bookProps}>
+          {c.text('chrome.mobile.book')}
+        </Link>
+      )}
     </nav>
   );
 }
