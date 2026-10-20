@@ -95,6 +95,33 @@ describe('beginTextEdit sınır ve temizlik', () => {
     expect(onCommit).toHaveBeenCalledWith('');
     expect(el.textContent).toBe('Eski metin');
   });
+  it('isteğe bağlı alanda boş onay alanı boşaltır, eski metin geri gelmez', () => {
+    const el = mk('Eski metin');
+    const onCommit = vi.fn();
+    beginTextEdit(el, { max: 20, optional: true, onCommit, onCancel: () => {}, onCount: () => {} });
+    el.textContent = '  ';
+    enter(el);
+    expect(onCommit).toHaveBeenCalledWith('');
+    expect(el.textContent).toBe('');
+  });
+  it('zaten boş isteğe bağlı alan boş bırakılırsa değişiklik sayılmaz', () => {
+    const el = mk('');
+    const onCommit = vi.fn();
+    const onUnchanged = vi.fn();
+    beginTextEdit(el, { max: 20, optional: true, onCommit, onUnchanged, onCancel: () => {}, onCount: () => {} });
+    enter(el);
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(onUnchanged).toHaveBeenCalled();
+  });
+  it('metin kısaltılabilir', () => {
+    const el = mk('Uzun bir eski metin');
+    const onCommit = vi.fn();
+    beginTextEdit(el, { max: 20, onCommit, onCancel: () => {}, onCount: () => {} });
+    el.textContent = 'Kısa';
+    enter(el);
+    expect(onCommit).toHaveBeenCalledWith('Kısa');
+    expect(el.textContent).toBe('Kısa');
+  });
 });
 
 describe('beginTextEdit belirteçli metin', () => {

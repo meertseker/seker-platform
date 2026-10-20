@@ -8,10 +8,10 @@ export function makeReader(data: ReaderData): Reader {
   };
   const fieldMeta = (key: string, path?: string) => {
     const meta = data.meta[key];
-    if (!path) return { kind: meta.kind as string, max: meta.max };
+    if (!path) return { kind: meta.kind as string, max: meta.max, optional: meta.optional };
     const field = path.split('.').slice(1).join('.');
     const f = meta.fields?.[field];
-    return { kind: f?.kind ?? 'text', max: f?.max };
+    return { kind: f?.kind ?? 'text', max: f?.max, optional: f?.optional };
   };
 
   return {
@@ -23,9 +23,10 @@ export function makeReader(data: ReaderData): Reader {
     list: <T extends ListItem>(key: string) => get(key) as T[],
     attrs(key, path): Record<string, string> {
       if (!data.editing) return {};
-      const { kind, max } = fieldMeta(key, path);
+      const { kind, max, optional } = fieldMeta(key, path);
       const out: Record<string, string> = { 'data-edit-key': key, 'data-edit-kind': kind };
       if (max) out['data-edit-max'] = String(max);
+      if (optional) out['data-edit-optional'] = '1';
       if (path) out['data-edit-path'] = path;
       return out;
     },

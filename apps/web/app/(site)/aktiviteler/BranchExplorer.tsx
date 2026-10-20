@@ -194,7 +194,7 @@ export default function BranchExplorer({ data, initialSlug }: { data: ReaderData
 
               <div className="p-6 md:p-10">
                 <div className="space-y-4 text-ink-soft">
-                  {BODY_FIELDS.filter((field) => selected[field]).map((field, index) => (
+                  {BODY_FIELDS.filter((field) => selected[field] || c.editing).map((field, index) => (
                     <Editable
                       key={field}
                       c={c}
@@ -209,7 +209,7 @@ export default function BranchExplorer({ data, initialSlug }: { data: ReaderData
 
                 <Editable c={c} k="aktiviteler.detail.gains" as="h3" className="mt-8 font-display text-lg text-ink" />
                 <ul className="mt-4 flex flex-wrap gap-2">
-                  {GAIN_FIELDS.filter((field) => selected[field]).map((field) => (
+                  {GAIN_FIELDS.filter((field) => selected[field] || c.editing).map((field) => (
                     <Editable
                       key={field}
                       c={c}

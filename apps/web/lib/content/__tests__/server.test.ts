@@ -18,6 +18,7 @@ vi.mock('../registry', async (importOriginal) => {
           a: { kind: 'rich', label: 'Cevap' },
         },
       },
+      'test.note': { kind: 'text', label: 'Not', default: 'Varsayılan not', optional: true },
     },
   };
 });
@@ -25,6 +26,21 @@ vi.mock('../registry', async (importOriginal) => {
 import { buildReaderData } from '../server';
 
 describe('buildReaderData', () => {
+  it('boş kaydedilmiş isteğe bağlı alan okuyucuda boş kalır, varsayılana dönmez', () => {
+    const d = buildReaderData({ 'test.note': { value: '', updatedAt: 't1' } }, false, 2026);
+    expect(d.values['test.note']).toBe('');
+    const sections = [{ id: 'montessori', question: 'S?', p1: 'a', p2: 'b', p3: '', p4: '' }];
+    const l = buildReaderData({ 'egitim.sections': { value: sections, updatedAt: 't1' } }, false, 2026);
+    expect(l.values['egitim.sections']).toEqual(sections);
+    // Satır yoksa (null ile "varsayılana dön") koddaki metin gelir.
+    expect(buildReaderData({}, false, 2026).values['test.note']).toBe('Varsayılan not');
+  });
+  it('optional bayrağı düzenleyici meta verisine taşınır', () => {
+    const e = buildReaderData({}, true, 2026);
+    expect(e.meta['test.note'].optional).toBe(true);
+    expect(e.meta['egitim.sections'].fields?.p4.optional).toBe(true);
+    expect(e.meta['egitim.sections'].fields?.p1.optional).toBeFalsy();
+  });
   it('vars kuruluş yılından türetilir; DB satırı varsayılanı ezer', () => {
     const d = buildReaderData({ 'site.foundingYear': { value: '2010', updatedAt: 't1' } }, true, 2026);
     expect(d.vars).toEqual({ yilSayisi: '16', kurulusYili: '2010' });

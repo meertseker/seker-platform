@@ -77,7 +77,8 @@ export default function EgitimView({ data }: { data: ReaderData }) {
                   className="font-display text-2xl text-ink md:text-3xl"
                 />
                 <div className="mt-5 space-y-4 text-ink-soft">
-                  {PARAGRAPHS.filter((field) => section[field]).map((field, index) =>
+                  {/* Boş paragraf ziyaretçiye basılmaz; düzenlemede yeniden yazılabilsin diye boş hâliyle görünür. */}
+                  {PARAGRAPHS.filter((field) => section[field] || c.editing).map((field, index) =>
                     section.id === 'brans' && field === 'p2' ? (
                       // Giriş cümlesi + türetilmiş branş adları tek paragrafta: tek alana yazılmasın diye işaretsiz.
                       <p key={field}>{`${c.fill(section[field])} ${branchNames}.`}</p>

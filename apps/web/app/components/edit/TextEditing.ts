@@ -12,6 +12,8 @@ export function beginTextEdit(
     raw?: string;
     /** Ham metni sayfada görünen (belirteçleri doldurulmuş) metne çevirir. */
     fill?: (s: string) => string;
+    /** Boş bırakılabilir alan: boş onay alanı boşaltır (eski metin geri gelmez). */
+    optional?: boolean;
     onUnchanged?(): void;
     onCommit(text: string): void; onCancel(): void; onCount(n: number, max?: number): void; onReject?(max: number): void },
 ): () => void {
@@ -46,12 +48,13 @@ export function beginTextEdit(
         return; // düzenleme modunda kal; sınırı aşan değer asla işlenmez
       }
       done = true;
-      if (!text) {
-        el.textContent = original;
-        opts.onCommit(text);
-      } else if (text === rawOriginal.trim()) {
+      if (text === rawOriginal.trim()) {
         el.textContent = original;
         (opts.onUnchanged ?? opts.onCancel)();
+      } else if (!text) {
+        // Zorunlu alan boş kalamaz: eski metin geri gelir. İsteğe bağlı alan boş kalır.
+        el.textContent = opts.optional ? '' : original;
+        opts.onCommit(text);
       } else {
         el.textContent = show(text);
         opts.onCommit(text);

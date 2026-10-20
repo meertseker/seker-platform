@@ -29,8 +29,8 @@ export function buildReaderData(map: ContentMap, editing: boolean, year: number)
     const v = read<unknown>(map, key);
     values[key] = sanitizeSlot(def, v);
     if (map[key]) updatedAt[key] = map[key].updatedAt;
-    const { kind, max, fields, label, warn, pattern, maxItems, fixedItems, newItem, allowHeadings } = def;
-    meta[key] = { kind, max, fields, label, warn, pattern, maxItems, fixedItems, newItem, allowHeadings };
+    const { kind, max, fields, label, warn, pattern, maxItems, fixedItems, newItem, allowHeadings, optional } = def;
+    meta[key] = { kind, max, fields, label, warn, pattern, maxItems, fixedItems, newItem, allowHeadings, optional };
   }
   const founding = Number(values['site.foundingYear']) || 2011;
   return {

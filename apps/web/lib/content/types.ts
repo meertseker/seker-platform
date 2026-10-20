@@ -1,6 +1,12 @@
 export type ContentKind = 'text' | 'rich' | 'image' | 'list';
 export type FieldKind = 'text' | 'rich' | 'image' | 'flag';
-export type FieldDef = { kind: FieldKind; max?: number; label: string };
+export type FieldDef = {
+  kind: FieldKind;
+  max?: number;
+  label: string;
+  /** Boş bırakılabilir (text/rich): boş değer kaydedilir, varsayılana dönmez; sayfa boş alanı basmaz. */
+  optional?: boolean;
+};
 export type SlotDef = {
   kind: ContentKind;
   max?: number;
@@ -13,13 +19,14 @@ export type SlotDef = {
   newItem?: Record<string, unknown>; // list için: yeni öğenin başlangıç alanları (fonksiyon değil: serileştirilebilir)
   allowHeadings?: boolean; // rich için: h2 izinli (yalnızca legal.*)
   warn?: string; // düzenleme çubuğunda gösterilecek uyarı
+  optional?: boolean; // text/rich için: boş bırakılabilir (bkz. FieldDef.optional)
 };
 export type ImageValue = { src: string; alt: string; width: number; height: number; assetId: string | null };
 export type ListItem = { id: string } & Record<string, unknown>;
 export type ContentMap = Record<string, { value: unknown; updatedAt: string }>;
 export type SlotMeta = Pick<
   SlotDef,
-  'kind' | 'max' | 'fields' | 'label' | 'warn' | 'pattern' | 'maxItems' | 'fixedItems' | 'newItem' | 'allowHeadings'
+  'kind' | 'max' | 'fields' | 'label' | 'warn' | 'pattern' | 'maxItems' | 'fixedItems' | 'newItem' | 'allowHeadings' | 'optional'
 >;
 export type ReaderData = {
   values: Record<string, unknown>;

@@ -11,6 +11,17 @@ vi.mock('../registry', () => ({
     },
     't.body': { kind: 'rich', max: 50, default: '<p>x</p>', label: 'Gövde' },
     't.img': { kind: 'image', default: { src: '/bahce-genis.webp', alt: 'a', width: 1, height: 1, assetId: null }, label: 'F' },
+    't.opt': { kind: 'text', max: 10, default: 'x', label: 'Not', optional: true },
+    't.optRich': { kind: 'rich', max: 50, default: '<p>x</p>', label: 'Ek', optional: true },
+    't.sections': {
+      kind: 'list', label: 'Bölümler', fixedItems: true, maxItems: 5,
+      default: [{ id: 'montessori', p1: 'a', p4: 'b' }, { id: 'planlama', p1: 'c', p4: '' }],
+      fields: {
+        p1: { kind: 'text', max: 20, label: '1. paragraf' },
+        p4: { kind: 'text', max: 20, label: '4. paragraf', optional: true },
+        r: { kind: 'rich', max: 20, label: 'Not', optional: true },
+      },
+    },
     't.list': {
       kind: 'list', default: [], label: 'L', maxItems: 2,
       fields: { q: { kind: 'text', max: 5, label: 'S' }, on: { kind: 'flag', label: 'Yayında' } },
@@ -90,5 +101,38 @@ describe('validateEdits', () => {
   });
   it('null varsayılana dönüş olarak kabul edilir', () => {
     expect(validateEdits(e('t.title', null))).toMatchObject({ ok: true, edits: [{ value: null }] });
+  });
+});
+
+describe('isteğe bağlı (optional) alanlar', () => {
+  it('isteğe bağlı metin boş kaydedilir; değer null değil boş metindir (varsayılana dönmez)', () => {
+    expect(validateEdits(e('t.opt', ''))).toEqual({ ok: true, edits: [{ key: 't.opt', kind: 'text', value: '', baseUpdatedAt: null }] });
+    expect(validateEdits(e('t.opt', '  \n '))).toMatchObject({ ok: true, edits: [{ value: '' }] });
+  });
+  it('isteğe bağlı zengin metin boş kaydedilir', () => {
+    expect(validateEdits(e('t.optRich', '<p> </p>'))).toMatchObject({ ok: true, edits: [{ value: '' }] });
+  });
+  it('isteğe bağlı alanda da sınır geçerlidir', () => {
+    expect(validateEdits(e('t.opt', 'çok uzun bir not')).ok).toBe(false);
+  });
+  it('zorunlu alan boşken hâlâ hata verir', () => {
+    expect(validateEdits(e('t.title', ''))).toMatchObject({ ok: false, error: 'Başlık boş bırakılamaz.' });
+    expect(validateEdits(e('t.body', '<p></p>'))).toMatchObject({ ok: false, error: 'Gövde boş bırakılamaz.' });
+  });
+  it('liste: isteğe bağlı paragraf boşaltılabilir, diğer maddelerin boş paragrafı kaydı engellemez', () => {
+    const r = validateEdits(e('t.sections', [{ id: 'montessori', p1: 'kısa', p4: '', r: '' }, { id: 'planlama', p1: 'c', p4: '' }]));
+    expect(r).toMatchObject({
+      ok: true,
+      edits: [{ value: [{ id: 'montessori', p1: 'kısa', p4: '', r: '' }, { id: 'planlama', p1: 'c', p4: '' }] }],
+    });
+  });
+  it('liste: zorunlu alan boşken hâlâ hata verir', () => {
+    expect(validateEdits(e('t.sections', [{ id: 'montessori', p1: ' ', p4: 'b' }, { id: 'planlama', p1: 'c', p4: '' }]))).toMatchObject({
+      ok: false,
+      error: '1. paragraf boş bırakılamaz.',
+    });
+  });
+  it('liste: büyük harfli madde kimliği (ör. mudKitchen) kabul edilir', () => {
+    expect(validateEdits(e('t.list', [{ id: 'mudKitchen', q: 'x' }])).ok).toBe(true);
   });
 });

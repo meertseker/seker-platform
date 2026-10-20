@@ -37,8 +37,12 @@ describe('egitim ziyaretçi HTML', () => {
     expect(container.querySelector('h2[data-edit-key="egitim.sections"][data-edit-path="montessori.question"]')).not.toBeNull();
     expect(container.querySelector('p[data-edit-key="egitim.sections"][data-edit-path="brans.p1"]')).not.toBeNull();
     expect(container.querySelector('p[data-edit-key="egitim.sections"][data-edit-path="brans.p2"]')).toBeNull();
-    // Boş p4 basılmaz.
-    expect(container.querySelector('[data-edit-path="planlama.p4"]')).toBeNull();
+    // Boş p4 düzenlemede boş ve işaretli basılır (yeniden yazılabilsin); ziyaretçide basılmaz.
+    const empty = container.querySelector('p[data-edit-path="planlama.p4"]');
+    expect(empty?.textContent).toBe('');
+    expect(empty?.getAttribute('data-edit-optional')).toBe('1');
+    const visitor = render(<EgitimView data={defaultData(PREFIXES)} />).container;
+    expect([...visitor.querySelectorAll('.space-y-4 > p')].filter((p) => !p.textContent?.trim())).toHaveLength(0);
   });
 
   it('yaş kartlarının metinleri ageGroups.items listesinin izdüşümüdür', () => {

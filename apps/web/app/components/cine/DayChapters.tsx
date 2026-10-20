@@ -64,7 +64,7 @@ export default function DayChapters({ c }: { c: Reader }) {
           </div>
 
           <div className="mt-8 max-w-2xl">
-            {BODY_FIELDS.filter((field) => chapter[field]).map((field) => (
+            {BODY_FIELDS.filter((field) => chapter[field] || c.editing).map((field) => (
               <Editable
                 key={field}
                 c={c}

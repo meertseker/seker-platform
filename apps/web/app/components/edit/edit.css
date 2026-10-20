@@ -17,3 +17,5 @@
 .seker-toast.error { background: #b4234e; }
 .seker-toast.warn { background: #8a5a00; }
 body.seker-editing { padding-top: 56px; }
+/* Boşaltılmış isteğe bağlı alan düzenlemede görünür ve yeniden çift tıklanabilir kalır; ziyaretçide basılmaz. */
+.seker-editing [data-edit-optional='1']:empty::before { content: 'Boş (ziyaretçiye gösterilmez) — yazmak için çift tıklayın'; opacity: 0.55; font-style: italic; }

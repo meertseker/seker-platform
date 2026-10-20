@@ -9,7 +9,7 @@ import { limitForField } from './limits';
 // Liste öğelerinin düzenlenemeyen alanları (mediaKey, grade, season, slug, time, image vb.) varsayılan öğede
 // durur ve kayıtta olduğu gibi korunur; yalnızca `fields` içindekiler düzenlenir.
 // Dizi alanları (paragraflar, kazanımlar, odak alanları) numaralı metin alanlarına açılır: body1, body2 …
-// Boş varsayılan alan sayfada basılmaz.
+// Boş varsayılan alan sayfada basılmaz; böyle alanlar `optional: true` taşır (boş kaydedilebilir, varsayılana dönmez).
 
 type Rec = Record<string, unknown>;
 
@@ -109,7 +109,7 @@ export const LIST_SLOTS: Record<string, SlotDef> = {
       title: { kind: 'text', max: limitForField(dayDefault, 'title'), label: 'Başlık' },
       lead: { kind: 'text', max: limitForField(dayDefault, 'lead'), label: 'Kısa açıklama' },
       ...numbered('body', DAY_BODY_COUNT, (n) => ({
-        kind: 'text', max: maxOver(dayDefault, 'body', DAY_BODY_COUNT), label: `${n}. paragraf${n > 1 ? ' (boşsa gösterilmez)' : ''}`,
+        kind: 'text', max: maxOver(dayDefault, 'body', DAY_BODY_COUNT), label: `${n}. paragraf${n > 1 ? ' (boşsa gösterilmez)' : ''}`, optional: n > 1,
       })),
     },
   },
@@ -119,10 +119,10 @@ export const LIST_SLOTS: Record<string, SlotDef> = {
       name: { kind: 'text', max: limitForField(branchDefault, 'name'), label: 'Ders adı' },
       summary: { kind: 'text', max: limitForField(branchDefault, 'summary'), label: 'Kart özeti' },
       ...numbered('body', BRANCH_BODY_COUNT, (n) => ({
-        kind: 'text', max: maxOver(branchDefault, 'body', BRANCH_BODY_COUNT), label: `${n}. paragraf${n > 2 ? ' (boşsa gösterilmez)' : ''}`,
+        kind: 'text', max: maxOver(branchDefault, 'body', BRANCH_BODY_COUNT), label: `${n}. paragraf${n > 2 ? ' (boşsa gösterilmez)' : ''}`, optional: n > 2,
       })),
       ...numbered('gain', BRANCH_GAIN_COUNT, (n) => ({
-        kind: 'text', max: maxOver(branchDefault, 'gain', BRANCH_GAIN_COUNT), label: `${n}. kazanım etiketi${n > 4 ? ' (boşsa gösterilmez)' : ''}`,
+        kind: 'text', max: maxOver(branchDefault, 'gain', BRANCH_GAIN_COUNT), label: `${n}. kazanım etiketi${n > 4 ? ' (boşsa gösterilmez)' : ''}`, optional: n > 4,
       })),
     },
   },
@@ -140,7 +140,7 @@ export const LIST_SLOTS: Record<string, SlotDef> = {
       classSize: { kind: 'text', max: limitForField(ageDefault, 'classSize'), label: 'Sınıf mevcudu' },
       ...focusFields,
       ...numbered('highlight', AGE_HIGHLIGHT_COUNT, (n) => ({
-        kind: 'text', max: maxOver(ageDefault, 'highlight', AGE_HIGHLIGHT_COUNT), label: `Günün akışından ${n}. madde`,
+        kind: 'text', max: maxOver(ageDefault, 'highlight', AGE_HIGHLIGHT_COUNT), label: `Günün akışından ${n}. madde${n > 1 ? ' (boşsa gösterilmez)' : ''}`, optional: n > 1,
       })),
     },
   },

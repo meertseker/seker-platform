@@ -137,6 +137,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       if (kind !== 'text') return;
       stopRef.current?.();
       const max = el.dataset.editMax ? Number(el.dataset.editMax) : undefined;
+      const optional = el.dataset.editOptional === '1';
       const rect = el.getBoundingClientRect();
       const cur = currentValueRef.current(key);
       const rawVal = path
@@ -148,6 +149,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       stopRef.current = beginTextEdit(el, {
         max,
         raw: typeof rawVal === 'string' ? rawVal : undefined,
+        optional,
         fill: (t) => fillVars(t, varsRef.current),
         onUnchanged: () => {
           setCounter(null);
@@ -158,7 +160,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
         onCommit: (text) => {
           setCounter(null);
           stopRef.current = null;
-          if (!text) return toast({ text: 'Boş bırakılamaz; eski metin geri getirildi.', tone: 'error' });
+          if (!text && !optional) return toast({ text: 'Bu alan boş bırakılamaz; eski metin geri getirildi.', tone: 'error' });
           setValue(key, text, path);
         },
         onReject: (m) => toast({ text: `Bu alan en fazla ${m} karakter olabilir.`, tone: 'error' }),

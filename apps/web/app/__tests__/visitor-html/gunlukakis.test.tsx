@@ -34,7 +34,9 @@ describe('gunlukakis ziyaretçi HTML', () => {
       // kapanis dışında hepsinin 2. paragrafı var; yalnızca kapanis.body2 boş ve basılmaz.
       expect(hit, path).not.toBeNull();
     }
-    expect(container.querySelector('[data-edit-path="kapanis.body2"]')).toBeNull();
+    // Boş body2 düzenlemede boş ve işaretli basılır; ziyaretçide basılmaz (snapshot ile korunur).
+    expect(container.querySelector('[data-edit-path="kapanis.body2"]')?.textContent).toBe('');
+    expect(container.querySelector('[data-edit-path="kapanis.body2"]')?.getAttribute('data-edit-optional')).toBe('1');
     expect(container.querySelector('[data-edit-key="media.giraffesGarden"]')).not.toBeNull();
     // Kenar çubuğundaki başlık aynaları işaretsiz: aynı alan iki kez işaretlenmez.
     expect(container.querySelectorAll('[data-edit-path="karsilama.title"]')).toHaveLength(1);

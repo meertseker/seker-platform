@@ -21,6 +21,22 @@ const data: ReaderData = {
 };
 
 describe('makeReader', () => {
+  it('boş değer boş döner; isteğe bağlı alan düzenlemede işaretlenir', () => {
+    const c = makeReader({
+      ...data,
+      editing: true,
+      values: { ...data.values, 'other.key': '' },
+      meta: {
+        ...data.meta,
+        'other.key': { kind: 'text', label: 'z', optional: true },
+        'home.faq': { kind: 'list', label: 'SSS', fields: { question: { kind: 'text', label: 'Soru', optional: true } } },
+      },
+    });
+    expect(c.text('other.key')).toBe('');
+    expect(c.attrs('other.key')['data-edit-optional']).toBe('1');
+    expect(c.attrs('home.faq', 'a.question')['data-edit-optional']).toBe('1');
+    expect(c.attrs('home.hero.title')['data-edit-optional']).toBeUndefined();
+  });
   it('ziyaretçide öznitelik üretmez', () => {
     const c = makeReader(data);
     expect(c.text('home.hero.title')).toBe('Başlık 15');

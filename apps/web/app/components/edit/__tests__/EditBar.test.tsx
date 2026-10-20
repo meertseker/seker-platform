@@ -195,3 +195,47 @@ describe('EditBar belirteçli metin düzenleme', () => {
     expect(p.textContent).toBe('10 yıllık güzel deneyim');
   });
 });
+
+describe('EditBar isteğe bağlı alan', () => {
+  const optData = (): ReaderData => ({
+    values: { 'egitim.sections': [{ id: 'montessori', p4: 'Eski dördüncü paragraf' }] },
+    updatedAt: { 'egitim.sections': 't1' },
+    meta: {
+      'egitim.sections': { label: 'Bölümler', kind: 'list', fields: { p4: { kind: 'text', label: '4. paragraf', optional: true } } },
+    } as never,
+    editing: true,
+    vars: { yilSayisi: '10', kurulusYili: '2016' },
+  });
+  const setup = (optional: boolean) => {
+    const p = document.createElement('p');
+    p.setAttribute('data-edit-key', 'egitim.sections');
+    p.setAttribute('data-edit-kind', 'text');
+    p.setAttribute('data-edit-path', 'montessori.p4');
+    if (optional) p.setAttribute('data-edit-optional', '1');
+    p.textContent = 'Eski dördüncü paragraf';
+    document.body.append(p);
+    bar(optData());
+    return p;
+  };
+  afterEach(() => document.querySelectorAll('p[data-edit-key]').forEach((n) => n.remove()));
+
+  it('boşaltılan isteğe bağlı paragraf boş metin olarak bekler; eski metin geri gelmez', async () => {
+    const p = setup(true);
+    fireEvent.dblClick(p);
+    p.textContent = '';
+    fireEvent.blur(p);
+    await waitFor(() => expect(sessionStorage.getItem(PENDING_STORAGE_KEY)).toContain('"p4":""'));
+    expect(p.textContent).toBe('');
+    expect(screen.queryByText(/boş bırakılamaz/)).toBeNull();
+  });
+
+  it('zorunlu alan boşaltılınca eski metin geri gelir ve uyarı çıkar', () => {
+    const p = setup(false);
+    fireEvent.dblClick(p);
+    p.textContent = '';
+    fireEvent.blur(p);
+    expect(p.textContent).toBe('Eski dördüncü paragraf');
+    expect(screen.getByText(/boş bırakılamaz/)).toBeTruthy();
+    expect(sessionStorage.getItem(PENDING_STORAGE_KEY) ?? '{}').toBe('{}');
+  });
+});

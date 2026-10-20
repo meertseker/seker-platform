@@ -20,23 +20,26 @@ const editSchema = z.array(
   z.object({ key: z.string().max(130), value: z.unknown(), baseUpdatedAt: z.string().max(64).nullable() }),
 ).max(100);
 
-function checkText(raw: unknown, max: number, label: string, vars: Vars, pattern?: string): Result<string> {
+function checkText(raw: unknown, max: number, label: string, vars: Vars, pattern?: string, optional?: boolean): Result<string> {
   if (typeof raw !== 'string') return { ok: false, error: `${label}: metin olmalı.` };
   let v = raw.replace(CONTROL, '');
   v = max > 300 ? v.replace(/\r\n?/g, '\n') : v.replace(/\s*[\r\n]+\s*/g, ' ');
   v = v.trim();
-  if (!v) return { ok: false, error: `${label} boş bırakılamaz.` };
+  // İsteğe bağlı alan boş kaydedilir (varsayılana dönmez); zorunlu alan boş kalamaz.
+  if (!v) return optional ? { ok: true, value: '' } : { ok: false, error: `${label} boş bırakılamaz.` };
   const n = countChars(fillVars(v, vars));
   if (n > max) return { ok: false, error: `${label} en fazla ${max} karakter olabilir (şu an ${n}).` };
   if (pattern && !new RegExp(pattern).test(v)) return { ok: false, error: `${label} biçimi uygun değil.` };
   return { ok: true, value: v };
 }
 
-function checkRich(raw: unknown, max: number, label: string, vars: Vars, allowHeadings?: boolean): Result<string> {
+function checkRich(
+  raw: unknown, max: number, label: string, vars: Vars, allowHeadings?: boolean, optional?: boolean,
+): Result<string> {
   if (typeof raw !== 'string') return { ok: false, error: `${label}: metin olmalı.` };
   const html = sanitizeRich(raw, { allowHeadings });
   const n = countChars(fillVars(richToText(html), vars));
-  if (!n) return { ok: false, error: `${label} boş bırakılamaz.` };
+  if (!n) return optional ? { ok: true, value: '' } : { ok: false, error: `${label} boş bırakılamaz.` };
   if (n > max) return { ok: false, error: `${label} en fazla ${max} karakter olabilir (şu an ${n}).` };
   return { ok: true, value: html };
 }
@@ -58,8 +61,8 @@ function checkImage(raw: unknown, label: string): Result<unknown> {
 }
 
 function checkField(raw: unknown, f: FieldDef, vars: Vars, allowHeadings?: boolean): Result<unknown> {
-  if (f.kind === 'text') return checkText(raw, f.max ?? 200, f.label, vars);
-  if (f.kind === 'rich') return checkRich(raw, f.max ?? 5000, f.label, vars, allowHeadings);
+  if (f.kind === 'text') return checkText(raw, f.max ?? 200, f.label, vars, undefined, f.optional);
+  if (f.kind === 'rich') return checkRich(raw, f.max ?? 5000, f.label, vars, allowHeadings, f.optional);
   if (f.kind === 'image') return checkImage(raw, f.label);
   return typeof raw === 'boolean' ? { ok: true, value: raw } : { ok: false, error: `${f.label}: evet/hayır olmalı.` };
 }
@@ -79,8 +82,8 @@ export function validateEdits(
       continue;
     }
     let r: Result<unknown>;
-    if (def.kind === 'text') r = checkText(edit.value, def.max ?? 200, def.label, vars, def.pattern);
-    else if (def.kind === 'rich') r = checkRich(edit.value, def.max ?? 20000, def.label, vars, def.allowHeadings);
+    if (def.kind === 'text') r = checkText(edit.value, def.max ?? 200, def.label, vars, def.pattern, def.optional);
+    else if (def.kind === 'rich') r = checkRich(edit.value, def.max ?? 20000, def.label, vars, def.allowHeadings, def.optional);
     else if (def.kind === 'image') r = checkImage(edit.value, def.label);
     else
       r = checkList(
@@ -120,7 +123,7 @@ function checkList(
   for (const item of raw) {
     if (!item || typeof item !== 'object') return { ok: false, error: `${label}: madde geçersiz.` };
     const rec = item as Record<string, unknown>;
-    if (typeof rec.id !== 'string' || !/^[a-z0-9-]{1,40}$/.test(rec.id) || ids.has(rec.id))
+    if (typeof rec.id !== 'string' || !/^[a-zA-Z0-9-]{1,40}$/.test(rec.id) || ids.has(rec.id))
       return { ok: false, error: `${label}: madde kimliği geçersiz.` };
     ids.add(rec.id);
     order.push(rec.id);
