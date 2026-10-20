@@ -9,7 +9,7 @@ import { createAdminSupabase } from "@seker/auth/admin";
 import { requireRole } from "@/lib/auth";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { notify } from "@/actions/notifications";
-import { nextContentCode, weekStart, type ContentKind, type PagePlatform } from "@/lib/content/codes";
+import { nextContentCode, weekStart, type ContentKind, type PagePlatform, type ReelsLetter } from "@/lib/content/codes";
 import { nextStageAfterApproval, type StageKey } from "@/lib/content/stages";
 import { getContentRules } from "@/lib/content/settings";
 import {
@@ -73,6 +73,8 @@ export type CreateContentTaskInput = {
   brief?: string;
   dueAt: string;
   weekOf?: string;
+  /** Yalnız bu Reels harfi (Bu hafta ekranının A/B slotu); verilmezse ilk boş harf. */
+  reelsLetter?: ReelsLetter;
 };
 
 function optionalText(value: string | undefined, max: number): string | null {
@@ -117,11 +119,13 @@ export async function createContentTask(
   try {
     // Eşzamanlı iki açılış aynı kodu alırsa tekil kısıt (23505) yakalar; kodlar yeniden okunup sonraki harf denenir.
     for (let attempt = 0; attempt < CODE_ATTEMPTS && !created; attempt++) {
-      const code = nextContentCode(input.kind, at, await takenCodes(admin, week), pagePlatform);
+      const code = nextContentCode(input.kind, at, await takenCodes(admin, week), pagePlatform, input.reelsLetter);
       if (!code) {
         return {
           error: input.kind === "reels"
-            ? "Bu hafta için üç Reels görevi zaten açık"
+            ? input.reelsLetter
+              ? `Bu hafta için Reels ${input.reelsLetter} görevi zaten açık`
+              : "Bu hafta için üç Reels görevi zaten açık"
             : "Bu hafta için bu sayfa görevi zaten açık",
         };
       }

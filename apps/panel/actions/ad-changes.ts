@@ -17,7 +17,7 @@ import {
   type AdChangeResult,
 } from "@/lib/ads/writes";
 
-const PATHS = ["/reklam/kampanyalar", "/reklam/bu-hafta", "/reklam/icerik"];
+const PATHS = ["/reklam/kampanyalar", "/reklam/hafta", "/reklam/icerik"];
 
 export async function applyAdChange(
   input: AdChangeAction & { reason?: string; source: "kampanyalar" | "oneri"; recommendationId?: string },

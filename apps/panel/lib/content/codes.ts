@@ -28,19 +28,24 @@ export function weekStart(d: Date): string {
 
 const REELS_LETTERS = ["A", "B", "C"];
 
+export type ReelsLetter = "A" | "B" | "C";
+
 /**
  * Haftanın bir sonraki boş içerik kodu; harfler doluysa null.
  * taken: tam kodlar ("R-2645-A"); başka haftanınkiler yok sayılır.
+ * reelsLetter: Reels için yalnız bu harf (Bu hafta ekranının slotu); doluysa null.
  */
 export function nextContentCode(
   kind: ContentKind,
   at: Date,
   taken: string[],
   pagePlatform: PagePlatform = "google",
+  reelsLetter?: ReelsLetter,
 ): string | null {
   const { year, week } = isoWeek(at);
   const prefix = `${kind === "reels" ? "R" : "S"}-${String(year % 100).padStart(2, "0")}${String(week).padStart(2, "0")}-`;
-  const letters = kind === "reels" ? REELS_LETTERS : [pagePlatform === "instagram" ? "I" : "G"];
+  const reels = reelsLetter && REELS_LETTERS.includes(reelsLetter) ? [reelsLetter] : REELS_LETTERS;
+  const letters = kind === "reels" ? reels : [pagePlatform === "instagram" ? "I" : "G"];
   const free = letters.find((l) => !taken.includes(prefix + l));
   return free ? prefix + free : null;
 }
