@@ -33,3 +33,20 @@ export interface AdsStore {
   listPending(limit: number): Promise<PendingConversion[]>;
   saveOutcomes(outcomes: UploadOutcome[]): Promise<void>;
 }
+
+export type AdPlatform = "google" | "meta";
+
+/** Platform bilgili harcama satırı. Google satırları `SpendRow` olarak kalır; Meta reklam seviyesi bunu kullanır. */
+export interface PlatformSpendRow extends SpendRow {
+  platform: AdPlatform;
+  level: "campaign" | "adset" | "ad";
+  objectId: string;
+  adsetId: string | null;
+  adsetName: string | null;
+  adId: string | null;
+  adName: string | null;
+  contentCode: string | null;
+  reach: number | null;
+  frequency: number | null;
+  platformResults: number | null;
+}
