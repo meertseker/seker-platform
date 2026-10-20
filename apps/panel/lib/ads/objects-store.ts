@@ -9,6 +9,8 @@ export interface AdObjectSyncRow extends AdObjectRow {
 }
 
 const CHUNK = 500;
+/** `.in()` adresi URL'ye girer; uzun adres isteği düşürmesin diye bağ sorgusu 100'lük parçalarla gider. */
+const LINK_CHUNK = 100;
 
 /**
  * Elle bağlanmış içerik kodları (`ad_content_links`, K11): reklam kimliği → kod.
@@ -21,12 +23,12 @@ export async function loadContentLinks(
 ): Promise<Map<string, string>> {
   const links = new Map<string, string>();
   const ids = [...new Set(adIds.filter(Boolean))];
-  for (let i = 0; i < ids.length; i += CHUNK) {
+  for (let i = 0; i < ids.length; i += LINK_CHUNK) {
     const { data, error } = await db
       .from("ad_content_links")
       .select("ad_id, content_code")
       .eq("platform", platform)
-      .in("ad_id", ids.slice(i, i + CHUNK));
+      .in("ad_id", ids.slice(i, i + LINK_CHUNK));
     if (error) throw new Error(`ad_content_links okunamadı: ${error.message}`);
     for (const row of (data ?? []) as { ad_id: string; content_code: string }[]) {
       links.set(row.ad_id, row.content_code);
@@ -36,7 +38,10 @@ export async function loadContentLinks(
 }
 
 /**
- * Nesneleri `ad_objects`'e idempotent yazar. Reklam satırlarında elle bağlı kod varsa addan çıkarılanın yerine geçer.
+ * Bir platformun TAM nesne görüntüsünü `ad_objects`'e idempotent yazar (çağıran, tüm sayfaların başarıyla
+ * çekildiğinden emin olmalı; çekim patlarsa bu fonksiyon hiç çağrılmaz). Yazım bitince o platformun bu koşuda
+ * görülmeyen (synced_at daha eski) satırları silinir; silinmiş nesne üzerinde işlem yapılamasın.
+ * Reklam satırlarında elle bağlı kod varsa addan çıkarılanın yerine geçer.
  * Bağ okunamazsa yazım yapılmaz (adın kodu elle bağı sessizce ezmesin).
  */
 export async function upsertAdObjects(db: SupabaseClient, rows: AdObjectSyncRow[]): Promise<number> {
@@ -67,6 +72,11 @@ export async function upsertAdObjects(db: SupabaseClient, rows: AdObjectSyncRow[
       .from("ad_objects")
       .upsert(payload.slice(i, i + CHUNK), { onConflict: "platform,level,object_id" });
     if (error) throw new Error(`ad_objects yazılamadı: ${error.message}`);
+  }
+  // Temizlik yalnız yazım tamamen başarılıysa ve satır gelen platformlar için.
+  for (const platform of new Set(rows.map((r) => r.platform))) {
+    const { error } = await db.from("ad_objects").delete().eq("platform", platform).lt("synced_at", syncedAt);
+    if (error) throw new Error(`ad_objects temizlenemedi: ${error.message}`);
   }
   return rows.length;
 }

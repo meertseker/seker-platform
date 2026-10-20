@@ -94,16 +94,33 @@ describe("upsertAdObjects", () => {
 
   function fakeDb(links: { ad_id: string; content_code: string }[]) {
     const upserts: Record<string, unknown>[][] = [];
+    const inCalls: string[][] = [];
+    const deletes: { platform?: unknown; ltSyncedAt?: unknown }[] = [];
     const db = {
       from: (table: string) => {
         if (table === "ad_content_links") {
-          const q: Record<string, unknown> = { select: () => q, eq: () => q, in: () => Promise.resolve({ data: links, error: null }) };
+          const q: Record<string, unknown> = {
+            select: () => q,
+            eq: () => q,
+            in: (_c: string, ids: string[]) => (inCalls.push(ids), Promise.resolve({ data: links.filter((l) => ids.includes(l.ad_id)), error: null })),
+          };
           return q;
         }
-        return { upsert: (rows: Record<string, unknown>[]) => (upserts.push(rows), Promise.resolve({ error: null })) };
+        return {
+          upsert: (rows: Record<string, unknown>[]) => (upserts.push(rows), Promise.resolve({ error: null })),
+          delete: () => {
+            const rec: { platform?: unknown; ltSyncedAt?: unknown } = {};
+            deletes.push(rec);
+            const q: Record<string, unknown> = {
+              eq: (_c: string, v: unknown) => ((rec.platform = v), q),
+              lt: (_c: string, v: unknown) => ((rec.ltSyncedAt = v), Promise.resolve({ error: null })),
+            };
+            return q;
+          },
+        };
       },
     };
-    return { db: db as never, upserts };
+    return { db: db as never, upserts, inCalls, deletes };
   }
 
   it("elle bağlı kod adın kodunun üstüne yazılır", async () => {
@@ -116,5 +133,29 @@ describe("upsertAdObjects", () => {
     const { db, upserts } = fakeDb([]);
     await upsertAdObjects(db, [ad()]);
     expect(upserts[0][0]).toMatchObject({ content_code: "R-2645-A" });
+  });
+
+  it("bağ sorgusu en çok 100 kimlikle parçalanır", async () => {
+    const { db, inCalls } = fakeDb([]);
+    const rows = Array.from({ length: 250 }, (_, i) => ad({ objectId: `a${i}` }));
+    await upsertAdObjects(db, rows);
+    expect(inCalls.map((c) => c.length)).toEqual([100, 100, 50]);
+  });
+
+  it("yazımdan sonra bu koşuda görülmeyen platform satırları silinir", async () => {
+    const { db, upserts, deletes } = fakeDb([]);
+    await upsertAdObjects(db, [ad()]);
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0].platform).toBe("meta");
+    expect(deletes[0].ltSyncedAt).toBe(upserts[0][0].synced_at);
+  });
+
+  it("yazım patlarsa temizlik yapılmaz", async () => {
+    const { db, deletes } = fakeDb([]);
+    const failing = {
+      from: (t: string) => (t === "ad_objects" ? { upsert: () => Promise.resolve({ error: { message: "x" } }) } : (db as never as { from: (t: string) => unknown }).from(t)),
+    };
+    await expect(upsertAdObjects(failing as never, [ad()])).rejects.toThrow("ad_objects yazılamadı");
+    expect(deletes).toHaveLength(0);
   });
 });

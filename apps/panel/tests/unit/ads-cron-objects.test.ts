@@ -112,5 +112,7 @@ describe("GET /api/cron/ads · nesne durumu", () => {
     const body = await response.json();
     expect(body).toMatchObject({ ok: false, spendRows: 1, objects: 2, meta: { spendRows: 1, objects: null } });
     expect(body.error).toContain("Meta durum: 190 süresi doldu");
+    // Çekim başarısızsa yazım da temizlik de çalışmaz: yalnız Google yazıldı.
+    expect(m.upsertAdObjects).toHaveBeenCalledTimes(1);
   });
 });

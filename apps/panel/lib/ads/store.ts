@@ -172,11 +172,17 @@ export function supabaseMetaStore(db: SupabaseClient): MetaStore {
     async upsertSpend(rows) {
       if (rows.length === 0) return;
       // Elle bağlı içerik kodu (ad_content_links) reklam adından çıkarılanın üstüne geçer.
-      const links = await loadContentLinks(
-        db,
-        "meta",
-        rows.map((r) => r.adId ?? ""),
-      );
+      // Harcama bağ tablosuna bağımlı değildir: okunamazsa uyarılır, ayrıştırılan kodla yazılır.
+      let links = new Map<string, string>();
+      try {
+        links = await loadContentLinks(
+          db,
+          "meta",
+          rows.map((r) => r.adId ?? ""),
+        );
+      } catch (e) {
+        console.warn("[ads] ad_content_links okunamadı, ad kodları kullanılıyor:", (e as Error).message);
+      }
       const { error } = await db.from("ad_spend_daily").upsert(
         rows.map((row) => ({
           date: row.date,

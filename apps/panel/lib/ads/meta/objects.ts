@@ -19,7 +19,6 @@ interface RawObject {
   id?: string;
   name?: string;
   status?: string;
-  effective_status?: string;
   daily_budget?: string;
   campaign_id?: string;
   adset_id?: string;
@@ -65,9 +64,9 @@ function budgetMicros(raw: string | undefined): number | null {
  * (`upsertAdObjects`) adın üstüne geçer.
  */
 export async function fetchMetaObjects(cfg: MetaConfig, fetchFn: FetchFn = fetch): Promise<AdObjectSyncRow[]> {
-  const campaigns = await fetchAll(cfg, "campaigns", "id,name,status,effective_status,daily_budget", fetchFn);
+  const campaigns = await fetchAll(cfg, "campaigns", "id,name,status,daily_budget", fetchFn);
   const adsets = await fetchAll(cfg, "adsets", "id,name,campaign_id,status,daily_budget", fetchFn);
-  const ads = await fetchAll(cfg, "ads", "id,name,adset_id,campaign_id,status,effective_status", fetchFn);
+  const ads = await fetchAll(cfg, "ads", "id,name,adset_id,campaign_id,status", fetchFn);
 
   // Bütçe kampanyada ya da kümede durur; ağ geçidi eski değeri istenen satırdan okuyup bütçe kaynağına yazar.
   // Bu yüzden alt satırlar (küme, reklam) bütçesi olmayan üstün bütçesini ve kaynağını devralır.
