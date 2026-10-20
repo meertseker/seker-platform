@@ -96,7 +96,7 @@ export const EVENT_LABELS = {
 } as const;
 
 export const CONVERSION_ACTIONS = {
-  randevu: "Randevu", kayit: "Kayıt",
+  randevu: "Randevu", kayit: "Kayıt", lead: "Başvuru",
 } as const;
 export type ConversionAction = keyof typeof CONVERSION_ACTIONS;
 
