@@ -145,6 +145,29 @@ async function loadOrganic(
 }
 
 /**
+ * Meta'da bütçe reklam setinde ya da kampanyada durur (reklam satırı üstün bütçesini taşır). Bütçe önerisi
+ * sahibine uygulanıp onun adıyla yazılsın diye sahip satırları (object_id = budget_resource) eklenir.
+ */
+async function attachMetaBudgetOwners(supabase: SupabaseClient, rows: RecAdObject[]): Promise<void> {
+  const resources = [...new Set(rows.map((r) => r.budgetResource).filter((r): r is string => !!r))];
+  const owners = new Map<string, NonNullable<RecAdObject["budgetOwner"]>>();
+  for (const part of chunk(resources, IN_CHUNK)) {
+    const { data, error } = await supabase
+      .from("ad_objects")
+      .select("level, object_id, name")
+      .eq("platform", "meta")
+      .in("level", ["campaign", "adset"])
+      .in("object_id", part);
+    if (error) throw new Error(`ad_objects: ${error.code ?? "okunamadı"}`);
+    for (const o of (data ?? []) as { level: "campaign" | "adset"; object_id: string; name: string }[]) {
+      // Aynı kimlik iki düzeyde olamaz; olursa reklam seti (bütçeye daha yakın) kazanır.
+      if (!owners.has(o.object_id) || o.level === "adset") owners.set(o.object_id, { level: o.level, objectId: o.object_id, name: o.name });
+    }
+  }
+  for (const r of rows) r.budgetOwner = r.budgetResource ? (owners.get(r.budgetResource) ?? null) : null;
+}
+
+/**
  * Organik, test ve büyütme aşamasındaki içeriklerin kural girdileri. `weekStart` toplantı haftası
  * (son hafta tıklama oranı, sıklık ve maliyet yönü bu haftadan).
  */
@@ -228,6 +251,8 @@ export async function loadRecInputs(supabase: SupabaseClient, weekStart: string,
       qualifiedDays.set(l.content_code, [...(qualifiedDays.get(l.content_code) ?? []), istanbulDateString(new Date(l.created_at))]);
     }
   }
+
+  await attachMetaBudgetOwners(supabase, [...objects.entries()].filter(([k]) => k.startsWith("meta|")).flatMap(([, v]) => v));
 
   const [perf, organic] = await Promise.all([loadContentPerf(supabase, codes), loadOrganic(supabase, items, now)]);
 

@@ -28,6 +28,7 @@ import { loadWeeklyData } from "@/lib/queries/weekly";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DECIDED = "Bu öneri için karar zaten verildi.";
+const INVALID = "Bu öneri artık geçerli değil.";
 const PATH = "/reklam/hafta";
 
 type Decision = { ok: true; result: string } | { error: string; needsReason?: boolean };
@@ -46,10 +47,13 @@ export async function approveRecommendation(id: string, reason?: string): Promis
   if (typeof id !== "string" || !UUID.test(id)) return { error: "Geçersiz öneri." };
   const store = supabaseRecommendationStore(db());
 
-  const rec = await store.get(id);
-  if (!rec) return { error: "Öneri bulunamadı." };
-  if (rec.status !== "acik") return { error: DECIDED };
-  if (!(await store.claim(id, profile.id))) return { error: DECIDED };
+  // Önce ayırma: uygulanan eylem ayrılan satırınkidir (okuma ile ayırma arasında tazelenen öneri eski eylemle uygulanmaz).
+  const rec = await store.claim(id, profile.id);
+  if (!rec) {
+    const current = await store.get(id);
+    if (!current) return { error: "Öneri bulunamadı." };
+    return { error: current.status === "gecersiz" ? INVALID : DECIDED };
+  }
 
   let result: string;
   try {
@@ -128,7 +132,8 @@ export async function refreshWeekRecommendations(weekStart: string): Promise<voi
     ]);
     const gates = computeWeekGates(weekly, now, hours, settings);
     await syncRecommendations(admin, weekStart, buildRecommendations(inputs, gates, settings));
-  } catch {
-    console.error("[ads] öneriler güncellenemedi");
+  } catch (e) {
+    // Hata metni yalnız tablo adı ve hata kodunu taşır (ör. "ad_recommendations okunamadı: 42P01").
+    console.error("[ads] öneriler güncellenemedi:", e instanceof Error ? e.message.slice(0, 200) : "bilinmeyen");
   }
 }
