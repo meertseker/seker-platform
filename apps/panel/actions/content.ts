@@ -1,6 +1,6 @@
 "use server";
 
-// İçerik görevleri: yönetici görev açar, öğretmen hazırlayıp teslim eder, tek yönetici onayı yeter.
+// İçerik görevleri: yönetici ya da danışman görev açar, öğretmen hazırlayıp teslim eder, tek yönetici onayı yeter.
 // Öğretmen eylemleri oturum istemcisiyle (RLS + kolon yetkisi) yazar; ekleme, onay, aşama ve bildirim
 // gizli anahtarlı istemcidedir ve her biri önce requireRole ile rolü doğrular.
 import { randomBytes } from "node:crypto";
@@ -28,6 +28,7 @@ import {
 } from "@/lib/content/store";
 import { formatDayTime, parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
 import { waMeUrl } from "@/lib/whatsapp";
+import { TASK_ASSIGN_PATH } from "@/lib/role-access";
 
 type Ok = { ok: true } | { error: string };
 
@@ -62,7 +63,7 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-// === Yönetici ===
+// === Yönetici (görev açma: danışman da) ===
 
 export type CreateContentTaskInput = {
   kind: ContentKind;
@@ -85,7 +86,8 @@ function optionalText(value: string | undefined, max: number): string | null {
 export async function createContentTask(
   input: CreateContentTaskInput,
 ): Promise<{ id: string; code: string; waLink: string | null } | { error: string }> {
-  const profile = await requireRole("yonetici");
+  // Görevi danışman da verir (Görev ver ekranı); onay, aşama ve düzeltme yalnız yöneticide kalır.
+  const profile = await requireRole("yonetici", "danisman");
 
   if (input.kind !== "reels" && input.kind !== "sayfa") return { error: "Görev türünü seçin" };
   const pagePlatform: PagePlatform = input.pagePlatform === "instagram" ? "instagram" : "google";
@@ -166,6 +168,7 @@ export async function createContentTask(
   const waLink = owner.phone ? waMeUrl(owner.phone, message) : null;
 
   revalidatePath(BOARD);
+  revalidatePath(TASK_ASSIGN_PATH);
   return { ...created, waLink };
 }
 

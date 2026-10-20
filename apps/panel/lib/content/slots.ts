@@ -1,5 +1,6 @@
 // Haftanın dört içerik yuvası (saf modül). "Bu hafta" toplantısı ve "Görev ver" ekranı aynı tanımı kullanır.
-import type { ContentKind, PagePlatform, ReelsLetter } from "./codes";
+import { weekStart, type ContentKind, type PagePlatform, type ReelsLetter } from "./codes";
+import { addDaysToDateString } from "@/lib/lead-flow/business-hours";
 
 export type WeeklySlot = "reels_a" | "reels_b" | "sayfa_google" | "sayfa_instagram";
 
@@ -30,4 +31,10 @@ export function slotOfCode(code: string): WeeklySlot | null {
   const prefix = code.charAt(0);
   const letter = code.slice(-1);
   return SLOT_ORDER.find((s) => (SLOTS[s].kind === "reels" ? "R" : "S") === prefix && SLOTS[s].letter === letter) ?? null;
+}
+
+/** Görev ver ekranında seçilebilen haftalar: bu hafta ve gelecek hafta (İstanbul Pazartesi'leri). */
+export function allowedTaskWeeks(now: Date): [string, string] {
+  const current = weekStart(now);
+  return [current, addDaysToDateString(current, 7)];
 }
