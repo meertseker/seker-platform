@@ -147,10 +147,21 @@ describe("öğretmen rolü: K1 görünürlük", () => {
   it("ayar tohumları: içerik limitleri ve reklam kuralları", async () => {
     const { data } = await admin.from("app_settings").select("key, value")
       .in("key", ["icerik_limitleri", "reklam_kurallari"]).order("key");
-    // 0018 reklam_kurallari'na yeni alanlar ekler; 0017 alanları korunur.
-    expect(data).toMatchObject([
+    // 0018 reklam_kurallari'na üç yeni alan ekler; 0017'nin dört alanı korunur. Birleşmiş nesnenin tamamı.
+    expect(data).toEqual([
       { key: "icerik_limitleri", value: { reels_aciklama: 150, sayfa_baslik: 30, en_az: 10 } },
-      { key: "reklam_kurallari", value: { hedef_nitelikli_tl: 1000, durdur_kat: 3, kazan_min_nitelikli: 5, sonucsuz_hafta: 3 } },
+      {
+        key: "reklam_kurallari",
+        value: {
+          hedef_nitelikli_tl: 1000,
+          durdur_kat: 3,
+          kazan_min_nitelikli: 5,
+          sonucsuz_hafta: 3,
+          buyutme_yuzde: 20,
+          yorgunluk_siklik: 3,
+          yorgunluk_ctr_dusus_yuzde: 30,
+        },
+      },
     ]);
   });
 
