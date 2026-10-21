@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { convertLeadToStudent } from "@/actions/students";
+import { offerPlanQuery } from "@/lib/offer-plan";
 
 interface LeadConversionFormProps {
   leadId: string;
@@ -34,12 +35,7 @@ export function LeadConversionForm({ leadId }: LeadConversionFormProps) {
         return;
       }
 
-      const params = new URLSearchParams({
-        plan: "1",
-        total: String(result.offer.totalTl),
-        count: String(result.offer.installmentCount),
-        offer: result.offer.sourceOfferId,
-      });
+      const params = offerPlanQuery(result.offer);
       router.push(`/ogrenciler/${result.studentId}?${params.toString()}`);
     });
   }

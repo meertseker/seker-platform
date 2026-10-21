@@ -8,9 +8,16 @@ import {
   type PaymentMethod,
 } from "@/lib/constants";
 import { getSessionProfile } from "@/lib/auth";
-import { generateInstallments, remainderInstallment } from "@/lib/installments";
+import { generateInstallments } from "@/lib/installments";
 import { allocatePayment } from "@/lib/payment-allocation";
-import { buildSettlement, type SettlementPlanRow } from "@/lib/payment-settlement";
+import {
+  buildSettlement,
+  plansAfterPayment,
+  type PaymentOp,
+  type PlanBeforePayment,
+} from "@/lib/payment-settlement";
+import { parseRevertPreview, revertConfirmText } from "@/lib/payment-revert";
+import { istanbulDateString } from "@/lib/lead-flow/business-hours";
 import { applyPaymentDay, type PaymentDay } from "@/lib/payment-day";
 import { buildEnrollmentPlans, seasonLastMonth } from "@/lib/enrollment-plan";
 import { kickWaFlush, logEvent } from "@/lib/events";
@@ -164,134 +171,44 @@ export async function createPaymentPlan(
   return { planId: plan.id };
 }
 
-export async function markInstallmentPaid(
-  installmentId: string,
-  paidTl: number,
-  method: PaymentMethod,
-  paidAtIso: string,
-) {
-  const profile = await getSessionProfile();
-  const supabase = await createServerSupabase();
-  const paidKurus = normalizeMoney(paidTl);
-  const paidAt = normalizePaidAt(paidAtIso);
-
-  if (!installmentId) return { error: "Taksit bulunamadı" };
-  if (!paidKurus) return { error: "Ödenen tutar 0'dan büyük olmalı" };
-  if (!paymentMethods.includes(method)) return { error: "Geçerli bir ödeme yöntemi seçin" };
-  if (!paidAt) return { error: "Geçerli bir ödeme tarihi girin" };
-
-  const { data: installment, error: installmentError } = await supabase
-    .from("installments")
-    .select("id, plan_id, due_date, amount, status")
-    .eq("id", installmentId)
-    .maybeSingle();
-
-  if (installmentError || !installment) return { error: "Taksit bulunamadı" };
-  if (installment.status !== "bekliyor") return { error: "Sadece bekleyen taksit ödenebilir" };
-
-  const amountKurus = tlToKurus(Number(installment.amount));
-  if (paidKurus > amountKurus) return { error: "Ödenen tutar taksit tutarını aşamaz" };
-
-  let remainderId: string | null = null;
-  const partial = paidKurus < amountKurus;
-
-  if (partial) {
-    const remainder = remainderInstallment(
-      { dueDate: installment.due_date, amountKurus },
-      paidKurus,
-    );
-    const { data: remainderRow, error: remainderError } = await supabase
-      .from("installments")
-      .insert({
-        plan_id: installment.plan_id,
-        due_date: remainder.dueDate,
-        amount: kurusToTl(remainder.amountKurus),
-      })
-      .select("id")
-      .single();
-
-    if (remainderError || !remainderRow) return { error: "Kalan taksit oluşturulamadı" };
-    remainderId = remainderRow.id;
-  }
-
-  const { error: updateError } = await supabase
-    .from("installments")
-    .update({
-      amount: kurusToTl(paidKurus),
-      status: "odendi",
-      paid_at: paidAt,
-      paid_amount: kurusToTl(paidKurus),
-      payment_method: method,
-      marked_by: profile.id,
-    })
-    .eq("id", installmentId);
-
-  if (updateError) {
-    const cleanupClient = createAdminSupabase() ?? supabase;
-    const cleanup = remainderId
-      ? await cleanupClient.from("installments").delete().eq("id", remainderId)
-      : null;
-    return {
-      error: cleanup?.error
-        ? "Taksit ödendi işaretlenemedi; kalan taksit manuel kontrol edilmeli"
-        : "Taksit ödendi olarak işaretlenemedi",
-    };
-  }
-
-  await logEvent(supabase, {
-    entityType: "installment",
-    entityId: installmentId,
-    eventType: "taksit_odendi",
-    actorId: profile.id,
-    payload: { paidTl: kurusToTl(paidKurus), partial },
-  });
-
-  const studentPath = await studentPathForPlan(supabase, installment.plan_id);
-  revalidatePath("/ogrenciler");
-  revalidatePath("/odemeler");
-  revalidatePath(studentPath);
-  return {};
+/** RPC'nin kendi (Türkçe) hata mesajı kullanıcıya gösterilir; beklenmeyen hata genel mesajla. */
+function rpcErrorMessage(error: { code?: string; message?: string } | null, fallback: string) {
+  if (!error) return fallback;
+  const known = ["P0001", "P0002", "22023", "42501"];
+  return error.code && known.includes(error.code) && error.message ? error.message : fallback;
 }
 
-export async function revertInstallment(installmentId: string) {
-  const profile = await getSessionProfile();
-  if (profile.role !== "yonetici") return { error: "Bu işlem için yönetici yetkisi gerekir" };
-
+/** Taksit tablosu / matris "Geri al" onayı: neyin geri alınacağını söyler, değiştirmez. */
+export async function previewInstallmentRevert(installmentId: string) {
+  await getSessionProfile();
   const supabase = await createServerSupabase();
-  const { data: installment } = await supabase
-    .from("installments")
-    .select("id, plan_id, status")
-    .eq("id", installmentId)
-    .maybeSingle();
+  if (!installmentId) return { error: "Taksit bulunamadı" };
+  const { data, error } = await supabase.rpc("preview_installment_revert", { p_installment_id: installmentId });
+  if (error || !data) return { error: rpcErrorMessage(error, "Ödeme bilgisi okunamadı") };
+  const preview = parseRevertPreview(data);
+  if (!preview) return { error: "Ödeme bilgisi okunamadı" };
+  return { preview, text: revertConfirmText(preview) };
+}
 
-  if (!installment) return { error: "Taksit bulunamadı" };
-  if (installment.status !== "odendi") return { error: "Sadece ödenmiş taksit geri alınabilir" };
+/**
+ * Ödenmiş taksiti geri alır. Taksiti ödeyen `odeme_alindi` olayı varsa o ödemenin
+ * tamamı geri alınır (undo_payment: tutar, kalan, olay); yoksa (içe aktarma) yalnız
+ * durum geri alınır ve olaya yazılır. Tek işlem: revert_installment_payment RPC.
+ */
+export async function revertInstallment(installmentId: string) {
+  await getSessionProfile();
+  const supabase = await createServerSupabase();
+  if (!installmentId) return { error: "Taksit bulunamadı" };
+  const { data, error } = await supabase.rpc("revert_installment_payment", { p_installment_id: installmentId });
+  if (error) return { error: rpcErrorMessage(error, "Ödeme geri alınamadı") };
+  kickWaFlush();
 
-  const { error } = await supabase
-    .from("installments")
-    .update({
-      status: "bekliyor",
-      paid_at: null,
-      paid_amount: null,
-      payment_method: null,
-      marked_by: null,
-    })
-    .eq("id", installmentId);
-
-  if (error) return { error: "Ödeme geri alınamadı" };
-
-  await logEvent(supabase, {
-    entityType: "installment",
-    entityId: installmentId,
-    eventType: "odeme_geri_alindi",
-    actorId: profile.id,
-    payload: {},
-  });
-
-  const studentPath = await studentPathForPlan(supabase, installment.plan_id);
+  const studentId = (data as { studentId?: string } | null)?.studentId;
   revalidatePath("/ogrenciler");
   revalidatePath("/odemeler");
-  revalidatePath(studentPath);
+  revalidatePath("/odemeler/gecikenler");
+  revalidatePath("/bugun");
+  if (studentId) revalidatePath(`/ogrenciler/${studentId}`);
   return {};
 }
 
@@ -305,57 +222,71 @@ export async function updateInstallment(
   const supabase = await createServerSupabase();
   const { data: installment } = await supabase
     .from("installments")
-    .select("id, plan_id, amount, due_date, plan:payment_plans!inner(total_amount)")
+    .select("id, plan_id, amount, due_date, status, plan:payment_plans!inner(total_amount)")
     .eq("id", installmentId)
     .maybeSingle();
 
   if (!installment) return { error: "Taksit bulunamadı" };
 
-  const patch: Record<string, number | string> = {};
-  let nextAmountKurus = tlToKurus(Number(installment.amount));
+  const currentKurus = tlToKurus(Number(installment.amount));
+  const patch: { amount?: number; due_date?: string } = {};
+  let nextAmountKurus = currentKurus;
 
   if (changes.amountTl !== undefined) {
     const amountKurus = normalizeMoney(changes.amountTl);
     if (!amountKurus) return { error: "Taksit tutarı 0'dan büyük olmalı" };
-    nextAmountKurus = amountKurus;
-    patch.amount = kurusToTl(amountKurus);
+    if (amountKurus !== currentKurus) {
+      if (installment.status === "odendi") {
+        return { error: "Ödenmiş taksitin tutarı değiştirilemez. Tutar yanlışsa önce ödemeyi geri alın." };
+      }
+      if (installment.status !== "bekliyor") return { error: "Yalnız bekleyen taksitin tutarı değiştirilebilir" };
+      nextAmountKurus = amountKurus;
+      patch.amount = kurusToTl(amountKurus);
+    }
   }
 
   if (changes.dueDate !== undefined) {
     const dueDate = normalizeDate(changes.dueDate);
     if (!dueDate) return { error: "Geçerli bir vade tarihi girin" };
-    patch.due_date = dueDate;
+    if (dueDate !== installment.due_date) patch.due_date = dueDate;
   }
 
+  // Değişiklik yoksa olay da yok (WhatsApp'a boş "güncellendi" gitmesin).
   if (Object.keys(patch).length === 0) return {};
 
-  const { data: installments } = await supabase
-    .from("installments")
-    .select("id, amount")
-    .eq("plan_id", installment.plan_id);
+  if (patch.amount !== undefined) {
+    const { data: installments } = await supabase
+      .from("installments")
+      .select("id, amount")
+      .eq("plan_id", installment.plan_id);
 
-  const nextTotalKurus = (installments ?? []).reduce((sum, row) => {
-    if (row.id === installmentId) return sum + nextAmountKurus;
-    return sum + tlToKurus(Number(row.amount));
-  }, 0);
-  const plan = Array.isArray(installment.plan) ? installment.plan[0] : installment.plan;
-  const planTotalKurus = tlToKurus(Number(plan.total_amount));
-  const difference = nextTotalKurus - planTotalKurus;
+    const nextTotalKurus = (installments ?? []).reduce((sum, row) => {
+      if (row.id === installmentId) return sum + nextAmountKurus;
+      return sum + tlToKurus(Number(row.amount));
+    }, 0);
+    const plan = Array.isArray(installment.plan) ? installment.plan[0] : installment.plan;
+    const planTotalKurus = tlToKurus(Number(plan.total_amount));
+    const difference = nextTotalKurus - planTotalKurus;
 
-  if (difference !== 0) {
-    return {
-      error: `Taksit toplamı plan toplamına eşit olmalı (fark: ${formatTRY(
-        Math.abs(difference),
-      )})`,
-    };
+    if (difference !== 0) {
+      return {
+        error: `Taksit toplamı plan toplamına eşit olmalı (fark: ${formatTRY(
+          Math.abs(difference),
+        )})`,
+      };
+    }
   }
 
-  const { error } = await supabase
+  // Okunduğu durumdayken güncellenir: arada ödenen taksitin tutarı değişmez.
+  const { data: updated, error } = await supabase
     .from("installments")
     .update(patch)
-    .eq("id", installmentId);
+    .eq("id", installmentId)
+    .eq("status", installment.status)
+    .select("id");
 
   if (error) return { error: "Taksit güncellenemedi" };
+  if (!updated || updated.length !== 1) return { error: "Taksit az önce değişti; sayfayı yenileyip tekrar deneyin" };
 
   await logEvent(supabase, {
     entityType: "installment",
@@ -366,7 +297,7 @@ export async function updateInstallment(
       fromTl: Number(installment.amount),
       toTl: kurusToTl(nextAmountKurus),
       fromDueDate: installment.due_date,
-      toDueDate: (patch.due_date as string | undefined) ?? installment.due_date,
+      toDueDate: patch.due_date ?? installment.due_date,
     },
   });
 
@@ -388,27 +319,21 @@ export interface TakePaymentInput {
   remainder?: { count: number; firstDueDate: string };
 }
 
-interface PaymentSnapshot {
-  id: string;
-  amount: number;
-}
-
-/** Danışman kendi ödemesini bu süre içinde geri alabilir. */
-const UNDO_WINDOW_MS = 15 * 60 * 1000;
-
 /**
  * Tek seferde ödeme: bir ya da birkaç taksit, bir ya da iki yöntem.
  * Dağıtım `allocatePayment` ile; işlem ve geri alma bilgisi tek bir
  * `odeme_alindi` olayına yazılır (not da burada durur).
  */
 export async function takePayment(input: TakePaymentInput) {
-  const profile = await getSessionProfile();
+  await getSessionProfile();
   const supabase = await createServerSupabase();
-  const paidAt = normalizePaidAt(input.paidOn);
+  const paidOn = normalizeDate(input.paidOn);
+  const paidAt = paidOn ? normalizePaidAt(paidOn) : null;
   const note = (input.note ?? "").trim().slice(0, 500);
 
   if (!input.studentId) return { error: "Öğrenci bulunamadı" };
-  if (!paidAt) return { error: "Geçerli bir ödeme tarihi girin" };
+  if (!paidOn || !paidAt) return { error: "Geçerli bir ödeme tarihi girin" };
+  if (paidOn > istanbulDateString(new Date())) return { error: "Ödeme tarihi bugünden ileri olamaz" };
   if (input.payments.length === 0 || input.payments.length > 2) {
     return { error: "Bir ya da iki ödeme yöntemi girin" };
   }
@@ -456,76 +381,29 @@ export async function takePayment(input: TakePaymentInput) {
   }
 
   const byId = new Map(typed.map((row) => [row.id, row]));
-  const createdIds: string[] = [];
-  const paidIds: string[] = [];
-  const snapshots: PaymentSnapshot[] = [];
-  const cleanupClient = createAdminSupabase() ?? supabase;
-
-  async function rollback() {
-    if (createdIds.length) await cleanupClient.from("installments").delete().in("id", createdIds);
-    for (const snap of snapshots) {
-      await cleanupClient
-        .from("installments")
-        .update({ amount: snap.amount, status: "bekliyor", paid_at: null, paid_amount: null, payment_method: null, marked_by: null })
-        .eq("id", snap.id);
-    }
-  }
-
-  const paidFields = (kurus: number, method: PaymentMethod) => ({
-    amount: kurusToTl(kurus),
-    status: "odendi" as const,
-    paid_at: paidAt,
-    paid_amount: kurusToTl(kurus),
-    payment_method: method,
-    marked_by: profile.id,
+  const ops: PaymentOp[] = result.allocations.map((allocation) => {
+    const row = byId.get(allocation.installmentId)!;
+    const remainders =
+      allocation.remainderKurus > 0
+        ? remainderPlan
+          ? generateInstallments(allocation.remainderKurus, remainderPlan.count, remainderPlan.firstDueDate)
+          : [{ dueDate: row.due_date, amountKurus: allocation.remainderKurus }]
+        : [];
+    return {
+      id: row.id,
+      planId: row.plan_id,
+      amount: Number(row.amount),
+      parts: allocation.parts.map((part) => ({ amount: kurusToTl(part.kurus), method: part.method })),
+      remainders: remainders.map((draft) => ({ dueDate: draft.dueDate, amount: kurusToTl(draft.amountKurus) })),
+    };
   });
 
-  for (const allocation of result.allocations) {
-    const row = byId.get(allocation.installmentId)!;
-    const [firstPart, ...extraParts] = allocation.parts;
-    const inserts = [
-      ...extraParts.map((part) => ({ plan_id: row.plan_id, due_date: row.due_date, ...paidFields(part.kurus, part.method) })),
-      ...(allocation.remainderKurus > 0
-        ? remainderPlan
-          ? generateInstallments(allocation.remainderKurus, remainderPlan.count, remainderPlan.firstDueDate).map(
-              (draft) => ({ plan_id: row.plan_id, due_date: draft.dueDate, amount: kurusToTl(draft.amountKurus) }),
-            )
-          : [{ plan_id: row.plan_id, due_date: row.due_date, amount: kurusToTl(allocation.remainderKurus) }]
-        : []),
-    ];
-    if (inserts.length) {
-      const { data: inserted, error: insertError } = await supabase
-        .from("installments")
-        .insert(inserts)
-        .select("id, status");
-      if (insertError || !inserted) {
-        await rollback();
-        return { error: "Ödeme kaydedilemedi, hiçbir değişiklik yapılmadı" };
-      }
-      for (const created of inserted) {
-        createdIds.push(created.id);
-        if (created.status === "odendi") paidIds.push(created.id);
-      }
-    }
-
-    const { error: updateError } = await supabase
-      .from("installments")
-      .update(paidFields(firstPart.kurus, firstPart.method))
-      .eq("id", row.id);
-    if (updateError) {
-      await rollback();
-      return { error: "Ödeme kaydedilemedi, hiçbir değişiklik yapılmadı" };
-    }
-    snapshots.push({ id: row.id, amount: Number(row.amount) });
-    paidIds.push(row.id);
-  }
-
-  const methods = [...new Set(result.allocations.flatMap((a) => a.parts.map((p) => p.method)))];
   // Ödeme anındaki durum (taksit tamamlandı mı, planda ne kaldı) olaya yazılır;
   // sonraki geri alma ya da taksitlendirme WhatsApp mesajını değiştirmez.
+  // Yazım tek işlemde (RPC) olduğundan durum, ödeme öncesi okunan planlardan hesaplanır.
   const { data: planRows } = await supabase
     .from("payment_plans")
-    .select("id, item_type, tentative_from, installments(due_date, amount, status)")
+    .select("id, item_type, tentative_from, installments(id, due_date, amount, status)")
     .in("id", [...new Set(typed.map((row) => row.plan_id))])
     .eq("installments.status", "bekliyor");
   const settlement = planRows
@@ -533,86 +411,46 @@ export async function takePayment(input: TakePaymentInput) {
         allocations: result.allocations,
         planOf: new Map(typed.map((row) => [row.id, row.plan_id])),
         remainder: remainderPlan,
-        plans: planRows as unknown as SettlementPlanRow[],
+        plans: plansAfterPayment(planRows as unknown as PlanBeforePayment[], ops),
       })
     : null;
-  const { data: event } = await supabase
-    .from("events")
-    .insert({
-      entity_type: "student",
-      entity_id: input.studentId,
-      event_type: "odeme_alindi",
-      actor_id: profile.id,
-      payload: {
-        totalTl: kurusToTl(result.totalKurus),
-        paidOn: input.paidOn,
-        methods,
-        note: note || null,
-        paidIds,
-        createdIds,
-        snapshots,
-        ...(settlement ?? {}),
-      },
-    })
-    .select("id")
-    .single();
+
+  const methods = [...new Set(result.allocations.flatMap((a) => a.parts.map((p) => p.method)))];
+  const { data, error } = await supabase.rpc("take_payment", {
+    p_student_id: input.studentId,
+    p_paid_at: paidAt,
+    p_ops: ops.map(({ id, amount, parts, remainders }) => ({ id, amount, parts, remainders })),
+    p_payload: { paidOn, methods, note: note || null, ...(settlement ?? {}) },
+  });
+  if (error || !data) return { error: rpcErrorMessage(error, "Ödeme kaydedilemedi, hiçbir değişiklik yapılmadı") };
   kickWaFlush();
 
   revalidatePath("/ogrenciler");
   revalidatePath("/odemeler");
   revalidatePath("/bugun");
   revalidatePath(`/ogrenciler/${input.studentId}`);
-  return { eventId: (event?.id as string | undefined) ?? null, totalTl: kurusToTl(result.totalKurus) };
+  const saved = data as { eventId?: string; totalTl?: number | string };
+  return { eventId: saved.eventId ?? null, totalTl: Number(saved.totalTl ?? kurusToTl(result.totalKurus)) };
 }
 
-/** "Ödeme al"ın geri alınması: oluşturulan satırlar silinir, taksitler eski hâline döner. */
+/**
+ * "Ödeme al"ın geri alınması (undo_payment RPC): oluşturulan satırlar silinir, taksitler eski
+ * hâline döner, olay undone olur. Sonradan kalan ödendiyse ya da değiştiyse reddedilir.
+ * Danışman kendi ödemesini 15 dakika içinde geri alabilir (kural RPC'de).
+ */
 export async function undoPayment(eventId: string) {
-  const profile = await getSessionProfile();
+  await getSessionProfile();
   const supabase = await createServerSupabase();
-  const { data: event } = await supabase
-    .from("events")
-    .select("id, entity_id, actor_id, event_type, created_at, payload")
-    .eq("id", eventId)
-    .maybeSingle();
+  if (!eventId) return { error: "Ödeme kaydı bulunamadı" };
+  const { data, error } = await supabase.rpc("undo_payment", { p_event_id: eventId });
+  if (error) return { error: rpcErrorMessage(error, "Ödeme geri alınamadı") };
+  kickWaFlush();
 
-  if (!event || event.event_type !== "odeme_alindi") return { error: "Ödeme kaydı bulunamadı" };
-  const payload = event.payload as { createdIds?: string[]; snapshots?: PaymentSnapshot[]; undone?: boolean };
-  if (payload.undone) return { error: "Bu ödeme zaten geri alındı" };
-  const isOwner = event.actor_id === profile.id;
-  const fresh = Date.now() - Date.parse(event.created_at) < UNDO_WINDOW_MS;
-  if (profile.role !== "yonetici" && !(isOwner && fresh)) {
-    return { error: "Bu ödemeyi yalnız yönetici geri alabilir" };
-  }
-
-  // Danışman taksit güncelleyemez (RLS); sahiplik ve süre yukarıda doğrulandı.
-  const admin = createAdminSupabase();
-  if (!admin && profile.role !== "yonetici") return { error: "Geri alma şu an yapılamıyor" };
-  const client = admin ?? supabase;
-
-  if (payload.createdIds?.length) {
-    const { error } = await client.from("installments").delete().in("id", payload.createdIds);
-    if (error) return { error: "Ödeme geri alınamadı" };
-  }
-  for (const snap of payload.snapshots ?? []) {
-    const { error } = await client
-      .from("installments")
-      .update({ amount: snap.amount, status: "bekliyor", paid_at: null, paid_amount: null, payment_method: null, marked_by: null })
-      .eq("id", snap.id);
-    if (error) return { error: "Ödeme geri alınamadı" };
-  }
-  await client.from("events").update({ payload: { ...payload, undone: true } }).eq("id", event.id);
-  await logEvent(supabase, {
-    entityType: "student",
-    entityId: event.entity_id,
-    eventType: "odeme_geri_alindi",
-    actorId: profile.id,
-    payload: { eventId: event.id },
-  });
-
+  const studentId = (data as { studentId?: string } | null)?.studentId;
   revalidatePath("/ogrenciler");
   revalidatePath("/odemeler");
   revalidatePath("/bugun");
-  revalidatePath(`/ogrenciler/${event.entity_id}`);
+  if (studentId) revalidatePath(`/ogrenciler/${studentId}`);
   return {};
 }
 
@@ -731,10 +569,10 @@ export async function createEnrollmentPlan(input: EnrollmentPlanInput) {
 /**
  * Taksitlendir: aynı plandaki bekleyen taksitlerin toplamı yeni sayıda aylık taksite
  * bölünür (ör. kırtasiye kalanı 3 taksit, ilki Kasım). Plan toplamı değişmez.
- * Taksit silmeye RLS izin vermediği için işlem sunucu anahtarıyla yapılır.
+ * Ekleme, silme ve ödeme olayının kalan listesi tek işlemde (reschedule_installments RPC).
  */
 export async function rescheduleInstallments(installmentIds: string[], count: number, firstDueDate: string) {
-  const profile = await getSessionProfile();
+  await getSessionProfile();
   const supabase = await createServerSupabase();
   const dueDate = normalizeDate(firstDueDate);
   if (installmentIds.length === 0) return { error: "Taksit seçin" };
@@ -743,45 +581,29 @@ export async function rescheduleInstallments(installmentIds: string[], count: nu
 
   const { data: rows } = await supabase
     .from("installments")
-    .select("id, plan_id, amount, status, plan:payment_plans!inner(student_id)")
+    .select("id, plan_id, amount, status")
     .in("id", installmentIds);
-  type Row = { id: string; plan_id: string; amount: number; status: string; plan: { student_id: string } | { student_id: string }[] };
+  type Row = { id: string; plan_id: string; amount: number; status: string };
   const typed = (rows ?? []) as unknown as Row[];
   if (typed.length !== installmentIds.length) return { error: "Taksitler bulunamadı" };
   if (typed.some((row) => row.status !== "bekliyor")) return { error: "Yalnız bekleyen taksitler taksitlendirilebilir" };
-  const planId = typed[0].plan_id;
-  if (typed.some((row) => row.plan_id !== planId)) return { error: "Taksitler aynı kaleme ait olmalı" };
-  const plan = Array.isArray(typed[0].plan) ? typed[0].plan[0] : typed[0].plan;
-
-  const admin = createAdminSupabase();
-  if (!admin) return { error: "Taksitlendirme şu an yapılamıyor" };
+  if (typed.some((row) => row.plan_id !== typed[0].plan_id)) return { error: "Taksitler aynı kaleme ait olmalı" };
 
   const totalKurus = typed.reduce((sum, row) => sum + tlToKurus(Number(row.amount)), 0);
   const drafts = generateInstallments(totalKurus, count, dueDate);
-  const { data: inserted, error: insertError } = await admin
-    .from("installments")
-    .insert(drafts.map((draft) => ({ plan_id: planId, due_date: draft.dueDate, amount: kurusToTl(draft.amountKurus) })))
-    .select("id");
-  if (insertError || !inserted) return { error: "Taksitler oluşturulamadı" };
-  const { error: deleteError } = await admin.from("installments").delete().in("id", installmentIds);
-  if (deleteError) {
-    await admin.from("installments").delete().in("id", inserted.map((row) => row.id));
-    return { error: "Taksitlendirilemedi, hiçbir değişiklik yapılmadı" };
-  }
-
-  await logEvent(supabase, {
-    entityType: "student",
-    entityId: plan.student_id,
-    eventType: "taksitlendirildi",
-    actorId: profile.id,
-    payload: { planId, totalTl: kurusToTl(totalKurus), count, firstDueDate: dueDate, replaced: installmentIds },
+  const { data, error } = await supabase.rpc("reschedule_installments", {
+    p_ids: installmentIds,
+    p_drafts: drafts.map((draft) => ({ dueDate: draft.dueDate, amount: kurusToTl(draft.amountKurus) })),
   });
+  if (error || !data) return { error: rpcErrorMessage(error, "Taksitlendirilemedi, hiçbir değişiklik yapılmadı") };
+  kickWaFlush();
 
+  const studentId = (data as { studentId?: string }).studentId;
   revalidatePath("/ogrenciler");
   revalidatePath("/odemeler");
   revalidatePath("/odemeler/gecikenler");
   revalidatePath("/bugun");
-  revalidatePath(`/ogrenciler/${plan.student_id}`);
+  if (studentId) revalidatePath(`/ogrenciler/${studentId}`);
   return {};
 }
 

@@ -3,12 +3,8 @@
 import type { Role } from "@/lib/role-access";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote } from "lucide-react";
-import {
-  markInstallmentPaid,
-  revertInstallment,
-  updateInstallment,
-} from "@/actions/payments";
+import { updateInstallment } from "@/actions/payments";
+import { PaymentRevertDialog } from "@/components/payment-revert-dialog";
 import {
   PAYMENT_METHODS,
   label,
@@ -38,19 +34,6 @@ interface InstallmentTableProps {
   today: string;
   /** Kalem sütununu + aya göre gruplamayı göster (öğrenci detayında tüm planlar tek takvimde). */
   showItemColumn?: boolean;
-  /** false: satır başına "Ödendi işaretle" gösterilmez (ödeme sayfanın "Ödeme al" düğmesinden alınır). */
-  allowPay?: boolean;
-}
-
-const paymentMethods = Object.keys(PAYMENT_METHODS) as PaymentMethod[];
-
-function todayInIstanbul() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Istanbul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
 }
 
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
@@ -74,13 +57,11 @@ function formatMonth(date: string) {
   return monthFormatter.format(new Date(`${date}T12:00:00+03:00`));
 }
 
-export function InstallmentTable({ installments, role, today, showItemColumn = false, allowPay = true }: InstallmentTableProps) {
+/** Ödemeler "Ödeme al" ile alınır; bu tablo takvimi gösterir, yönetici düzenler ve geri alır. */
+export function InstallmentTable({ installments, role, today, showItemColumn = false }: InstallmentTableProps) {
   const router = useRouter();
-  const [paying, setPaying] = useState<InstallmentTableItem | null>(null);
   const [editing, setEditing] = useState<InstallmentTableItem | null>(null);
-  const [paidAmount, setPaidAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("havale");
-  const [paidAt, setPaidAt] = useState(() => todayInIstanbul());
+  const [reverting, setReverting] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -106,38 +87,6 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
 
   const columnCount = showItemColumn ? 5 : 4;
 
-  function openPayModal(installment: InstallmentTableItem) {
-    setError(null);
-    setPaying(installment);
-    setPaidAmount(formatTlInput(installment.amount));
-    setPaymentMethod("havale");
-    setPaidAt(todayInIstanbul());
-  }
-
-  function submitPaid() {
-    if (!paying) return;
-    const amount = parseTlInput(paidAmount);
-    if (amount === null) {
-      setError("Geçerli bir tutar girin");
-      return;
-    }
-    setError(null);
-    startTransition(async () => {
-      const result = await markInstallmentPaid(
-        paying.id,
-        amount,
-        paymentMethod,
-        paidAt,
-      );
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      setPaying(null);
-      router.refresh();
-    });
-  }
-
   function openEdit(installment: InstallmentTableItem) {
     setError(null);
     setEditing(installment);
@@ -147,15 +96,17 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
 
   function submitEdit() {
     if (!editing) return;
-    const amount = parseTlInput(editAmount);
-    if (amount === null) {
+    // Ödenmiş taksitte yalnız vade değişir; tutar yanlışsa ödeme geri alınır.
+    const amountEditable = editing.status === "bekliyor";
+    const amount = amountEditable ? parseTlInput(editAmount) : null;
+    if (amountEditable && amount === null) {
       setError("Geçerli bir tutar girin");
       return;
     }
     setError(null);
     startTransition(async () => {
       const result = await updateInstallment(editing.id, {
-        amountTl: amount,
+        ...(amountEditable && amount !== null ? { amountTl: amount } : {}),
         dueDate: editDueDate,
       });
       if (result.error) {
@@ -168,16 +119,8 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
   }
 
   function revert(id: string) {
-    if (!window.confirm("Bu ödemenin geri alınmasını onaylıyor musunuz?")) return;
     setError(null);
-    startTransition(async () => {
-      const result = await revertInstallment(id);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      router.refresh();
-    });
+    setReverting(id);
   }
 
   if (installments.length === 0) {
@@ -275,16 +218,6 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap justify-end gap-2">
-                      {allowPay && installment.status === "bekliyor" ? (
-                        <button
-                          type="button"
-                          onClick={() => openPayModal(installment)}
-                          className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Banknote aria-hidden className="size-4" />
-                          Ödendi işaretle
-                        </button>
-                      ) : null}
                       {role === "yonetici" && installment.status !== "iptal" ? (
                         <>
                           <button
@@ -292,7 +225,7 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                             onClick={() => openEdit(installment)}
                             className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            Düzenle
+                            {installment.status === "odendi" ? "Vadeyi düzenle" : "Düzenle"}
                           </button>
                           {installment.status === "odendi" ? (
                             <button
@@ -375,16 +308,6 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {allowPay && installment.status === "bekliyor" ? (
-                    <button
-                      type="button"
-                      onClick={() => openPayModal(installment)}
-                      className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <Banknote aria-hidden className="size-4" />
-                      Ödendi işaretle
-                    </button>
-                  ) : null}
                   {role === "yonetici" && installment.status !== "iptal" ? (
                     <>
                       <button
@@ -392,7 +315,7 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                         onClick={() => openEdit(installment)}
                         className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        Düzenle
+                        {installment.status === "odendi" ? "Vadeyi düzenle" : "Düzenle"}
                       </button>
                       {installment.status === "odendi" ? (
                         <button
@@ -413,71 +336,6 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
         })()}
       </div>
 
-      {paying ? (
-        <div
-          className="scrim fixed inset-0 z-50 flex animate-scrim-in items-end p-4 sm:items-center sm:justify-center"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="glass-thick w-full animate-materialize rounded-[1.75rem] p-5 sm:max-w-md">
-            <h2 className="text-lg font-semibold text-foreground">Taksiti ödendi işaretle</h2>
-            <div className="mt-4 space-y-3">
-              <label className="block text-sm font-medium text-foreground">
-                Ödenen tutar
-                <input
-                  inputMode="decimal"
-                  value={paidAmount}
-                  onChange={(event) => setPaidAmount(event.target.value)}
-                  className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/30"
-                />
-              </label>
-              <label className="block text-sm font-medium text-foreground">
-                Yöntem
-                <select
-                  value={paymentMethod}
-                  onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
-                  className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
-                >
-                  {paymentMethods.map((method) => (
-                    <option key={method} value={method}>
-                      {label(PAYMENT_METHODS, method)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm font-medium text-foreground">
-                Ödeme tarihi
-                <input
-                  type="date"
-                  value={paidAt}
-                  onChange={(event) => setPaidAt(event.target.value)}
-                  className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
-                />
-              </label>
-            </div>
-
-            <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPaying(null)}
-                disabled={isPending}
-                className="min-h-11 flex-1 cursor-pointer rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Vazgeç
-              </button>
-              <button
-                type="button"
-                onClick={submitPaid}
-                disabled={isPending}
-                className="min-h-11 flex-1 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isPending ? "Kaydediliyor..." : "Kaydet"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {editing ? (
         <div
           className="scrim fixed inset-0 z-50 flex animate-scrim-in items-end p-4 sm:items-center sm:justify-center"
@@ -485,17 +343,25 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
           aria-modal="true"
         >
           <div className="glass-thick w-full animate-materialize rounded-[1.75rem] p-5 sm:max-w-md">
-            <h2 className="text-lg font-semibold text-foreground">Taksiti düzenle</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              {editing.status === "bekliyor" ? "Taksiti düzenle" : "Vadeyi düzenle"}
+            </h2>
             <div className="mt-4 space-y-3">
-              <label className="block text-sm font-medium text-foreground">
-                Tutar
-                <input
-                  inputMode="decimal"
-                  value={editAmount}
-                  onChange={(event) => setEditAmount(event.target.value)}
-                  className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/30"
-                />
-              </label>
+              {editing.status === "bekliyor" ? (
+                <label className="block text-sm font-medium text-foreground">
+                  Tutar
+                  <input
+                    inputMode="decimal"
+                    value={editAmount}
+                    onChange={(event) => setEditAmount(event.target.value)}
+                    className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/30"
+                  />
+                </label>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Ödenmiş taksitin tutarı değiştirilemez. Tutar yanlışsa önce ödemeyi geri alın.
+                </p>
+              )}
               <label className="block text-sm font-medium text-foreground">
                 Vade
                 <input
@@ -528,6 +394,8 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
           </div>
         </div>
       ) : null}
+
+      {reverting ? <PaymentRevertDialog installmentId={reverting} onClose={() => setReverting(null)} /> : null}
     </div>
   );
 }

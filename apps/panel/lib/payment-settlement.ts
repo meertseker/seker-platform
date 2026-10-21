@@ -93,3 +93,44 @@ export function buildSettlement(input: {
 
   return { settled, plans };
 }
+
+/** take_payment RPC'ye giden tek taksit işlemi (TL). */
+export interface PaymentOp {
+  id: string;
+  planId: string;
+  /** Okunan (ödeme öncesi) tutar; RPC satır değiştiyse reddeder. */
+  amount: number;
+  /** İlki mevcut satırı günceller, sonrakiler aynı vadeye ödenmiş satır olur. */
+  parts: { amount: number; method: string }[];
+  /** Ödenmeyen kalanın yeni bekleyen satırları. */
+  remainders: { dueDate: string; amount: number }[];
+}
+
+export interface PlanBeforePayment {
+  id: string;
+  item_type: string;
+  tentative_from: string | null;
+  installments: { id: string; due_date: string; amount: number | string; status: string }[] | null;
+}
+
+/**
+ * Ödeme yazılmadan önce okunan bekleyen taksitlerden, ödeme sonrası planı kurar:
+ * ödenen taksitler çıkar, kalanlar eklenir. Ödeme tek işlemde yazıldığından
+ * `buildSettlement` ödeme sonrası okuma yerine bunu kullanır.
+ */
+export function plansAfterPayment(plans: PlanBeforePayment[], ops: PaymentOp[]): SettlementPlanRow[] {
+  const paid = new Set(ops.map((op) => op.id));
+  return plans.map((plan) => ({
+    id: plan.id,
+    item_type: plan.item_type,
+    tentative_from: plan.tentative_from,
+    installments: [
+      ...(plan.installments ?? [])
+        .filter((item) => item.status === "bekliyor" && !paid.has(item.id))
+        .map(({ due_date, amount, status }) => ({ due_date, amount, status })),
+      ...ops
+        .filter((op) => op.planId === plan.id)
+        .flatMap((op) => op.remainders.map((r) => ({ due_date: r.dueDate, amount: r.amount, status: "bekliyor" }))),
+    ],
+  }));
+}

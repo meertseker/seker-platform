@@ -277,7 +277,7 @@ describe("buildPaymentMatrix — hücre durumları", () => {
   });
 
   it("kısmi ödemede bölünen taksit çifti tek hücrede 'kismi' verir", () => {
-    // markInstallmentPaid kısmi tahsilatta taksiti ödenen tutara indirip
+    // takePayment (take_payment RPC) kısmi tahsilatta taksiti ödenen tutara indirip
     // aynı vadeye yeni bir bekleyen taksit ekliyor.
     const matrix = buildPaymentMatrix(
       [

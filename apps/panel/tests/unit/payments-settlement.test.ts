@@ -3,7 +3,8 @@ import { buildSettlement } from "@/lib/payment-settlement";
 
 /**
  * takePayment'in `odeme_alindi` olayına ödeme anı durumunu (settled / plans)
- * yazdığını gösterir. Supabase zinciri bellekte taklit edilir.
+ * yazdığını gösterir. Yazım tek işlemde (take_payment RPC); durum ödeme öncesi
+ * okunan planlardan hesaplanır. Supabase zinciri bellekte taklit edilir.
  */
 type Inst = { id: string; plan_id: string; due_date: string; amount: number; status: string };
 const plans = [
@@ -12,8 +13,9 @@ const plans = [
 ];
 let installments: Inst[] = [];
 let eventPayload: Record<string, unknown> | null = null;
+let rpcArgs: Record<string, unknown> | null = null;
+let rpcResult: { data: unknown; error: unknown } = { data: { eventId: "E1", totalTl: 0 }, error: null };
 let planQuery: { ids: string[]; filters: [string, unknown][] } | null = null;
-let nextId = 0;
 
 function installmentsTable() {
   return {
@@ -24,24 +26,6 @@ function installmentsTable() {
           .map((i) => ({ ...i, plan: { student_id: "S1" } })),
         error: null,
       }),
-    }),
-    insert: (rows: (Omit<Inst, "id" | "status"> & { status?: string })[]) => ({
-      select: async () => {
-        const created = rows.map((row) => {
-          nextId += 1;
-          const inst: Inst = { ...row, id: `new-${nextId}`, status: row.status ?? "bekliyor" };
-          installments.push(inst);
-          return { id: inst.id, status: inst.status };
-        });
-        return { data: created, error: null };
-      },
-    }),
-    update: (patch: Partial<Inst>) => ({
-      eq: async (_col: string, id: string) => {
-        const inst = installments.find((i) => i.id === id)!;
-        Object.assign(inst, patch);
-        return { error: null };
-      },
     }),
   };
 }
@@ -64,7 +48,7 @@ function plansTable() {
                   ...p,
                   installments: installments
                     .filter((i) => i.plan_id === p.id && i.status === "bekliyor")
-                    .map(({ due_date, amount, status }) => ({ due_date, amount, status })),
+                    .map(({ id, due_date, amount, status }) => ({ id, due_date, amount, status })),
                 })),
               error: null,
             }),
@@ -78,29 +62,29 @@ function plansTable() {
 const from = vi.fn((table: string) => {
   if (table === "installments") return installmentsTable();
   if (table === "payment_plans") return plansTable();
-  if (table === "events") {
-    return {
-      insert: (row: { payload: Record<string, unknown> }) => {
-        eventPayload = row.payload;
-        return { select: () => ({ single: async () => ({ data: { id: "E1" }, error: null }) }) };
-      },
-    };
-  }
   throw new Error(`beklenmeyen tablo ${table}`);
+});
+const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
+  if (name !== "take_payment") throw new Error(`beklenmeyen rpc ${name}`);
+  rpcArgs = args;
+  eventPayload = args.p_payload as Record<string, unknown>;
+  return rpcResult;
 });
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ getSessionProfile: async () => ({ id: "u1", role: "yonetici" }) }));
 vi.mock("@/lib/events", () => ({ logEvent: vi.fn(), kickWaFlush: vi.fn() }));
-vi.mock("@/lib/supabase/server", () => ({ createServerSupabase: async () => ({ from }) }));
+vi.mock("@/lib/supabase/server", () => ({ createServerSupabase: async () => ({ from, rpc }) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminSupabase: () => null }));
 
 import { takePayment } from "@/actions/payments";
 
 beforeEach(() => {
   eventPayload = null;
+  rpcArgs = null;
+  rpcResult = { data: { eventId: "E1", totalTl: 0 }, error: null };
   planQuery = null;
-  nextId = 0;
+  rpc.mockClear();
   installments = [
     { id: "K1", plan_id: "P-kitap", due_date: "2026-10-05", amount: 3000, status: "bekliyor" },
     { id: "K2", plan_id: "P-kitap", due_date: "2026-11-05", amount: 3000, status: "bekliyor" },
@@ -128,8 +112,12 @@ describe("takePayment → odeme_alindi durumu", () => {
       { planId: "P-aidat", itemType: "aidat", pendingCount: 2, pendingTl: 30990, tentativePending: true, closed: false },
       { planId: "P-kitap", itemType: "kitap", pendingCount: 1, pendingTl: 3000, tentativePending: false, closed: false },
     ]);
-    // Mevcut alanlar yerinde.
-    expect(eventPayload).toMatchObject({ totalTl: 18495, methods: ["nakit"], paidIds: expect.arrayContaining(["K1", "A1"]) });
+    // Olay alanları: ödenen/oluşan id'leri RPC yazar.
+    expect(eventPayload).toMatchObject({ paidOn: "2026-10-21", methods: ["nakit"], note: null });
+    expect(rpcArgs?.p_ops).toEqual([
+      { id: "A1", amount: 15495, parts: [{ amount: 15495, method: "nakit" }], remainders: [] },
+      { id: "K1", amount: 3000, parts: [{ amount: 3000, method: "nakit" }], remainders: [] },
+    ]);
   });
 
   it("kısmi ödeme: kalan yeni taksitlere bölünür, plan bunları sayar", async () => {
@@ -146,6 +134,49 @@ describe("takePayment → odeme_alindi durumu", () => {
     expect(eventPayload?.plans).toEqual([
       { planId: "P-kitap", itemType: "kitap", pendingCount: 4, pendingTl: 3900, tentativePending: false, closed: false },
     ]);
+    expect(rpcArgs?.p_ops).toEqual([
+      {
+        id: "K2", amount: 3000, parts: [{ amount: 2100, method: "pos" }],
+        remainders: [
+          { dueDate: "2026-12-05", amount: 300 },
+          { dueDate: "2027-01-05", amount: 300 },
+          { dueDate: "2027-02-05", amount: 300 },
+        ],
+      },
+    ]);
+  });
+
+  it("ileri tarihli ödeme RPC'ye gitmeden reddedilir", async () => {
+    const result = await takePayment({
+      studentId: "S1",
+      installmentIds: ["K1"],
+      payments: [{ method: "nakit", amountTl: 3000 }],
+      paidOn: "2999-01-01",
+    });
+    expect(result).toEqual({ error: "Ödeme tarihi bugünden ileri olamaz" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("eşzamanlı ödeme: RPC'nin mesajı kullanıcıya gider, hata yutulmaz", async () => {
+    rpcResult = { data: null, error: { code: "P0001", message: "Bu taksit az önce başka biri tarafından ödendi" } };
+    const result = await takePayment({
+      studentId: "S1",
+      installmentIds: ["K1"],
+      payments: [{ method: "nakit", amountTl: 3000 }],
+      paidOn: "2026-10-21",
+    });
+    expect(result).toEqual({ error: "Bu taksit az önce başka biri tarafından ödendi" });
+  });
+
+  it("beklenmeyen veritabanı hatası genel mesajla döner", async () => {
+    rpcResult = { data: null, error: { code: "XX000", message: "internal" } };
+    const result = await takePayment({
+      studentId: "S1",
+      installmentIds: ["K1"],
+      payments: [{ method: "nakit", amountTl: 3000 }],
+      paidOn: "2026-10-21",
+    });
+    expect(result).toEqual({ error: "Ödeme kaydedilemedi, hiçbir değişiklik yapılmadı" });
   });
 
   it("son taksit ödenince plan kapanır", async () => {

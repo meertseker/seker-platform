@@ -379,8 +379,13 @@ function describe(item: WaItem, ctx: WaContext): Line | null {
       if (note) lines.push(`Not: ${escapeWa(note)}`);
       return { icon: "💰", title: "Ödeme alındı", lines };
     }
-    case "odeme_geri_alindi":
-      return { icon: "↩️", title: "Ödeme geri alındı", lines: [] };
+    case "odeme_geri_alindi": {
+      const total = money(p.totalTl);
+      const count = num(p.installmentCount);
+      const parts = [total ? `Tutar: ${total}` : null, count && count > 1 ? `${count} taksit` : null];
+      const line = parts.filter(Boolean).join(" · ");
+      return { icon: "↩️", title: "Ödeme geri alındı", lines: line ? [line] : [] };
+    }
     case "odeme_hatirlatildi": {
       const count = Array.isArray(p.installmentIds) ? p.installmentIds.length : 0;
       return { icon: "🔔", title: "Veliye ödeme hatırlatıldı", lines: count > 1 ? [`${count} taksit`] : [] };

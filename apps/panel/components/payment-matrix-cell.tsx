@@ -4,7 +4,8 @@ import type { Role } from "@/lib/role-access";
 import { createContext, useContext, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote } from "lucide-react";
-import { rescheduleInstallments, revertInstallment, updateInstallment } from "@/actions/payments";
+import { rescheduleInstallments, updateInstallment } from "@/actions/payments";
+import { PaymentRevertDialog } from "@/components/payment-revert-dialog";
 import { PaymentDialog, type OpenPaymentItem } from "@/components/payment-dialog";
 import { EXCEL_FILLS } from "@/lib/payment-fills";
 import { ReminderButton } from "@/components/reminder-button";
@@ -221,6 +222,7 @@ function CellSheet({
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [splitting, setSplitting] = useState(false);
+  const [reverting, setReverting] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const openItems = cell.items.filter((item) => item.status === "bekliyor");
@@ -240,10 +242,15 @@ function CellSheet({
 
   function saveEdit() {
     if (!editing) return;
-    const parsed = parseTlInput(amount);
-    if (parsed === null) return setError("Geçerli bir tutar girin");
+    // Ödenmiş taksitte yalnız vade değişir; tutar yanlışsa ödeme geri alınır.
+    const amountEditable = editing.status === "bekliyor";
+    const parsed = amountEditable ? parseTlInput(amount) : null;
+    if (amountEditable && parsed === null) return setError("Geçerli bir tutar girin");
     startTransition(async () => {
-      const result = await updateInstallment(editing.installmentId, { amountTl: parsed, dueDate });
+      const result = await updateInstallment(editing.installmentId, {
+        ...(amountEditable && parsed !== null ? { amountTl: parsed } : {}),
+        dueDate,
+      });
       if (result.error) return setError(result.error);
       setEditing(null);
       router.refresh();
@@ -251,13 +258,8 @@ function CellSheet({
   }
 
   function revert(item: MatrixCellItem) {
-    if (!window.confirm("Bu ödemenin geri alınmasını onaylıyor musunuz?")) return;
     setError(null);
-    startTransition(async () => {
-      const result = await revertInstallment(item.installmentId);
-      if (result.error) return setError(result.error);
-      router.refresh();
-    });
+    setReverting(item.installmentId);
   }
 
   return (
@@ -306,15 +308,23 @@ function CellSheet({
 
               {editing?.installmentId === item.installmentId ? (
                 <div className="mt-3 space-y-3 rounded-xl bg-muted/60 p-3">
-                  <label className="block text-sm font-semibold text-foreground">
-                    Tutar
-                    <input
-                      inputMode="decimal"
-                      value={amount}
-                      onChange={(event) => setAmount(event.target.value)}
-                      className="mt-2 min-h-12 w-full rounded-xl border border-input bg-surface px-3 text-base tabular-nums outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
-                    />
-                  </label>
+                  {item.status === "bekliyor" ? (
+                    <label className="block text-sm font-semibold text-foreground">
+                      Tutar
+                      <input
+                        inputMode="decimal"
+                        value={amount}
+                        onChange={(event) => setAmount(event.target.value)}
+                        className="mt-2 min-h-12 w-full rounded-xl border border-input bg-surface px-3 text-base tabular-nums outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+                      />
+                    </label>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {item.status === "odendi"
+                        ? "Ödenmiş taksitin tutarı değiştirilemez. Tutar yanlışsa önce ödemeyi geri alın."
+                        : "Bu taksitin tutarı değiştirilemez."}
+                    </p>
+                  )}
                   <label className="block text-sm font-semibold text-foreground">
                     Vade
                     <input
@@ -341,7 +351,7 @@ function CellSheet({
               ) : role === "yonetici" ? (
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button type="button" onClick={() => startEdit(item)} className={secondaryButton}>
-                    Düzenle
+                    {item.status === "odendi" ? "Vadeyi düzenle" : "Düzenle"}
                   </button>
                   {item.status === "odendi" ? (
                     <button
@@ -411,6 +421,9 @@ function CellSheet({
             ? `${shortDate(lastReminder.at)} tarihinde hatırlatıldı · ${lastReminder.actorName ?? "Panel"}`
             : "Henüz hatırlatılmadı"}
         </p>
+      ) : null}
+      {reverting ? (
+        <PaymentRevertDialog installmentId={reverting} onClose={() => setReverting(null)} onDone={onClose} />
       ) : null}
     </Sheet>
   );

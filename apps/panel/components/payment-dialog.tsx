@@ -351,7 +351,13 @@ function PaymentForm({ studentId, studentName, items, preselect, onDone }: Payme
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-semibold text-foreground">
           Ödeme tarihi
-          <input type="date" value={paidOn} onChange={(event) => setPaidOn(event.target.value)} className={`mt-2 ${inputClass}`} />
+          <input
+            type="date"
+            value={paidOn}
+            max={todayInIstanbul()}
+            onChange={(event) => setPaidOn(event.target.value)}
+            className={`mt-2 ${inputClass}`}
+          />
         </label>
         <label className="block text-sm font-semibold text-foreground">
           Not (isteğe bağlı)

@@ -7,6 +7,11 @@
  * SİLİNEN tablolar: students, leads, tasks, notifications, events (+ FK cascade ile
  * payment_plans, installments, refunds, lead_notes, appointments, offers).
  *
+ * 0019'dan beri ödenmiş taksit (status='odendi') silinemez; service_role ve cascade dahil.
+ * Bu betik ödenmiş taksiti olan bir veritabanında temizlik adımında durur. Bilinçli tam
+ * silme gerekiyorsa SQL ile aynı işlem içinde:
+ *   select set_config('seker.odenmis_taksit_silme', 'on', true); delete from public.students ...;
+ *
  * Kullanım:
  *   npx tsx scripts/seed/migrate-production.ts --env .env.production.pull            # dry-run
  *   npx tsx scripts/seed/migrate-production.ts --env .env.production.pull --apply --confirm-wipe
