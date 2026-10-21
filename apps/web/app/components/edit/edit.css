@@ -19,3 +19,14 @@
 body.seker-editing { padding-top: 56px; }
 /* Boşaltılmış isteğe bağlı alan düzenlemede görünür ve yeniden çift tıklanabilir kalır; ziyaretçide basılmaz. */
 .seker-editing [data-edit-optional='1']:empty::before { content: 'Boş (ziyaretçiye gösterilmez) — yazmak için çift tıklayın'; opacity: 0.55; font-style: italic; }
+/* Taslak geri yükleme sorusu: çubuğun hemen altında. */
+.seker-restore { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 2147483001; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  max-width: calc(100vw - 32px); padding: 12px 16px; border-radius: 12px; background: #fff; color: #2a1840; font: 600 14px/1.4 system-ui, sans-serif;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.25); border: 2px solid #6d33b8; }
+.seker-restore button { border-radius: 999px; padding: 6px 14px; background: rgb(42 24 64 / 0.08); color: #2a1840; }
+.seker-restore .primary { background: #6d33b8; color: #fff; }
+/* 5 dakikadır kaydedilmemiş değişiklik: nazik hatırlatma. */
+.seker-remind { padding: 2px 10px; border-radius: 999px; background: #ffd66b; color: #2a1840; }
+.seker-editbar .primary.remind { box-shadow: 0 0 0 3px #ffd66b; animation: seker-remind 2s ease-in-out infinite; }
+@keyframes seker-remind { 50% { box-shadow: 0 0 0 6px rgb(255 214 107 / 0.35); } }
+@media (prefers-reduced-motion: reduce) { .seker-editbar .primary.remind { animation: none; } }

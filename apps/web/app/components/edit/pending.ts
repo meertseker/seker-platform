@@ -2,6 +2,8 @@ export type Pending = Record<string, { value: unknown; baseUpdatedAt: string | n
 export type PendingAction =
   | { type: 'set'; key: string; value: unknown; baseUpdatedAt: string | null }
   | { type: 'clear' }
+  /** Taslak geri yükleme: taslaktaki değerler eklenir, bu sekmede o sırada yapılmış değişiklikler üstün gelir. */
+  | { type: 'merge'; pending: Pending }
   | { type: 'drop'; keys: string[] }
   | { type: 'rebase'; bases: Record<string, string | null> };
 
@@ -20,6 +22,8 @@ export function pendingReducer(state: Pending, action: PendingAction): Pending {
       return Object.fromEntries(
         Object.entries(state).map(([k, p]) => [k, k in action.bases ? { ...p, baseUpdatedAt: action.bases[k] } : p]),
       );
+    case 'merge':
+      return { ...action.pending, ...state };
     case 'clear':
       return {};
   }

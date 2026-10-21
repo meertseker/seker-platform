@@ -19,7 +19,18 @@ RUN test -n "$NEXT_PUBLIC_SUPABASE_URL" && test -n "$NEXT_PUBLIC_SUPABASE_PUBLIS
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY \
     NEXT_TELEMETRY_DISABLED=1
-RUN pnpm turbo run build --filter=@seker/panel
+# Sürüm kayması (docs/01-app/02-guides/self-hosting.md "Version Skew"):
+# - NEXT_DEPLOYMENT_ID (git SHA): eski sekme yeni sunucuya gezinirse Next tam sayfa yeniler.
+# - NEXT_SERVER_ACTIONS_ENCRYPTION_KEY (BuildKit secret, imaj katmanına ARG olarak girmez): sunucu eylemi
+#   kimliklerinin tuzu bu anahtardır. Sabit kalırsa kimlikler deploy'lar arasında değişmez ve açık sekmeler
+#   "Failed to find Server Action" almaz. Secret yoksa Next her derlemede yeni anahtar üretir (eski davranış).
+ARG NEXT_DEPLOYMENT_ID
+ENV NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID
+RUN --mount=type=secret,id=next_actions_key,required=false \
+    if [ -s /run/secrets/next_actions_key ]; then \
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/next_actions_key)"; export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY; \
+    else echo "UYARI: next_actions_key secret yok; sunucu eylemi kimlikleri bu deploy'da değişecek" >&2; fi; \
+    pnpm turbo run build --filter=@seker/panel
 
 FROM node:22-alpine AS runner
 WORKDIR /app
