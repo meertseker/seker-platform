@@ -82,6 +82,8 @@ export const EVENT_LABELS = {
   plan_olusturuldu: "Ödeme planı oluşturuldu",
   taksit_odendi: "Taksit ödendi",
   odeme_geri_alindi: "Ödeme geri alındı",
+  odeme_duzeltildi: "Ödeme düzeltildi",
+  kalan_kapatildi: "Kalan kapatıldı",
   fiyat_listesi_guncellendi: "Fiyat listesi güncellendi",
   beklemeye_alindi: "Beklemeye alındı",
   ogrenci_ayrildi: "Öğrenci ayrıldı",

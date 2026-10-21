@@ -6,7 +6,9 @@ import {
   type Program,
 } from "@/lib/constants";
 import { badgeClass, STUDENT_STATUS_STYLES } from "@/lib/status-styles";
-import { formatTRY, tlToKurus } from "@/lib/money";
+import { formatTRY } from "@/lib/money";
+import { collectedKurus, isOverdue, receivableKurus, sumKurus } from "@/lib/queries/money";
+import { requestClock } from "@/lib/time";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 
@@ -28,7 +30,6 @@ interface InstallmentRow {
 }
 
 interface PlanRow {
-  total_amount: number;
   installments?: InstallmentRow[] | null;
 }
 
@@ -49,42 +50,18 @@ function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function todayInIstanbul() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Istanbul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
 function cleanSearch(value: string) {
   return value.replace(/[%,]/g, " ").trim();
 }
 
+/** Alacak, tahsilat ve geciken tek tanımlardan (lib/queries/money). */
 function summary(student: StudentRow, today: string) {
-  const plans = student.payment_plans ?? [];
-  const totalKurus = plans.reduce(
-    (sum, plan) => sum + tlToKurus(Number(plan.total_amount)),
-    0,
-  );
-  const paidKurus = plans.reduce(
-    (planSum, plan) =>
-      planSum +
-      (plan.installments ?? []).reduce((sum, installment) => {
-        if (installment.status !== "odendi") return sum;
-        return sum + tlToKurus(Number(installment.paid_amount ?? installment.amount));
-      }, 0),
-    0,
-  );
-  const overdue = plans.some((plan) =>
-    (plan.installments ?? []).some(
-      (installment) =>
-        installment.status === "bekliyor" && installment.due_date < today,
-    ),
-  );
-
-  return { totalKurus, paidKurus, overdue };
+  const installments = (student.payment_plans ?? []).flatMap((plan) => plan.installments ?? []);
+  return {
+    totalKurus: sumKurus(installments, receivableKurus),
+    paidKurus: sumKurus(installments, collectedKurus),
+    overdue: installments.some((installment) => isOverdue(installment, today, student.status)),
+  };
 }
 
 function hrefWith(
@@ -111,12 +88,12 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
     ? (durumParam as keyof typeof STUDENT_STATUSES)
     : "";
   const supabase = await createServerSupabase();
-  const today = todayInIstanbul();
+  const { today } = await requestClock();
 
   let query = supabase
     .from("students")
     .select(
-      "id, full_name, parent_name, phone, season, program, status, payment_plans(total_amount, installments(due_date, amount, status, paid_amount))",
+      "id, full_name, parent_name, phone, season, program, status, payment_plans(installments(due_date, amount, status, paid_amount))",
     )
     .order("full_name", { ascending: true });
 

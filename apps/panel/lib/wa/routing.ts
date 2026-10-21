@@ -10,6 +10,8 @@ export const WA_HEDEF_TURLERI: Record<WaHedef, readonly string[]> = {
     "taksit_odendi",
     "odeme_alindi",
     "odeme_geri_alindi",
+    "odeme_duzeltildi",
+    "kalan_kapatildi",
     "odeme_hatirlatildi",
     "odeme_gunu_degisti",
     "iade_kaydedildi",

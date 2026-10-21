@@ -1,5 +1,4 @@
 import type { LeadStatus } from "./constants";
-import { tlToKurus } from "./money";
 
 /** Kural §8.1: takipsizlik kontrolüne giren açık lead durumları. */
 export type StaleLeadStatus = Extract<
@@ -58,9 +57,4 @@ export function isIstanbulMonday(now: Date | string = new Date()): boolean {
       weekday: "short",
     }) === "Mon"
   );
-}
-
-/** Geciken taksit satırlarının (TL) toplamını kuruş cinsinden döner (spec §8.5). */
-export function overdueTotalKurus(rows: { amount: number | string }[]): number {
-  return rows.reduce((sum, row) => sum + tlToKurus(Number(row.amount)), 0);
 }

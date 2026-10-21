@@ -72,7 +72,7 @@ beforeEach(() => {
 describe("updateInstallment", () => {
   it("ödenmiş satırın tutarı değiştirilemez", async () => {
     const result = await payments.updateInstallment("I1", { amountTl: 14495, dueDate: "2026-10-05" });
-    expect(result.error).toContain("Ödenmiş taksitin tutarı değiştirilemez");
+    expect(result.error).toContain("Ödeme geçmişi → Ödemeyi düzelt");
     expect(updates).toHaveLength(0);
     expect(logEvent).not.toHaveBeenCalled();
   });

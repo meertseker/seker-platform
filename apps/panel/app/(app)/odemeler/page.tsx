@@ -8,7 +8,9 @@ import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
 import { STUDENT_STATUSES, label } from "@/lib/constants";
 import { getSessionProfile } from "@/lib/auth";
 import { isPhoneRequest } from "@/lib/device";
-import { formatTRY, tlToKurus } from "@/lib/money";
+import { formatTRY } from "@/lib/money";
+import { fetchCollectedKurus, monthDayRange } from "@/lib/queries/money";
+import { requestClock } from "@/lib/time";
 import {
   buildPaymentMatrix,
   SIDE_COLUMNS,
@@ -24,7 +26,6 @@ import {
   resolveScope,
   seasonsOf,
   studentsInScope,
-  todayInIstanbul,
   type PaymentFilterKey as FilterKey,
   type PaymentStudent,
 } from "@/lib/payments-scope";
@@ -84,10 +85,6 @@ const LEGEND = [
 /** "2026-09" -> "Eylül 2026" */
 function longMonthLabel(monthKey: string) {
   return monthLongFormatter.format(monthDate(monthKey));
-}
-
-function istanbulMonthUtcIso(year: number, monthIndex: number) {
-  return new Date(Date.UTC(year, monthIndex, 1, -3)).toISOString();
 }
 
 function hrefWith(
@@ -152,20 +149,16 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
   const profile = await getSessionProfile();
   const supabase = await createServerSupabase();
 
-  const today = todayInIstanbul();
+  const { today } = await requestClock();
   const currentMonth = today.slice(0, 7);
-  const [year, month] = today.split("-").map(Number);
+  const thisMonth = monthDayRange(currentMonth);
 
   const [studentsResult, paidResult, traces] = await Promise.all([
     supabase
       .from("students")
       .select(PAYMENT_STUDENTS_SELECT),
-    supabase
-      .from("installments")
-      .select("amount, paid_amount")
-      .eq("status", "odendi")
-      .gte("paid_at", istanbulMonthUtcIso(year, month - 1))
-      .lt("paid_at", istanbulMonthUtcIso(year, month)),
+    // Tahsilat tek tanımı: bu ay (İstanbul günü) ödenmiş satırların ödenen tutarı.
+    fetchCollectedKurus(supabase, thisMonth.from, thisMonth.to),
     fetchPaymentTraces(supabase),
   ]);
 
@@ -189,11 +182,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
 
   const dueThisMonthKurus = dueThisMonthKurusOf(matrix.rows, currentMonth);
   const seasonSummary = seasonSummaryOf(matrix.rows);
-  const collectedThisMonthKurus = (paidResult.data ?? []).reduce(
-    (sum, row: { amount: number; paid_amount: number | null }) =>
-      sum + tlToKurus(Number(row.paid_amount ?? row.amount)),
-    0,
-  );
+  const collectedThisMonthKurus = paidResult.kurus;
 
   const currentParams = {
     sezon: season || undefined,

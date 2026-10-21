@@ -11,6 +11,7 @@
 import type { InstallmentStatus, ItemType, PaymentMethod } from "@/lib/constants";
 import { tlToKurus } from "@/lib/money";
 import { isTentative } from "@/lib/price-increase";
+import { collectedKurus, isOverdue } from "@/lib/queries/money";
 
 export interface MatrixInstallmentInput {
   id: string;
@@ -124,6 +125,7 @@ function toCellItem(
   installment: MatrixInstallmentInput,
   plan: MatrixPlanInput,
   today: string,
+  studentStatus: StudentStatus,
 ): MatrixCellItem {
   return {
     installmentId: installment.id,
@@ -136,15 +138,19 @@ function toCellItem(
       installment.paid_amount == null ? null : tlToKurus(Number(installment.paid_amount)),
     paymentMethod: installment.payment_method,
     paidAt: installment.paid_at,
-    overdue: installment.status === "bekliyor" && installment.due_date < today,
+    // Geciken tek tanım: bekliyor, vadesi geçmiş, öğrenci aktif (lib/queries/money).
+    overdue: isOverdue(installment, today, studentStatus),
     tentative: isTentative(plan.tentative_from ?? null, installment.due_date, installment.status),
   };
 }
 
-/** Ödenen tutar; `paid_amount` boş bırakılmış eski kayıtlarda `amount`a düşer. */
+/** Tahsilat tek tanımı (lib/queries/money): ödenen tutar, eski kayıtta boşsa tutar. */
 function paidKurusOf(item: MatrixCellItem) {
-  if (item.status !== "odendi") return 0;
-  return item.paidAmountKurus ?? item.amountKurus;
+  return collectedKurus({
+    status: item.status,
+    amount: item.amountKurus / 100,
+    paid_amount: item.paidAmountKurus === null ? null : item.paidAmountKurus / 100,
+  });
 }
 
 function buildCell(monthKeyValue: string, items: MatrixCellItem[], cancelledCount: number): MatrixCell {
@@ -241,7 +247,7 @@ export function buildPaymentMatrix(
           continue;
         }
         const bucket = itemsByColumn.get(key);
-        const item = toCellItem(installment, plan, today);
+        const item = toCellItem(installment, plan, today, student.status);
         if (bucket) bucket.push(item);
         else itemsByColumn.set(key, [item]);
       }

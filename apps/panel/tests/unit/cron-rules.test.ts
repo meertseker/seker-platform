@@ -6,7 +6,6 @@ import {
   staleCutoffIso,
   istanbulDateString,
   isIstanbulMonday,
-  overdueTotalKurus,
 } from "@/lib/cron-rules";
 
 describe("STALE_LEAD_STATUSES (spec §8.1)", () => {
@@ -65,20 +64,6 @@ describe("isIstanbulMonday (spec §8.5)", () => {
   });
   it("salı günü false döner", () => {
     expect(isIstanbulMonday(new Date("2026-07-14T05:00:00.000Z"))).toBe(false);
-  });
-});
-
-describe("overdueTotalKurus (spec §8.5)", () => {
-  it("TL tutarlarını kuruş cinsinden toplar", () => {
-    expect(
-      overdueTotalKurus([{ amount: 1500.5 }, { amount: 2000 }, { amount: 0.5 }]),
-    ).toBe(350100);
-  });
-  it("boş listede 0 döner", () => {
-    expect(overdueTotalKurus([])).toBe(0);
-  });
-  it("string tutarları da destekler (DB numeric -> string dönüşü)", () => {
-    expect(overdueTotalKurus([{ amount: "1200.25" }])).toBe(120025);
   });
 });
 

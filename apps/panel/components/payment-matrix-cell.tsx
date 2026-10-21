@@ -4,15 +4,18 @@ import type { Role } from "@/lib/role-access";
 import { createContext, useContext, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote } from "lucide-react";
-import { rescheduleInstallments, updateInstallment } from "@/actions/payments";
+import { closeRemainder, rescheduleInstallments, updateInstallment } from "@/actions/payments";
+import { PaymentCorrectDialog } from "@/components/payment-correct-dialog";
 import { PaymentRevertDialog } from "@/components/payment-revert-dialog";
+import { useToast } from "@/components/toast";
 import { PaymentDialog, type OpenPaymentItem } from "@/components/payment-dialog";
 import { EXCEL_FILLS } from "@/lib/payment-fills";
 import { ReminderButton } from "@/components/reminder-button";
 import { Sheet } from "@/components/sheet";
 import { ITEM_TYPES, PAYMENT_METHODS, label } from "@/lib/constants";
 import { formatTRY, kurusToTl } from "@/lib/money";
-import { nextMonthFifth, shortDate } from "@/lib/payment-labels";
+import { installmentLabel, nextMonthFifth, shortDate } from "@/lib/payment-labels";
+import { PAID_AMOUNT_LOCKED } from "@/lib/payment-messages";
 import type { CellState, MatrixCell, MatrixCellItem } from "@/lib/payment-matrix";
 import { pendingColumns, type PanelColumn, type PendingColumn } from "@/lib/student-payment-panel";
 import { formatTlInput, parseTlInput } from "@/lib/tl-input";
@@ -352,6 +355,8 @@ function CellSheet({
   const [error, setError] = useState<string | null>(null);
   const [splitting, setSplitting] = useState(false);
   const [reverting, setReverting] = useState<string | null>(null);
+  const [correcting, setCorrecting] = useState<MatrixCellItem | null>(null);
+  const [closing, setClosing] = useState<MatrixCellItem | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const openItems = cell.items.filter((item) => item.status === "bekliyor");
@@ -452,9 +457,7 @@ function CellSheet({
                     </label>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      {item.status === "odendi"
-                        ? "Ödenmiş taksitin tutarı değiştirilemez. Tutar yanlışsa önce ödemeyi geri alın."
-                        : "Bu taksitin tutarı değiştirilemez."}
+                      {item.status === "odendi" ? PAID_AMOUNT_LOCKED : "Bu taksitin tutarı değiştirilemez."}
                     </p>
                   )}
                   <label className="block text-sm font-semibold text-foreground">
@@ -480,19 +483,45 @@ function CellSheet({
                     </button>
                   </div>
                 </div>
+              ) : closing?.installmentId === item.installmentId ? (
+                <CloseRemainderForm
+                  item={item}
+                  onCancel={() => setClosing(null)}
+                  onDone={() => {
+                    setClosing(null);
+                    router.refresh();
+                  }}
+                />
               ) : role === "yonetici" ? (
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button type="button" onClick={() => startEdit(item)} className={secondaryButton}>
                     {item.status === "odendi" ? "Vadeyi düzenle" : "Düzenle"}
                   </button>
                   {item.status === "odendi" ? (
+                    <>
+                      <button type="button" onClick={() => setCorrecting(item)} disabled={isPending} className={secondaryButton}>
+                        Ödemeyi düzelt
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => revert(item)}
+                        disabled={isPending}
+                        className="min-h-12 cursor-pointer rounded-xl border border-red-200 bg-destructive-soft px-4 text-sm font-semibold text-red-700 hover:border-red-300 disabled:opacity-50"
+                      >
+                        Ödemeyi geri al
+                      </button>
+                    </>
+                  ) : item.status === "bekliyor" ? (
                     <button
                       type="button"
-                      onClick={() => revert(item)}
+                      onClick={() => {
+                        setError(null);
+                        setClosing(item);
+                      }}
                       disabled={isPending}
-                      className="min-h-12 cursor-pointer rounded-xl border border-red-200 bg-destructive-soft px-4 text-sm font-semibold text-red-700 hover:border-red-300 disabled:opacity-50"
+                      className={secondaryButton}
                     >
-                      Ödemeyi geri al
+                      Kalanı kapat
                     </button>
                   ) : null}
                 </div>
@@ -583,6 +612,14 @@ function CellSheet({
       {reverting ? (
         <PaymentRevertDialog installmentId={reverting} onClose={() => setReverting(null)} onDone={onClose} />
       ) : null}
+      {correcting ? (
+        <PaymentCorrectDialog
+          installmentId={correcting.installmentId}
+          title={installmentLabel(correcting.itemType, correcting.dueDate)}
+          onClose={() => setCorrecting(null)}
+          onDone={onClose}
+        />
+      ) : null}
     </>
   );
 }
@@ -594,6 +631,80 @@ function todayInIstanbul() {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+}
+
+const CLOSE_REASONS = ["küsurat", "indirim"];
+
+/**
+ * "Kalanı kapat" (yönetici): bekleyen taksit nedenle kapatılır, kalemin toplamı aynı tutarda düşer.
+ * Ör. 15.500 yerine 15.495 alındıysa kalan 5 ₺ "küsurat" ile kapanır ve kalem tamamen ödenmiş olur.
+ */
+function CloseRemainderForm({ item, onCancel, onDone }: { item: MatrixCellItem; onCancel: () => void; onDone: () => void }) {
+  const showToast = useToast();
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function save() {
+    setError(null);
+    if (!reason.trim()) return setError("Kapatma nedenini yazın (ör. küsurat, indirim)");
+    startTransition(async () => {
+      const result = await closeRemainder(item.installmentId, reason);
+      if ("error" in result && result.error) return setError(result.error);
+      showToast({
+        text: result.closed
+          ? `${formatTRY(item.amountKurus)} kapatıldı · ${label(ITEM_TYPES, item.itemType)} tamamen ödendi`
+          : `${formatTRY(item.amountKurus)} kapatıldı`,
+      });
+      onDone();
+    });
+  }
+
+  return (
+    <div className="mt-3 space-y-3 rounded-xl bg-muted/60 p-3">
+      <p className="text-sm text-foreground">
+        Bu taksitin {formatTRY(item.amountKurus)} tutarı alınmayacak: taksit kapanır, kalemin toplamı {formatTRY(item.amountKurus)} azalır.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {CLOSE_REASONS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setReason(option)}
+            className={`min-h-11 cursor-pointer rounded-xl border px-3 text-sm font-semibold ${
+              reason === option ? "border-primary bg-primary text-on-primary" : "border-border bg-surface text-foreground hover:bg-muted"
+            }`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+      <label className="block text-sm font-semibold text-foreground">
+        Neden (zorunlu)
+        <input
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          maxLength={200}
+          placeholder="Örn. küsurat"
+          className="mt-2 min-h-12 w-full rounded-xl border border-input bg-surface px-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+        />
+      </label>
+      {error ? <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p> : null}
+      <div className="flex gap-2">
+        <button type="button" onClick={onCancel} disabled={isPending} className={`flex-1 ${secondaryButton}`}>
+          Vazgeç
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={isPending}
+          className="min-h-12 flex-1 cursor-pointer rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-strong disabled:opacity-50"
+        >
+          {isPending ? "Kapatılıyor…" : "Kalanı kapat"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 /** Bekleyen tutarı ayda bir taksite böler (1 = yalnız vadeyi değiştir). */

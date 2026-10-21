@@ -11,6 +11,7 @@
  * Planın toplamı değişmez.
  */
 import type { PaymentMethod } from "@/lib/constants";
+import { overpaymentMessage } from "@/lib/payment-messages";
 
 export interface AllocationInstallment {
   id: string;
@@ -56,7 +57,7 @@ export function allocatePayment(
   const dueKurus = ordered.reduce((sum, item) => sum + item.amountKurus, 0);
   const totalKurus = parts.reduce((sum, part) => sum + part.kurus, 0);
   if (totalKurus > dueKurus) {
-    return { ok: false, error: "Ödenen tutar seçilen taksitlerin toplamını aşamaz" };
+    return { ok: false, error: overpaymentMessage(dueKurus) };
   }
 
   const queue = parts.map((part) => ({ ...part }));

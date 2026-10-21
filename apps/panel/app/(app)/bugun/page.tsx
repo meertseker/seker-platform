@@ -30,13 +30,13 @@ import {
   dropLeadsWithFutureVisit,
   staleCutoffIso,
   istanbulDateString,
-  overdueTotalKurus,
 } from "@/lib/cron-rules";
 import { loadFutureVisitLeadIds } from "@/lib/queries/stale-leads";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
 import { fillTemplate } from "@/lib/lead-flow/template";
 import { reminderMessage } from "@/lib/overdue";
 import { formatTRY, tlToKurus } from "@/lib/money";
+import { isOverdue, receivableKurus, sumKurus } from "@/lib/queries/money";
 import {
   isAutoRuleKey,
   loadCallQueue,
@@ -107,6 +107,7 @@ interface DuePlanJoin {
 
 interface DueInstallmentRow {
   id: string;
+  status: string;
   due_date: string;
   amount: number;
   plan?: DuePlanJoin | DuePlanJoin[] | null;
@@ -426,10 +427,12 @@ export default async function Home({
     supabase
       .from("installments")
       .select(
-        "id, due_date, amount, plan:payment_plans(item_type, student:students(id, full_name, phone, family:families(phone)))",
+        "id, status, due_date, amount, plan:payment_plans!inner(item_type, student:students!inner(id, full_name, phone, status, family:families(phone)))",
       )
       .eq("status", "bekliyor")
       .lte("due_date", today)
+      // Geciken tek tanımı: yalnız aktif öğrenci (lib/queries/money).
+      .eq("plan.student.status", "aktif")
       .order("due_date", { ascending: true }),
     isYonetici
       ? loadPendingOffers(DISPLAY_LIMIT)
@@ -467,11 +470,9 @@ export default async function Home({
   const pendingOfferItems = pendingOffersResult.offers;
   const pendingOffersCount = pendingOffersResult.count;
 
-  const tahsilatTotalKurus = overdueTotalKurus(
-    dueInstallments.map((row) => ({ amount: row.amount })),
-  );
-  const overdueOnly = dueInstallments.filter((row) => daysLate(row.due_date, today) > 0);
-  const overdueOnlyKurus = overdueTotalKurus(overdueOnly.map((row) => ({ amount: row.amount })));
+  const tahsilatTotalKurus = sumKurus(dueInstallments, receivableKurus);
+  const overdueOnly = dueInstallments.filter((row) => isOverdue(row, today));
+  const overdueOnlyKurus = sumKurus(overdueOnly, receivableKurus);
   const dueInstallmentsToShow = dueInstallments.slice(0, DISPLAY_LIMIT);
 
   const followupCount = laterTasks.length + staleLeads.length;

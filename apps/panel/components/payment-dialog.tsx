@@ -9,6 +9,7 @@ import { useToast } from "@/components/toast";
 import type { PaymentMethod } from "@/lib/constants";
 import { formatTRY, kurusToTl, tlToKurus } from "@/lib/money";
 import { nextMonthFifth } from "@/lib/payment-labels";
+import { overpaymentMessage } from "@/lib/payment-messages";
 import { formatTlInput, parseTlInput } from "@/lib/tl-input";
 
 export interface OpenPaymentItem {
@@ -169,7 +170,7 @@ function PaymentForm({ studentId, studentName, items, preselect, onDone }: Payme
     } else {
       if (!method) return setError("Nasıl ödendiğini seçin");
       if (singleKurus <= 0) return setError("Geçerli bir tutar girin");
-      if (singleKurus > dueKurus) return setError("Tutar seçilen ayların toplamını aşamaz");
+      if (singleKurus > dueKurus) return setError(overpaymentMessage(dueKurus));
       payments = [{ method, amountTl: kurusToTl(singleKurus) }];
     }
 

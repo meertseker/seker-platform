@@ -17,12 +17,15 @@ import {
   type PlanBeforePayment,
 } from "@/lib/payment-settlement";
 import { parseRevertPreview, revertConfirmText } from "@/lib/payment-revert";
+import { buildCorrectionOps, type CorrectionTarget } from "@/lib/payment-correction";
+import { collectedDay, collectedKurus } from "@/lib/queries/money";
+import { ALREADY_PAID, PAID_AMOUNT_LOCKED, planTotalMismatchMessage } from "@/lib/payment-messages";
 import { istanbulDateString } from "@/lib/lead-flow/business-hours";
 import { applyPaymentDay, type PaymentDay } from "@/lib/payment-day";
 import { buildEnrollmentPlans, seasonLastMonth } from "@/lib/enrollment-plan";
 import { kickWaFlush, logEvent } from "@/lib/events";
 import { shouldStartTentative, tentativeStart } from "@/lib/price-increase";
-import { formatTRY, kurusToTl, tlToKurus } from "@/lib/money";
+import { kurusToTl, tlToKurus } from "@/lib/money";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -237,7 +240,7 @@ export async function updateInstallment(
     if (!amountKurus) return { error: "Taksit tutarı 0'dan büyük olmalı" };
     if (amountKurus !== currentKurus) {
       if (installment.status === "odendi") {
-        return { error: "Ödenmiş taksitin tutarı değiştirilemez. Tutar yanlışsa önce ödemeyi geri alın." };
+        return { error: PAID_AMOUNT_LOCKED };
       }
       if (installment.status !== "bekliyor") return { error: "Yalnız bekleyen taksitin tutarı değiştirilebilir" };
       nextAmountKurus = amountKurus;
@@ -269,11 +272,7 @@ export async function updateInstallment(
     const difference = nextTotalKurus - planTotalKurus;
 
     if (difference !== 0) {
-      return {
-        error: `Taksit toplamı plan toplamına eşit olmalı (fark: ${formatTRY(
-          Math.abs(difference),
-        )})`,
-      };
+      return { error: planTotalMismatchMessage(difference) };
     }
   }
 
@@ -369,7 +368,7 @@ export async function takePayment(input: TakePaymentInput) {
   for (const row of typed) {
     const plan = Array.isArray(row.plan) ? row.plan[0] : row.plan;
     if (plan?.student_id !== input.studentId) return { error: "Taksit bu öğrenciye ait değil" };
-    if (row.status !== "bekliyor") return { error: "Seçilen taksitlerden biri zaten ödenmiş" };
+    if (row.status !== "bekliyor") return { error: ALREADY_PAID };
   }
 
   const result = allocatePayment(
@@ -677,4 +676,200 @@ export async function setPaymentDay(studentId: string, day: PaymentDay, includeK
   revalidatePath("/bugun");
   revalidatePath(`/ogrenciler/${studentId}`);
   return { moved: moves.length };
+}
+
+type CorrectionLoad =
+  | { error: string }
+  | {
+      kind: "odeme" | "ice_aktarma";
+      targets: CorrectionTarget[];
+      /** Ödemenin bugünkü ödenmiş satırları. */
+      paidRows: { id: string; due_date: string; amount: number; paid_amount: number | null; paid_at: string | null; payment_method: PaymentMethod | null; status: string }[];
+      note: string | null;
+    };
+
+/**
+ * Düzeltmenin hedefleri: ödemenin taksitleri, ödeme öncesi tutarlarıyla (geri alma onları bu
+ * hâle döndürür). Olayı bulma kuralı RPC'deki payment_event_for_installment ile aynı:
+ * taksiti ödeyen, geri alınmamış en yeni `odeme_alindi`.
+ */
+async function loadCorrectionTargets(supabase: Supabase, installmentId: string): Promise<CorrectionLoad> {
+  const rowSelect = "id, due_date, amount, paid_amount, paid_at, payment_method, status";
+  const { data: row } = await supabase.from("installments").select(rowSelect).eq("id", installmentId).maybeSingle();
+  if (!row) return { error: "Ödeme bulunamadı; sayfayı yenileyin" };
+  if (row.status !== "odendi") return { error: "Bu taksit ödenmiş görünmüyor; sayfayı yenileyin" };
+
+  const { data: events } = await supabase
+    .from("events")
+    .select("id, created_at, payload")
+    .eq("event_type", "odeme_alindi")
+    .contains("payload", { paidIds: [installmentId] })
+    .order("created_at", { ascending: false });
+  type EventRow = {
+    id: string;
+    payload: { undone?: boolean; note?: string | null; paidIds?: string[]; snapshots?: { id: string; amount: number | string }[] } | null;
+  };
+  const event = ((events ?? []) as EventRow[]).find((candidate) => candidate.payload?.undone !== true);
+  type PaidRow = Extract<CorrectionLoad, { targets: CorrectionTarget[] }>["paidRows"][number];
+
+  if (!event) {
+    return {
+      kind: "ice_aktarma",
+      targets: [{ id: row.id, dueDate: row.due_date, amountKurus: tlToKurus(Number(row.amount)) }],
+      paidRows: [row as unknown as PaidRow],
+      note: null,
+    };
+  }
+
+  const snapshots = event.payload?.snapshots ?? [];
+  const paidIds = event.payload?.paidIds ?? [];
+  const ids = [...new Set([...snapshots.map((snap) => snap.id), ...paidIds])];
+  const { data: rows } = await supabase.from("installments").select(rowSelect).in("id", ids);
+  const byId = new Map(((rows ?? []) as unknown as PaidRow[]).map((r) => [r.id, r]));
+  if (snapshots.length === 0 || snapshots.some((snap) => !byId.has(snap.id))) {
+    return { error: "Bu ödemenin taksitlerinden biri bulunamadı; düzeltilemez. Önce sonraki işlemi geri alın." };
+  }
+  return {
+    kind: "odeme",
+    targets: snapshots.map((snap) => ({
+      id: snap.id,
+      dueDate: byId.get(snap.id)!.due_date,
+      amountKurus: tlToKurus(Number(snap.amount)),
+    })),
+    paidRows: paidIds.map((id) => byId.get(id)).filter((r): r is PaidRow => r !== undefined && r.status === "odendi"),
+    note: event.payload?.note ?? null,
+  };
+}
+
+/**
+ * "Ödemeyi düzelt" penceresi: ödemenin bugünkü hâli, yazılabilecek en yüksek tutar ve
+ * (varsa) düzeltmeyi engelleyen sonraki işlem. Değiştirmez.
+ */
+export async function previewPaymentCorrection(installmentId: string) {
+  const profile = await getSessionProfile();
+  if (profile.role !== "yonetici") return { error: "Ödemeyi yalnız yönetici düzeltebilir" };
+  if (!installmentId) return { error: "Ödeme bulunamadı" };
+  const supabase = await createServerSupabase();
+  const [loaded, preview] = await Promise.all([
+    loadCorrectionTargets(supabase, installmentId),
+    supabase.rpc("preview_installment_revert", { p_installment_id: installmentId }),
+  ]);
+  if ("error" in loaded) return { error: loaded.error };
+  const parsed = preview.data ? parseRevertPreview(preview.data) : null;
+  const parts = loaded.paidRows
+    .slice()
+    .sort((a, b) => (a.paid_at ?? "").localeCompare(b.paid_at ?? ""))
+    .map((r) => ({
+      method: r.payment_method,
+      kurus: collectedKurus(r),
+      paidOn: collectedDay(r) ?? istanbulDateString(new Date()),
+    }));
+  return {
+    kind: loaded.kind,
+    blocker: parsed?.blocker ?? null,
+    capacityKurus: loaded.targets.reduce((sum, target) => sum + target.amountKurus, 0),
+    totalKurus: parts.reduce((sum, part) => sum + part.kurus, 0),
+    parts,
+    note: loaded.note,
+  };
+}
+
+export interface CorrectPaymentInput {
+  /** Ödemenin herhangi bir ödenmiş satırı (Ödeme geçmişindeki kaydın satırı). */
+  installmentId: string;
+  /** Doğru tutar; bir ya da iki yöntem, her biri kendi günüyle. */
+  payments: { method: PaymentMethod; amountTl: number; paidOn: string }[];
+  note?: string;
+}
+
+/**
+ * "Ödemeyi düzelt" (yönetici): ödeme geri alınır ve doğru tutar / yöntem / tarihle yeniden
+ * kaydedilir — tek işlem (correct_payment RPC). Olaylı ödemede ödemenin bütün taksitleri,
+ * olaysız (içe aktarma) satırda yalnız o satır düzeltilir. Eksik kalan aynı vadeye bekler.
+ */
+export async function correctPayment(input: CorrectPaymentInput) {
+  const profile = await getSessionProfile();
+  if (profile.role !== "yonetici") return { error: "Ödemeyi yalnız yönetici düzeltebilir" };
+  if (!input.installmentId) return { error: "Ödeme bulunamadı" };
+  if (input.payments.length === 0 || input.payments.length > 2) return { error: "Bir ya da iki ödeme yöntemi girin" };
+  const today = istanbulDateString(new Date());
+  for (const part of input.payments) {
+    if (!paymentMethods.includes(part.method)) return { error: "Geçerli bir ödeme yöntemi seçin" };
+    if (!Number.isFinite(part.amountTl) || part.amountTl < 0) return { error: "Geçerli bir tutar girin" };
+    if (!normalizeDate(part.paidOn)) return { error: "Geçerli bir ödeme tarihi girin" };
+    if (part.paidOn > today) return { error: "Ödeme tarihi bugünden ileri olamaz" };
+  }
+  const note = (input.note ?? "").trim().slice(0, 500);
+  const supabase = await createServerSupabase();
+
+  const loaded = await loadCorrectionTargets(supabase, input.installmentId);
+  if ("error" in loaded) return { error: loaded.error };
+  const { targets } = loaded;
+
+  const built = buildCorrectionOps(
+    targets,
+    input.payments.map((part) => ({ method: part.method, kurus: tlToKurus(part.amountTl), paidOn: part.paidOn })),
+  );
+  if (!built.ok) return { error: built.error };
+
+  const methods = [...new Set(input.payments.filter((part) => part.amountTl > 0).map((part) => part.method))];
+  const { data, error } = await supabase.rpc("correct_payment", {
+    p_installment_id: input.installmentId,
+    p_paid_at: normalizePaidAt(built.paidOn),
+    p_ops: built.ops.map((op) => ({
+      id: op.id,
+      amount: op.amount,
+      parts: op.parts.map((part) =>
+        part.paidOn
+          ? { amount: part.amount, method: part.method, paidAt: normalizePaidAt(part.paidOn) }
+          : { amount: part.amount, method: part.method },
+      ),
+      remainders: op.remainders,
+    })),
+    p_payload: {
+      paidOn: built.paidOn,
+      methods,
+      parts: input.payments
+        .filter((part) => part.amountTl > 0)
+        .map((part) => ({ amountTl: part.amountTl, method: part.method, paidOn: part.paidOn })),
+      note: note || null,
+    },
+  });
+  if (error || !data) return { error: rpcErrorMessage(error, "Ödeme düzeltilemedi, hiçbir değişiklik yapılmadı") };
+  kickWaFlush();
+
+  const studentId = (data as { studentId?: string }).studentId;
+  revalidatePath("/ogrenciler");
+  revalidatePath("/odemeler");
+  revalidatePath("/odemeler/gecikenler");
+  revalidatePath("/bugun");
+  if (studentId) revalidatePath(`/ogrenciler/${studentId}`);
+  return { totalTl: kurusToTl(built.totalKurus), remainderTl: kurusToTl(built.remainderKurus) };
+}
+
+/**
+ * "Kalanı kapat" (yönetici): bekleyen taksit küsurat / indirim gibi bir nedenle kapatılır;
+ * taksit silinir ve kalemin toplamı aynı tutarda düşer (close_installment_remainder RPC).
+ */
+export async function closeRemainder(installmentId: string, reason: string) {
+  const profile = await getSessionProfile();
+  if (profile.role !== "yonetici") return { error: "Kalanı yalnız yönetici kapatabilir" };
+  const trimmed = (reason ?? "").trim();
+  if (!trimmed) return { error: "Kapatma nedenini yazın (ör. küsurat, indirim)" };
+  if (!installmentId) return { error: "Taksit bulunamadı" };
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase.rpc("close_installment_remainder", {
+    p_installment_id: installmentId,
+    p_reason: trimmed.slice(0, 200),
+  });
+  if (error || !data) return { error: rpcErrorMessage(error, "Kalan kapatılamadı, hiçbir değişiklik yapılmadı") };
+  kickWaFlush();
+
+  const result = data as { studentId?: string; closed?: boolean; planTotalTl?: number | string };
+  revalidatePath("/ogrenciler");
+  revalidatePath("/odemeler");
+  revalidatePath("/odemeler/gecikenler");
+  revalidatePath("/bugun");
+  if (result.studentId) revalidatePath(`/ogrenciler/${result.studentId}`);
+  return { closed: result.closed === true, planTotalTl: Number(result.planTotalTl ?? 0) };
 }

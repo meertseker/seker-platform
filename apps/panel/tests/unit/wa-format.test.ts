@@ -387,3 +387,88 @@ describe("odeme_alindi: parçalar farklı günlerde", () => {
     ).toContain("Tutar: 19.000 ₺ · Nakit, Kart (POS)");
   });
 });
+
+describe("odeme_duzeltildi ve kalan_kapatildi (Faz 1)", () => {
+  function message(eventType: string, payload: Record<string, unknown>) {
+    const c = ctx();
+    const [group] = groupItems([item({ eventType, entityType: "student", entityId: "S1", payload })], c);
+    return formatGroup(group, c);
+  }
+
+  it("Ödeme düzeltildi: kalem, önce / sonra, kalan ve not", () => {
+    expect(
+      message("odeme_duzeltildi", {
+        items: [{ itemType: "kitap", dueDate: "2026-10-05" }],
+        before: { totalTl: 14495, parts: [{ amountTl: 14495, method: "nakit", paidOn: "2026-10-12" }] },
+        after: { totalTl: 15495, parts: [{ amountTl: 15495, method: "havale", paidOn: "2026-10-12" }] },
+        remainderTl: 5,
+        note: "*yanlış* girilmiş",
+      }),
+    ).toBe(
+      [
+        "*Elif Demir* · öğrenci",
+        "✏️ Ödeme düzeltildi",
+        "Ekim kitap-kırtasiye",
+        "Önce: 14.495 ₺ · nakit (12 Ekim)",
+        "Sonra: 15.495 ₺ · havale (12 Ekim)",
+        "Kalan: 5 ₺ bekliyor",
+        "Not: ∗yanlış∗ girilmiş",
+        "— Merve Hanım",
+      ].join("\n"),
+    );
+  });
+
+  it("Ödeme düzeltildi: iki parça ve iki kalem kısaca yazılır, kalan yoksa satır yok", () => {
+    const text = message("odeme_duzeltildi", {
+      items: [
+        { itemType: "aidat", dueDate: "2026-10-05" },
+        { itemType: "aidat", dueDate: "2026-11-05" },
+      ],
+      before: { totalTl: 30000, parts: [{ amountTl: 30000, method: "nakit", paidOn: "2026-10-12" }] },
+      after: {
+        totalTl: 30000,
+        parts: [
+          { amountTl: 4000, method: "nakit", paidOn: "2026-10-12" },
+          { amountTl: 26000, method: "pos", paidOn: "2026-10-14" },
+        ],
+      },
+      remainderTl: 0,
+    })!;
+    expect(text).toContain("Ekim aidat, Kasım aidat");
+    expect(text).toContain("Sonra: 30.000 ₺ · 4.000 ₺ nakit (12 Ekim) + 26.000 ₺ kart (14 Ekim)");
+    expect(text).not.toContain("Kalan:");
+  });
+
+  it("Kalan kapatıldı: tutar, neden, kalem toplamı ve kalemin kapanması", () => {
+    expect(
+      message("kalan_kapatildi", {
+        itemType: "kitap",
+        dueDate: "2026-12-05",
+        amountTl: 5,
+        reason: "küsurat",
+        planTotalBeforeTl: 45000,
+        planTotalAfterTl: 44995,
+        pendingCount: 0,
+        closed: true,
+      }),
+    ).toBe(
+      [
+        "*Elif Demir* · öğrenci",
+        "✂️ Kalan kapatıldı",
+        "Aralık kitap-kırtasiye: 5 ₺ · Neden: küsurat",
+        "Kalem toplamı: 45.000 ₺ → 44.995 ₺",
+        "✅ Kitap-kırtasiye tamamen ödendi",
+        "— Merve Hanım",
+      ].join("\n"),
+    );
+  });
+
+  it("Kalan kapatıldı: kalem açık kalırsa kalan taksit sayısı yazılır", () => {
+    const text = message("kalan_kapatildi", {
+      itemType: "aidat", dueDate: "2026-10-05", amountTl: 500, reason: "indirim",
+      planTotalBeforeTl: 150000, planTotalAfterTl: 149500, pendingCount: 7, pendingTl: 105000, closed: false,
+    })!;
+    expect(text).toContain("Ekim aidat: 500 ₺ · Neden: indirim");
+    expect(text).toContain("Aidat kalan: 7 taksit");
+  });
+});
