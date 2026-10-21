@@ -8,19 +8,33 @@ import type { Testimonial } from '@/content/testimonials';
 import { mapsUrl, phoneE164 } from '@/lib/site';
 import { buildFaqSchema } from '@/lib/schema';
 import { makeReader, pickData } from '@/lib/content/reader';
-import type { ReaderData } from '@/lib/content/types';
+import type { Reader, ReaderData } from '@/lib/content/types';
 
 type Block = { id: string; heading: string; text: string };
 type Faq = { id: string; question: string; answer: string };
 
-/** Beş yıldız; metin taşımaz (yorum kaynağı yanında "Google yorumu" olarak yazar). */
+/** Beş yıldız; metin taşımaz (yorumun kaynağı altında "Google yorumu" olarak yazar). */
 function Stars() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 100 20" className="h-3 w-[60px] shrink-0 fill-[#f5b301]">
+    <svg aria-hidden="true" viewBox="0 0 100 20" className="block h-3.5 w-[70px] shrink-0 fill-[#E9A100]">
       {[0, 1, 2, 3, 4].map((i) => (
         <path key={i} transform={`translate(${i * 20} 0)`} d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z" />
       ))}
     </svg>
+  );
+}
+
+/** Veli yorumu: yıldız, tam metin (kesilmez), ad ve kaynak. İlk ekranda ve sayfanın aşağısında aynı biçim. */
+function QuoteCard({ c, quote }: { c: Reader; quote: Testimonial }) {
+  return (
+    <figure className="h-full rounded-2xl border border-rule bg-white px-4 py-4 lg:px-5">
+      <Stars />
+      <blockquote className="mt-2.5 text-[15px] leading-relaxed text-ink">&ldquo;{c.fill(quote.quote)}&rdquo;</blockquote>
+      <figcaption className="mt-3 text-[13px] leading-snug text-ink-soft">
+        <span className="font-bold text-ink">{c.fill(quote.author)}</span>
+        <span className="block">{c.fill(quote.context)}</span>
+      </figcaption>
+    </figure>
   );
 }
 
@@ -41,10 +55,10 @@ export default function LandingView({
   // Yalnızca yazılı onayla yayına hazır (ready: true) yorumlar gösterilir —
   // bkz. content/testimonials.ts (liste `testimonials.items`, Görev 11). Bugün bu liste boşsa bölüm hiç render
   // edilmez; boş bir "yorumlar" başlığı görünür bir boşluk bırakmaz.
-  // İlk üçü ilk ekranda, sonraki ikisi sayfanın aşağısında; aynı yorum iki kez görünmez.
+  // İlk ikisi formdan önce (kısa güven), sonraki ikisi sayfanın aşağısında; aynı yorum iki kez görünmez.
   const ready = c.list<Testimonial>('testimonials.items').filter((item) => item.ready);
-  const heroQuotes = ready.slice(0, 3);
-  const quotes = ready.slice(3, 5);
+  const heroQuotes = ready.slice(0, 2);
+  const quotes = ready.slice(2, 4);
   const hero = c.image('lp.common.heroImage');
 
   // buildFaqSchema content/faq.ts'nin FaqItem tipini bekler (id/featured/ready
@@ -65,64 +79,72 @@ export default function LandingView({
     <div className="bg-paper">
       <JsonLd data={faqSchema} />
 
-      {/* İlk ekran: binanın göründüğü bahçe fotoğrafının üstünde başlık, yazımız, üç veli yorumu ve form.
-          Form zaten görünür olduğu için forma kaydıran düğme yok. Mobilde yorumlar kısaltılır ki form
-          ilk ekranda başlasın; masaüstünde form sağ sütunda tam görünür. */}
-      <section className="relative isolate overflow-hidden bg-ink">
-        <Image
-          src={hero.src}
-          alt={hero.alt}
-          fill
-          preload
-          loading="eager"
-          fetchPriority="high"
-          sizes="100vw"
-          className="-z-10 object-cover object-left"
-          {...c.attrs('lp.common.heroImage')}
-        />
-        {/* Nötr karartma: metin okunur, bina ve bahçe seçilir. */}
-        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-b from-black/60 via-black/45 to-black/65 lg:bg-gradient-to-r lg:from-black/70 lg:via-black/45 lg:to-black/10" />
-        <div className="mx-auto grid max-w-6xl items-start gap-4 px-4 pt-5 pb-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,430px)] lg:gap-12 lg:pt-10 lg:pb-14">
-          <div className="min-w-0">
-            <Editable c={c} k={k('h1')} as="h1" className="text-[1.5rem] leading-tight text-white text-balance [text-shadow:0_1px_12px_rgb(0_0_0/0.35)] md:text-4xl" />
-            {/* Mobilde ilk üç satır: form ilk ekranda başlasın. Metnin tamamı masaüstünde görünür. */}
-            <Editable c={c} k={k('subhead')} as="p" className="mt-2.5 line-clamp-3 max-w-2xl whitespace-pre-line text-[15px] text-white/90 md:mt-4 md:line-clamp-none md:text-base" />
-            {heroQuotes.length > 0 && (
-              <ul className="mt-3.5 grid min-w-0 gap-2 md:mt-6 md:gap-3" {...c.listAttrs('testimonials.items')}>
-                {heroQuotes.map((quote, i) => (
-                  <li key={quote.id} className={`min-w-0 ${i === 2 ? 'hidden md:block' : ''}`}>
-                    <figure className="rounded-xl bg-white/95 px-3.5 py-2.5 md:px-5 md:py-3.5">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <Stars />
-                        <figcaption className="min-w-0 truncate text-xs font-medium text-ink-soft">
-                          {c.fill(quote.author)} · {c.fill(quote.context)}
-                        </figcaption>
-                      </div>
-                      <blockquote className="mt-1 line-clamp-2 text-sm text-ink md:text-[15px]">
-                        &ldquo;{c.fill(quote.quote)}&rdquo;
-                      </blockquote>
-                    </figure>
-                  </li>
-                ))}
-              </ul>
-            )}
+      {/* İlk ekran. Telefonda: bahçe fotoğrafı kenardan kenara ve karartmasız (4:3; 375 px altında 3:2), altında düz
+          zeminde başlık, kısa metin, forma inen düğme, okulun rakamları, iki veli yorumu ve form. Masaüstünde
+          sol sütunda başlık ve fotoğraf, sağ sütunda form. Metin hiçbir yerde fotoğrafın üstünde durmaz. */}
+      <section>
+        <div className="mx-auto max-w-6xl lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start lg:gap-12 lg:px-6 lg:pt-10 lg:pb-16">
+          <div className="flex min-w-0 flex-col">
+            <div className="relative aspect-[3/2] overflow-hidden bg-paper-warm min-[375px]:aspect-[4/3] lg:order-2 lg:mt-7 lg:aspect-[3/2] lg:rounded-[28px]">
+              <Image
+                src={hero.src}
+                alt={hero.alt}
+                fill
+                preload
+                loading="eager"
+                fetchPriority="high"
+                sizes="(min-width: 1152px) 690px, (min-width: 1024px) 60vw, 100vw"
+                className="object-cover"
+                {...c.attrs('lp.common.heroImage')}
+              />
+              {/* Şeker ambalajı kenarı: fotoğraf sayfaya fisto kesimle bağlanır (yalnız telefonda). */}
+              <div aria-hidden="true" className="scallop absolute inset-x-0 -bottom-px lg:hidden" />
+            </div>
+
+            <div className="px-5 pt-4 sm:px-6 lg:order-1 lg:px-0 lg:pt-0">
+              <Editable c={c} k={k('h1')} as="h1" className="lp-title text-balance text-ink" />
+              <Editable c={c} k={k('subhead')} as="p" className="lp-lede mt-2.5 max-w-[60ch] whitespace-pre-line text-ink-soft lg:mt-4" />
+              {/* Telefonda form yorumların altında kalır; ilk ekranda forma inen yol görünsün. */}
+              <a
+                href="#form"
+                className="mt-4 flex min-h-12 items-center justify-center rounded-full bg-grape px-6 text-base font-semibold text-white shadow-md shadow-grape/25 lg:hidden"
+                {...c.attrs('lp.common.ctaPrimary')}
+              >
+                {c.text('lp.common.ctaPrimary')}
+              </a>
+            </div>
+
+            <div className="px-5 sm:px-6 lg:order-3 lg:px-0">
+              <ProofStrip c={c} listKey={k('proofPoints')} />
+
+              {heroQuotes.length > 0 && (
+                <ul className="mt-6 grid gap-3 lg:mt-7 lg:grid-cols-2 lg:gap-4" {...c.listAttrs('testimonials.items')}>
+                  {heroQuotes.map((quote) => (
+                    <li key={quote.id} className="min-w-0">
+                      <QuoteCard c={c} quote={quote} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
-          <div id="form" className="min-w-0 scroll-mt-4 rounded-2xl bg-paper p-5 shadow-xl md:p-7">
-            <Editable c={c} k={k('formHeading')} as="h2" className="text-2xl text-ink" />
-            <Editable c={c} k={k('formIntro')} as="p" className="mt-2 text-sm text-ink-soft" />
-            <div className="mt-5">
+          <div
+            id="form"
+            className="mt-8 scroll-mt-3 border-t border-rule bg-paper-warm px-5 pt-8 pb-10 sm:px-6 lg:sticky lg:top-6 lg:mt-0 lg:rounded-[28px] lg:border lg:bg-white lg:p-8 lg:shadow-[0_18px_50px_-24px_rgb(46_16_101/0.35)]"
+          >
+            <Editable c={c} k={k('formHeading')} as="h2" className="text-[1.625rem] text-ink lg:text-[1.5rem]" />
+            <Editable c={c} k={k('formIntro')} as="p" className="mt-1.5 text-[15px] text-ink-soft" />
+            <div className="mt-6">
               <LeadForm data={pickData(data, ['form.'])} qualify currentYear={year} />
             </div>
           </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-5xl px-6 pt-10">
+      <div className="mx-auto max-w-5xl px-5 pt-12 sm:px-6">
         <Frame image={c.image(k('media'))} editAttrs={c.attrs(k('media'))} ratio="wide" sizes="(max-width: 768px) 100vw, 1100px" />
       </div>
-
-      <ProofStrip c={c} listKey={k('proofPoints')} />
 
       <section className="mx-auto max-w-3xl px-6 py-14" {...c.listAttrs(k('bodyBlocks'))}>
         {blocks.map((block) => (
@@ -135,14 +157,9 @@ export default function LandingView({
 
       {quotes.length > 0 && (
         <section className="mx-auto max-w-4xl px-6 pb-14">
-          <div className="grid gap-6 md:grid-cols-2" {...c.listAttrs('testimonials.items')}>
+          <div className="grid gap-4 md:grid-cols-2" {...c.listAttrs('testimonials.items')}>
             {quotes.map((quote) => (
-              <figure key={quote.id} className="rounded-2xl bg-paper-warm p-7">
-                <blockquote className="text-ink">&ldquo;{c.fill(quote.quote)}&rdquo;</blockquote>
-                <figcaption className="timecode mt-4 text-ink-soft">
-                  {c.fill(quote.author)} · {c.fill(quote.context)}
-                </figcaption>
-              </figure>
+              <QuoteCard key={quote.id} c={c} quote={quote} />
             ))}
           </div>
         </section>

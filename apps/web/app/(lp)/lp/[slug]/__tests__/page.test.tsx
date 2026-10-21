@@ -124,8 +124,8 @@ describe('render — beş LP için yasak kelime / fiyat sızmaz', () => {
   });
 });
 
-describe('bölüm sırası — form gövde içeriğinden önce gelir (kasıtlı dönüşüm kararı)', () => {
-  it('id="form" bölümü ProofStrip ve gövde bloklarından önce render edilir', () => {
+describe('bölüm sırası — rakamlar formdan önce, form gövde içeriğinden önce', () => {
+  it('ProofStrip (kısa güven) formdan önce, id="form" gövde bloklarından önce gelir', () => {
     const formIndex = PAGE_SRC.indexOf('id="form"');
     const proofStripIndex = PAGE_SRC.indexOf('<ProofStrip');
     const bodyBlocksIndex = PAGE_SRC.indexOf('blocks.map');
@@ -133,7 +133,7 @@ describe('bölüm sırası — form gövde içeriğinden önce gelir (kasıtlı 
     expect(formIndex).toBeGreaterThan(-1);
     expect(proofStripIndex).toBeGreaterThan(-1);
     expect(bodyBlocksIndex).toBeGreaterThan(-1);
-    expect(formIndex).toBeLessThan(proofStripIndex);
+    expect(proofStripIndex).toBeLessThan(formIndex);
     expect(formIndex).toBeLessThan(bodyBlocksIndex);
   });
 
@@ -149,38 +149,68 @@ describe('bölüm sırası — form gövde içeriğinden önce gelir (kasıtlı 
   });
 });
 
-describe('ilk ekran — bahçe fotoğrafı, veli yorumları, yazımız ve form birlikte', () => {
+describe('ilk ekran — net bahçe fotoğrafı, düz zeminde metin, rakamlar, iki veli yorumu ve form', () => {
   const firstSection = async (slug: string) => {
     const { container } = render(await LandingPageRoute(params(slug)));
     return container.querySelector('section') as HTMLElement;
   };
 
-  it.each(LANDING_SLUGS)('%s: ilk bölümün arka planı binanın göründüğü bahçe fotoğrafı ve öncelikli yüklenir', async (slug) => {
+  it.each(LANDING_SLUGS)('%s: ilk bölümün fotoğrafı binanın göründüğü bahçe ve öncelikli yüklenir', async (slug) => {
     const hero = await firstSection(slug);
     const img = hero.querySelector('img');
     expect(img?.getAttribute('src')).toContain('bahce-genis');
     expect(img?.getAttribute('loading')).not.toBe('lazy');
     expect(img?.getAttribute('fetchpriority')).toBe('high');
+    expect(img?.getAttribute('sizes')).toContain('100vw');
   });
 
-  it.each(LANDING_SLUGS)('%s: ilk bölümde başlık, alt yazı, üç veli yorumu ve form var', async (slug) => {
+  it('fotoğraf karartılmaz: üstünde siyah gradyan/karartma katmanı yok', () => {
+    expect(PAGE_SRC).not.toMatch(/from-black|bg-black\//);
+  });
+
+  it.each(LANDING_SLUGS)('%s: ilk bölümde başlık, alt yazı, rakamlar, iki veli yorumu ve form var', async (slug) => {
     const hero = await firstSection(slug);
     const values = defaultData().values;
     expect(hero.querySelector('h1')?.textContent).toBe(values[`lp.${slug}.h1`]);
-    expect(hero.textContent).toContain((values[`lp.${slug}.subhead`] as string).slice(0, 30));
-    expect(hero.querySelectorAll('blockquote')).toHaveLength(3);
+    expect(hero.textContent).toContain((values[`lp.${slug}.subhead`] as string).slice(0, 20));
+    expect(hero.querySelector('dl')).not.toBeNull();
+    expect(hero.querySelectorAll('blockquote')).toHaveLength(2);
     expect(hero.querySelector('#form input[name="phone"]')).not.toBeNull();
   });
 
-  it.each(LANDING_SLUGS)('%s: ilk bölümde forma kaydıran düğme yok', async (slug) => {
+  it.each(LANDING_SLUGS)('%s: telefonda forma inen düğme var, masaüstünde gizli (form sağ sütunda görünür)', async (slug) => {
     const hero = await firstSection(slug);
-    expect(hero.querySelector('a[href="#form"]')).toBeNull();
+    const cta = hero.querySelector('a[href="#form"]');
+    expect(cta).not.toBeNull();
+    expect(cta?.className).toContain('lg:hidden');
+  });
+
+  it.each(LANDING_SLUGS)('%s: veli yorumları kesilmez (line-clamp/truncate yok)', async (slug) => {
+    const hero = await firstSection(slug);
+    expect(hero.innerHTML).not.toMatch(/line-clamp|truncate/);
   });
 
   it('aynı yorum sayfada iki kez görünmez', async () => {
     const { container } = render(await LandingPageRoute(params('beykent-anaokulu')));
     const quotes = Array.from(container.querySelectorAll('blockquote')).map((q) => q.textContent);
     expect(new Set(quotes).size).toBe(quotes.length);
+  });
+});
+
+describe('varsayılan metinler — emoji ve üstünlük iddiası yok (reklam kuralı)', () => {
+  const SUPERLATIVES = ['en iyi', 'en sevilen', 'en güvenli', 'bir numara', 'garanti'];
+
+  it.each(LANDING_SLUGS)('%s: başlık, alt yazı ve form metinleri emoji içermez', (slug) => {
+    const values = defaultData().values;
+    for (const field of ['h1', 'subhead', 'formHeading', 'formIntro']) {
+      expect(values[`lp.${slug}.${field}`] as string).not.toMatch(/\p{Extended_Pictographic}/u);
+    }
+  });
+
+  it.each(LANDING_SLUGS)('%s: ilk bölüm üstünlük iddiası içermez', async (slug) => {
+    const { container } = render(await LandingPageRoute(params(slug)));
+    const text = (container.querySelector('section')?.textContent ?? '').toLocaleLowerCase('tr');
+    for (const phrase of SUPERLATIVES) expect(text).not.toContain(phrase);
   });
 });
 
