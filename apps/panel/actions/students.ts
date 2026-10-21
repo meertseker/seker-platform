@@ -125,7 +125,8 @@ export async function convertLeadToStudent(leadId: string, startDate: string) {
     studentId: student.id,
     offer: {
       sourceOfferId: approvedOffer.id as string,
-      totalTl: Number(approvedOffer.offered_price),
+      // Teklif tutarı aylıktır; plan sihirbazına aylık olarak gider.
+      monthlyTl: Number(approvedOffer.offered_price),
       installmentCount: Number(approvedOffer.installment_count),
     },
   };
@@ -315,6 +316,15 @@ export async function deleteStudent(studentId: string) {
   const db = admin ?? (await createServerSupabase());
 
   const { data: snapshot } = await db.from("students").select("full_name").eq("id", studentId).maybeSingle();
+  // Ödenmiş taksit silinemez (0019 tetikleyicisi); öğrenci silme cascade'i de buna takılır.
+  const { count: paidCount } = await db
+    .from("installments")
+    .select("id, plan:payment_plans!inner(student_id)", { count: "exact", head: true })
+    .eq("status", "odendi")
+    .eq("plan.student_id", studentId);
+  if (paidCount) {
+    return { error: `Ödenmiş taksiti olan öğrenci silinemez (${paidCount} ödeme). Önce ödemeleri geri alın.` };
+  }
   // FK temizliği: iade kayıtları + bu öğrenciye bağlı lead referansı.
   await db.from("refunds").delete().eq("student_id", studentId);
   await db.from("leads").update({ converted_student_id: null }).eq("converted_student_id", studentId);

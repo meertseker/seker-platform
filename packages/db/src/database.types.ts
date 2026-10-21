@@ -780,17 +780,41 @@ isOneToOne: false
 "is_yonetici":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"odeme_uuid_dizisi":
+{ Args: { "p": Json }; Returns: (string)[]
+                           },
+"payment_event_for_installment":
+{ Args: { "p_installment_id": string }; Returns: string
+                           },
+"payment_undo_blocker":
+{ Args: { "p_event_id": string }; Returns: string
+                           },
+"preview_installment_revert":
+{ Args: { "p_installment_id": string }; Returns: Json
+                           },
 "record_site_visit":
 { Args: { "p_device": string,"p_entrance": boolean,"p_path": string,"p_source": string }; Returns: undefined
                            },
 "reorder_announcements":
 { Args: { "p_dir": number,"p_id": string }; Returns: boolean
                            },
+"reschedule_installments":
+{ Args: { "p_drafts": Json,"p_ids": (string)[] }; Returns: Json
+                           },
+"revert_installment_payment":
+{ Args: { "p_installment_id": string }; Returns: Json
+                           },
 "save_site_content":
 { Args: { "p_edits": Json }; Returns: Json
                            },
 "set_can_edit_site":
 { Args: { "p_user": string,"p_value": boolean }; Returns: undefined
+                           },
+"take_payment":
+{ Args: { "p_ops": Json,"p_paid_at": string,"p_payload": Json,"p_student_id": string }; Returns: Json
+                           },
+"undo_payment":
+{ Args: { "p_event_id": string }; Returns: Json
                            },
 "wa_bildirim_acik":
 { Args: Record<PropertyKey, never>; Returns: boolean

@@ -1,3 +1,4 @@
+import { initialMonthlyFromQuery } from "@/lib/offer-plan";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -262,14 +263,13 @@ export default async function StudentDetailPage({
     }
   }
 
-  const initialTotal = Number(first(queryParams.total));
-  const initialCount = Number(first(queryParams.count));
   const initialOpen = first(queryParams.plan) === "1";
   const sourceOfferId = first(queryParams.offer);
-  const initialMonthlyTl =
-    Number.isFinite(initialTotal) && initialTotal > 0 && Number.isInteger(initialCount) && initialCount > 0
-      ? Math.round(initialTotal / initialCount)
-      : undefined;
+  // Teklif tutarı aylıktır (bölünmez).
+  const initialMonthlyTl = initialMonthlyFromQuery({
+    monthly: first(queryParams.monthly),
+    total: first(queryParams.total),
+  });
 
   // Öğrencinin aidat listesindeki satırı: Ödemeler tablosuyla aynı hesap ve boya.
   const matrix = buildPaymentMatrix(
@@ -514,7 +514,6 @@ export default async function StudentDetailPage({
               role={profile.role}
               today={today}
               showItemColumn
-              allowPay={false}
             />
           </div>
         </details>
