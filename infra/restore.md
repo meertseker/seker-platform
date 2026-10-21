@@ -22,3 +22,7 @@ Not: 4. adımdaki `pg_restore` sürümü yedekteki pg_dump sürümünden düşü
 
 | Tarih | Yedek dosyası | Sayılar eşleşti mi | Yapan |
 |---|---|---|---|
+| 2026-10-21 | sunucuda backup.sh ile aynı pg_dump (S3 dosyası değil; yönetici AWS girişi süresi dolmuştu) → yerel ayrı `restore_test` veritabanı | Evet: öğrenci 62, aday 3, taksit 696, kullanıcı 5, olay 152, tahsilat 6.126.015, site içeriği 31 | koordinatör |
+
+Gizli ayarlar: `/opt/seker/.env`'nin SSE şifreli kopyası `s3://sekeranaokulu-backup/db/env-YYYY-MM-DD.env` (yedek kullanıcısı yalnız `db/` altına yazabilir). Ayar değişince yenilenir:
+`cat .env | docker exec -i seker-cron-1 sh -c '. /app/env.sh; aws s3 cp - s3://$S3_BACKUP_BUCKET/db/env-$(date +%F).env --sse AES256'`
