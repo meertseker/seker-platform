@@ -27,7 +27,7 @@ describe('reklam sayfaları ziyaretçi HTML', () => {
 
   it.each(LANDING_SLUGS)('%s: düzenleme modunda ana alanlar işaretlenir', (slug) => {
     const { container } = render(<LandingView slug={slug} data={{ ...defaultData(prefixes(slug)), editing: true }} />);
-    for (const key of [`lp.${slug}.h1`, `lp.${slug}.subhead`, `lp.${slug}.formHeading`, `lp.${slug}.media`, 'lp.common.ctaPrimary', 'site.phone']) {
+    for (const key of [`lp.${slug}.h1`, `lp.${slug}.subhead`, `lp.${slug}.formHeading`, `lp.${slug}.media`, 'lp.common.heroImage', 'lp.common.ctaPrimary', 'site.phone']) {
       expect(container.querySelector(`[data-edit-key="${key}"]`), key).not.toBeNull();
     }
     for (const list of ['proofPoints', 'bodyBlocks', 'faq']) {
