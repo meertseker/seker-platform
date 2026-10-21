@@ -127,7 +127,7 @@ export default function LeadForm({
   }
 
   const field =
-    'w-full rounded-xl border-2 border-rule bg-white px-4 py-3 text-ink transition-colors focus:border-mark focus:outline-none focus:ring-1 focus:ring-mark';
+    'w-full rounded-xl border-2 border-rule bg-white px-4 py-3 text-ink placeholder:text-ink-soft transition-colors focus:border-mark focus:outline-none focus:ring-1 focus:ring-mark';
   const label = 'mb-1.5 block text-sm font-semibold text-ink';
   const err = (name: string) =>
     errors[name] ? <p className="mt-1 text-sm text-red-600">{errors[name]![0]}</p> : null;

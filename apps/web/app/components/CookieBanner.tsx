@@ -30,30 +30,32 @@ export default function CookieBanner() {
 
   if (!visible) return null;
 
+  // Telefonda alt çubuğun hemen üstünde ince bir şerit: metin ve iki düğme ~95 px'e sığar, reklam
+  // sayfasındaki formu ve ilk ekranı kapatmaz. Seçim davranışı (choose) değişmedi.
   return (
     <div
       role="dialog"
       aria-modal="false"
       aria-label="Çerez tercihi"
-      className="fixed inset-x-0 bottom-14 z-50 border-t border-rule bg-paper p-5 shadow-[0_-2px_16px_rgba(0,0,0,0.08)] md:bottom-0"
+      className="fixed inset-x-0 bottom-[49px] z-50 border-t border-rule bg-paper/95 px-4 py-2.5 shadow-[0_-2px_16px_rgba(46,16,101,0.08)] backdrop-blur md:bottom-0 md:px-6 md:py-4"
     >
-      <div className="mx-auto flex max-w-4xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <p className="text-sm text-ink-soft">
+      <div className="mx-auto flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <p className="text-[13px] leading-snug text-ink-soft md:text-sm">
           Deneyiminizi iyileştirmek ve reklam performansını ölçmek için çerez kullanıyoruz.{' '}
-          <Link href="/cerez" className="underline">Çerez Politikası</Link>
+          <Link href="/cerez" className="font-semibold text-ink underline">Çerez Politikası</Link>
         </p>
-        <div className="flex shrink-0 gap-3">
+        <div className="flex shrink-0 gap-2">
           <button
             type="button"
             onClick={() => choose('denied')}
-            className="rounded-full border border-rule px-6 py-2.5 text-sm text-ink"
+            className="min-h-9 flex-1 rounded-full border border-ink/25 px-5 text-sm font-semibold text-ink sm:flex-none"
           >
             Reddet
           </button>
           <button
             type="button"
             onClick={() => choose('granted')}
-            className="rounded-full bg-ink px-6 py-2.5 text-sm text-paper"
+            className="min-h-9 flex-1 rounded-full bg-ink px-5 text-sm font-semibold text-paper sm:flex-none"
           >
             Kabul Et
           </button>

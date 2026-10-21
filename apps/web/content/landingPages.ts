@@ -28,7 +28,6 @@ export type LandingPage = {
 const CHILDREN_PER_TEACHER = Math.round(ROSTER_STATUS.childCount / ROSTER_STATUS.teacherCount);
 
 const AGE_RANGE_POINT = { value: '2-6', label: 'Yaş aralığı' };
-const HOURS_POINT = { value: `${SITE.hours.opens}–${SITE.hours.closes}`, label: 'Günlük çalışma saatleri' };
 const YEARS_ACTIVE_POINT = { value: '{yilSayisi} yıl', label: "Beykent'te aynı adreste" };
 
 function rosterProof(): { value: string; label: string }[] {
@@ -80,11 +79,10 @@ export const LANDING_PAGES: LandingPage[] = [
     campaign: 'K2-A',
     metaTitle: 'Beykent Anaokulu | Özel Şeker Anaokulu',
     metaDescription: `Beykent Cumhuriyet Mahallesi'nde okul öncesi eğitim. Sınıfta ${ROSTER_STATUS.childCount} çocuk, ${ROSTER_STATUS.teacherCount} öğretmen. ${SITE.foundingYear}'den beri aynı adreste; ön görüşmede gelip gezin.`,
-    h1: '🌟 Çocuğunuz İçin Beykent’in Merkezinde, Güvenle Büyüyeceği Bir Gelecek! 🌟',
-    subhead:
-      'Beylikdüzü ve Büyükçekmece bölgesinin en sevilen anaokulunda; uzman kadromuz, güvenli ortamımız ve çocukların potansiyelini keşfeden eğitim modelimizle tanışın! 🎨📚✨\n\n🚌 Evinizden Okula, Güvenli Ulaşım!\nServis planlamasını, ön görüşmemizde birlikte planlıyoruz.\n\nSiz de ailemize katılmak ve okulumuzu yerinde ziyaret etmek için hemen bizimle iletişime geçin!',
-    mediaKey: 'gardenWide',
-    proofPoints: [...rosterProof(), AGE_RANGE_POINT, HOURS_POINT],
+    h1: 'Çocuğunuz İçin Beykent’in Merkezinde, Güvenle Büyüyeceği Bir Gelecek',
+    subhead: `Cumhuriyet Mahallesi’nde {kurulusYili}’den beri aynı adresteyiz. Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk ve ${ROSTER_STATUS.teacherCount} öğretmen var. Servis güzergâhınızı ön görüşmede birlikte planlıyoruz.`,
+    mediaKey: 'gardenWorkshops',
+    proofPoints: [YEARS_ACTIVE_POINT, ...rosterProof(), AGE_RANGE_POINT],
     bodyBlocks: [
       {
         heading: '{yilSayisi} yıldır aynı sokakta',
@@ -117,11 +115,11 @@ export const LANDING_PAGES: LandingPage[] = [
     metaTitle: "Beylikdüzü'ne Yakın Anaokulu | Özel Şeker Anaokulu",
     metaDescription:
       "Beykent'te, Beylikdüzü'ne yakın bir anaokulu. Hizmet bölgemiz Beylikdüzü'nü kapsar; servis ihtiyacınızı ön görüşmede birlikte planlıyoruz.",
-    h1: '🌟 Çocuğunuz İçin Beykent’in Merkezinde, Güvenle Büyüyeceği Bir Gelecek! 🌟',
+    h1: 'Çocuğunuz İçin Beykent’in Merkezinde, Güvenle Büyüyeceği Bir Gelecek',
     subhead:
-      'Beylikdüzü ve Büyükçekmece bölgesinin en sevilen anaokulunda; uzman kadromuz, güvenli ortamımız ve çocukların potansiyelini keşfeden eğitim modelimizle tanışın! 🎨📚✨\n\n🚌 Evinizden Okula, Güvenli Ulaşım!\nGeniş servis ağımız Beylikdüzü ve Büyükçekmece’nin tüm mahallelerini kapsamaktadır. Çocuğunuzun konforu ve güvenliği için servis güzergâhı ile saatlerini adresinize özel olarak, ön görüşmemizde birlikte planlıyoruz.\n\nSiz de ailemize katılmak ve okulumuzu yerinde ziyaret etmek için hemen bizimle iletişime geçin!',
+      'Beykent’teyiz, Beylikdüzü’ne komşuyuz. Servis güzergâhını ve saatlerini adresinize göre ön görüşmede birlikte planlıyoruz; gelin, okulu ve bahçeyi gezin.',
     mediaKey: 'gardenWorkshops',
-    proofPoints: [...rosterProof(), AGE_RANGE_POINT, { value: String(SITE.areaServed.length), label: 'Hizmet verdiğimiz bölge sayısı' }],
+    proofPoints: [YEARS_ACTIVE_POINT, ...rosterProof(), { value: String(SITE.areaServed.length), label: 'Hizmet verdiğimiz bölge' }],
     bodyBlocks: [
       {
         heading: 'Neden mahalledeki okul değil',
@@ -158,10 +156,9 @@ export const LANDING_PAGES: LandingPage[] = [
     metaTitle: 'Az Mevcutlu Anaokulu — Sınıfta 13 Çocuk | Özel Şeker Anaokulu',
     metaDescription: `Sınıfımızda ${ROSTER_STATUS.childCount} çocuk ve ${ROSTER_STATUS.teacherCount} öğretmen var; öğretmen başına ${CHILDREN_PER_TEACHER} çocuk düşüyor. Yönetmelik ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor. Beykent Büyükçekmece.`,
     h1: 'Bir çocuğun okulda en çok neye ihtiyacı vardır? Kaliteli ve Birebir İlgiye!',
-    subhead:
-      'Peki bunu nasıl başarıyoruz?\nSınıf içinde çift öğretmenli destek sistemi\nHer çocuğun potansiyeline odaklanan butik yaklaşım\n\nÇocuklarınızın her anını yakından takip eden, yeteneklerini keşfeden uzman kadromuzla tanışın.\n\nGelin, Kendiniz Görün: Ön görüşmede sınıflarımızı ziyaret edebilirsiniz. Kontenjanlarımız dolmadan yerinizi ayırtın!',
-    mediaKey: 'gardenWide',
-    proofPoints: [...rosterProof(), AGE_RANGE_POINT, { value: 'Ders saatinde', label: 'Sınıfı ziyaret zamanı' }],
+    subhead: `Sınıfta ${ROSTER_STATUS.childCount} çocuk ve ${ROSTER_STATUS.teacherCount} öğretmen var; öğretmen başına ${CHILDREN_PER_TEACHER} çocuk düşer. Ön görüşmede ders saatinde gelip sınıfı kendiniz görebilirsiniz.`,
+    mediaKey: 'mudKitchen',
+    proofPoints: [YEARS_ACTIVE_POINT, ...rosterProof(), AGE_RANGE_POINT],
     bodyBlocks: [
       {
         heading: 'Rakamın pratikte anlamı',
@@ -199,9 +196,9 @@ export const LANDING_PAGES: LandingPage[] = [
       'İki yaşından itibaren kabul. Kreş değil anaokulu: güvenli bağlanma, kademeli uyum ve Montessori temelli program. Beykent Büyükçekmece.',
     h1: '2 Yaş İçin Doğru Başlangıç: Önce Güven, Sonra Keşif!',
     subhead:
-      'Çocukların aileden ilk kez ayrıldığı 2 yaş döneminde en büyük ihtiyaç akademiden önce güvenli bağlanmadır. Anaokulumuzda miniklerimizi zorlamadan, kendi doğal tempolarında, şefkatli bir uyum süreciyle geleceğe hazırlıyoruz.\n\n✨ Kreş değil; sevgi, güven ve pedagojik altyapıyla tasarlanmış bir Anaokulu.\n\n📲 Okulumuzu ve Oryantasyon Modelimizi Keşfetmek İçin Ziyaret Edin.',
+      'İki yaşında en büyük ihtiyaç güvenli bağlanmadır. Uyum sürecini çocuğunuzun temposunda, sizinle birlikte planlıyoruz. Kreş değil, Montessori temelli bir anaokulu.',
     mediaKey: 'giraffesGarden',
-    proofPoints: [...rosterProof(), { value: '2', label: 'Başlangıç yaşı' }, HOURS_POINT],
+    proofPoints: [YEARS_ACTIVE_POINT, ...rosterProof(), { value: '2', label: 'Başlangıç yaşı' }],
     bodyBlocks: [
       {
         heading: 'Uyum, çocuğun temposunda',
@@ -241,11 +238,11 @@ export const LANDING_PAGES: LandingPage[] = [
     metaTitle: 'Anaokulu Ücreti — Ön Görüşmede Paylaşıyoruz | Özel Şeker Anaokulu',
     metaDescription:
       'Ücreti belirleyen unsurlar: sınıf modeli, program genişliği, servis ve ödeme planı. Net rakamı ön görüşmede yazılı paylaşıyoruz.',
-    h1: '"Eğitimde Kalite Doğru Yatırımla Başlar."',
+    h1: '“Eğitimde Kalite Doğru Yatırımla Başlar.”',
     subhead:
-      'Geleceğinize yaptığınız yatırımın kapsamı, yüzeysel bir fiyat listesine sığmayacak kadar değerlidir. Neye, nasıl bir yatırım yapacağınızı tüm detaylarıyla görmek ve kurumumuza özel avantajlı kayıt koşullarını öğrenmek için ön görüşme randevunuzu hemen oluşturun.\n\nEğitimde Kaliteli Deneyim\nDonanımlı fiziki ortamımızda sunduğumuz nitelikli eğitim anlayışımız, sabit bir rakamın ötesindedir. Sizler için net bütçe planlamasını, kurumumuzu ve eğitim alanlarımızı yakından inceleyeceğiniz ön görüşmemizde paylaşıyoruz.',
+      'Ücret; program, haftalık gün sayısı ve servis ihtiyacına göre değişir. Size özel hesabı, okulu gezdiğiniz ön görüşmede yazılı olarak paylaşıyoruz.',
     mediaKey: 'mudKitchen',
-    proofPoints: [...rosterProof(), AGE_RANGE_POINT, { value: '2026-2027', label: 'Eğitim yılı' }],
+    proofPoints: [YEARS_ACTIVE_POINT, ...rosterProof(), AGE_RANGE_POINT],
     bodyBlocks: [
       {
         heading: 'Bir — sınıf modeli',
