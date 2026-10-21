@@ -100,8 +100,9 @@ export interface PaymentOp {
   planId: string;
   /** Okunan (ödeme öncesi) tutar; RPC satır değiştiyse reddeder. */
   amount: number;
-  /** İlki mevcut satırı günceller, sonrakiler aynı vadeye ödenmiş satır olur. */
-  parts: { amount: number; method: string }[];
+  /** İlki mevcut satırı günceller, sonrakiler aynı vadeye ödenmiş satır olur.
+   *  `paidAt` yoksa RPC ödemenin tarihini (p_paid_at) yazar. */
+  parts: { amount: number; method: string; paidAt?: string }[];
   /** Ödenmeyen kalanın yeni bekleyen satırları. */
   remainders: { dueDate: string; amount: number }[];
 }

@@ -343,3 +343,47 @@ describe("odeme_alindi: taksit ve plan durumu", () => {
     );
   });
 });
+
+describe("odeme_alindi: parçalar farklı günlerde", () => {
+  function message(payload: Record<string, unknown>) {
+    const c = ctx();
+    const [group] = groupItems(
+      [item({ eventType: "odeme_alindi", entityType: "student", entityId: "S1", payload })],
+      c,
+    );
+    return formatGroup(group, c);
+  }
+
+  it("farklı tarihli parçalar tutar satırında kısaca yazılır", () => {
+    expect(
+      message({
+        totalTl: 19000,
+        methods: ["nakit", "pos"],
+        parts: [
+          { amountTl: 4000, method: "nakit", paidOn: "2026-10-12" },
+          { amountTl: 15000, method: "pos", paidOn: "2026-10-14" },
+        ],
+      }),
+    ).toBe(
+      [
+        "*Elif Demir* · öğrenci",
+        "💰 Ödeme alındı",
+        "Tutar: 19.000 ₺ · 4.000 ₺ nakit (12 Ekim) + 15.000 ₺ kart (14 Ekim)",
+        "— Merve Hanım",
+      ].join("\n"),
+    );
+  });
+
+  it("aynı gün ödenen parçalarda eski biçim kalır", () => {
+    expect(
+      message({
+        totalTl: 19000,
+        methods: ["nakit", "pos"],
+        parts: [
+          { amountTl: 4000, method: "nakit", paidOn: "2026-10-14" },
+          { amountTl: 15000, method: "pos", paidOn: "2026-10-14" },
+        ],
+      }),
+    ).toContain("Tutar: 19.000 ₺ · Nakit, Kart (POS)");
+  });
+});

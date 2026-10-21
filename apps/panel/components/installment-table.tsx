@@ -1,10 +1,8 @@
 "use client";
 
-import type { Role } from "@/lib/role-access";
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { updateInstallment } from "@/actions/payments";
-import { PaymentRevertDialog } from "@/components/payment-revert-dialog";
+import { useMemo } from "react";
+import { ChevronRight } from "lucide-react";
+import { usePaymentPanel } from "@/components/payment-matrix-cell";
 import {
   PAYMENT_METHODS,
   label,
@@ -12,7 +10,6 @@ import {
 } from "@/lib/constants";
 import { formatTRY, tlToKurus } from "@/lib/money";
 import { badgeClass, INSTALLMENT_STATUS_STYLES } from "@/lib/status-styles";
-import { formatTlInput, parseTlInput } from "@/lib/tl-input";
 
 export interface InstallmentTableItem {
   id: string;
@@ -30,7 +27,6 @@ export interface InstallmentTableItem {
 
 interface InstallmentTableProps {
   installments: InstallmentTableItem[];
-  role: Role;
   today: string;
   /** Kalem sütununu + aya göre gruplamayı göster (öğrenci detayında tüm planlar tek takvimde). */
   showItemColumn?: boolean;
@@ -57,15 +53,19 @@ function formatMonth(date: string) {
   return monthFormatter.format(new Date(`${date}T12:00:00+03:00`));
 }
 
-/** Ödemeler "Ödeme al" ile alınır; bu tablo takvimi gösterir, yönetici düzenler ve geri alır. */
-export function InstallmentTable({ installments, role, today, showItemColumn = false }: InstallmentTableProps) {
-  const router = useRouter();
-  const [editing, setEditing] = useState<InstallmentTableItem | null>(null);
-  const [reverting, setReverting] = useState<string | null>(null);
-  const [editAmount, setEditAmount] = useState("");
-  const [editDueDate, setEditDueDate] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+function statusText(status: InstallmentTableItem["status"]) {
+  return status === "odendi" ? "Ödendi" : status === "iptal" ? "İptal" : "Bekliyor";
+}
+
+const openButton =
+  "inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/**
+ * Bütün taksitlerin takvimi. Satıra dokununca o ayın ödeme paneli açılır (Ödemeler
+ * ekranındaki hücre paneliyle aynı): ödeme alma, düzenleme ve geri alma oradan yapılır.
+ */
+export function InstallmentTable({ installments, today, showItemColumn = false }: InstallmentTableProps) {
+  const panel = usePaymentPanel();
 
   const sorted = useMemo(
     () =>
@@ -87,40 +87,30 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
 
   const columnCount = showItemColumn ? 5 : 4;
 
-  function openEdit(installment: InstallmentTableItem) {
-    setError(null);
-    setEditing(installment);
-    setEditAmount(formatTlInput(installment.amount));
-    setEditDueDate(installment.due_date);
+  /** Satırın panel anahtarı; iptal taksit ya da panel yoksa null. */
+  function panelKey(installment: InstallmentTableItem) {
+    return panel ? panel.keyFor(installment.id) : null;
   }
 
-  function submitEdit() {
-    if (!editing) return;
-    // Ödenmiş taksitte yalnız vade değişir; tutar yanlışsa ödeme geri alınır.
-    const amountEditable = editing.status === "bekliyor";
-    const amount = amountEditable ? parseTlInput(editAmount) : null;
-    if (amountEditable && amount === null) {
-      setError("Geçerli bir tutar girin");
-      return;
-    }
-    setError(null);
-    startTransition(async () => {
-      const result = await updateInstallment(editing.id, {
-        ...(amountEditable && amount !== null ? { amountTl: amount } : {}),
-        dueDate: editDueDate,
-      });
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      setEditing(null);
-      router.refresh();
-    });
-  }
-
-  function revert(id: string) {
-    setError(null);
-    setReverting(id);
+  function renderOpen(installment: InstallmentTableItem) {
+    const key = panelKey(installment);
+    if (!key || !panel) return null;
+    return (
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          panel.open(key);
+        }}
+        aria-label={`${formatDate(installment.due_date)}${installment.itemLabel ? ` ${installment.itemLabel}` : ""} — ${
+          installment.status === "bekliyor" ? "ödeme al" : "ayrıntı"
+        }`}
+        className={openButton}
+      >
+        {installment.status === "bekliyor" ? "Ödeme al" : "Ayrıntı"}
+        <ChevronRight aria-hidden className="size-4" />
+      </button>
+    );
   }
 
   if (installments.length === 0) {
@@ -133,12 +123,6 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
 
   return (
     <div className="space-y-3">
-      {error ? (
-        <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">
-          {error}
-        </p>
-      ) : null}
-
       <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
         <table className="min-w-full divide-y divide-border text-sm">
           <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -157,6 +141,7 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
               for (const installment of sorted) {
                 const overdue = installment.status === "bekliyor" && installment.due_date < today;
                 const monthKey = installment.due_date.slice(0, 7);
+                const key = panelKey(installment);
 
                 // Aya göre gruplama başlığı (yalnız birleşik takvimde).
                 if (showItemColumn && monthKey !== lastMonth) {
@@ -177,7 +162,11 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                 }
 
                 out.push(
-                <tr key={installment.id} className={overdue ? "bg-red-50/70" : undefined}>
+                <tr
+                  key={installment.id}
+                  onClick={key && panel ? () => panel.open(key) : undefined}
+                  className={`${overdue ? "bg-red-50/70" : ""} ${key ? "cursor-pointer hover:bg-muted/60" : ""}`}
+                >
                   <td className="px-4 py-3 font-medium text-foreground">
                     {formatDate(installment.due_date)}
                     {overdue ? (
@@ -204,11 +193,7 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                   </td>
                   <td className="px-4 py-3">
                     <span className={badgeClass(INSTALLMENT_STATUS_STYLES[installment.status])}>
-                      {installment.status === "odendi"
-                        ? "Ödendi"
-                        : installment.status === "iptal"
-                          ? "İptal"
-                          : "Bekliyor"}
+                      {statusText(installment.status)}
                     </span>
                     {installment.payment_method ? (
                       <span className="ml-2 text-xs text-muted-foreground">
@@ -218,26 +203,7 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap justify-end gap-2">
-                      {role === "yonetici" && installment.status !== "iptal" ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openEdit(installment)}
-                            className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            {installment.status === "odendi" ? "Vadeyi düzenle" : "Düzenle"}
-                          </button>
-                          {installment.status === "odendi" ? (
-                            <button
-                              type="button"
-                              onClick={() => revert(installment.id)}
-                              className="min-h-11 cursor-pointer rounded-xl border border-red-200 bg-destructive-soft px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:border-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              Geri Al
-                            </button>
-                          ) : null}
-                        </>
-                      ) : null}
+                      {renderOpen(installment)}
                     </div>
                   </td>
                 </tr>,
@@ -294,11 +260,7 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                       {formatTRY(tlToKurus(installment.amount))}
                     </p>
                     <span className={`mt-1 inline-block ${badgeClass(INSTALLMENT_STATUS_STYLES[installment.status])}`}>
-                      {installment.status === "odendi"
-                        ? "Ödendi"
-                        : installment.status === "iptal"
-                          ? "İptal"
-                          : "Bekliyor"}
+                      {statusText(installment.status)}
                     </span>
                     {installment.payment_method ? (
                       <p className="mt-1 text-xs text-muted-foreground">
@@ -307,95 +269,17 @@ export function InstallmentTable({ installments, role, today, showItemColumn = f
                     ) : null}
                   </div>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {role === "yonetici" && installment.status !== "iptal" ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => openEdit(installment)}
-                        className="min-h-11 cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        {installment.status === "odendi" ? "Vadeyi düzenle" : "Düzenle"}
-                      </button>
-                      {installment.status === "odendi" ? (
-                        <button
-                          type="button"
-                          onClick={() => revert(installment.id)}
-                          className="min-h-11 cursor-pointer rounded-xl border border-red-200 bg-destructive-soft px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:border-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          Geri Al
-                        </button>
-                      ) : null}
-                    </>
-                  ) : null}
-                </div>
+                {panelKey(installment) ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {renderOpen(installment)}
+                  </div>
+                ) : null}
               </div>,
             );
           }
           return out;
         })()}
       </div>
-
-      {editing ? (
-        <div
-          className="scrim fixed inset-0 z-50 flex animate-scrim-in items-end p-4 sm:items-center sm:justify-center"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="glass-thick w-full animate-materialize rounded-[1.75rem] p-5 sm:max-w-md">
-            <h2 className="text-lg font-semibold text-foreground">
-              {editing.status === "bekliyor" ? "Taksiti düzenle" : "Vadeyi düzenle"}
-            </h2>
-            <div className="mt-4 space-y-3">
-              {editing.status === "bekliyor" ? (
-                <label className="block text-sm font-medium text-foreground">
-                  Tutar
-                  <input
-                    inputMode="decimal"
-                    value={editAmount}
-                    onChange={(event) => setEditAmount(event.target.value)}
-                    className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors tabular-nums focus:border-primary focus:ring-2 focus:ring-primary/30"
-                  />
-                </label>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Ödenmiş taksitin tutarı değiştirilemez. Tutar yanlışsa önce ödemeyi geri alın.
-                </p>
-              )}
-              <label className="block text-sm font-medium text-foreground">
-                Vade
-                <input
-                  type="date"
-                  value={editDueDate}
-                  onChange={(event) => setEditDueDate(event.target.value)}
-                  className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30"
-                />
-              </label>
-            </div>
-
-            <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setEditing(null)}
-                disabled={isPending}
-                className="min-h-11 flex-1 cursor-pointer rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Vazgeç
-              </button>
-              <button
-                type="button"
-                onClick={submitEdit}
-                disabled={isPending}
-                className="min-h-11 flex-1 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isPending ? "Kaydediliyor..." : "Kaydet"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {reverting ? <PaymentRevertDialog installmentId={reverting} onClose={() => setReverting(null)} /> : null}
     </div>
   );
 }

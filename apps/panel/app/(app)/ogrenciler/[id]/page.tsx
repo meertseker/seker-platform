@@ -6,9 +6,8 @@ import {
   type InstallmentTableItem,
 } from "@/components/installment-table";
 import { EnrollmentPlanButton } from "@/components/enrollment-plan-form";
-import { PaymentButton } from "@/components/payment-dialog";
 import { PaymentDayControl } from "@/components/payment-day-control";
-import { PaymentMatrixCell, PaymentRowProvider } from "@/components/payment-matrix-cell";
+import { PaymentMatrixCell, PaymentPanelButton, PaymentPanelHost } from "@/components/payment-matrix-cell";
 import { PlanWizard } from "@/components/plan-wizard";
 import { ReminderButton } from "@/components/reminder-button";
 import { WhatsAppButton } from "@/components/whatsapp-button";
@@ -29,8 +28,9 @@ import { formatTRY, tlToKurus } from "@/lib/money";
 import { seasonLastMonth } from "@/lib/enrollment-plan";
 import { inferPaymentDay } from "@/lib/payment-day";
 import { isTentative } from "@/lib/price-increase";
-import { openItemsOf, paymentContextFor } from "@/lib/payment-context";
-import { buildPaymentMatrix, SIDE_COLUMNS, sideCellOf, type SideColumn } from "@/lib/payment-matrix";
+import { paymentContextForCells } from "@/lib/payment-context";
+import { buildPaymentMatrix, SIDE_COLUMNS, sideCellOf } from "@/lib/payment-matrix";
+import { defaultPanelKey, longMonthLabel, SIDE_LABELS, studentPanelColumns } from "@/lib/student-payment-panel";
 import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
 import { badgeClass, STUDENT_STATUS_STYLES } from "@/lib/status-styles";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -165,23 +165,11 @@ function toInstallmentItems(
   }));
 }
 
-const SIDE_HEADERS: Record<SideColumn, string> = {
-  kitap: "Kitap - Kırtasiye",
-  aidat: "Aidat Tutarı",
-  servis: "Servis Tutarı",
-};
-
 const monthNameFormatter = new Intl.DateTimeFormat("tr-TR", { month: "long", timeZone: "Europe/Istanbul" });
 
 /** "2026-10" → "EKİM" (Excel defterindeki başlık) */
 function sheetMonthLabel(monthKey: string) {
   return monthNameFormatter.format(new Date(`${monthKey}-01T12:00:00+03:00`)).toLocaleUpperCase("tr");
-}
-
-/** "2026-10" → "Ekim 2026" */
-function longMonthLabel(monthKey: string) {
-  const name = monthNameFormatter.format(new Date(`${monthKey}-01T12:00:00+03:00`));
-  return `${name.charAt(0).toLocaleUpperCase("tr")}${name.slice(1)} ${monthKey.slice(0, 4)}`;
 }
 
 /** Planın ilk vadesi: başlangıç ayının son günü (okulun kuralı: aidat ay sonuna kadar ödenir). */
@@ -272,15 +260,19 @@ export default async function StudentDetailPage({
   });
 
   // Öğrencinin aidat listesindeki satırı: Ödemeler tablosuyla aynı hesap ve boya.
-  const matrix = buildPaymentMatrix(
-    [{ ...student, payment_plans: student.payment_plans ?? [] }],
-    today,
-    student.season,
-  );
+  const matrixInput = { ...student, payment_plans: student.payment_plans ?? [] };
+  const matrix = buildPaymentMatrix([matrixInput], today, student.season);
   const row = matrix.rows[0];
   const traces = await fetchPaymentTraces(supabase, [student.id]);
-  const payment = row ? paymentContextFor(row, { id: student.id, phone: student.phone }, traces) : null;
-  const openItems = row ? openItemsOf(row) : [];
+  // Sayfadaki bütün ödeme girişleri Ödemeler ekranının hücre panelini açar (bütün sezonlar).
+  const panelColumns = studentPanelColumns(matrixInput, today);
+  const payment = paymentContextForCells(
+    panelColumns.map((column) => column.cell),
+    { id: student.id, phone: student.phone, fullName: student.full_name },
+    traces,
+  );
+  const payKey = defaultPanelKey(panelColumns);
+  const openItems = payment.openItems;
   const overdueItems = openItems.filter((item) => item.overdue);
   const nextItem = openItems[0];
   const hasAidatPlan = plans.some((plan) => plan.item_type === "aidat" && plan.season === student.season);
@@ -328,224 +320,215 @@ export default async function StudentDetailPage({
   }[statusTone];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link
-          href="/ogrenciler"
-          className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          ← Öğrenciler
-        </Link>
-        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold">{student.full_name}</h1>
+    <PaymentPanelHost columns={panelColumns} payment={payment} studentName={student.full_name} role={profile.role}>
+      <div className="space-y-6">
+        <div>
+          <Link
+            href="/ogrenciler"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            ← Öğrenciler
+          </Link>
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold">{student.full_name}</h1>
+              <p className="mt-1 text-base text-muted-foreground">
+                {student.program ? label(PROGRAMS, student.program) : "Program eklenmedi"} · {student.season}
+                {student.parent_name ? ` · Veli: ${student.parent_name}` : ""}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`w-fit ${badgeClass(STUDENT_STATUS_STYLES[student.status])}`}>
+                {label(STUDENT_STATUSES, student.status)}
+              </span>
+              {student.phone ? <WhatsAppButton phone={student.phone} /> : null}
+            </div>
+          </div>
+        </div>
+
+        <section className={`rounded-2xl border p-5 shadow-sm sm:p-6 ${toneClass}`}>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Durum</p>
+          <p className="mt-1 text-xl font-semibold text-foreground">{statusTitle}</p>
+          {hasAidatPlan ? (
             <p className="mt-1 text-base text-muted-foreground">
-              {student.program ? label(PROGRAMS, student.program) : "Program eklenmedi"} · {student.season}
-              {student.parent_name ? ` · Veli: ${student.parent_name}` : ""}
+              Bu yıl kalan {formatTRY(kalanKurus)} · alınan {formatTRY(paidKurus)} / {formatTRY(totalKurus)}
             </p>
+          ) : null}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {isActive && !hasAidatPlan ? (
+              <EnrollmentPlanButton
+                studentId={student.id}
+                studentName={student.full_name}
+                lastMonth={lastMonth}
+                initialFirstDue={defaultFirstDue(student.start_date, today)}
+                initialMonthlyTl={initialMonthlyTl}
+                sourceOfferId={sourceOfferId}
+                initialOpen={initialOpen}
+              />
+            ) : null}
+            {payKey ? <PaymentPanelButton columnKey={payKey} /> : null}
+            {overdueItems.length > 0 ? (
+              <ReminderButton
+                studentId={student.id}
+                installmentIds={overdueItems.map((item) => item.id)}
+                phone={student.phone}
+                message={payment.reminderMessage}
+                big
+              />
+            ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`w-fit ${badgeClass(STUDENT_STATUS_STYLES[student.status])}`}>
-              {label(STUDENT_STATUSES, student.status)}
-            </span>
-            {student.phone ? <WhatsAppButton phone={student.phone} /> : null}
-          </div>
-        </div>
-      </div>
+        </section>
 
-      <section className={`rounded-2xl border p-5 shadow-sm sm:p-6 ${toneClass}`}>
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Durum</p>
-        <p className="mt-1 text-xl font-semibold text-foreground">{statusTitle}</p>
-        {hasAidatPlan ? (
-          <p className="mt-1 text-base text-muted-foreground">
-            Bu yıl kalan {formatTRY(kalanKurus)} · alınan {formatTRY(paidKurus)} / {formatTRY(totalKurus)}
-          </p>
-        ) : null}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {isActive && !hasAidatPlan ? (
-            <EnrollmentPlanButton
-              studentId={student.id}
-              studentName={student.full_name}
-              lastMonth={lastMonth}
-              initialFirstDue={defaultFirstDue(student.start_date, today)}
-              initialMonthlyTl={initialMonthlyTl}
-              sourceOfferId={sourceOfferId}
-              initialOpen={initialOpen}
-            />
-          ) : null}
-          {openItems.length > 0 ? (
-            <PaymentButton
-              studentId={student.id}
-              studentName={student.full_name}
-              items={openItems}
-              preselect={overdueItems.length ? overdueItems.map((item) => item.id) : undefined}
-              big
-            />
-          ) : null}
-          {overdueItems.length > 0 && payment ? (
-            <ReminderButton
-              studentId={student.id}
-              installmentIds={overdueItems.map((item) => item.id)}
-              phone={student.phone}
-              message={payment.reminderMessage}
-              big
-            />
-          ) : null}
-        </div>
-      </section>
-
-      {row && payment && hasRow ? (
-        <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">Aidat listesindeki satırı</h2>
-          <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
-            <table className="min-w-full text-sm">
-              <thead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  {SIDE_COLUMNS.filter((column) => sideCellOf(row, column)).map((column) => (
-                    <th key={column} scope="col" className="whitespace-nowrap border-l border-border px-2 py-3 text-right">
-                      {SIDE_HEADERS[column]}
-                    </th>
-                  ))}
-                  {matrix.months.map((monthKey) => (
-                    <th
-                      key={monthKey}
-                      scope="col"
-                      className={`whitespace-nowrap border-l border-border px-2 py-3 text-right ${
-                        monthKey === currentMonthPrefix ? "text-primary-strong" : ""
-                      }`}
-                    >
-                      {sheetMonthLabel(monthKey)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <PaymentRowProvider value={payment}>
-                    {SIDE_COLUMNS.map((column) => {
-                      const cell = sideCellOf(row, column);
-                      return cell ? (
+        {row && hasRow ? (
+          <section className="space-y-2">
+            <h2 className="text-lg font-semibold text-foreground">Aidat listesindeki satırı</h2>
+            <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+              <table className="min-w-full text-sm">
+                <thead className="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    {SIDE_COLUMNS.filter((column) => sideCellOf(row, column)).map((column) => (
+                      <th key={column} scope="col" className="whitespace-nowrap border-l border-border px-2 py-3 text-right">
+                        {SIDE_LABELS[column]}
+                      </th>
+                    ))}
+                    {matrix.months.map((monthKey) => (
+                      <th
+                        key={monthKey}
+                        scope="col"
+                        className={`whitespace-nowrap border-l border-border px-2 py-3 text-right ${
+                          monthKey === currentMonthPrefix ? "text-primary-strong" : ""
+                        }`}
+                      >
+                        {sheetMonthLabel(monthKey)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                      {SIDE_COLUMNS.map((column) => {
+                        const cell = sideCellOf(row, column);
+                        return cell ? (
+                          <PaymentMatrixCell
+                            key={column}
+                            cell={cell}
+                            studentName={student.full_name}
+                            monthLabel={SIDE_LABELS[column]}
+                            role={profile.role}
+                          />
+                        ) : null;
+                      })}
+                      {matrix.months.map((monthKey) => (
                         <PaymentMatrixCell
-                          key={column}
-                          cell={cell}
+                          key={monthKey}
+                          cell={row.cells[monthKey]}
                           studentName={student.full_name}
-                          monthLabel={SIDE_HEADERS[column]}
+                          monthLabel={longMonthLabel(monthKey)}
                           role={profile.role}
                         />
-                      ) : null;
-                    })}
-                    {matrix.months.map((monthKey) => (
-                      <PaymentMatrixCell
-                        key={monthKey}
-                        cell={row.cells[monthKey]}
-                        studentName={student.full_name}
-                        monthLabel={longMonthLabel(monthKey)}
-                        role={profile.role}
-                      />
-                    ))}
-                  </PaymentRowProvider>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Bir hücreye dokunarak ayrıntısını, notunu ve hatırlatmasını görebilirsiniz.
-          </p>
+                      ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Bir hücreye dokunarak ayrıntısını, notunu ve hatırlatmasını görebilirsiniz.
+            </p>
+          </section>
+        ) : null}
+
+        {student.status === "ayrildi" ? (
+          <RefundPanel studentId={student.id} canManage={profile.role === "yonetici"} refunds={refunds} />
+        ) : null}
+
+        <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
+          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <dt className="text-sm font-medium text-muted-foreground">Veli</dt>
+              <dd className="mt-1 text-base font-semibold text-foreground">{student.parent_name ?? "Eklenmedi"}</dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium text-muted-foreground">Telefon</dt>
+              <dd className="mt-1 text-base font-semibold text-foreground">{student.phone ?? "Eklenmedi"}</dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium text-muted-foreground">Doğum</dt>
+              <dd className="mt-1 text-base font-semibold text-foreground">
+                {formatBirth(student.birth_month, student.birth_year)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium text-muted-foreground">Başlangıç</dt>
+              <dd className="mt-1 text-base font-semibold text-foreground">{formatDate(student.start_date)}</dd>
+            </div>
+            {isActive && monthlyAidat.length > 0 ? (
+              <PaymentDayControl
+                studentId={student.id}
+                studentName={student.full_name}
+                current={paymentDay}
+                hasKitap={hasKitapPlan}
+              />
+            ) : null}
+            {student.status === "ayrildi" ? (
+              <>
+                <div>
+                  <dt className="text-sm font-medium text-muted-foreground">Ayrılış tarihi</dt>
+                  <dd className="mt-1 text-base font-semibold text-foreground">{formatDate(student.left_date)}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-muted-foreground">Ayrılış nedeni</dt>
+                  <dd className="mt-1 text-base font-semibold text-foreground">{student.leave_reason || "Belirtilmedi"}</dd>
+                </div>
+              </>
+            ) : null}
+          </dl>
         </section>
-      ) : null}
 
-      {student.status === "ayrildi" ? (
-        <RefundPanel studentId={student.id} canManage={profile.role === "yonetici"} refunds={refunds} />
-      ) : null}
+        {scheduleItems.length > 0 ? (
+          <details className="group rounded-2xl border border-border bg-surface shadow-sm">
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 text-base font-semibold text-foreground">
+              Bütün taksitler ({scheduleItems.length})
+              <span className="text-sm font-medium text-muted-foreground group-open:hidden">Göster</span>
+              <span className="hidden text-sm font-medium text-muted-foreground group-open:inline">Gizle</span>
+            </summary>
+            <div className="border-t border-border p-3 sm:p-4">
+              <InstallmentTable
+                installments={scheduleItems}
+                today={today}
+                showItemColumn
+              />
+            </div>
+          </details>
+        ) : null}
 
-      <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
-        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <dt className="text-sm font-medium text-muted-foreground">Veli</dt>
-            <dd className="mt-1 text-base font-semibold text-foreground">{student.parent_name ?? "Eklenmedi"}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-muted-foreground">Telefon</dt>
-            <dd className="mt-1 text-base font-semibold text-foreground">{student.phone ?? "Eklenmedi"}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-muted-foreground">Doğum</dt>
-            <dd className="mt-1 text-base font-semibold text-foreground">
-              {formatBirth(student.birth_month, student.birth_year)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-muted-foreground">Başlangıç</dt>
-            <dd className="mt-1 text-base font-semibold text-foreground">{formatDate(student.start_date)}</dd>
-          </div>
-          {isActive && monthlyAidat.length > 0 ? (
-            <PaymentDayControl
-              studentId={student.id}
-              studentName={student.full_name}
-              current={paymentDay}
-              hasKitap={hasKitapPlan}
-            />
-          ) : null}
-          {student.status === "ayrildi" ? (
-            <>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">Ayrılış tarihi</dt>
-                <dd className="mt-1 text-base font-semibold text-foreground">{formatDate(student.left_date)}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">Ayrılış nedeni</dt>
-                <dd className="mt-1 text-base font-semibold text-foreground">{student.leave_reason || "Belirtilmedi"}</dd>
-              </div>
-            </>
-          ) : null}
-        </dl>
-      </section>
-
-      {scheduleItems.length > 0 ? (
-        <details className="group rounded-2xl border border-border bg-surface shadow-sm">
-          <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 text-base font-semibold text-foreground">
-            Bütün taksitler ({scheduleItems.length})
-            <span className="text-sm font-medium text-muted-foreground group-open:hidden">Göster</span>
-            <span className="hidden text-sm font-medium text-muted-foreground group-open:inline">Gizle</span>
+        <details id="diger" className="group rounded-2xl border border-border bg-surface shadow-sm">
+          <summary className="flex min-h-14 cursor-pointer list-none flex-wrap items-center justify-between gap-x-3 px-5 py-2 text-base font-semibold text-foreground">
+            Diğer işlemler
+            <span className="text-sm font-medium text-muted-foreground">
+              Bilgileri düzenle · başka kalem ekle
+              {isActive && profile.role === "yonetici" ? " · ayrıldı olarak işaretle" : ""}
+            </span>
           </summary>
-          <div className="border-t border-border p-3 sm:p-4">
-            <InstallmentTable
-              installments={scheduleItems}
+          <div className="space-y-4 border-t border-border p-3 sm:p-4">
+            <StudentEditForm
+              student={{
+                id: student.id,
+                full_name: student.full_name,
+                parent_name: student.parent_name,
+                phone: student.phone,
+                program: student.program,
+                birth_month: student.birth_month,
+                birth_year: student.birth_year,
+                start_date: student.start_date,
+                season: student.season,
+              }}
               role={profile.role}
-              today={today}
-              showItemColumn
             />
+            <PlanWizard studentId={student.id} />
+            {isActive && profile.role === "yonetici" ? <StudentLeaveForm studentId={student.id} /> : null}
           </div>
         </details>
-      ) : null}
-
-      <details id="diger" className="group rounded-2xl border border-border bg-surface shadow-sm">
-        <summary className="flex min-h-14 cursor-pointer list-none flex-wrap items-center justify-between gap-x-3 px-5 py-2 text-base font-semibold text-foreground">
-          Diğer işlemler
-          <span className="text-sm font-medium text-muted-foreground">
-            Bilgileri düzenle · başka kalem ekle
-            {isActive && profile.role === "yonetici" ? " · ayrıldı olarak işaretle" : ""}
-          </span>
-        </summary>
-        <div className="space-y-4 border-t border-border p-3 sm:p-4">
-          <StudentEditForm
-            student={{
-              id: student.id,
-              full_name: student.full_name,
-              parent_name: student.parent_name,
-              phone: student.phone,
-              program: student.program,
-              birth_month: student.birth_month,
-              birth_year: student.birth_year,
-              start_date: student.start_date,
-              season: student.season,
-            }}
-            role={profile.role}
-          />
-          <PlanWizard studentId={student.id} />
-          {isActive && profile.role === "yonetici" ? <StudentLeaveForm studentId={student.id} /> : null}
-        </div>
-      </details>
-    </div>
+      </div>
+    </PaymentPanelHost>
   );
 }

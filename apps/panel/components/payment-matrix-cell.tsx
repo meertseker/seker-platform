@@ -1,7 +1,7 @@
 "use client";
 
 import type { Role } from "@/lib/role-access";
-import { createContext, useContext, useRef, useState, useTransition, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote } from "lucide-react";
 import { rescheduleInstallments, updateInstallment } from "@/actions/payments";
@@ -14,6 +14,7 @@ import { ITEM_TYPES, PAYMENT_METHODS, label } from "@/lib/constants";
 import { formatTRY, kurusToTl } from "@/lib/money";
 import { nextMonthFifth, shortDate } from "@/lib/payment-labels";
 import type { CellState, MatrixCell, MatrixCellItem } from "@/lib/payment-matrix";
+import { pendingColumns, type PanelColumn, type PendingColumn } from "@/lib/student-payment-panel";
 import { formatTlInput, parseTlInput } from "@/lib/tl-input";
 
 /** Sunucudan gelen not / hatırlatma izi (Excel'deki hücre yorumunun karşılığı). */
@@ -39,6 +40,82 @@ const PaymentRowContext = createContext<CellPaymentContext | null>(null);
 /** Satırın ödeme bağlamı bir kez gönderilir; satırdaki bütün hücreler buradan okur. */
 export function PaymentRowProvider({ value, children }: { value: CellPaymentContext; children: ReactNode }) {
   return <PaymentRowContext.Provider value={value}>{children}</PaymentRowContext.Provider>;
+}
+
+interface PaymentPanelHostValue {
+  open: (columnKey: string) => void;
+  /** Taksitin bulunduğu sütun (iptal taksit sütunda yoktur → null). */
+  keyFor: (installmentId: string) => string | null;
+}
+
+const PaymentPanelHostContext = createContext<PaymentPanelHostValue | null>(null);
+
+/** Öğrenci sayfasında hücre panelini açan girişler (Durum kartı, aidat satırı, taksit listesi). */
+export function usePaymentPanel() {
+  return useContext(PaymentPanelHostContext);
+}
+
+/**
+ * Öğrenci sayfası: sayfadaki bütün ödeme girişleri tek hücre panelini açar — Ödemeler
+ * ekranındakiyle aynı panel. Panelde öğrencinin diğer bekleyen ayları arasında geçilir.
+ */
+export function PaymentPanelHost({
+  columns,
+  payment,
+  studentName,
+  role,
+  children,
+}: {
+  columns: PanelColumn[];
+  payment: CellPaymentContext;
+  studentName: string;
+  role: Role;
+  children: ReactNode;
+}) {
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const pending = useMemo(() => pendingColumns(columns), [columns]);
+  const host = useMemo<PaymentPanelHostValue>(
+    () => ({
+      open: setOpenKey,
+      keyFor: (installmentId) =>
+        columns.find((column) => column.cell.items.some((item) => item.installmentId === installmentId))?.key ?? null,
+    }),
+    [columns],
+  );
+  const column = openKey ? columns.find((candidate) => candidate.key === openKey) : undefined;
+
+  return (
+    <PaymentPanelHostContext.Provider value={host}>
+      <PaymentRowProvider value={payment}>{children}</PaymentRowProvider>
+      {column ? (
+        <CellPanel
+          cell={column.cell}
+          studentName={studentName}
+          monthLabel={column.label}
+          role={role}
+          payment={payment}
+          nav={{ currentKey: column.key, pending, onSelect: setOpenKey }}
+          onClose={() => setOpenKey(null)}
+        />
+      ) : null}
+    </PaymentPanelHostContext.Provider>
+  );
+}
+
+/** Durum kartındaki "Ödeme al": en eski bekleyen ayın panelini açar. */
+export function PaymentPanelButton({ columnKey, label = "Ödeme al" }: { columnKey: string; label?: string }) {
+  const host = usePaymentPanel();
+  if (!host) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => host.open(columnKey)}
+      className="inline-flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-5 text-base font-semibold text-on-primary transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      <Banknote aria-hidden className="size-5" />
+      {label}
+    </button>
+  );
 }
 
 interface PaymentMatrixCellProps {
@@ -91,9 +168,9 @@ export function PaymentMatrixCell({
   tileLabel,
 }: PaymentMatrixCellProps) {
   const payment = useContext(PaymentRowContext);
+  const host = useContext(PaymentPanelHostContext);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const [paying, setPaying] = useState(false);
 
   if (cell.state === "bos" || !payment) {
     if (variant === "tile") return null;
@@ -137,7 +214,7 @@ export function PaymentMatrixCell({
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => (host ? host.open(cell.monthKey) : setOpen(true))}
         aria-label={`${studentName}, ${monthLabel}, ${display}${cell.tentative ? " (Kesinleşmedi)" : ""}, ${stateLabel}`}
         className={`flex min-h-12 w-full cursor-pointer flex-col items-end justify-center gap-0.5 px-2 py-1.5 text-right text-sm font-semibold tabular-nums transition-[filter] hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${fillOf(cell)}`}
       >
@@ -171,50 +248,102 @@ export function PaymentMatrixCell({
 
       {/* Sayfada ~2000 hücre var; pencere ve durumu yalnız açılınca kurulur. */}
       {open ? (
-        <CellSheet
+        <CellPanel
           cell={cell}
           studentName={studentName}
           monthLabel={monthLabel}
           role={role}
           payment={payment}
           onClose={close}
-          onPay={() => {
-            setOpen(false);
-            setPaying(true);
-          }}
-        />
-      ) : null}
-
-      {paying ? (
-        <PaymentDialog
-          open
-          onClose={() => setPaying(false)}
-          studentId={payment.studentId}
-          studentName={studentName}
-          items={payment.openItems}
-          preselect={cell.items.filter((item) => item.status === "bekliyor").map((item) => item.installmentId)}
         />
       ) : null}
     </Wrapper>
   );
 }
 
-function CellSheet({
+interface CellNav {
+  currentKey: string;
+  pending: PendingColumn[];
+  onSelect: (columnKey: string) => void;
+}
+
+/**
+ * Hücre paneli: ayın kalemleri, "Ödeme al", hatırlatma, taksitlendirme. "Ödeme al" ödeme
+ * penceresini bu ayın taksitleri seçili açar; "Birden çok ay öde" gecikenler seçili açar.
+ * Ödemeler tablosu ve öğrenci sayfası aynı paneli kullanır.
+ */
+function CellPanel({
   cell,
   studentName,
   monthLabel,
   role,
   payment,
+  nav,
   onClose,
-  onPay,
 }: {
   cell: MatrixCell;
   studentName: string;
   monthLabel: string;
   role: Role;
   payment: CellPaymentContext;
+  nav?: CellNav;
+  onClose: () => void;
+}) {
+  const [paying, setPaying] = useState<"cell" | "multi" | null>(null);
+
+  if (paying) {
+    const overdueIds = payment.openItems.filter((item) => item.overdue).map((item) => item.id);
+    return (
+      <PaymentDialog
+        open
+        onClose={onClose}
+        studentId={payment.studentId}
+        studentName={studentName}
+        items={payment.openItems}
+        preselect={
+          paying === "cell"
+            ? cell.items.filter((item) => item.status === "bekliyor").map((item) => item.installmentId)
+            : overdueIds.length > 0
+              ? overdueIds
+              : undefined
+        }
+      />
+    );
+  }
+
+  return (
+    <Sheet open onClose={onClose} title={monthLabel} description={studentName}>
+      {/* Ay değişince içerik (düzenleme, taksitlendirme) sıfırdan kurulur; pencere açık kalır. */}
+      <CellSheet
+        key={nav?.currentKey ?? cell.monthKey}
+        cell={cell}
+        role={role}
+        payment={payment}
+        nav={nav}
+        onClose={onClose}
+        onPay={() => setPaying("cell")}
+        onPayMany={() => setPaying("multi")}
+      />
+    </Sheet>
+  );
+}
+
+function CellSheet({
+  cell,
+  role,
+  payment,
+  nav,
+  onClose,
+  onPay,
+  onPayMany,
+}: {
+  cell: MatrixCell;
+  role: Role;
+  payment: CellPaymentContext;
+  nav?: CellNav;
   onClose: () => void;
   onPay: () => void;
+  onPayMany: () => void;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<MatrixCellItem | null>(null);
@@ -232,6 +361,9 @@ function CellSheet({
   const overdueIds = cell.items.filter((item) => item.overdue).map((item) => item.installmentId);
   const reminders = cell.items.flatMap((item) => payment.reminders[item.installmentId] ?? []);
   const lastReminder = [...reminders].sort((a, b) => b.at.localeCompare(a.at))[0];
+  // Bu hücrenin dışında bekleyen taksit varsa birkaç ayı birlikte ödeme yolu açık kalır.
+  const othersOpen = payment.openItems.some((item) => !openIds.includes(item.id));
+  const otherColumns = nav ? nav.pending.filter((column) => column.key !== nav.currentKey) : [];
 
   function startEdit(item: MatrixCellItem) {
     setError(null);
@@ -263,7 +395,7 @@ function CellSheet({
   }
 
   return (
-    <Sheet open onClose={onClose} title={monthLabel} description={studentName}>
+    <>
       {error ? (
         <p role="alert" className="mb-3 rounded-xl bg-destructive-soft px-3 py-2 text-sm font-medium text-red-700">{error}</p>
       ) : null}
@@ -422,10 +554,36 @@ function CellSheet({
             : "Henüz hatırlatılmadı"}
         </p>
       ) : null}
+      {othersOpen ? (
+        <button type="button" onClick={onPayMany} className={`mt-2 w-full ${secondaryButton}`}>
+          Birden çok ay öde
+        </button>
+      ) : null}
+      {otherColumns.length > 0 ? (
+        <nav aria-label="Diğer bekleyenler" className="mt-4 border-t border-border pt-3">
+          <p className="mb-2 text-sm font-semibold text-muted-foreground">Diğer bekleyenler</p>
+          <div className="flex flex-wrap gap-2">
+            {otherColumns.map((column) => (
+              <button
+                key={column.key}
+                type="button"
+                onClick={() => nav?.onSelect(column.key)}
+                className={`min-h-12 cursor-pointer rounded-xl border px-3 text-left text-sm font-semibold transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  column.overdue ? "border-red-200 bg-destructive-soft text-red-700" : "border-border bg-surface text-foreground"
+                }`}
+              >
+                {column.label}
+                <span className="ml-2 tabular-nums">{formatTRY(column.openKurus)}</span>
+                {column.overdue ? <span className="ml-1 font-medium">· alınmadı</span> : null}
+              </button>
+            ))}
+          </div>
+        </nav>
+      ) : null}
       {reverting ? (
         <PaymentRevertDialog installmentId={reverting} onClose={() => setReverting(null)} onDone={onClose} />
       ) : null}
-    </Sheet>
+    </>
   );
 }
 
