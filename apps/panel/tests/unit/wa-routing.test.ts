@@ -81,3 +81,16 @@ describe("WhatsApp grup yönlendirmesi", () => {
     expect(chatIdFor("lead_olusturuldu", { groupId: "ana@g.us", finansGroupId: "odeme@g.us" })).toBe("ana@g.us");
   });
 });
+
+describe("Faz 1 ödeme olayları", () => {
+  it("düzeltme ve kalan kapatma ödeme grubuna gider (kapsam koruması)", () => {
+    expect(hedefFor("odeme_duzeltildi")).toBe("finans");
+    expect(hedefFor("kalan_kapatildi")).toBe("finans");
+    expect(chatIdFor("odeme_duzeltildi", { groupId: "ana@g.us", finansGroupId: "odeme@g.us" })).toBe("odeme@g.us");
+    expect(chatIdFor("kalan_kapatildi", { groupId: "ana@g.us", finansGroupId: "odeme@g.us" })).toBe("odeme@g.us");
+  });
+
+  it("panel etiketleri var", () => {
+    expect(EVENT_LABELS).toMatchObject({ odeme_duzeltildi: "Ödeme düzeltildi", kalan_kapatildi: "Kalan kapatıldı" });
+  });
+});

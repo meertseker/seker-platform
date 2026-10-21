@@ -274,6 +274,32 @@ function datedParts(value: unknown): string | null {
     .join(" + ");
 }
 
+/** Düzeltme özeti: "15.495 ₺ · havale (12 Ekim)" ya da "4.000 ₺ nakit (12 Ekim) + 11.000 ₺ kart (14 Ekim)". */
+function paymentSummary(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const total = num(v.totalTl);
+  const parts = records(v.parts).flatMap((part) => {
+    const amount = num(part.amountTl);
+    const method = str(part.method);
+    const day = str(part.paidOn);
+    return amount !== null ? [{ amount, method, day }] : [];
+  });
+  const dayText = (day: string | null) =>
+    day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? ` (${dayMonthFormatter.format(new Date(`${day}T12:00:00+03:00`))})` : "";
+  const methodText = (method: string | null) => (method ? METHOD_NOUNS[method] ?? method : "");
+  if (parts.length === 1) {
+    const [part] = parts;
+    const detail = [methodText(part.method), dayText(part.day).trim()].filter(Boolean).join(" ");
+    return `${formatTl(total ?? part.amount)}${detail ? ` · ${detail}` : ""}`;
+  }
+  if (parts.length > 1) {
+    const list = parts.map((part) => `${formatTl(part.amount)} ${methodText(part.method)}${dayText(part.day)}`.replace(/\s+/g, " ").trim());
+    return `${formatTl(total ?? parts.reduce((sum, part) => sum + part.amount, 0))} · ${list.join(" + ")}`;
+  }
+  return total !== null ? formatTl(total) : null;
+}
+
 function describe(item: WaItem, ctx: WaContext): Line | null {
   const p = item.payload;
   const lead = ctx.leads.get(item.entityId);
@@ -414,6 +440,45 @@ function describe(item: WaItem, ctx: WaContext): Line | null {
       const parts = [total ? `Tutar: ${total}` : null, count && count > 1 ? `${count} taksit` : null];
       const line = parts.filter(Boolean).join(" · ");
       return { icon: "↩️", title: "Ödeme geri alındı", lines: line ? [line] : [] };
+    }
+    case "odeme_duzeltildi": {
+      const lines: string[] = [];
+      const items = records(p.items).flatMap((entry) => {
+        const itemType = str(entry.itemType);
+        const dueDate = str(entry.dueDate);
+        return itemType && dueDate ? [installmentName(itemType, dueDate)] : [];
+      });
+      if (items.length) lines.push([...new Set(items)].join(", "));
+      const before = paymentSummary(p.before);
+      const after = paymentSummary(p.after);
+      if (before) lines.push(`Önce: ${before}`);
+      if (after) lines.push(`Sonra: ${after}`);
+      const remainder = num(p.remainderTl);
+      if (remainder !== null && remainder > 0) lines.push(`Kalan: ${formatTl(remainder)} bekliyor`);
+      const note = str(p.note);
+      if (note) lines.push(`Not: ${escapeWa(note)}`);
+      return { icon: "✏️", title: "Ödeme düzeltildi", lines };
+    }
+    case "kalan_kapatildi": {
+      const lines: string[] = [];
+      const itemType = str(p.itemType);
+      const dueDate = str(p.dueDate);
+      const amount = money(p.amountTl);
+      const reason = str(p.reason);
+      const head = [itemType && dueDate ? installmentName(itemType, dueDate) : null, amount].filter(Boolean).join(": ");
+      const line = [head || null, reason ? `Neden: ${escapeWa(reason)}` : null].filter(Boolean).join(" · ");
+      if (line) lines.push(line);
+      const from = num(p.planTotalBeforeTl);
+      const to = num(p.planTotalAfterTl);
+      if (from !== null && to !== null) lines.push(`Kalem toplamı: ${formatTl(from)} → ${formatTl(to)}`);
+      if (itemType) {
+        lines.push(
+          ...settlementLines([], [
+            { itemType, pendingCount: num(p.pendingCount) ?? (p.closed === true ? 0 : null), pendingTl: p.pendingTl, closed: p.closed },
+          ]),
+        );
+      }
+      return { icon: "✂️", title: "Kalan kapatıldı", lines };
     }
     case "odeme_hatirlatildi": {
       const count = Array.isArray(p.installmentIds) ? p.installmentIds.length : 0;

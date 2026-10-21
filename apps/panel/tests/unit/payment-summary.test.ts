@@ -15,6 +15,8 @@ function builder() {
     return b;
   };
   b.select = () => b;
+  b.order = () => b;
+  b.range = () => b;
   b.eq = add((c, v) => (r) => r[c] === v);
   b.neq = add((c, v) => (r) => r[c] !== v);
   b.gte = add((c, v) => (r) => String(r[c]) >= String(v));

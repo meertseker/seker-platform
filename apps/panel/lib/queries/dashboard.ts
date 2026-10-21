@@ -1,5 +1,11 @@
 import { createServerSupabase } from "@/lib/supabase/server";
-import { tlToKurus } from "@/lib/money";
+import {
+  fetchCollectedKurus,
+  fetchOverdueTotal,
+  monthDayRange,
+  receivableKurus,
+  sumKurus,
+} from "@/lib/queries/money";
 import { LEAD_SOURCES, LOST_REASONS, type LeadSource, type LeadStatus, type LostReason } from "@/lib/constants";
 
 export interface FunnelResult {
@@ -46,11 +52,6 @@ interface DurumDegistiEvent {
 /** Görüşme yapıldı aşamasına ulaşmış sayılan durumlar (spec §11: gorusme_yapildi+ötesi). */
 const GORUSME_OR_BEYOND: LeadStatus[] = ["gorusme_yapildi", "teklif", "kazanildi"];
 
-/** Europe/Istanbul takviminde bugünün YYYY-MM-DD dizesini döner (DST yok, sabit +03:00). */
-function istanbulToday(): string {
-  return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" });
-}
-
 /** "YYYY-MM" ayını, timestamptz kolonları için Istanbul takvim ayının UTC başlangıç/bitiş ISO damgalarına çevirir. */
 function monthIsoTimestampRange(monthIso: string): { start: string; end: string } {
   const [yearStr, monthStr] = monthIso.split("-");
@@ -71,14 +72,6 @@ function monthIsoDateRange(monthIso: string): { startYmd: string; nextStartYmd: 
     startYmd: ymd(new Date(Date.UTC(year, monthIndex, 1))),
     nextStartYmd: ymd(new Date(Date.UTC(year, monthIndex + 1, 1))),
   };
-}
-
-function sumKurus<T extends string>(rows: Record<T, number | string | null>[], field: T): number {
-  return rows.reduce((sum, row) => {
-    const value = row[field];
-    if (value == null) return sum;
-    return sum + tlToKurus(Number(value));
-  }, 0);
 }
 
 /** Seçili ayda oluşturulan lead'ler için huni: toplam, randevusu olan, görüşmeye ulaşan, kazanılan (spec §11). */
@@ -170,33 +163,30 @@ export async function getLostReasons(): Promise<LostReasonRow[]> {
     .sort((a, b) => b.count - a.count);
 }
 
-/** Seçili ayda vadesi gelen toplam, seçili ayda tahsil edilen toplam ve tüm zamanların geciken toplamı (spec §11). */
+/**
+ * Seçili ayda vadesi gelen alacak, seçili ayda tahsil edilen ve bugün geciken toplam (spec §11).
+ * Tanımlar lib/queries/money'den: alacak iptal hariç, tahsilat İstanbul günü, geciken yalnız aktif öğrenci.
+ */
 export async function getPaymentSummary(monthIso: string): Promise<PaymentSummary> {
   const supabase = await createServerSupabase();
-  const { start, end } = monthIsoTimestampRange(monthIso);
   const { startYmd, nextStartYmd } = monthIsoDateRange(monthIso);
-  const today = istanbulToday();
+  const month = monthDayRange(monthIso);
 
-  const [dueResult, paidResult, overdueResult] = await Promise.all([
+  const [dueResult, paid, overdue] = await Promise.all([
     supabase
       .from("installments")
-      .select("amount")
+      .select("amount, status")
       .neq("status", "iptal")
       .gte("due_date", startYmd)
       .lt("due_date", nextStartYmd),
-    supabase
-      .from("installments")
-      .select("paid_amount")
-      .eq("status", "odendi")
-      .gte("paid_at", start)
-      .lt("paid_at", end),
-    supabase.from("installments").select("amount").eq("status", "bekliyor").lt("due_date", today),
+    fetchCollectedKurus(supabase, month.from, month.to),
+    fetchOverdueTotal(supabase),
   ]);
 
   return {
-    dueThisMonthKurus: sumKurus((dueResult.data ?? []) as { amount: number }[], "amount"),
-    paidThisMonthKurus: sumKurus((paidResult.data ?? []) as { paid_amount: number | null }[], "paid_amount"),
-    overdueKurus: sumKurus((overdueResult.data ?? []) as { amount: number }[], "amount"),
+    dueThisMonthKurus: sumKurus((dueResult.data ?? []) as { amount: number; status: string }[], receivableKurus),
+    paidThisMonthKurus: paid.kurus,
+    overdueKurus: overdue.kurus,
   };
 }
 

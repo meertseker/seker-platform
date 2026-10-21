@@ -15,6 +15,7 @@ import {
 } from "@/lib/constants";
 import { businessMinutesBetween, type BusinessHours } from "@/lib/lead-flow/business-hours";
 import { summarizeVisits, VISIT_SOURCE_LABELS, type VisitRow, type VisitSummary } from "@/lib/queries/site-visits";
+import { collectedKurus, receivableKurus } from "@/lib/queries/money";
 import type { Role } from "@/lib/role-access";
 import {
   agingOf,
@@ -533,7 +534,7 @@ function buildSummary(input: ReportInput, facts: LeadFacts[]): SummarySection {
       sum(
         manager.installments
           .filter((i) => i.status === "odendi" && isoInRange(i.paid_at, r))
-          .map((i) => kurus(i.paid_amount)),
+          .map(collectedKurus),
       );
     const spendCur = spendKurus(spendIn(manager.spend, period));
     const spendPrev = spendKurus(spendIn(manager.spend, prev));
@@ -1137,9 +1138,10 @@ function buildStudents(input: ReportInput): StudentsSection {
     const live = m.installments.filter((i) => i.status !== "iptal");
     const due = live.filter((i) => inRange(i.due_date, range));
     const paid = live.filter((i) => i.status === "odendi" && isoInRange(i.paid_at, range));
-    const expectedKurus = sum(due.map((i) => kurus(i.amount)));
-    const collectedKurus = sum(paid.map((i) => kurus(i.paid_amount)));
-    const dueCollected = sum(due.filter((i) => i.status === "odendi").map((i) => kurus(i.paid_amount)));
+    // Tek tanımlar (lib/queries/money): alacak iptal hariç tutar, tahsilat ödenen tutar.
+    const expectedKurus = sum(due.map(receivableKurus));
+    const collected = sum(paid.map(collectedKurus));
+    const dueCollected = sum(due.map(collectedKurus));
     const refundsKurus = sum(m.refunds.filter((r) => inRange(r.refund_date, range)).map((r) => kurus(r.amount)));
     const overdueRows = m.overdue.map((o) => ({ days: Number(o.days_overdue) || 0, amountKurus: kurus(o.amount), item: o.item_type }));
     const aging = agingOf(overdueRows);
@@ -1147,12 +1149,12 @@ function buildStudents(input: ReportInput): StudentsSection {
     const expByMonth = new Map<string, number>();
     const colByMonth = new Map<string, number>();
     for (const i of live) {
-      bump(expByMonth, i.due_date.slice(0, 7), kurus(i.amount));
-      if (i.status === "odendi" && i.paid_at) bump(colByMonth, monthOfIso(i.paid_at), kurus(i.paid_amount));
+      bump(expByMonth, i.due_date.slice(0, 7), receivableKurus(i));
+      if (i.status === "odendi" && i.paid_at) bump(colByMonth, monthOfIso(i.paid_at), collectedKurus(i));
     }
     money = {
       expectedKurus,
-      collectedKurus,
+      collectedKurus: collected,
       dueCollectedRatio: ratio(dueCollected, expectedKurus),
       refundsKurus,
       overdueKurus: sum(overdueRows.map((o) => o.amountKurus)),
@@ -1176,12 +1178,12 @@ function buildStudents(input: ReportInput): StudentsSection {
         rows: items
           .map((item) => ({
             kalem: label(ITEM_TYPES, item),
-            beklenen: sum(due.filter((i) => (i.item_type ?? "diger") === item).map((i) => kurus(i.amount))),
-            tahsil: sum(paid.filter((i) => (i.item_type ?? "diger") === item).map((i) => kurus(i.paid_amount))),
+            beklenen: sum(due.filter((i) => (i.item_type ?? "diger") === item).map(receivableKurus)),
+            tahsil: sum(paid.filter((i) => (i.item_type ?? "diger") === item).map(collectedKurus)),
             geciken: sum(overdueRows.filter((o) => (o.item ?? "diger") === item).map((o) => o.amountKurus)),
           }))
           .sort((a, b) => b.beklenen - a.beklenen),
-        total: { kalem: "Toplam", beklenen: expectedKurus, tahsil: collectedKurus, geciken: money.overdueKurus },
+        total: { kalem: "Toplam", beklenen: expectedKurus, tahsil: collected, geciken: money.overdueKurus },
         emptyText: "Bu dönemde vadesi gelen ya da ödenen taksit yok.",
       },
       {

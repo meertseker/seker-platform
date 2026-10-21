@@ -10,7 +10,12 @@ import {
   type OverdueRow,
   type OverdueSort,
 } from "@/lib/overdue";
+import { paymentContextForCells } from "@/lib/payment-context";
+import { PAYMENT_STUDENTS_SELECT, type PaymentStudent } from "@/lib/payments-scope";
+import { OVERDUE_VIEW } from "@/lib/queries/money";
 import { fetchPaymentTraces } from "@/lib/queries/payment-traces";
+import { studentPanelColumns } from "@/lib/student-payment-panel";
+import { requestClock } from "@/lib/time";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 
@@ -23,19 +28,45 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const SORT_LABELS: Record<OverdueSort, string> = { gun: "En çok geciken", tutar: "En yüksek tutar", isim: "İsim" };
 
 export default async function GecikenlerPage({ searchParams }: { searchParams: SearchParams }) {
-  await getSessionProfile();
+  const profile = await getSessionProfile();
   const params = await searchParams;
+  const { today } = await requestClock();
   const sortParam = Array.isArray(params.sirala) ? params.sirala[0] : params.sirala;
   const sort = normalizeOverdueSort(sortParam);
 
   const supabase = await createServerSupabase();
   const { data, error } = await supabase
-    .from("v_overdue_installments")
+    // Geciken tek tanımı: bekliyor, vadesi geçmiş, yalnız aktif öğrenci (görünüm süzer).
+    .from(OVERDUE_VIEW)
     .select("installment_id, student_id, student_name, family_phone, due_date, amount, days_overdue, item_type, season")
     .order("due_date", { ascending: true });
 
   const sorted = sortOverdue(groupOverdueByStudent((data ?? []) as OverdueRow[]), sort);
-  const traces = await fetchPaymentTraces(supabase, sorted.map((student) => student.studentId));
+  const studentIds = sorted.map((student) => student.studentId);
+  const [traces, panelStudentsResult] = await Promise.all([
+    fetchPaymentTraces(supabase, studentIds),
+    studentIds.length
+      ? supabase.from("students").select(PAYMENT_STUDENTS_SELECT).in("id", studentIds)
+      : Promise.resolve({ data: [] as unknown[], error: null }),
+  ]);
+  // Kart "Ödeme al"ı Ödemeler ekranındaki ay panelini açar: öğrencinin sütunları ve ödeme bağlamı.
+  const panelOf = new Map(
+    ((panelStudentsResult.data ?? []) as unknown as PaymentStudent[]).map((student) => {
+      const columns = studentPanelColumns(student, today);
+      return [
+        student.id,
+        {
+          columns,
+          payment: paymentContextForCells(
+            columns.map((column) => column.cell),
+            { id: student.id, phone: student.phone, fullName: student.full_name },
+            traces,
+          ),
+          role: profile.role,
+        },
+      ] as const;
+    }),
+  );
   const lastReminderOf = (studentId: string, ids: string[]) =>
     ids
       .flatMap((id) => traces.reminders.get(id) ?? [])
@@ -103,9 +134,17 @@ export default async function GecikenlerPage({ searchParams }: { searchParams: S
             </p>
           ) : (
             <ul className="space-y-3">
-              {ordered.map(({ student, lastReminder }) => (
-                <OverdueStudentCard key={student.studentId} student={student} lastReminder={lastReminder} />
-              ))}
+              {ordered.map(({ student, lastReminder }) => {
+                // Öğrenci satırı okunamazsa kart yine görünür (yalnız "Ödeme al" düğmesi çıkmaz).
+                const panel = panelOf.get(student.studentId) ?? {
+                  columns: [],
+                  payment: paymentContextForCells([], { id: student.studentId, phone: student.phone, fullName: student.studentName }, traces),
+                  role: profile.role,
+                };
+                return (
+                  <OverdueStudentCard key={student.studentId} student={student} lastReminder={lastReminder} panel={panel} />
+                );
+              })}
             </ul>
           )}
         </>

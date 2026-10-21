@@ -39,6 +39,8 @@ function query(table: string) {
     lte: () => q,
     gt: () => ((futureQuery = true), q),
     limit: () => q,
+    order: () => q,
+    range: () => q,
     maybeSingle: () => Promise.resolve({ data: null, error: null }),
     single: () => Promise.resolve({ data: { value: 3 }, error: null }),
     insert: (rows: Array<Omit<Notif, "id" | "read_at">> | Record<string, unknown>) => {
@@ -63,7 +65,8 @@ function query(table: string) {
       if (table === "profiles") return resolve({ data: yoneticiler, error: null });
       if (table === "appointments") return resolve({ data: futureQuery ? futureAppts : appts, error: null });
       if (table === "leads") return resolve({ data: staleLeads, error: null });
-      if (table === "installments") return resolve({ data: installments, error: null });
+      // Pazartesi özeti gecikenleri aktif öğrenci süzgeçli görünümden okur (0022).
+      if (table === "v_overdue_installments") return resolve({ data: installments, error: null });
       return resolve({ data: [], error: null });
     },
   };

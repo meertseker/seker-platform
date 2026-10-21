@@ -6,8 +6,8 @@ import {
   staleCutoffIso,
   istanbulDateString,
   isIstanbulMonday,
-  overdueTotalKurus,
 } from "@/lib/cron-rules";
+import { fetchOverdueTotal } from "@/lib/queries/money";
 import { formatTRY } from "@/lib/money";
 import { loadFutureVisitLeadIds } from "@/lib/queries/stale-leads";
 import { insertNotifications } from "@/lib/notifications/insert";
@@ -139,9 +139,10 @@ export async function GET(req: NextRequest) {
 
   // Kural 5 (spec §8.5): Pazartesi geciken özeti (yöneticilere)
   if (isIstanbulMonday()) {
-    const { data: overdue } = await db.from("installments")
-      .select("amount").eq("status", "bekliyor").lt("due_date", today);
-    const totalKurus = overdueTotalKurus(overdue ?? []);
+    // Geciken tek tanımı: bekliyor, vadesi geçmiş, yalnız aktif öğrenci (v_overdue_installments).
+    const overdue = await fetchOverdueTotal(db);
+    if (overdue.error) console.error("Geciken özet okunamadı");
+    const totalKurus = overdue.kurus;
     if (totalKurus > 0) for (const y of yoneticiler ?? []) {
       // Aynı gün içinde tekrar tetiklenen cron, yöneticiye ikinci bir özet göndermesin.
       if (await notificationExists(db, y.id, "geciken_ozet", { tarih: today })) {
@@ -151,7 +152,7 @@ export async function GET(req: NextRequest) {
       const { error } = await insertNotifications(db, [{
         user_id: y.id, type: "geciken_ozet",
         payload: {
-          count: overdue!.length,
+          count: overdue.count,
           totalKurus,
           totalFormatted: formatTRY(totalKurus),
           tarih: today,

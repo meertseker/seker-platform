@@ -7,6 +7,7 @@ import {
 } from "@/components/installment-table";
 import { EnrollmentPlanButton } from "@/components/enrollment-plan-form";
 import { PaymentDayControl } from "@/components/payment-day-control";
+import { PaymentHistory } from "@/components/payment-history";
 import { PaymentMatrixCell, PaymentPanelButton, PaymentPanelHost } from "@/components/payment-matrix-cell";
 import { PlanWizard } from "@/components/plan-wizard";
 import { ReminderButton } from "@/components/reminder-button";
@@ -24,7 +25,11 @@ import {
   type Program,
 } from "@/lib/constants";
 import { getSessionProfile } from "@/lib/auth";
-import { formatTRY, tlToKurus } from "@/lib/money";
+import { formatTRY } from "@/lib/money";
+import { buildPaymentHistory } from "@/lib/payment-history";
+import { collectedKurus, overdueKurus, receivableKurus, sumKurus } from "@/lib/queries/money";
+import { fetchPaymentEvents } from "@/lib/queries/payment-history";
+import { requestClock } from "@/lib/time";
 import { seasonLastMonth } from "@/lib/enrollment-plan";
 import { inferPaymentDay } from "@/lib/payment-day";
 import { isTentative } from "@/lib/price-increase";
@@ -56,6 +61,7 @@ interface InstallmentRow {
   paid_at: string | null;
   paid_amount: number | null;
   payment_method: PaymentMethod | null;
+  marker?: { full_name: string } | { full_name: string }[] | null;
 }
 
 interface PlanRow {
@@ -115,15 +121,6 @@ function toRefundItems(rows: RefundRow[] | null | undefined): RefundItem[] {
   }));
 }
 
-function todayInIstanbul() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Istanbul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
   day: "numeric",
   month: "long",
@@ -140,13 +137,6 @@ function formatBirth(month: number | null, year: number | null) {
   const paddedMonth = month?.toString().padStart(2, "0");
   const value = [paddedMonth, year].filter(Boolean).join("/");
   return value || "Belirtilmedi";
-}
-
-function paidSummary(installments: InstallmentRow[] | null | undefined) {
-  return (installments ?? []).reduce((sum, installment) => {
-    if (installment.status !== "odendi") return sum;
-    return sum + tlToKurus(Number(installment.paid_amount ?? installment.amount));
-  }, 0);
 }
 
 function toInstallmentItems(
@@ -193,7 +183,7 @@ export default async function StudentDetailPage({
   const { data, error } = await supabase
     .from("students")
     .select(
-      "id, created_at, full_name, birth_month, birth_year, parent_name, phone, season, program, start_date, status, left_date, leave_reason, payment_plans(id, season, item_type, total_amount, installment_count, tentative_from, source_offer_id, created_at, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method))",
+      "id, created_at, full_name, birth_month, birth_year, parent_name, phone, season, program, start_date, status, left_date, leave_reason, payment_plans(id, season, item_type, total_amount, installment_count, tentative_from, source_offer_id, created_at, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method, marker:profiles!installments_marked_by_fkey(full_name)))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -220,15 +210,12 @@ export default async function StudentDetailPage({
         )
       : [];
 
-  const today = todayInIstanbul();
-  const totalKurus = plans.reduce(
-    (sum, plan) => sum + tlToKurus(Number(plan.total_amount)),
-    0,
-  );
-  const paidKurus = plans.reduce(
-    (sum, plan) => sum + paidSummary(plan.installments),
-    0,
-  );
+  const { today } = await requestClock();
+  // Tek tanımlar (lib/queries/money): alacak iptal hariç taksit tutarı, tahsilat ödenen tutar,
+  // geciken yalnız aktif öğrencide. Plan toplamı (total_amount) ekranda kullanılmaz.
+  const allInstallments = plans.flatMap((plan) => plan.installments ?? []);
+  const totalKurus = sumKurus(allInstallments, receivableKurus);
+  const paidKurus = sumKurus(allInstallments, collectedKurus);
 
   // Tüm planların taksitlerini TEK takvimde topla (kalem etiketiyle) — aya göre gruplanır.
   const scheduleItems = plans.flatMap((plan) =>
@@ -240,16 +227,11 @@ export default async function StudentDetailPage({
 
   // Okulun ilk baktığı rakamlar: geciken ve kalan.
   const currentMonthPrefix = today.slice(0, 7);
-  let kalanKurus = 0;
-  let gecikenKurus = 0;
-  for (const plan of plans) {
-    for (const inst of plan.installments ?? []) {
-      if (inst.status !== "bekliyor") continue;
-      const kurus = tlToKurus(Number(inst.amount));
-      kalanKurus += kurus;
-      if (inst.due_date < today) gecikenKurus += kurus;
-    }
-  }
+  const kalanKurus = sumKurus(
+    allInstallments.filter((inst) => inst.status === "bekliyor"),
+    receivableKurus,
+  );
+  const gecikenKurus = sumKurus(allInstallments, (inst) => overdueKurus(inst, today, student.status));
 
   const initialOpen = first(queryParams.plan) === "1";
   const sourceOfferId = first(queryParams.offer);
@@ -263,7 +245,26 @@ export default async function StudentDetailPage({
   const matrixInput = { ...student, payment_plans: student.payment_plans ?? [] };
   const matrix = buildPaymentMatrix([matrixInput], today, student.season);
   const row = matrix.rows[0];
-  const traces = await fetchPaymentTraces(supabase, [student.id]);
+  const [traces, paymentEvents] = await Promise.all([
+    fetchPaymentTraces(supabase, [student.id]),
+    fetchPaymentEvents(supabase, student.id),
+  ]);
+  const history = buildPaymentHistory(
+    plans.flatMap((plan) =>
+      (plan.installments ?? []).map((inst) => ({
+        id: inst.id,
+        itemType: plan.item_type,
+        dueDate: inst.due_date,
+        amount: inst.amount,
+        status: inst.status,
+        paidAmount: inst.paid_amount,
+        paidAt: inst.paid_at,
+        method: inst.payment_method,
+        markedByName: one(inst.marker)?.full_name ?? null,
+      })),
+    ),
+    paymentEvents,
+  );
   // Sayfadaki bütün ödeme girişleri Ödemeler ekranının hücre panelini açar (bütün sezonlar).
   const panelColumns = studentPanelColumns(matrixInput, today);
   const payment = paymentContextForCells(
@@ -435,6 +436,10 @@ export default async function StudentDetailPage({
               Bir hücreye dokunarak ayrıntısını, notunu ve hatırlatmasını görebilirsiniz.
             </p>
           </section>
+        ) : null}
+
+        {history.length > 0 || hasRow ? (
+          <PaymentHistory entries={history} role={profile.role} studentName={student.full_name} />
         ) : null}
 
         {student.status === "ayrildi" ? (
