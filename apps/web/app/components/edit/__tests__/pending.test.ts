@@ -15,6 +15,13 @@ describe('pendingReducer', () => {
     s = pendingReducer(s, { type: 'set', key: 'a', value: '2', baseUpdatedAt: 'ikinci' });
     expect(s.a).toEqual({ value: '2', baseUpdatedAt: 'ilk' });
   });
+  it('merge: taslak eklenir, mevcut değişiklik üstün gelir', () => {
+    const s = pendingReducer(
+      { a: { value: 'sekmede', baseUpdatedAt: 't' } },
+      { type: 'merge', pending: { a: { value: 'taslak', baseUpdatedAt: 'x' }, b: { value: 'y', baseUpdatedAt: null } } },
+    );
+    expect(s).toEqual({ a: { value: 'sekmede', baseUpdatedAt: 't' }, b: { value: 'y', baseUpdatedAt: null } });
+  });
 });
 
 describe('kalıcılık (oturum düşse de kaybolmaz)', () => {

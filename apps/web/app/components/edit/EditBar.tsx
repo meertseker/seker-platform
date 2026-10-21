@@ -8,7 +8,20 @@ import { UploadDialog } from './UploadDialog';
 import { AnnouncementDialog } from './AnnouncementDialog';
 import type { AnnouncementRow, ImageValue, ListItem, ReaderData } from '@/lib/content/types';
 import { saveContent } from '@/app/actions/content';
-import { applyListField, loadPending, pendingReducer, savePending } from './pending';
+import { applyListField, loadPending, pendingReducer, savePending, type Pending } from './pending';
+import {
+  clearResume,
+  draftKey,
+  listDrafts,
+  purgeDrafts,
+  readResume,
+  removeDraft,
+  RESUME_MAX_ATTEMPTS,
+  writeDraft,
+  writeResume,
+  type Draft,
+} from './drafts';
+import { classifySaveError } from './saveErrors';
 import { beginTextEdit } from './TextEditing';
 import { Toasts, type Toast } from './Toasts';
 import { RichEditor } from './RichEditor';
@@ -19,7 +32,23 @@ import { PhonePreview } from './PhonePreview';
 import { fillVars } from '@/lib/content/chars';
 import { PAGE_IDS } from '@/lib/content/pageIds';
 
+/** Sekmenin çalışma kopyası. */
 const storage = () => (typeof window === 'undefined' ? null : window.sessionStorage);
+/** Sekme kapansa da kalan yedek (drafts.ts). Gizli sekmede erişim fırlatabilir. */
+const local = () => {
+  try {
+    return typeof window === 'undefined' ? null : window.localStorage;
+  } catch {
+    return null;
+  }
+};
+
+/** "Site güncellendi" mesajı okunabilsin diye yenilemeden önceki bekleme. */
+export const RELOAD_DELAY_MS = 1500;
+/** Bekleyen değişiklik bu süreden uzun kaydedilmezse çubukta hatırlatma çıkar. */
+export const REMIND_AFTER_MS = 5 * 60 * 1000;
+
+const VERSION_TEXT = 'Site güncellendi. Değişiklikleriniz korunarak sayfa yenileniyor…';
 
 export type EditBarProps = { editor: Editor | null; data: ReaderData; announcements: AnnouncementRow[] };
 
@@ -38,6 +67,20 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
   const [panel, setPanel] = useState<null | 'rich' | 'list' | 'settings' | 'history' | 'upload' | 'announcement' | 'preview'>(null);
   const [target, setTarget] = useState<{ key: string; path?: string } | null>(null);
   const [annId, setAnnId] = useState<string | 'new'>('new');
+  // Bu sekmede bekleyen yoksa, kapanmış sekmelerden kalan taslaklar sorulur (bileşen yalnızca istemcide çizilir).
+  const [drafts, setDrafts] = useState<Draft[]>(() =>
+    editor && !Object.keys(loadPending(storage())).length
+      ? listDrafts(local(), editor.id, Date.now(), window.location.pathname)
+      : [],
+  );
+  const [reloading, setReloading] = useState(false);
+  const [remind, setRemind] = useState(false);
+  const editorId = editor?.id ?? null;
+  /** Bu sekmenin localStorage'a yazdığı taslağın sayfası; başka sekmelerin taslaklarına dokunulmaz. */
+  const draftPathRef = useRef<string | null>(null);
+  /** Kendi başlattığımız yenilemede "sayfadan ayrıl?" sorusu çıkmasın. */
+  const allowUnloadRef = useRef(false);
+  const startedRef = useRef(false);
   const stopRef = useRef<null | (() => void)>(null);
   const metaRef = useRef(data.meta);
   const varsRef = useRef(data.vars);
@@ -66,25 +109,46 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
     [currentValue, data],
   );
 
-  useEffect(() => savePending(storage(), pending), [pending]);
-
-  // Başkası araya girdiyse (taze veri farklı), kullanıcının değerini koruyup tabanı tazele.
+  // Tek kaynak reducer durumu; sessionStorage çalışma kopyası, localStorage (kullanıcı + sayfa) yedeği.
   useEffect(() => {
-    const bases: Record<string, string | null> = {};
-    for (const [k, p] of Object.entries(pending)) {
-      const fresh = data.updatedAt[k] ?? null;
-      if (p.baseUpdatedAt !== fresh) bases[k] = fresh;
+    savePending(storage(), pending);
+    if (!editorId) return;
+    const path = window.location.pathname;
+    const owned = draftPathRef.current;
+    if (!Object.keys(pending).length) {
+      // Yalnızca bu sekmenin yazdığı taslak silinir; kapanmış bir sekmenin taslağı soru bekliyor olabilir.
+      if (owned) removeDraft(local(), draftKey(editorId, owned));
+      draftPathRef.current = null;
+      return;
     }
-    const keys = Object.keys(bases);
-    if (!keys.length) return;
-    dispatch({ type: 'rebase', bases });
-    toast({
-      text: `Bu metinleri siz düzenlerken başkası değiştirdi: ${keys.map((k) => data.meta[k]?.label ?? k).join(', ')}. Kaydederseniz sizin metniniz geçerli olur; istemiyorsanız Vazgeç'e basın.`,
-      tone: 'error',
-      persistent: true,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (owned && owned !== path) removeDraft(local(), draftKey(editorId, owned));
+    writeDraft(local(), editorId, path, pending, Date.now());
+    draftPathRef.current = path;
+  }, [pending, editorId]);
+
+  /**
+   * Başkası araya girdiyse (taze veri farklı), kullanıcının değerini koruyup tabanı tazeler ve uyarır.
+   * Tazelenen anahtarları döndürür.
+   */
+  const rebaseAgainstServer = useCallback(
+    (p: Pending): string[] => {
+      const bases: Record<string, string | null> = {};
+      for (const [k, v] of Object.entries(p)) {
+        const fresh = data.updatedAt[k] ?? null;
+        if (v.baseUpdatedAt !== fresh) bases[k] = fresh;
+      }
+      const keys = Object.keys(bases);
+      if (!keys.length) return keys;
+      dispatch({ type: 'rebase', bases });
+      toast({
+        text: `Bu metinleri siz düzenlerken başkası değiştirdi: ${keys.map((k) => data.meta[k]?.label ?? k).join(', ')}. Kaydederseniz sizin metniniz geçerli olur; istemiyorsanız Vazgeç'e basın.`,
+        tone: 'error',
+        persistent: true,
+      });
+      return keys;
+    },
+    [data, toast],
+  );
 
   // Bekleyen değerleri sayfaya yansıt (yenilemeden sonra da görünsünler).
   useEffect(() => {
@@ -188,16 +252,68 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
   useEffect(() => {
     if (!count) return;
     const onLeave = (e: BeforeUnloadEvent) => {
+      if (allowUnloadRef.current) return;
       e.preventDefault();
     };
     window.addEventListener('beforeunload', onLeave);
     return () => window.removeEventListener('beforeunload', onLeave);
   }, [count]);
 
+  // Bekleyen değişiklik REMIND_AFTER_MS boyunca kaydedilmezse nazik hatırlatma; sayaç ilk değişiklikte başlar.
+  const hasPending = count > 0;
+  useEffect(() => {
+    if (!hasPending) return;
+    const t = setTimeout(() => setRemind(true), REMIND_AFTER_MS);
+    return () => {
+      clearTimeout(t);
+      setRemind(false);
+    };
+  }, [hasPending]);
+
   /** Depoyu eşzamanlı temizler: effect render sonrasına kalır, hemen yenilenirse bekleyenler geri gelirdi. */
   function clearPending() {
     savePending(storage(), {});
+    if (editorId) {
+      removeDraft(local(), draftKey(editorId, window.location.pathname));
+      if (draftPathRef.current) removeDraft(local(), draftKey(editorId, draftPathRef.current));
+    }
+    draftPathRef.current = null;
     dispatch({ type: 'clear' });
+  }
+
+  /**
+   * Sekme eski bir derlemeden kalmış (sunucu eylemi bulunamadı) ya da istek sunucuya ulaşmadı (deploy
+   * sırasında konteyner yeniden başlıyor). Bekleyenler eşzamanlı saklanır, sayfa yenilenir; yeni sayfa
+   * işareti görünce bekleyenleri geri yükler ve mümkünse kendiliğinden kaydeder.
+   */
+  function recoverFromStale(kind: 'version' | 'network') {
+    const now = Date.now();
+    if (kind === 'network' && typeof navigator !== 'undefined' && navigator.onLine === false) {
+      toast({ text: "İnternet bağlantısı yok. Değişiklikleriniz bu tarayıcıda saklandı; bağlantı gelince Kaydet'e tekrar basın.", tone: 'error' });
+      return;
+    }
+    const prev = readResume(storage(), now);
+    if (prev && prev.attempts >= RESUME_MAX_ATTEMPTS) {
+      // Yenileme sorunu çözmedi: döngüye girme, kullanıcıya bırak.
+      clearResume(storage());
+      toast({
+        text: "Sunucuya şu an ulaşılamıyor. Değişiklikleriniz bu tarayıcıda saklandı; birkaç dakika sonra Kaydet'e tekrar basın.",
+        tone: 'error',
+        persistent: true,
+      });
+      return;
+    }
+    savePending(storage(), pending);
+    if (editorId) {
+      const path = window.location.pathname;
+      writeDraft(local(), editorId, path, pending, now);
+      draftPathRef.current = path;
+    }
+    writeResume(storage(), { at: now, attempts: (prev?.attempts ?? 0) + 1 });
+    allowUnloadRef.current = true;
+    setReloading(true);
+    toast({ text: VERSION_TEXT, tone: 'warn', persistent: true });
+    setTimeout(() => window.location.reload(), RELOAD_DELAY_MS);
   }
 
   async function save() {
@@ -207,12 +323,17 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       res = await saveContent(
         Object.entries(pending).map(([key, p]) => ({ key, value: p.value, baseUpdatedAt: p.baseUpdatedAt })),
       );
-    } catch {
+    } catch (err) {
+      const kind = classifySaveError(err);
+      if (kind !== 'other') return recoverFromStale(kind);
+      clearResume(storage());
       toast({ text: 'Kaydedilemedi, tekrar deneyin.', tone: 'error' });
       return;
     } finally {
       setSaving(false);
     }
+    // Sunucu yanıt verdi: sürüm sorunu yok, yenileme sayacı sıfırlanır.
+    clearResume(storage());
     if (res.ok) {
       clearPending();
       toast({ text: 'Yayında. Ziyaretçiler yeni hâlini görüyor.', tone: 'ok' });
@@ -229,8 +350,61 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
 
   function discard() {
     clearPending();
+    allowUnloadRef.current = true;
     window.location.reload();
   }
+
+  function restoreDraft(d: Draft) {
+    // Bu sekmede o sırada yapılmış değişiklikler üstün gelir (merge); geri kalanların tabanı denetlenir.
+    const restored = Object.fromEntries(Object.entries(d.pending).filter(([k]) => !(k in pending)));
+    dispatch({ type: 'merge', pending: d.pending });
+    removeDraft(local(), d.key);
+    setDrafts([]);
+    const rebased = rebaseAgainstServer(restored);
+    if (!rebased.length) {
+      toast({ text: `${Object.keys(restored).length} değişiklik geri yüklendi. Yayınlamak için Kaydet'e basın.`, tone: 'ok' });
+    }
+  }
+
+  function dropDraft(d: Draft) {
+    removeDraft(local(), d.key);
+    setDrafts((ds) => ds.filter((x) => x.key !== d.key));
+  }
+
+  // Açılış: bayat tabanları tazele, eski taslakları temizle/sor, sürüm yenilemesinden döndüysek devam et.
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    const now = Date.now();
+    const initial = pending;
+    const rebased = rebaseAgainstServer(initial);
+    const hasInitial = Object.keys(initial).length > 0;
+    purgeDrafts(local(), now);
+    const resume = readResume(storage(), now);
+    if (!resume || !hasInitial) {
+      clearResume(storage());
+      return;
+    }
+    // Bildirim ve kayıt ilk çizimden sonraya bırakılır (effect içinde eşzamanlı setState yok).
+    queueMicrotask(() => {
+      if (editorId && !rebased.length) {
+        // Tabanlar değişmedi: kullanıcının bastığı Kaydet tamamlanır; sunucu yine baseUpdatedAt ile çakışma denetler.
+        toast({ text: 'Site güncellendi. Değişiklikleriniz geri yüklendi, kaydediliyor…', tone: 'ok' });
+        void save();
+        return;
+      }
+      clearResume(storage());
+      toast({
+        text: "Site güncellendi. Değişiklikleriniz geri yüklendi; yayınlamak için Kaydet'e tekrar basın.",
+        tone: 'warn',
+        persistent: true,
+      });
+    });
+    // Yalnızca açılışta bir kez çalışır.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const draft = drafts[0];
 
   if (inIframe) return null;
 
@@ -249,6 +423,7 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
       <div className="seker-editbar" role="region" aria-label="Düzenleme çubuğu">
         <span>✎ Düzenleme modu</span>
         <span aria-live="polite">{count ? `${count} kaydedilmemiş değişiklik` : 'Değişiklik yok'}</span>
+        {remind && count ? <span className="seker-remind" role="status">Kaydetmeyi unutmayın</span> : null}
         <span style={{ flex: 1 }} />
         <EditBarExtras
           data={data}
@@ -264,12 +439,12 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
           currentValue={currentValue}
           toast={toast}
         />
-        <button type="button" onClick={discard} disabled={!count || saving}>Vazgeç</button>
+        <button type="button" onClick={discard} disabled={!count || saving || reloading}>Vazgeç</button>
         <button
           type="button"
-          className="primary"
+          className={remind && count ? 'primary remind' : 'primary'}
           onClick={save}
-          disabled={!count || saving || (counter?.max !== undefined && counter.n > counter.max)}
+          disabled={!count || saving || reloading || (counter?.max !== undefined && counter.n > counter.max)}
         >
           {saving ? 'Kaydediliyor…' : 'Kaydet'}
         </button>
@@ -278,6 +453,17 @@ function EditBarInner({ editor, data, announcements }: EditBarProps) {
           <button type="submit" disabled={count > 0} title={count ? 'Önce kaydedin veya vazgeçin' : undefined}>Çık</button>
         </form>
       </div>
+      {draft ? (
+        <div className="seker-restore" role="dialog" aria-label="Kaydedilmemiş değişiklikler">
+          <span>
+            Kaydedilmemiş {Object.keys(draft.pending).length} değişiklik bulundu
+            {' '}({new Date(draft.savedAt).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+            {draft.path !== (typeof window !== 'undefined' ? window.location.pathname : draft.path) ? `, ${draft.path} sayfasında` : ''}).
+          </span>
+          <button type="button" className="primary" onClick={() => restoreDraft(draft)}>Geri yükle</button>
+          <button type="button" onClick={() => dropDraft(draft)}>At</button>
+        </div>
+      ) : null}
       {counter ? (
         <div
           className={`seker-counter ${counter.max && counter.n > counter.max ? 'over' : ''}`}

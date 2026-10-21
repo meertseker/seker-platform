@@ -50,6 +50,11 @@ jobs:
             NEXT_PUBLIC_MEDIA_BASE_URL=${{ vars.NEXT_PUBLIC_MEDIA_BASE_URL }}
             NEXT_PUBLIC_META_PIXEL_ID=${{ vars.NEXT_PUBLIC_META_PIXEL_ID }}
             NEXT_PUBLIC_CONSENT_VERSION=${{ vars.NEXT_PUBLIC_CONSENT_VERSION }}
+            NEXT_DEPLOYMENT_ID=${{ env.SHA }}
+          # Sabit sunucu eylemi anahtarı (repo secret'ı; build işi production ortamında değil). Boşsa Next her
+          # derlemede yeni anahtar üretir ve açık sekmeler deploy sonrası "Failed to find Server Action" alır.
+          secrets: |
+            next_actions_key=${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
