@@ -149,6 +149,41 @@ describe('bölüm sırası — form gövde içeriğinden önce gelir (kasıtlı 
   });
 });
 
+describe('ilk ekran — bahçe fotoğrafı, veli yorumları, yazımız ve form birlikte', () => {
+  const firstSection = async (slug: string) => {
+    const { container } = render(await LandingPageRoute(params(slug)));
+    return container.querySelector('section') as HTMLElement;
+  };
+
+  it.each(LANDING_SLUGS)('%s: ilk bölümün arka planı binanın göründüğü bahçe fotoğrafı ve öncelikli yüklenir', async (slug) => {
+    const hero = await firstSection(slug);
+    const img = hero.querySelector('img');
+    expect(img?.getAttribute('src')).toContain('bahce-genis');
+    expect(img?.getAttribute('loading')).not.toBe('lazy');
+    expect(img?.getAttribute('fetchpriority')).toBe('high');
+  });
+
+  it.each(LANDING_SLUGS)('%s: ilk bölümde başlık, alt yazı, üç veli yorumu ve form var', async (slug) => {
+    const hero = await firstSection(slug);
+    const values = defaultData().values;
+    expect(hero.querySelector('h1')?.textContent).toBe(values[`lp.${slug}.h1`]);
+    expect(hero.textContent).toContain((values[`lp.${slug}.subhead`] as string).slice(0, 30));
+    expect(hero.querySelectorAll('blockquote')).toHaveLength(3);
+    expect(hero.querySelector('#form input[name="phone"]')).not.toBeNull();
+  });
+
+  it.each(LANDING_SLUGS)('%s: ilk bölümde forma kaydıran düğme yok', async (slug) => {
+    const hero = await firstSection(slug);
+    expect(hero.querySelector('a[href="#form"]')).toBeNull();
+  });
+
+  it('aynı yorum sayfada iki kez görünmez', async () => {
+    const { container } = render(await LandingPageRoute(params('beykent-anaokulu')));
+    const quotes = Array.from(container.querySelectorAll('blockquote')).map((q) => q.textContent);
+    expect(new Set(quotes).size).toBe(quotes.length);
+  });
+});
+
 describe('beş LP için temel render sağlığı', () => {
   it.each(LANDING_PAGES)('$slug h1 ve form alanını render eder', async (page) => {
     const jsx = await LandingPageRoute(params(page.slug));

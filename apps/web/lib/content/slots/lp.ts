@@ -22,6 +22,11 @@ export const LP_SLOTS: Record<string, SlotDef> = {
   'lp.common.faqTitle': { kind: 'text', max: 60, default: 'Sıkça Sorulanlar', label: 'Reklam sayfası SSS başlığı' },
   'lp.common.visitTitle': { kind: 'text', max: 80, default: 'Okulu gezin, sonra karar verin', label: 'Reklam sayfası kapanış başlığı' },
   'lp.common.mapsCta': { kind: 'text', max: 30, default: 'Haritada Gör', label: 'Harita düğmesi' },
+  'lp.common.heroImage': {
+    kind: 'image',
+    label: 'Reklam sayfası ilk ekran arka planı (binanın göründüğü bahçe)',
+    default: { src: MEDIA.gardenWide.src, alt: MEDIA.gardenWide.alt, width: MEDIA.gardenWide.width, height: MEDIA.gardenWide.height, assetId: null },
+  },
   ...Object.fromEntries(
     LANDING_PAGES.flatMap((p) => {
       const k = (f: string) => `lp.${p.slug}.${f}`;
