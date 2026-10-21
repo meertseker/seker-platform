@@ -10,6 +10,7 @@ import {
 import { getSessionProfile } from "@/lib/auth";
 import { generateInstallments, remainderInstallment } from "@/lib/installments";
 import { allocatePayment } from "@/lib/payment-allocation";
+import { buildSettlement, type SettlementPlanRow } from "@/lib/payment-settlement";
 import { applyPaymentDay, type PaymentDay } from "@/lib/payment-day";
 import { buildEnrollmentPlans, seasonLastMonth } from "@/lib/enrollment-plan";
 import { kickWaFlush, logEvent } from "@/lib/events";
@@ -520,6 +521,21 @@ export async function takePayment(input: TakePaymentInput) {
   }
 
   const methods = [...new Set(result.allocations.flatMap((a) => a.parts.map((p) => p.method)))];
+  // Ödeme anındaki durum (taksit tamamlandı mı, planda ne kaldı) olaya yazılır;
+  // sonraki geri alma ya da taksitlendirme WhatsApp mesajını değiştirmez.
+  const { data: planRows } = await supabase
+    .from("payment_plans")
+    .select("id, item_type, tentative_from, installments(due_date, amount, status)")
+    .in("id", [...new Set(typed.map((row) => row.plan_id))])
+    .eq("installments.status", "bekliyor");
+  const settlement = planRows
+    ? buildSettlement({
+        allocations: result.allocations,
+        planOf: new Map(typed.map((row) => [row.id, row.plan_id])),
+        remainder: remainderPlan,
+        plans: planRows as unknown as SettlementPlanRow[],
+      })
+    : null;
   const { data: event } = await supabase
     .from("events")
     .insert({
@@ -535,6 +551,7 @@ export async function takePayment(input: TakePaymentInput) {
         paidIds,
         createdIds,
         snapshots,
+        ...(settlement ?? {}),
       },
     })
     .select("id")

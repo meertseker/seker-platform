@@ -203,3 +203,143 @@ describe("sessiz olaylar", () => {
     expect(text).not.toMatch(/üstlen/i);
   });
 });
+
+describe("odeme_alindi: taksit ve plan durumu", () => {
+  function settled(partial: Record<string, unknown>) {
+    return {
+      installmentId: "I9", itemType: "kitap", dueDate: "2026-10-05", amountTl: 3000, paidTl: 3000,
+      complete: true, remainderTl: 0, remainderCount: 0, remainderDueDate: null, ...partial,
+    };
+  }
+  function plan(partial: Record<string, unknown>) {
+    return { planId: "P1", itemType: "kitap", pendingCount: 0, pendingTl: 0, tentativePending: false, closed: true, ...partial };
+  }
+  function message(payload: Record<string, unknown>) {
+    const c = ctx();
+    const [group] = groupItems(
+      [item({ eventType: "odeme_alindi", entityType: "student", entityId: "S1", payload: { methods: ["nakit"], ...payload } })],
+      c,
+    );
+    return formatGroup(group, c);
+  }
+
+  it("tam ödenen taksit ve planda kalan tutar", () => {
+    expect(
+      message({
+        totalTl: 3000,
+        settled: [settled({})],
+        plans: [plan({ pendingCount: 2, pendingTl: 6000, closed: false })],
+      }),
+    ).toBe(
+      [
+        "*Elif Demir* · öğrenci",
+        "💰 Ödeme alındı",
+        "Tutar: 3.000 ₺ · Nakit",
+        "✅ Ekim kitap-kırtasiye taksiti tamamlandı",
+        "Kitap-kırtasiye kalan: 6.000 ₺ (2 taksit)",
+        "— Merve Hanım",
+      ].join("\n"),
+    );
+  });
+
+  it("kısmi ödeme: kalan aynı vadede", () => {
+    expect(
+      message({
+        totalTl: 2995,
+        note: "eksik getirdi",
+        settled: [settled({ paidTl: 2995, complete: false, remainderTl: 5, remainderCount: 1, remainderDueDate: "2026-10-05" })],
+        plans: [plan({ pendingCount: 1, pendingTl: 5, closed: false })],
+      }),
+    ).toBe(
+      [
+        "*Elif Demir* · öğrenci",
+        "💰 Ödeme alındı",
+        "Tutar: 2.995 ₺ · Nakit",
+        "Ekim kitap-kırtasiye: kısmi, kalan 5 ₺",
+        "Kitap-kırtasiye kalan: 5 ₺ (1 taksit)",
+        "Not: eksik getirdi",
+        "— Merve Hanım",
+      ].join("\n"),
+    );
+  });
+
+  it("kısmi ödeme: kalan yeni vadeye ya da birkaç taksite bölündü", () => {
+    const one = message({
+      totalTl: 2000,
+      settled: [settled({ paidTl: 2000, complete: false, remainderTl: 1000, remainderCount: 1, remainderDueDate: "2026-11-05" })],
+    });
+    expect(one).toContain("Ekim kitap-kırtasiye: kısmi, kalan 1.000 ₺ (yeni vade 5 Kasım 2026)");
+    const many = message({
+      totalTl: 2100,
+      settled: [settled({ paidTl: 2100, complete: false, remainderTl: 900, remainderCount: 3, remainderDueDate: "2026-11-05" })],
+    });
+    expect(many).toContain("Ekim kitap-kırtasiye: kısmi, kalan 900 ₺ (3 taksite bölündü, ilk vade 5 Kasım 2026)");
+  });
+
+  it("iki taksit birden ödenir", () => {
+    const text = message({
+      totalTl: 6000,
+      settled: [settled({ installmentId: "Ia" }), settled({ installmentId: "Ib", dueDate: "2026-11-05" })],
+      plans: [plan({ pendingCount: 1, pendingTl: 3000, closed: false })],
+    });
+    expect(text).toContain(
+      ["✅ Ekim kitap-kırtasiye taksiti tamamlandı", "✅ Kasım kitap-kırtasiye taksiti tamamlandı", "Kitap-kırtasiye kalan: 3.000 ₺ (1 taksit)"].join("\n"),
+    );
+  });
+
+  it("plan kapanır", () => {
+    expect(
+      message({ totalTl: 3000, settled: [settled({ dueDate: "2026-12-05" })], plans: [plan({})] }),
+    ).toBe(
+      [
+        "*Elif Demir* · öğrenci",
+        "💰 Ödeme alındı",
+        "Tutar: 3.000 ₺ · Nakit",
+        "✅ Aralık kitap-kırtasiye taksiti tamamlandı",
+        "✅ Kitap-kırtasiye tamamen ödendi",
+        "— Merve Hanım",
+      ].join("\n"),
+    );
+  });
+
+  it("aidatta kalan tutar değil taksit sayısı yazılır", () => {
+    expect(
+      message({
+        totalTl: 15495,
+        settled: [settled({ itemType: "aidat", amountTl: 15495, paidTl: 15495 })],
+        plans: [plan({ itemType: "aidat", pendingCount: 8, pendingTl: 123960, closed: false })],
+      }),
+    ).toBe(
+      [
+        "*Elif Demir* · öğrenci",
+        "💰 Ödeme alındı",
+        "Tutar: 15.495 ₺ · Nakit",
+        "✅ Ekim aidat taksiti tamamlandı",
+        "Aidat kalan: 8 taksit",
+        "— Merve Hanım",
+      ].join("\n"),
+    );
+  });
+
+  it("kesinleşmemiş tutar varsa kalan tutar yazılmaz, yalnız taksit sayısı", () => {
+    const text = message({
+      totalTl: 3000,
+      settled: [settled({})],
+      plans: [plan({ pendingCount: 2, pendingTl: 6000, tentativePending: true, closed: false })],
+    });
+    expect(text).toContain("Kitap-kırtasiye kalan: 2 taksit");
+    expect(text).not.toContain("6.000");
+  });
+
+  it("eski payload (durum alanı yok) bugünkü mesajı aynen verir", () => {
+    expect(message({ totalTl: 15495, note: "Ekim" })).toBe(
+      ["*Elif Demir* · öğrenci", "💰 Ödeme alındı", "Tutar: 15.495 ₺ · Nakit", "Not: Ekim", "— Merve Hanım"].join("\n"),
+    );
+  });
+
+  it("bozuk durum kayıtlarını atlar", () => {
+    expect(message({ totalTl: 100, settled: [null, { itemType: 3 }], plans: "x" })).toBe(
+      ["*Elif Demir* · öğrenci", "💰 Ödeme alındı", "Tutar: 100 ₺ · Nakit", "— Merve Hanım"].join("\n"),
+    );
+  });
+});
