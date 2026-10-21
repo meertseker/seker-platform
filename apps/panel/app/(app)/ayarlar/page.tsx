@@ -51,7 +51,7 @@ export default async function AyarlarPage() {
   const { data: waSettingRows } = await supabase
     .from("app_settings")
     .select("key, value")
-    .in("key", ["wa_enabled", "wa_group_id", "wa_group_name", SCHOOL_INFO_KEY]);
+    .in("key", ["wa_enabled", "wa_group_id", "wa_group_name", "wa_finans_group_id", "wa_finans_group_name", SCHOOL_INFO_KEY]);
   const waSetting = new Map((waSettingRows ?? []).map((r) => [r.key, r.value as unknown]));
   const { data: outboxRows } = await supabase
     .from("wa_outbox")
@@ -129,6 +129,8 @@ export default async function AyarlarPage() {
           enabled={waSetting.get("wa_enabled") === true}
           groupId={typeof waSetting.get("wa_group_id") === "string" ? (waSetting.get("wa_group_id") as string) : ""}
           groupName={typeof waSetting.get("wa_group_name") === "string" ? (waSetting.get("wa_group_name") as string) : ""}
+          finansGroupId={typeof waSetting.get("wa_finans_group_id") === "string" ? (waSetting.get("wa_finans_group_id") as string) : ""}
+          finansGroupName={typeof waSetting.get("wa_finans_group_name") === "string" ? (waSetting.get("wa_finans_group_name") as string) : ""}
           recent={waRecent}
           failedCount={waFailed ?? 0}
         />

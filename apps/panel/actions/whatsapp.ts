@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSessionProfile } from "@/lib/auth";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { runWaFlush } from "@/lib/wa/run";
+import { WA_GRUP_ANAHTARLARI, parseWaHedef, type WaHedef } from "@/lib/wa/routing";
 import {
   ensureSessionStarted,
   getQrDataUrl,
@@ -95,13 +96,16 @@ export async function listWaGroups(): Promise<{ groups: WahaGroup[]; error?: str
   }
 }
 
-export async function saveWaGroup(groupId: string, groupName: string): Promise<{ error?: string }> {
+/** hedef "kayit": ana grup (Kayıt Randevuları). "finans": Ödeme ve fatura grubu; boş groupId grubu kaldırır
+ *  ve ödeme mesajları yeniden ana gruba gider. */
+export async function saveWaGroup(groupId: string, groupName: string, hedef: WaHedef = "kayit"): Promise<{ error?: string }> {
   await requireYonetici();
+  const keys = WA_GRUP_ANAHTARLARI[parseWaHedef(hedef)];
   if (groupId && !groupId.endsWith("@g.us")) return { error: "Geçersiz grup." };
   const supabase = await createServerSupabase();
   const { error } = await supabase.from("app_settings").upsert([
-    { key: "wa_group_id", value: groupId },
-    { key: "wa_group_name", value: groupName },
+    { key: keys.id, value: groupId },
+    { key: keys.name, value: groupId ? groupName : "" },
   ]);
   if (error) return { error: "Kaydedilemedi, tekrar deneyin." };
   revalidatePath("/ayarlar");
@@ -121,16 +125,22 @@ export async function setWaEnabled(enabled: boolean): Promise<{ error?: string }
   return {};
 }
 
-export async function sendWaTest(): Promise<{ error?: string }> {
+export async function sendWaTest(hedef: WaHedef = "kayit"): Promise<{ error?: string }> {
   const profile = await requireYonetici();
   const cfg = readWahaConfig();
   if (!cfg) return { error: "WhatsApp servisi yapılandırılmamış." };
+  const finans = parseWaHedef(hedef) === "finans";
   const supabase = await createServerSupabase();
-  const { data } = await supabase.from("app_settings").select("value").eq("key", "wa_group_id").maybeSingle();
+  const { data } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", WA_GRUP_ANAHTARLARI[finans ? "finans" : "kayit"].id)
+    .maybeSingle();
   const groupId = typeof data?.value === "string" ? data.value : "";
   if (!groupId) return { error: "Önce grubu seçin." };
+  const body = finans ? "Bu gruba ödeme ve fatura bildirimleri gelecek." : "Bu gruba panel bildirimleri gelecek.";
   try {
-    await sendText(cfg, groupId, `✅ *Şeker Panel bağlantı testi*\nBu gruba panel bildirimleri gelecek.\n— ${profile.full_name}`);
+    await sendText(cfg, groupId, `✅ *Şeker Panel bağlantı testi*\n${body}\n— ${profile.full_name}`);
   } catch (e) {
     return { error: `Gönderilemedi: ${(e as Error).message.slice(0, 160)}` };
   }

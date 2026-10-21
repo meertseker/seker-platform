@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { flushOutbox, type WaOutboxRow, type WaStore } from "@/lib/wa/flush";
+import { flushOutbox, type WaOutboxRow, type WaSettings, type WaStore } from "@/lib/wa/flush";
 import { emptyContext } from "@/lib/wa/format";
 import { parseGroups } from "@/lib/wa/waha";
 
@@ -23,11 +23,12 @@ function row(id: string, createdAt: string, overrides: Partial<NonNullable<WaOut
   };
 }
 
-function makeStore(rows: WaOutboxRow[], settings = { enabled: true, groupId: "123@g.us" }) {
+function makeStore(rows: WaOutboxRow[], settings: WaSettings = { enabled: true, groupId: "123@g.us" }) {
   const ctx = emptyContext();
   ctx.actors.set("u1", "Merve");
   ctx.leads.set("L1", { parentName: "Ayşe", childName: null, phone: "05321234547", source: "referans" });
   ctx.leads.set("L2", { parentName: "Fatma", childName: null, phone: "05329998877", source: "telefon" });
+  ctx.students.set("S1", { fullName: "Ali Yılmaz", parentName: "Ayşe", program: null });
   const store = {
     settings: vi.fn(async () => settings),
     releaseStale: vi.fn(async () => {}),
@@ -121,6 +122,124 @@ describe("flushOutbox", () => {
     const sender = { isReady: vi.fn(async () => true), send: vi.fn() };
     await flushOutbox({ store, sender }, { now: NOW, sleep: noSleep });
     expect(sender.send).not.toHaveBeenCalled();
+  });
+});
+
+describe("flushOutbox · ödeme grubu", () => {
+  const ANA = "ana@g.us";
+  const ODEME = "odeme@g.us";
+  const ikiGrup: WaSettings = { enabled: true, groupId: ANA, finansGroupId: ODEME };
+
+  /** Aynı kişinin aynı öğrencide peş peşe yaptığı kayıt + ödeme planı. */
+  function kayitVePlan() {
+    return [
+      row("k", "2026-10-19T11:58:00.000Z", { eventType: "ogrenciye_donusturuldu", entityType: "student", entityId: "S1" }),
+      row("p", "2026-10-19T11:58:20.000Z", {
+        eventType: "plan_olusturuldu", entityType: "student", entityId: "S1", payload: { itemType: "aidat", totalTl: 30000, count: 10 },
+      }),
+    ];
+  }
+
+  it("ödeme türlerini ödeme grubuna, kayıt türlerini ana gruba gönderir", async () => {
+    const store = makeStore([
+      row("a", "2026-10-19T11:58:00.000Z"),
+      row("o", "2026-10-19T11:58:10.000Z", { eventType: "odeme_alindi", entityType: "student", entityId: "S1", payload: { totalTl: 3500 } }),
+    ], ikiGrup);
+    const sender = { isReady: vi.fn(async () => true), send: vi.fn(async () => {}) };
+    const result = await flushOutbox({ store, sender }, { now: NOW, sleep: noSleep });
+    expect(result.sent).toBe(2);
+    expect(sender.send).toHaveBeenCalledWith(ANA, expect.stringContaining("*Ayşe*"));
+    expect(sender.send).toHaveBeenCalledWith(ODEME, expect.stringContaining("Ödeme alındı"));
+    expect(store.markSent).toHaveBeenCalledWith(["a"], expect.any(String));
+    expect(store.markSent).toHaveBeenCalledWith(["o"], expect.any(String));
+  });
+
+  it("ödeme grubu seçili değilse eskisi gibi her şey ana grupta, aynı mesajda birleşir", async () => {
+    for (const settings of [
+      { enabled: true, groupId: ANA },
+      { enabled: true, groupId: ANA, finansGroupId: "" },
+    ] satisfies WaSettings[]) {
+      const store = makeStore(kayitVePlan(), settings);
+      const sender = { isReady: vi.fn(async () => true), send: vi.fn(async () => {}) };
+      const result = await flushOutbox({ store, sender }, { now: NOW, sleep: noSleep });
+      expect(result.sent).toBe(1);
+      expect(sender.send).toHaveBeenCalledTimes(1);
+      const [chatId, text] = sender.send.mock.calls[0] as unknown as [string, string];
+      expect(chatId).toBe(ANA);
+      expect(text).toContain("Kayıt yapıldı");
+      expect(text).toContain("Ödeme planı oluşturuldu");
+      expect(store.markSent).toHaveBeenCalledWith(["k", "p"], text);
+    }
+  });
+
+  it("farklı gruplara giden işlemler aynı kişiden olsa da aynı mesajda birleşmez", async () => {
+    const store = makeStore(kayitVePlan(), ikiGrup);
+    const sender = { isReady: vi.fn(async () => true), send: vi.fn(async () => {}) };
+    const result = await flushOutbox({ store, sender }, { now: NOW, sleep: noSleep });
+    expect(result.sent).toBe(2);
+    const calls = sender.send.mock.calls as unknown as [string, string][];
+    const ana = calls.find(([id]) => id === ANA)?.[1] ?? "";
+    const odeme = calls.find(([id]) => id === ODEME)?.[1] ?? "";
+    expect(ana).toContain("Kayıt yapıldı");
+    expect(ana).not.toContain("Ödeme planı");
+    expect(odeme).toContain("Ödeme planı oluşturuldu");
+    expect(odeme).not.toContain("Kayıt yapıldı");
+    expect(odeme).toContain("*Ali Yılmaz*");
+    expect(store.markSent).toHaveBeenCalledWith(["k"], ana);
+    expect(store.markSent).toHaveBeenCalledWith(["p"], odeme);
+  });
+
+  it("aynı grupta peş peşe ödeme işlemleri tek mesajda birleşir", async () => {
+    const store = makeStore([
+      row("p", "2026-10-19T11:58:00.000Z", { eventType: "plan_olusturuldu", entityType: "student", entityId: "S1", payload: {} }),
+      row("a", "2026-10-19T11:58:05.000Z"),
+      row("o", "2026-10-19T11:58:20.000Z", { eventType: "odeme_alindi", entityType: "student", entityId: "S1", payload: {} }),
+    ], ikiGrup);
+    const sender = { isReady: vi.fn(async () => true), send: vi.fn(async () => {}) };
+    await flushOutbox({ store, sender }, { now: NOW, sleep: noSleep });
+    expect(store.markSent).toHaveBeenCalledWith(["p", "o"], expect.any(String));
+    expect(store.markSent).toHaveBeenCalledWith(["a"], expect.any(String));
+  });
+
+  it("bir grubun geçici hatası diğer grubun mesajlarını durdurmaz", async () => {
+    const store = makeStore([
+      row("o1", "2026-10-19T11:57:00.000Z", { eventType: "odeme_alindi", entityType: "student", entityId: "S1", payload: {} }),
+      row("a", "2026-10-19T11:58:00.000Z"),
+      row("o2", "2026-10-19T11:59:00.000Z", { eventType: "iade_kaydedildi", entityType: "student", entityId: "S2", payload: {} }),
+      row("b", "2026-10-19T11:59:10.000Z", { entityId: "L2" }),
+    ], ikiGrup);
+    const sender = {
+      isReady: vi.fn(async () => true),
+      send: vi.fn(async (chatId: string) => {
+        if (chatId === ODEME) throw Object.assign(new Error("WAHA 503"), { status: 503 });
+      }),
+    };
+    const result = await flushOutbox({ store, sender }, { now: NOW, sleep: noSleep });
+    // Ödeme grubuna bir kez denendi; sıradaki ödeme mesajı aynı hataya sürüklenmedi.
+    expect(sender.send.mock.calls.filter(([id]) => id === ODEME)).toHaveLength(1);
+    expect(store.markRetry).toHaveBeenCalledWith(["o1"], "WAHA 503", 1, "2026-10-19T12:02:00.000Z");
+    expect(store.claim).not.toHaveBeenCalledWith(["o2"]);
+    // Ana grubun iki mesajı da gitti.
+    expect(store.markSent).toHaveBeenCalledWith(["a"], expect.any(String));
+    expect(store.markSent).toHaveBeenCalledWith(["b"], expect.any(String));
+    expect(result).toMatchObject({ sent: 2, waiting: 2 });
+  });
+
+  it("bir grubun kalıcı hatası diğer grubu etkilemez", async () => {
+    const store = makeStore([
+      row("o1", "2026-10-19T11:57:00.000Z", { eventType: "odeme_alindi", entityType: "student", entityId: "S1", payload: {} }),
+      row("a", "2026-10-19T11:58:00.000Z"),
+    ], ikiGrup);
+    const sender = {
+      isReady: vi.fn(async () => true),
+      send: vi.fn(async (chatId: string) => {
+        if (chatId === ODEME) throw Object.assign(new Error("WAHA 404"), { status: 404 });
+      }),
+    };
+    const result = await flushOutbox({ store, sender }, { now: NOW, sleep: noSleep });
+    expect(store.markFailed).toHaveBeenCalledWith(["o1"], "WAHA 404", 1);
+    expect(store.markSent).toHaveBeenCalledWith(["a"], expect.any(String));
+    expect(result).toMatchObject({ sent: 1, failed: 1 });
   });
 });
 
