@@ -181,6 +181,74 @@ function money(value: unknown): string | null {
   return n === null ? null : formatTl(n);
 }
 
+const monthNameFormatter = new Intl.DateTimeFormat("tr-TR", { month: "long", timeZone: "Europe/Istanbul" });
+
+/** "kitap" → "kitap-kırtasiye", "aidat" → "aidat" (cümle içinde). */
+function itemNoun(itemType: string): string {
+  return label(ITEM_TYPES, itemType).toLocaleLowerCase("tr");
+}
+
+/** "kitap" → "Kitap-kırtasiye" (satır başında). */
+function itemTitle(itemType: string): string {
+  const noun = itemNoun(itemType);
+  return noun.charAt(0).toLocaleUpperCase("tr") + noun.slice(1);
+}
+
+/** "2026-10-05" + "kitap" → "Ekim kitap-kırtasiye". */
+function installmentName(itemType: string, dueDate: string): string {
+  const month = monthNameFormatter.format(new Date(`${dueDate}T12:00:00+03:00`));
+  return `${month.charAt(0).toLocaleUpperCase("tr")}${month.slice(1)} ${itemNoun(itemType)}`;
+}
+
+function records(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value.filter((v): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v))
+    : [];
+}
+
+/**
+ * `odeme_alindi` olayındaki ödeme anı durumu: her taksit için bir satır, sonra
+ * her plan için kalan. Aidatta ve kesinleşmemiş tutar bekleyen planlarda kalan
+ * tutar yazılmaz, yalnız taksit sayısı yazılır. Eski olaylarda alan yoktur.
+ */
+function settlementLines(settledValue: unknown, plansValue: unknown): string[] {
+  const lines: string[] = [];
+  for (const s of records(settledValue)) {
+    const itemType = str(s.itemType);
+    const dueDate = str(s.dueDate);
+    if (!itemType || !dueDate || typeof s.complete !== "boolean") continue;
+    const name = installmentName(itemType, dueDate);
+    if (s.complete) {
+      lines.push(`✅ ${name} taksiti tamamlandı`);
+      continue;
+    }
+    const remainder = num(s.remainderTl);
+    const count = num(s.remainderCount) ?? 1;
+    const nextDue = str(s.remainderDueDate);
+    let text = `${name}: kısmi${remainder !== null ? `, kalan ${formatTl(remainder)}` : ""}`;
+    if (count > 1) text += ` (${count} taksite bölündü${nextDue ? `, ilk vade ${formatDate(nextDue)}` : ""})`;
+    else if (nextDue && nextDue !== dueDate) text += ` (yeni vade ${formatDate(nextDue)})`;
+    lines.push(text);
+  }
+  for (const plan of records(plansValue)) {
+    const itemType = str(plan.itemType);
+    const pendingCount = num(plan.pendingCount);
+    if (!itemType || pendingCount === null) continue;
+    if (plan.closed === true || pendingCount === 0) {
+      lines.push(`✅ ${itemTitle(itemType)} tamamen ödendi`);
+      continue;
+    }
+    const pendingTl = num(plan.pendingTl);
+    const countOnly = itemType === "aidat" || plan.tentativePending === true || pendingTl === null;
+    lines.push(
+      countOnly
+        ? `${itemTitle(itemType)} kalan: ${pendingCount} taksit`
+        : `${itemTitle(itemType)} kalan: ${formatTl(pendingTl)} (${pendingCount} taksit)`,
+    );
+  }
+  return lines;
+}
+
 function describe(item: WaItem, ctx: WaContext): Line | null {
   const p = item.payload;
   const lead = ctx.leads.get(item.entityId);
@@ -306,6 +374,7 @@ function describe(item: WaItem, ctx: WaContext): Line | null {
         ? p.methods.filter((m): m is string => typeof m === "string").map((m) => label(PAYMENT_METHODS, m))
         : [];
       if (total) lines.push(`Tutar: ${total}${methods.length ? ` · ${methods.join(", ")}` : ""}`);
+      lines.push(...settlementLines(p.settled, p.plans));
       const note = str(p.note);
       if (note) lines.push(`Not: ${escapeWa(note)}`);
       return { icon: "💰", title: "Ödeme alındı", lines };
