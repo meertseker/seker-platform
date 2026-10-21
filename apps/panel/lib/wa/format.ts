@@ -249,6 +249,31 @@ function settlementLines(settledValue: unknown, plansValue: unknown): string[] {
   return lines;
 }
 
+const dayMonthFormatter = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long", timeZone: "Europe/Istanbul" });
+
+/** Cümle içinde kısa yöntem adı: "4.000 ₺ nakit", "15.000 ₺ kart". */
+const METHOD_NOUNS: Record<string, string> = { nakit: "nakit", pos: "kart", havale: "havale", diger: "diğer" };
+
+/**
+ * Parçalar farklı günlerde ödendiyse "4.000 ₺ nakit (12 Ekim) + 15.000 ₺ kart (14 Ekim)";
+ * tek parça ya da hepsi aynı gün ise null (tutar satırı eski biçimde kalır).
+ */
+function datedParts(value: unknown): string | null {
+  const parts = records(value).flatMap((part) => {
+    const amount = num(part.amountTl);
+    const method = str(part.method);
+    const day = str(part.paidOn);
+    return amount !== null && method && day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? [{ amount, method, day }] : [];
+  });
+  if (parts.length < 2 || new Set(parts.map((part) => part.day)).size < 2) return null;
+  return parts
+    .map(
+      (part) =>
+        `${formatTl(part.amount)} ${METHOD_NOUNS[part.method] ?? part.method} (${dayMonthFormatter.format(new Date(`${part.day}T12:00:00+03:00`))})`,
+    )
+    .join(" + ");
+}
+
 function describe(item: WaItem, ctx: WaContext): Line | null {
   const p = item.payload;
   const lead = ctx.leads.get(item.entityId);
@@ -373,7 +398,11 @@ function describe(item: WaItem, ctx: WaContext): Line | null {
       const methods = Array.isArray(p.methods)
         ? p.methods.filter((m): m is string => typeof m === "string").map((m) => label(PAYMENT_METHODS, m))
         : [];
-      if (total) lines.push(`Tutar: ${total}${methods.length ? ` · ${methods.join(", ")}` : ""}`);
+      const dated = datedParts(p.parts);
+      if (total) {
+        const detail = dated ?? (methods.length ? methods.join(", ") : null);
+        lines.push(`Tutar: ${total}${detail ? ` · ${detail}` : ""}`);
+      }
       lines.push(...settlementLines(p.settled, p.plans));
       const note = str(p.note);
       if (note) lines.push(`Not: ${escapeWa(note)}`);

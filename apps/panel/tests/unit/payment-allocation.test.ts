@@ -81,6 +81,20 @@ describe("allocatePayment", () => {
     expect(result.ok && result.allocations[0].parts).toEqual([{ method: "nakit", kurus: 1500000 }]);
   });
 
+  it("aynı yöntem farklı günlerde ödendiyse parçalar ayrı kalır (tarih taşınır)", () => {
+    const result = allocatePayment(
+      [ekim],
+      [
+        { method: "nakit", kurus: 1000000, paidOn: "2026-10-12" },
+        { method: "nakit", kurus: 1500000, paidOn: "2026-10-14" },
+      ],
+    );
+    expect(result.ok && result.allocations[0].parts).toEqual([
+      { method: "nakit", kurus: 1000000, paidOn: "2026-10-12" },
+      { method: "nakit", kurus: 1500000, paidOn: "2026-10-14" },
+    ]);
+  });
+
   it("fazla ödemeyi reddeder", () => {
     expect(allocatePayment([ekim], [{ method: "nakit", kurus: 2600000 }]).ok).toBe(false);
   });

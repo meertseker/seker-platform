@@ -5,7 +5,8 @@
  *
  * Her taksit için üretilen işlem:
  *   - ilk parça mevcut taksiti günceller (tutar = parça, ödendi, yöntem),
- *   - sonraki parçalar aynı vadeye yeni ödenmiş taksit olarak eklenir,
+ *   - sonraki parçalar aynı vadeye yeni ödenmiş taksit olarak eklenir
+ *     (parça kendi gününü taşır: 12.10'da 4.000 nakit, 14.10'da 15.000 kart),
  *   - ödenmeyen kısım aynı vadeye yeni bekleyen taksit olarak eklenir.
  * Planın toplamı değişmez.
  */
@@ -20,6 +21,8 @@ export interface AllocationInstallment {
 export interface PaymentPart {
   method: PaymentMethod;
   kurus: number;
+  /** Parçanın ödendiği gün ("YYYY-MM-DD"); yoksa ödemenin tarihi. */
+  paidOn?: string;
 }
 
 export interface InstallmentAllocation {
@@ -66,8 +69,9 @@ export function allocatePayment(
       const head = queue[0];
       const use = Math.min(open, head.kurus);
       const last = taken.at(-1);
-      if (last && last.method === head.method) last.kurus += use;
-      else taken.push({ method: head.method, kurus: use });
+      // Aynı yöntem ve aynı gün art arda gelirse tek parça; farklı gün ayrı kalır.
+      if (last && last.method === head.method && last.paidOn === head.paidOn) last.kurus += use;
+      else taken.push(head.paidOn ? { method: head.method, kurus: use, paidOn: head.paidOn } : { method: head.method, kurus: use });
       open -= use;
       head.kurus -= use;
       if (head.kurus === 0) queue.shift();

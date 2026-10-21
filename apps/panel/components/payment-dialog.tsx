@@ -127,6 +127,8 @@ function PaymentForm({ studentId, studentName, items, preselect, onDone }: Payme
   const [firstAmount, setFirstAmount] = useState("");
   const [secondMethod, setSecondMethod] = useState<PaymentMethod>("nakit");
   const [paidOn, setPaidOn] = useState(todayInIstanbul);
+  /** İki yöntemde ikinci parçanın günü; null = ilk parçayla aynı gün. */
+  const [secondPaidOn, setSecondPaidOn] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [showAll, setShowAll] = useState(false);
   /** Eksik ödemede kalan: 0 = aynı vadede tek taksit, n = n taksit. */
@@ -151,14 +153,18 @@ function PaymentForm({ studentId, studentName, items, preselect, onDone }: Payme
   function submit() {
     setError(null);
     if (selected.length === 0) return setError("Ödenecek ayı seçin");
-    let payments: { method: PaymentMethod; amountTl: number }[];
+    let payments: { method: PaymentMethod; amountTl: number; paidOn?: string }[];
     if (twoMethods) {
       if (firstKurus <= 0) return setError("İlk yöntemin tutarını girin");
       if (firstKurus >= dueKurus) return setError("İlk tutar toplamdan küçük olmalı; tek yöntem seçin");
       if (firstMethod === secondMethod) return setError("İki farklı yöntem seçin");
+      const secondDay = secondPaidOn ?? paidOn;
+      if (!paidOn || !secondDay) return setError("Her parçanın tarihini girin");
+      const today = todayInIstanbul();
+      if (paidOn > today || secondDay > today) return setError("Ödeme tarihi bugünden ileri olamaz");
       payments = [
-        { method: firstMethod, amountTl: kurusToTl(firstKurus) },
-        { method: secondMethod, amountTl: kurusToTl(secondKurus) },
+        { method: firstMethod, amountTl: kurusToTl(firstKurus), paidOn },
+        { method: secondMethod, amountTl: kurusToTl(secondKurus), paidOn: secondDay },
       ];
     } else {
       if (!method) return setError("Nasıl ödendiğini seçin");
@@ -265,45 +271,60 @@ function PaymentForm({ studentId, studentName, items, preselect, onDone }: Payme
 
       {twoMethods ? (
         <div className="space-y-3 rounded-xl bg-muted/60 p-3">
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
-            <select
-              aria-label="İlk yöntem"
-              value={firstMethod}
-              onChange={(event) => setFirstMethod(event.target.value as PaymentMethod)}
-              className={inputClass}
-            >
-              {METHODS.map((option) => (
-                <option key={option.key} value={option.key}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <input
-              aria-label="İlk yöntemle ödenen"
-              inputMode="decimal"
-              placeholder="Örn. 15.000"
-              value={firstAmount}
-              onChange={(event) => setFirstAmount(event.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
-            <select
-              aria-label="İkinci yöntem"
-              value={secondMethod}
-              onChange={(event) => setSecondMethod(event.target.value as PaymentMethod)}
-              className={inputClass}
-            >
-              {METHODS.map((option) => (
-                <option key={option.key} value={option.key}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <div className={`${inputClass} flex items-center text-muted-foreground`}>
-              Kalan {formatTRY(secondKurus)}
+          <p className="text-sm text-muted-foreground">Farklı günlerde ödendiyse parçaların tarihini ayrı girin.</p>
+          {[
+            {
+              n: 1,
+              method: firstMethod,
+              setMethod: setFirstMethod,
+              day: paidOn,
+              setDay: setPaidOn,
+              amount: (
+                <input
+                  aria-label="İlk yöntemle ödenen"
+                  inputMode="decimal"
+                  placeholder="Örn. 15.000"
+                  value={firstAmount}
+                  onChange={(event) => setFirstAmount(event.target.value)}
+                  className={inputClass}
+                />
+              ),
+            },
+            {
+              n: 2,
+              method: secondMethod,
+              setMethod: setSecondMethod,
+              day: secondPaidOn ?? paidOn,
+              setDay: (value: string) => setSecondPaidOn(value),
+              amount: <div className={`${inputClass} flex items-center text-muted-foreground`}>Kalan {formatTRY(secondKurus)}</div>,
+            },
+          ].map((part) => (
+            <div key={part.n} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+              <select
+                aria-label={part.n === 1 ? "İlk yöntem" : "İkinci yöntem"}
+                value={part.method}
+                onChange={(event) => part.setMethod(event.target.value as PaymentMethod)}
+                className={inputClass}
+              >
+                {METHODS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {part.amount}
+              <label className="col-span-2 flex items-center justify-between gap-3 text-sm font-semibold text-foreground">
+                {part.n}. parçanın tarihi
+                <input
+                  type="date"
+                  value={part.day}
+                  max={todayInIstanbul()}
+                  onChange={(event) => part.setDay(event.target.value)}
+                  className={`${inputClass} max-w-48`}
+                />
+              </label>
             </div>
-          </div>
+          ))}
         </div>
       ) : (
         <label className="block text-sm font-semibold text-foreground">
@@ -349,16 +370,19 @@ function PaymentForm({ studentId, studentName, items, preselect, onDone }: Payme
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm font-semibold text-foreground">
-          Ödeme tarihi
-          <input
-            type="date"
-            value={paidOn}
-            max={todayInIstanbul()}
-            onChange={(event) => setPaidOn(event.target.value)}
-            className={`mt-2 ${inputClass}`}
-          />
-        </label>
+        {/* İki yöntemde her parçanın kendi tarihi yukarıda. */}
+        {twoMethods ? null : (
+          <label className="block text-sm font-semibold text-foreground">
+            Ödeme tarihi
+            <input
+              type="date"
+              value={paidOn}
+              max={todayInIstanbul()}
+              onChange={(event) => setPaidOn(event.target.value)}
+              className={`mt-2 ${inputClass}`}
+            />
+          </label>
+        )}
         <label className="block text-sm font-semibold text-foreground">
           Not (isteğe bağlı)
           <input

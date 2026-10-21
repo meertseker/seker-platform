@@ -16,7 +16,12 @@ export function rowCells(row: MatrixRow): MatrixCell[] {
 }
 
 export function openItemsOf(row: MatrixRow): OpenPaymentItem[] {
-  return rowCells(row)
+  return openItemsOfCells(rowCells(row));
+}
+
+/** Hücrelerdeki bekleyen taksitler, vade sırasıyla ("Ödeme al" penceresinin listesi). */
+export function openItemsOfCells(cells: MatrixCell[]): OpenPaymentItem[] {
+  return cells
     .flatMap((cell) => cell.items)
     .filter((item) => item.status === "bekliyor")
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.installmentId.localeCompare(b.installmentId))
@@ -43,17 +48,26 @@ export function paymentContextFor(
   student: { id: string; phone: string | null },
   traces: PaymentTraces,
 ): CellPaymentContext {
-  const items = rowCells(row).flatMap((cell) => cell.items);
+  return paymentContextForCells(rowCells(row), { ...student, fullName: row.fullName }, traces);
+}
+
+/** Öğrenci sayfası: birden çok sezonun hücreleri tek bağlamda. */
+export function paymentContextForCells(
+  cells: MatrixCell[],
+  student: { id: string; phone: string | null; fullName: string },
+  traces: PaymentTraces,
+): CellPaymentContext {
+  const items = cells.flatMap((cell) => cell.items);
   const ids = items.map((item) => item.installmentId);
   const overdue = items.filter((item) => item.overdue);
   return {
     studentId: student.id,
     phone: student.phone,
-    openItems: openItemsOf(row),
+    openItems: openItemsOfCells(cells),
     notes: pick(traces.notes, ids),
     reminders: pick(traces.reminders, ids),
     reminderMessage: reminderMessage({
-      studentName: row.fullName,
+      studentName: student.fullName,
       totalKurus: overdue.reduce((sum, item) => sum + item.amountKurus, 0),
       items: overdue.map((item) => ({ dueDate: item.dueDate, itemType: item.itemType })),
     }),

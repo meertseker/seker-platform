@@ -311,7 +311,8 @@ export async function updateInstallment(
 export interface TakePaymentInput {
   studentId: string;
   installmentIds: string[];
-  payments: { method: PaymentMethod; amountTl: number }[];
+  /** Parça kendi gününü taşıyabilir (farklı günlerde ödenen iki yöntem); yoksa `paidOn`. */
+  payments: { method: PaymentMethod; amountTl: number; paidOn?: string }[];
   /** "YYYY-MM-DD" (İstanbul günü). */
   paidOn: string;
   note?: string;
@@ -333,14 +334,21 @@ export async function takePayment(input: TakePaymentInput) {
 
   if (!input.studentId) return { error: "Öğrenci bulunamadı" };
   if (!paidOn || !paidAt) return { error: "Geçerli bir ödeme tarihi girin" };
-  if (paidOn > istanbulDateString(new Date())) return { error: "Ödeme tarihi bugünden ileri olamaz" };
+  const today = istanbulDateString(new Date());
+  if (paidOn > today) return { error: "Ödeme tarihi bugünden ileri olamaz" };
   if (input.payments.length === 0 || input.payments.length > 2) {
     return { error: "Bir ya da iki ödeme yöntemi girin" };
   }
   for (const part of input.payments) {
     if (!paymentMethods.includes(part.method)) return { error: "Geçerli bir ödeme yöntemi seçin" };
     if (!Number.isFinite(part.amountTl) || part.amountTl < 0) return { error: "Geçerli bir tutar girin" };
+    if (part.paidOn !== undefined) {
+      if (!normalizeDate(part.paidOn)) return { error: "Geçerli bir ödeme tarihi girin" };
+      if (part.paidOn > today) return { error: "Ödeme tarihi bugünden ileri olamaz" };
+    }
   }
+  // Ödemenin gününden farklı günde ödenen parça kendi tarihini taşır.
+  const partDay = (part: { paidOn?: string }) => (part.paidOn && part.paidOn !== paidOn ? part.paidOn : undefined);
 
   const { data: rows, error: rowsError } = await supabase
     .from("installments")
@@ -366,7 +374,7 @@ export async function takePayment(input: TakePaymentInput) {
 
   const result = allocatePayment(
     typed.map((row) => ({ id: row.id, dueDate: row.due_date, amountKurus: tlToKurus(Number(row.amount)) })),
-    input.payments.map((part) => ({ method: part.method, kurus: tlToKurus(part.amountTl) })),
+    input.payments.map((part) => ({ method: part.method, kurus: tlToKurus(part.amountTl), paidOn: partDay(part) })),
   );
   if (!result.ok) return { error: result.error };
 
@@ -393,7 +401,11 @@ export async function takePayment(input: TakePaymentInput) {
       id: row.id,
       planId: row.plan_id,
       amount: Number(row.amount),
-      parts: allocation.parts.map((part) => ({ amount: kurusToTl(part.kurus), method: part.method })),
+      parts: allocation.parts.map((part) =>
+        part.paidOn
+          ? { amount: kurusToTl(part.kurus), method: part.method, paidAt: normalizePaidAt(part.paidOn)! }
+          : { amount: kurusToTl(part.kurus), method: part.method },
+      ),
       remainders: remainders.map((draft) => ({ dueDate: draft.dueDate, amount: kurusToTl(draft.amountKurus) })),
     };
   });
@@ -420,7 +432,16 @@ export async function takePayment(input: TakePaymentInput) {
     p_student_id: input.studentId,
     p_paid_at: paidAt,
     p_ops: ops.map(({ id, amount, parts, remainders }) => ({ id, amount, parts, remainders })),
-    p_payload: { paidOn, methods, note: note || null, ...(settlement ?? {}) },
+    p_payload: {
+      paidOn,
+      methods,
+      // Her parçanın tutarı, yöntemi ve günü (ödeme geçmişi ve WhatsApp mesajı).
+      parts: input.payments
+        .filter((part) => part.amountTl > 0)
+        .map((part) => ({ amountTl: part.amountTl, method: part.method, paidOn: part.paidOn ?? paidOn })),
+      note: note || null,
+      ...(settlement ?? {}),
+    },
   });
   if (error || !data) return { error: rpcErrorMessage(error, "Ödeme kaydedilemedi, hiçbir değişiklik yapılmadı") };
   kickWaFlush();

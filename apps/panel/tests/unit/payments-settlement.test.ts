@@ -157,6 +157,61 @@ describe("takePayment → odeme_alindi durumu", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("iki yöntem farklı günlerde: parça tarihi RPC'ye ve olaya gider", async () => {
+    installments = [{ id: "E1", plan_id: "P-kitap", due_date: "2026-10-05", amount: 19000, status: "bekliyor" }];
+    const result = await takePayment({
+      studentId: "S1",
+      installmentIds: ["E1"],
+      payments: [
+        { method: "nakit", amountTl: 4000, paidOn: "2026-10-12" },
+        { method: "pos", amountTl: 15000, paidOn: "2026-10-14" },
+      ],
+      paidOn: "2026-10-12",
+    });
+    expect(result).toMatchObject({ eventId: "E1" });
+    expect(rpcArgs?.p_paid_at).toBe(new Date("2026-10-12T12:00:00+03:00").toISOString());
+    expect(rpcArgs?.p_ops).toEqual([
+      {
+        id: "E1",
+        amount: 19000,
+        parts: [
+          { amount: 4000, method: "nakit" },
+          { amount: 15000, method: "pos", paidAt: new Date("2026-10-14T12:00:00+03:00").toISOString() },
+        ],
+        remainders: [],
+      },
+    ]);
+    expect(eventPayload?.parts).toEqual([
+      { amountTl: 4000, method: "nakit", paidOn: "2026-10-12" },
+      { amountTl: 15000, method: "pos", paidOn: "2026-10-14" },
+    ]);
+  });
+
+  it("ileri tarihli ikinci parça RPC'ye gitmeden reddedilir", async () => {
+    const result = await takePayment({
+      studentId: "S1",
+      installmentIds: ["K1"],
+      payments: [
+        { method: "nakit", amountTl: 1000 },
+        { method: "pos", amountTl: 2000, paidOn: "2999-01-01" },
+      ],
+      paidOn: "2026-10-21",
+    });
+    expect(result).toEqual({ error: "Ödeme tarihi bugünden ileri olamaz" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("geçersiz parça tarihi reddedilir", async () => {
+    const result = await takePayment({
+      studentId: "S1",
+      installmentIds: ["K1"],
+      payments: [{ method: "nakit", amountTl: 3000, paidOn: "dün" }],
+      paidOn: "2026-10-21",
+    });
+    expect(result).toEqual({ error: "Geçerli bir ödeme tarihi girin" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("eşzamanlı ödeme: RPC'nin mesajı kullanıcıya gider, hata yutulmaz", async () => {
     rpcResult = { data: null, error: { code: "P0001", message: "Bu taksit az önce başka biri tarafından ödendi" } };
     const result = await takePayment({
