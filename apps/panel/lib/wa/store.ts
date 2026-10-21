@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { emptyContext, type WaContext, type WaItem } from "./format";
 import type { WaOutboxRow, WaSettings, WaStore } from "./flush";
+import { WA_GRUP_ANAHTARLARI } from "./routing";
 
 interface EventRow {
   id: string;
@@ -36,17 +37,22 @@ function str(value: unknown): string | null {
   return typeof value === "string" && value ? value : null;
 }
 
-export async function readWaSettings(db: SupabaseClient): Promise<WaSettings & { groupName: string }> {
+export async function readWaSettings(
+  db: SupabaseClient,
+): Promise<WaSettings & { groupName: string; finansGroupId: string; finansGroupName: string }> {
+  const { kayit, finans } = WA_GRUP_ANAHTARLARI;
   const { data, error } = await db
     .from("app_settings")
     .select("key, value")
-    .in("key", ["wa_enabled", "wa_group_id", "wa_group_name"]);
+    .in("key", ["wa_enabled", kayit.id, kayit.name, finans.id, finans.name]);
   if (error) throw new Error(`app_settings okunamadı: ${error.message}`);
   const map = new Map((data ?? []).map((r) => [r.key as string, r.value as unknown]));
   return {
     enabled: map.get("wa_enabled") === true,
-    groupId: str(map.get("wa_group_id")) ?? "",
-    groupName: str(map.get("wa_group_name")) ?? "",
+    groupId: str(map.get(kayit.id)) ?? "",
+    groupName: str(map.get(kayit.name)) ?? "",
+    finansGroupId: str(map.get(finans.id)) ?? "",
+    finansGroupName: str(map.get(finans.name)) ?? "",
   };
 }
 

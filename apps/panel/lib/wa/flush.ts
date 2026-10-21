@@ -1,4 +1,5 @@
-import { formatGroup, groupItems, type WaContext, type WaItem } from "./format";
+import { formatGroup, groupItems, type WaContext, type WaGroup, type WaItem } from "./format";
+import { chatIdFor } from "./routing";
 
 export interface WaOutboxRow {
   id: string;
@@ -10,7 +11,10 @@ export interface WaOutboxRow {
 
 export interface WaSettings {
   enabled: boolean;
+  /** Ana grup (Kayıt Randevuları); bildirimlerin açılabilmesi için şart. */
   groupId: string;
+  /** Ödeme ve fatura grubu; boşsa ödeme mesajları da ana gruba gider. */
+  finansGroupId?: string;
 }
 
 export interface WaStore {
@@ -92,7 +96,18 @@ export async function flushOutbox(
   const attemptsById = new Map(live.map((r) => [r.id, r.attempts]));
   const items = live.map((r) => r.item as WaItem);
   const ctx = await store.loadContext(items);
-  const groups = groupItems(items, ctx);
+  // Önce hedef gruba göre ayır, sonra birleştir: farklı gruplara giden işlemler aynı mesaja girmesin.
+  // Ödeme grubu seçili değilse hepsi ana gruba düşer ve davranış eskisiyle aynıdır.
+  const byChat = new Map<string, WaItem[]>();
+  for (const item of items) {
+    const chatId = chatIdFor(item.eventType, settings);
+    const list = byChat.get(chatId) ?? [];
+    list.push(item);
+    byChat.set(chatId, list);
+  }
+  const groups: Array<WaGroup & { chatId: string }> = [...byChat]
+    .flatMap(([chatId, list]) => groupItems(list, ctx).map((g) => ({ ...g, chatId })))
+    .sort((a, b) => a.items[0].createdAt.localeCompare(b.items[0].createdAt));
 
   const ready = groups.filter((g) => now.getTime() - Date.parse(g.lastAt) >= settleMs);
   result.waiting = groups.length - ready.length;
@@ -101,8 +116,10 @@ export async function flushOutbox(
   if (!(await sender.isReady())) return { ...result, notReady: true };
 
   let sentMessages = 0;
+  /** Geçici hata veren gruplar: bu koşuda o gruba başka mesaj denenmez, diğer grup etkilenmez. */
+  const blocked = new Set<string>();
   for (const group of ready) {
-    if (sentMessages >= maxMessages) {
+    if (sentMessages >= maxMessages || blocked.has(group.chatId)) {
       result.waiting += 1;
       continue;
     }
@@ -118,7 +135,7 @@ export async function flushOutbox(
 
     if (sentMessages > 0) await sleep(pauseMs);
     try {
-      await sender.send(settings.groupId, text);
+      await sender.send(group.chatId, text);
       await store.markSent(claimed, text);
       result.sent += 1;
       sentMessages += 1;
@@ -133,8 +150,8 @@ export async function flushOutbox(
         await store.markRetry(claimed, message, attempts, new Date(now.getTime() + backoffMs).toISOString());
         result.waiting += 1;
       }
-      // Bağlantı gittiyse sıradaki mesajları da aynı hataya sürüklemeyelim.
-      if (!isPermanent(error)) break;
+      // Bağlantı gittiyse bu grubun sıradaki mesajlarını da aynı hataya sürüklemeyelim.
+      if (!isPermanent(error)) blocked.add(group.chatId);
     }
   }
   return result;

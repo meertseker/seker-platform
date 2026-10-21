@@ -26,6 +26,8 @@ interface Props {
   enabled: boolean;
   groupId: string;
   groupName: string;
+  finansGroupId: string;
+  finansGroupName: string;
   recent: WaOutboxView[];
   failedCount: number;
 }
@@ -59,10 +61,80 @@ const timeFormatter = new Intl.DateTimeFormat("tr-TR", {
   day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul",
 });
 
-export function WhatsappSettings({ enabled: initialEnabled, groupId, groupName, recent, failedCount }: Props) {
+interface PickerProps {
+  id: string;
+  label: string;
+  savedId: string;
+  savedName: string;
+  groups: { id: string; name: string }[] | null;
+  disabled: boolean;
+  onSave: (id: string, name: string) => void;
+  onRemove?: () => void;
+  onTest?: () => void;
+}
+
+/** Bir hedef için grup seçimi; WAHA grup listesi iki seçim arasında paylaşılır. */
+function GroupPicker({ id, label, savedId, savedName, groups, disabled, onSave, onRemove, onTest }: PickerProps) {
+  const [selected, setSelected] = useState(savedId);
+  const selectedName = groups?.find((g) => g.id === selected)?.name ?? (selected === savedId ? savedName : "");
+  return (
+    <div>
+      <p className="text-sm text-muted-foreground">
+        {label}: <span className="font-semibold text-foreground">{savedName || (savedId ? "seçili" : "yok")}</span>
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {groups ? (
+          <>
+            <select
+              id={id}
+              aria-label={label}
+              className="min-h-11 min-w-0 flex-1 rounded-xl border border-input bg-surface px-3 py-2 text-sm"
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+            >
+              <option value="">Grup seçin…</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={primaryBtn}
+              disabled={disabled || !selected || selected === savedId}
+              onClick={() => onSave(selected, selectedName)}
+            >
+              Kaydet
+            </button>
+          </>
+        ) : null}
+        {onTest && savedId ? (
+          <button type="button" className={secondaryBtn} disabled={disabled} onClick={onTest}>
+            Test mesajı gönder
+          </button>
+        ) : null}
+        {onRemove && savedId ? (
+          <button
+            type="button"
+            className={secondaryBtn}
+            disabled={disabled}
+            onClick={() => {
+              setSelected("");
+              onRemove();
+            }}
+          >
+            Kaldır
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function WhatsappSettings({
+  enabled: initialEnabled, groupId, groupName, finansGroupId, finansGroupName, recent, failedCount,
+}: Props) {
   const [conn, setConn] = useState<WaConnection | null>(null);
   const [groups, setGroups] = useState<{ id: string; name: string }[] | null>(null);
-  const [selected, setSelected] = useState(groupId);
   const [enabled, setEnabled] = useState(initialEnabled);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -110,13 +182,13 @@ export function WhatsappSettings({ enabled: initialEnabled, groupId, groupName, 
   }
 
   const connected = conn?.status === "WORKING";
-  const selectedName = groups?.find((g) => g.id === selected)?.name ?? (selected === groupId ? groupName : "");
 
   return (
     <section id="whatsapp" className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
       <h2 className="text-xl font-semibold text-foreground">WhatsApp grubu</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Panelde yapılan her işlem (yeni veli, görüşme notu, randevu, teklif, ödeme, kayıt) seçilen gruba otomatik mesaj olarak gider.
+        Ödeme ve fatura grubu seçilirse ödeme, iade ve fiyat mesajları o gruba gider.
       </p>
 
       <div className="mt-5 space-y-5">
@@ -161,24 +233,32 @@ export function WhatsappSettings({ enabled: initialEnabled, groupId, groupName, 
 
         <div>
           <h3 className="text-sm font-semibold text-foreground">2. Grubu seç</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Seçili grup: <span className="font-semibold text-foreground">{groupName || "yok"}</span>
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {groups ? (
-              <select
-                id="wa-group"
-                aria-label="Bildirim grubu"
-                className="min-h-11 min-w-0 flex-1 rounded-xl border border-input bg-surface px-3 py-2 text-sm"
-                value={selected}
-                onChange={(e) => setSelected(e.target.value)}
-              >
-                <option value="">Grup seçin…</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-            ) : null}
+          <div className="mt-2 space-y-4">
+            <GroupPicker
+              id="wa-group"
+              label="Kayıt Randevuları grubu"
+              savedId={groupId}
+              savedName={groupName}
+              groups={groups}
+              disabled={pending}
+              onSave={(id, name) => run(() => saveWaGroup(id, name), "Grup kaydedildi.")}
+            />
+            <div>
+              <GroupPicker
+                id="wa-finans-group"
+                label="Ödeme ve fatura grubu"
+                savedId={finansGroupId}
+                savedName={finansGroupName}
+                groups={groups}
+                disabled={pending}
+                onSave={(id, name) => run(() => saveWaGroup(id, name, "finans"), "Ödeme ve fatura grubu kaydedildi.")}
+                onRemove={() => run(() => saveWaGroup("", "", "finans"), "Ödeme grubu kaldırıldı; ödeme mesajları ana gruba gidecek.")}
+                onTest={connected ? () => run(() => sendWaTest("finans"), "Test mesajı gönderildi, ödeme grubuna bakın.") : undefined}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                İsteğe bağlı. Seçilmezse ödeme mesajları da yukarıdaki gruba gider. Bağlı numara bu grupta üye olmalı.
+              </p>
+            </div>
             <button
               type="button"
               className={secondaryBtn}
@@ -187,16 +267,6 @@ export function WhatsappSettings({ enabled: initialEnabled, groupId, groupName, 
             >
               {groups ? "Listeyi yenile" : "Grupları getir"}
             </button>
-            {groups ? (
-              <button
-                type="button"
-                className={primaryBtn}
-                disabled={pending || !selected || selected === groupId}
-                onClick={() => run(() => saveWaGroup(selected, selectedName), "Grup kaydedildi.")}
-              >
-                Kaydet
-              </button>
-            ) : null}
           </div>
         </div>
 
@@ -216,7 +286,7 @@ export function WhatsappSettings({ enabled: initialEnabled, groupId, groupName, 
               />
               Panel işlemlerini gruba gönder
             </label>
-            <button type="button" className={secondaryBtn} disabled={pending || !connected || !groupId} onClick={() => run(sendWaTest, "Test mesajı gönderildi, gruba bakın.")}>
+            <button type="button" className={secondaryBtn} disabled={pending || !connected || !groupId} onClick={() => run(() => sendWaTest(), "Test mesajı gönderildi, gruba bakın.")}>
               Test mesajı gönder
             </button>
             {failedCount > 0 ? (
