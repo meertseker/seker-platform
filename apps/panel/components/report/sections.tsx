@@ -369,7 +369,11 @@ export function StudentsView({ s, query }: { s: StudentsSection; query: string }
 
         {m ? (
           <div className="grid min-w-0 grid-cols-2 content-start gap-3">
-            <StatTile label="Vadesi gelen" value={formatTl(m.expectedKurus)} helper="dönemde, iptal hariç" />
+            <StatTile
+              label="Vadesi gelen"
+              value={formatTl(m.expectedKurus)}
+              helper={m.season ? `dönemde, iptal hariç · ${m.season}` : "dönemde, iptal hariç"}
+            />
             <StatTile
               label="Tahsil edilen"
               value={formatTl(m.collectedKurus)}
@@ -378,7 +382,7 @@ export function StudentsView({ s, query }: { s: StudentsSection; query: string }
             <StatTile
               label="Geciken (bugün)"
               value={formatTl(m.overdueKurus)}
-              helper={`${formatInt(m.overdueCount)} taksit`}
+              helper={`${formatInt(m.overdueCount)} taksit · bütün sezonlar`}
               tone={m.overdueKurus > 0 ? "bad" : "neutral"}
             />
             <StatTile label="İade" value={formatTl(m.refundsKurus)} helper="dönemde" />
@@ -389,8 +393,12 @@ export function StudentsView({ s, query }: { s: StudentsSection; query: string }
       {m ? (
         <>
           <Card>
-            <CardTitle hint="Açık mavi o ay vadesi gelen tutar, koyu mavi o ay tahsil edilen. Koyu sütun açığa ulaşmıyorsa ay eksik kapandı.">
-              Son 12 ay: beklenen ve tahsil edilen
+            <CardTitle
+              hint={`Açık mavi o ay vadesi gelen tutar, koyu mavi o ay tahsil edilen. Koyu sütun açığa ulaşmıyorsa ay eksik kapandı.${
+                m.season ? ` Yalnız ${m.season} sezonunun planları; geçmiş sezonun ödemeleri sayılmaz.` : ""
+              }`}
+            >
+              Son 12 ay: beklenen ve tahsil edilen{m.season ? ` · ${m.season} sezonu` : ""}
             </CardTitle>
             <ColumnChart
               title="Son 12 ay: aylık vadesi gelen ve tahsil edilen tutar"
@@ -410,7 +418,7 @@ export function StudentsView({ s, query }: { s: StudentsSection; query: string }
           </Card>
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <CardTitle hint="Kalem türüne göre dönemde vadesi gelen ve tahsil edilen; geciken bugünkü toplam.">Kalem başına</CardTitle>
+              <CardTitle hint="Kalem türüne göre dönemde vadesi gelen ve tahsil edilen (seçili sezon); geciken bugünkü toplam, bütün sezonlar.">Kalem başına</CardTitle>
               <DataTable table={s.tables.find((t) => t.id === "tahsilat")!} />
             </Card>
             <Card>

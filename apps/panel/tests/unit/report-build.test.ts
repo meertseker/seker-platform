@@ -41,11 +41,12 @@ const M = "00000000-0000-0000-0000-00000000000c";
 const TEACHER = "00000000-0000-0000-0000-00000000000d";
 
 const manager: ManagerInput = {
+  season: "2026-2027",
   installments: [
-    { amount: 1000, due_date: "2026-10-05", status: "odendi", paid_at: T("2026-10-04T10:00:00"), paid_amount: 1000, item_type: "aidat" },
-    { amount: 500, due_date: "2026-10-15", status: "bekliyor", paid_at: null, paid_amount: null, item_type: "aidat" },
-    { amount: 2000, due_date: "2026-09-15", status: "odendi", paid_at: T("2026-10-01T10:00:00"), paid_amount: 2000, item_type: "servis" },
-    { amount: 700, due_date: "2026-10-10", status: "iptal", paid_at: null, paid_amount: null, item_type: "aidat" },
+    { amount: 1000, due_date: "2026-10-05", status: "odendi", paid_at: T("2026-10-04T10:00:00"), paid_amount: 1000, item_type: "aidat", season: "2026-2027" },
+    { amount: 500, due_date: "2026-10-15", status: "bekliyor", paid_at: null, paid_amount: null, item_type: "aidat", season: "2026-2027" },
+    { amount: 2000, due_date: "2026-09-15", status: "odendi", paid_at: T("2026-10-01T10:00:00"), paid_amount: 2000, item_type: "servis", season: "2026-2027" },
+    { amount: 700, due_date: "2026-10-10", status: "iptal", paid_at: null, paid_amount: null, item_type: "aidat", season: "2026-2027" },
   ],
   overdue: [{ amount: 500, days_overdue: 5, item_type: "aidat" }],
   refunds: [{ amount: 250, refund_date: "2026-10-12" }],
@@ -289,6 +290,42 @@ describe("rapor (yönetici)", () => {
     expect(s.money?.aging[0]).toMatchObject({ key: "1-30", count: 1, amountKurus: 50_000 });
     expect(s.money?.trend.series[0].values.at(-1)).toBe(150_000);
     expect(s.money?.trend.series[1].values.at(-1)).toBe(300_000);
+  });
+
+  it("tahsilat yalnız aktif sezonun planlarından; geçmiş sezon aylık rakamlara karışmaz", () => {
+    const past = (due: string, paid: string, amount: number) => ({
+      amount,
+      due_date: due,
+      status: "odendi",
+      paid_at: T(`${paid}T10:00:00`),
+      paid_amount: amount,
+      item_type: "aidat",
+      season: "2025-2026",
+    });
+    const withPast: ManagerInput = {
+      ...manager,
+      installments: [
+        ...manager.installments,
+        past("2025-11-05", "2025-11-03", 40_000),
+        past("2026-05-05", "2026-05-02", 40_000),
+        past("2026-06-05", "2026-10-06", 9_000), // geçen sezon borcu bu ay ödendi
+      ],
+    };
+    const r = buildReport({ ...input(), manager: withPast });
+    const k = Object.fromEntries(r.summary.kpis.map((x) => [x.key, x]));
+    expect(k.tahsilat.value).toBe(300_000);
+    expect(r.students.money).toMatchObject({ season: "2026-2027", expectedKurus: 150_000, collectedKurus: 300_000 });
+    const trend = r.students.money!.trend;
+    expect(trend.series[1].values.at(-1)).toBe(300_000);
+    expect(trend.series[1].values.slice(0, -1).every((v) => v === 0)).toBe(true);
+    expect(trend.series[0].values.slice(0, -2).every((v) => v === 0)).toBe(true);
+    const table = r.students.tables.find((t) => t.id === "tahsilat-12-ay")!;
+    expect(table.title).toContain("2026-2027");
+
+    // Süzgeç yoksa (aktif sezon okunamadı) bütün sezonlar sayılır.
+    const all = buildReport({ ...input(), manager: { ...withPast, season: null } });
+    expect(all.students.money?.collectedKurus).toBe(300_000 + 900_000);
+    expect(all.students.money?.trend.series[1].values.at(-6)).toBe(4_000_000);
   });
 
   it("içerik, site, otomasyon", () => {

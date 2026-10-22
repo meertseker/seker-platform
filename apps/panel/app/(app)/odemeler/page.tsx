@@ -9,7 +9,8 @@ import { STUDENT_STATUSES, label } from "@/lib/constants";
 import { getSessionProfile } from "@/lib/auth";
 import { isPhoneRequest } from "@/lib/device";
 import { formatTRY } from "@/lib/money";
-import { fetchCollectedKurus, monthDayRange } from "@/lib/queries/money";
+import { monthDayRange } from "@/lib/queries/money";
+import { fetchActiveSeason } from "@/lib/queries/season";
 import { requestClock } from "@/lib/time";
 import {
   buildPaymentMatrix,
@@ -25,6 +26,7 @@ import {
   PAYMENT_STUDENTS_SELECT,
   resolveScope,
   seasonsOf,
+  collectedInSeasonKurus,
   studentsInScope,
   type PaymentFilterKey as FilterKey,
   type PaymentStudent,
@@ -153,18 +155,17 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
   const currentMonth = today.slice(0, 7);
   const thisMonth = monthDayRange(currentMonth);
 
-  const [studentsResult, paidResult, traces] = await Promise.all([
+  const [studentsResult, activeSeason, traces] = await Promise.all([
     supabase
       .from("students")
       .select(PAYMENT_STUDENTS_SELECT),
-    // Tahsilat tek tanımı: bu ay (İstanbul günü) ödenmiş satırların ödenen tutarı.
-    fetchCollectedKurus(supabase, thisMonth.from, thisMonth.to),
+    fetchActiveSeason(supabase),
     fetchPaymentTraces(supabase),
   ]);
 
   const allStudents = (studentsResult.data ?? []) as unknown as PaymentStudent[];
   const seasons = seasonsOf(allStudents);
-  const { season, query, filter, includePast } = resolveScope(params, seasons);
+  const { season, query, filter, includePast } = resolveScope(params, seasons, activeSeason);
   const inScope = studentsInScope(allStudents, { season, query, filter, includePast });
 
   const matrix = buildPaymentMatrix(inScope, today, season);
@@ -182,7 +183,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
 
   const dueThisMonthKurus = dueThisMonthKurusOf(matrix.rows, currentMonth);
   const seasonSummary = seasonSummaryOf(matrix.rows);
-  const collectedThisMonthKurus = paidResult.kurus;
+  // Tahsilat tek tanımı (bu ay İstanbul günü, ödenen tutar), yalnız seçili sezonun planlarından.
+  const collectedThisMonthKurus = collectedInSeasonKurus(allStudents, season, thisMonth.from, thisMonth.to);
 
   const currentParams = {
     sezon: season || undefined,
@@ -220,7 +222,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         </div>
       </div>
 
-      {studentsResult.error || paidResult.error ? (
+      {studentsResult.error ? (
         <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
           Ödeme bilgileri yüklenirken bir sorun oluştu.
         </p>
@@ -299,7 +301,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         <SummaryCard
           label="Bu ay tahsil edilen"
           value={formatTRY(collectedThisMonthKurus)}
-          helper="Bu ay içinde ödendi işaretlenen taksitler"
+          helper={`Bu ay içinde ödendi işaretlenen taksitler (${season} sezonu)`}
           icon={<Banknote aria-hidden className="size-5" />}
           chipClass="bg-accent-soft text-emerald-700"
         />

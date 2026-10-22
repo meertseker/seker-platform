@@ -34,6 +34,7 @@ function emptyReport(role: "yonetici" | "danisman"): Report {
     manager:
       role === "yonetici"
         ? {
+            season: "2026-2027",
             installments: [],
             overdue: [],
             refunds: [],

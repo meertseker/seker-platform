@@ -76,19 +76,23 @@ export const FORMER_OVERDUE_VIEW = "v_former_overdue_installments";
 
 /**
  * [fromDay, toDayExclusive) İstanbul günlerinde tahsil edilen toplam. PostgREST satır sınırında
- * toplam kesilmesin diye sayfa sayfa okunur.
+ * toplam kesilmesin diye sayfa sayfa okunur. `season` verilirse yalnız o sezonun planlarındaki taksitler
+ * (payment_plans.season); null ise bütün sezonlar.
  */
 export async function fetchCollectedKurus(
   db: SupabaseClient,
   fromDay: string,
   toDayExclusive: string,
+  season: string | null = null,
 ): Promise<{ kurus: number; error: boolean }> {
   let kurus = 0;
   for (let from = 0; ; from += PAGE) {
-    const { data, error } = await db
+    let query = db
       .from("installments")
-      .select("id, status, amount, paid_amount")
-      .eq("status", "odendi")
+      .select("id, status, amount, paid_amount, payment_plans!inner(season)")
+      .eq("status", "odendi");
+    if (season) query = query.eq("payment_plans.season", season);
+    const { data, error } = await query
       .gte("paid_at", istanbulDayStartIso(fromDay))
       .lt("paid_at", istanbulDayStartIso(toDayExclusive))
       .order("id")

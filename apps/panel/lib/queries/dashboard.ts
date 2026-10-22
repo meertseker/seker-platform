@@ -6,6 +6,7 @@ import {
   receivableKurus,
   sumKurus,
 } from "@/lib/queries/money";
+import { fetchActiveSeason } from "@/lib/queries/season";
 import { LEAD_SOURCES, LOST_REASONS, type LeadSource, type LeadStatus, type LostReason } from "@/lib/constants";
 
 export interface FunnelResult {
@@ -166,20 +167,25 @@ export async function getLostReasons(): Promise<LostReasonRow[]> {
 /**
  * Seçili ayda vadesi gelen alacak, seçili ayda tahsil edilen ve bugün geciken toplam (spec §11).
  * Tanımlar lib/queries/money'den: alacak iptal hariç, tahsilat İstanbul günü, geciken yalnız aktif öğrenci.
+ * Vadesi gelen ve tahsil edilen yalnız aktif sezonun planlarından; geciken bilinçli olarak bütün sezonlar.
  */
 export async function getPaymentSummary(monthIso: string): Promise<PaymentSummary> {
   const supabase = await createServerSupabase();
   const { startYmd, nextStartYmd } = monthIsoDateRange(monthIso);
   const month = monthDayRange(monthIso);
+  const season = await fetchActiveSeason(supabase);
+
+  let dueQuery = supabase
+    .from("installments")
+    .select("amount, status, payment_plans!inner(season)")
+    .neq("status", "iptal")
+    .gte("due_date", startYmd)
+    .lt("due_date", nextStartYmd);
+  if (season) dueQuery = dueQuery.eq("payment_plans.season", season);
 
   const [dueResult, paid, overdue] = await Promise.all([
-    supabase
-      .from("installments")
-      .select("amount, status")
-      .neq("status", "iptal")
-      .gte("due_date", startYmd)
-      .lt("due_date", nextStartYmd),
-    fetchCollectedKurus(supabase, month.from, month.to),
+    dueQuery,
+    fetchCollectedKurus(supabase, month.from, month.to, season),
     fetchOverdueTotal(supabase),
   ]);
 

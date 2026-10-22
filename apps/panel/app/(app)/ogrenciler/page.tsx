@@ -7,7 +7,14 @@ import {
 } from "@/lib/constants";
 import { badgeClass, STUDENT_STATUS_STYLES } from "@/lib/status-styles";
 import { formatTRY } from "@/lib/money";
-import { collectedKurus, isOverdue, receivableKurus, sumKurus } from "@/lib/queries/money";
+import { fetchActiveSeason } from "@/lib/queries/season";
+import {
+  resolveStudentListFilter,
+  STUDENT_LIST_FILTERS,
+  statusesFor,
+  studentPaymentSummary,
+  type StudentListFilter,
+} from "@/lib/student-list";
 import { requestClock } from "@/lib/time";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { Metadata } from "next";
@@ -30,6 +37,7 @@ interface InstallmentRow {
 }
 
 interface PlanRow {
+  season: string | null;
   installments?: InstallmentRow[] | null;
 }
 
@@ -44,7 +52,7 @@ interface StudentRow {
   payment_plans?: PlanRow[] | null;
 }
 
-const statusKeys = Object.keys(STUDENT_STATUSES) as (keyof typeof STUDENT_STATUSES)[];
+const filterKeys = Object.keys(STUDENT_LIST_FILTERS) as StudentListFilter[];
 
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -52,16 +60,6 @@ function first(value: string | string[] | undefined) {
 
 function cleanSearch(value: string) {
   return value.replace(/[%,]/g, " ").trim();
-}
-
-/** Alacak, tahsilat ve geciken tek tanımlardan (lib/queries/money). */
-function summary(student: StudentRow, today: string) {
-  const installments = (student.payment_plans ?? []).flatMap((plan) => plan.installments ?? []);
-  return {
-    totalKurus: sumKurus(installments, receivableKurus),
-    paidKurus: sumKurus(installments, collectedKurus),
-    overdue: installments.some((installment) => isOverdue(installment, today, student.status)),
-  };
 }
 
 function hrefWith(
@@ -83,28 +81,27 @@ function hrefWith(
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
   const params = await searchParams;
   const q = cleanSearch(first(params.q) ?? "");
-  const durumParam = first(params.durum) ?? "";
-  const durum = statusKeys.includes(durumParam as keyof typeof STUDENT_STATUSES)
-    ? (durumParam as keyof typeof STUDENT_STATUSES)
-    : "";
+  // Varsayılan yalnız aktif öğrenciler; ayrılan/mezun süzgeçle.
+  const durum = resolveStudentListFilter(first(params.durum));
+  const statuses = statusesFor(durum);
   const supabase = await createServerSupabase();
   const { today } = await requestClock();
 
   let query = supabase
     .from("students")
     .select(
-      "id, full_name, parent_name, phone, season, program, status, payment_plans(installments(due_date, amount, status, paid_amount))",
+      "id, full_name, parent_name, phone, season, program, status, payment_plans(season, installments(due_date, amount, status, paid_amount))",
     )
     .order("full_name", { ascending: true });
 
   if (q) {
     query = query.or(`full_name.ilike.%${q}%,parent_name.ilike.%${q}%,phone.ilike.%${q}%`);
   }
-  if (durum) query = query.eq("status", durum);
+  if (statuses) query = query.in("status", statuses);
 
-  const { data, error } = await query;
+  const [{ data, error }, activeSeason] = await Promise.all([query, fetchActiveSeason(supabase)]);
   const students = (data ?? []) as unknown as StudentRow[];
-  const currentParams = { q: q || undefined, durum: durum || undefined };
+  const currentParams = { q: q || undefined, durum: durum === "aktif" ? undefined : durum };
 
   return (
     <div className="space-y-6">
@@ -133,13 +130,12 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           Durum
           <select
             name="durum"
-            defaultValue={durum}
+            defaultValue={durum === "aktif" ? "" : durum}
             className="mt-2 min-h-11 w-full rounded-xl border border-input bg-surface px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
           >
-            <option value="">Tüm durumlar</option>
-            {statusKeys.map((status) => (
-              <option key={status} value={status}>
-                {label(STUDENT_STATUSES, status)}
+            {filterKeys.map((key) => (
+              <option key={key} value={key === "aktif" ? "" : key}>
+                {STUDENT_LIST_FILTERS[key]}
               </option>
             ))}
           </select>
@@ -165,13 +161,15 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               <th className="px-4 py-3">Öğrenci</th>
               <th className="px-4 py-3">Program</th>
               <th className="px-4 py-3">Sezon</th>
-              <th className="px-4 py-3">Ödeme</th>
+              <th className="px-4 py-3" title="Ödenen / toplam, aktif sezonun planlarından">
+                Ödeme{activeSeason ? ` (${activeSeason})` : ""}
+              </th>
               <th className="px-4 py-3">Durum</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {students.map((student) => {
-              const payment = summary(student, today);
+              const payment = studentPaymentSummary(student, today, activeSeason);
 
               return (
                 <tr key={student.id} className="transition-colors hover:bg-muted/60">
@@ -192,7 +190,9 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                   <td className="px-4 py-4 text-muted-foreground">{student.season}</td>
                   <td className="px-4 py-4">
                     <span className="font-semibold tabular-nums text-foreground">
-                      {formatTRY(payment.paidKurus)} / {formatTRY(payment.totalKurus)}
+                      {payment.totalKurus === 0 && payment.paidKurus === 0
+                        ? "—"
+                        : `${formatTRY(payment.paidKurus)} / ${formatTRY(payment.totalKurus)}`}
                     </span>
                     {payment.overdue ? (
                       <span className="ml-2 inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200">
@@ -211,7 +211,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
             {students.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                  Öğrenci bulunamadı.
+                  {durum === "aktif" && !q ? "Aktif öğrenci yok." : "Öğrenci bulunamadı."}
                 </td>
               </tr>
             ) : null}
@@ -219,7 +219,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         </table>
       </div>
 
-      {(q || durum) && students.length > 0 ? (
+      {q || durum !== "aktif" ? (
         <Link
           href={hrefWith(currentParams, { q: undefined, durum: undefined })}
           className="text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"

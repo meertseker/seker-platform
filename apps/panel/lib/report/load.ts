@@ -5,6 +5,7 @@ import { readAdsConfig } from "@/lib/ads/config";
 import { readMetaConfig } from "@/lib/ads/meta/config";
 import { chunk, fetchAllPages, IN_CHUNK } from "@/lib/content/board";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
+import { fetchActiveSeason } from "@/lib/queries/season";
 import type { Role } from "@/lib/role-access";
 import {
   buildReport,
@@ -49,13 +50,15 @@ async function loadManager(db: SupabaseClient, sinceDay: string, period: Period)
   const prevStart = isoBounds(period.prev).start;
   const visitFrom = [period.prev.from, period.from].sort()[0];
 
-  type InstallmentRow = Omit<RawInstallment, "item_type"> & { plan: { item_type: string } | { item_type: string }[] | null };
+  type PlanRef = { item_type: string; season: string | null };
+  type InstallmentRow = Omit<RawInstallment, "item_type" | "season"> & { plan: PlanRef | PlanRef[] | null };
   type OverdueRow = RawOverdue;
-  const [installments, overdue, refunds, spend, campaigns, visits, content, wa, uploads, pending] = await Promise.all([
+  const [season, installments, overdue, refunds, spend, campaigns, visits, content, wa, uploads, pending] = await Promise.all([
+    fetchActiveSeason(db),
     all<InstallmentRow>((f, t) =>
       db
         .from("installments")
-        .select("amount, due_date, status, paid_at, paid_amount, plan:payment_plans(item_type)")
+        .select("amount, due_date, status, paid_at, paid_amount, plan:payment_plans(item_type, season)")
         .or(`due_date.gte.${sinceDay},paid_at.gte.${since}`)
         .order("id")
         .range(f, t),
@@ -107,9 +110,18 @@ async function loadManager(db: SupabaseClient, sinceDay: string, period: Period)
 
   const activeStatuses = new Set(["ENABLED", "ACTIVE"]);
   return {
+    season,
     installments: installments.map((i) => {
       const plan = Array.isArray(i.plan) ? i.plan[0] : i.plan;
-      return { amount: i.amount, due_date: i.due_date, status: i.status, paid_at: i.paid_at, paid_amount: i.paid_amount, item_type: plan?.item_type ?? null };
+      return {
+        amount: i.amount,
+        due_date: i.due_date,
+        status: i.status,
+        paid_at: i.paid_at,
+        paid_amount: i.paid_amount,
+        item_type: plan?.item_type ?? null,
+        season: plan?.season ?? null,
+      };
     }),
     overdue,
     refunds,

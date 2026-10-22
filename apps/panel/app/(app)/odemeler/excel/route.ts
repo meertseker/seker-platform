@@ -12,6 +12,7 @@ import {
   type PaymentStudent,
 } from "@/lib/payments-scope";
 import { getSessionProfile } from "@/lib/auth";
+import { fetchActiveSeason } from "@/lib/queries/season";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,10 @@ export async function GET(request: NextRequest) {
   const profile = await getSessionProfile();
   if (profile.role === "ogretmen") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const { data, error } = await supabase.from("students").select(PAYMENT_STUDENTS_SELECT);
+  const [{ data, error }, activeSeason] = await Promise.all([
+    supabase.from("students").select(PAYMENT_STUDENTS_SELECT),
+    fetchActiveSeason(supabase),
+  ]);
   if (error) {
     console.error("[odemeler/excel] okunamadı:", error.code);
     return NextResponse.json({ error: "Ödeme bilgileri okunamadı" }, { status: 500 });
@@ -34,7 +38,7 @@ export async function GET(request: NextRequest) {
 
   const students = (data ?? []) as unknown as PaymentStudent[];
   const params = Object.fromEntries(request.nextUrl.searchParams.entries());
-  const scope = resolveScope(params, seasonsOf(students));
+  const scope = resolveScope(params, seasonsOf(students), activeSeason);
   const today = todayInIstanbul();
   const matrix = buildPaymentMatrix(studentsInScope(students, scope), today, scope.season);
   const rows = filterRows(matrix.rows, scope.filter, today.slice(0, 7));

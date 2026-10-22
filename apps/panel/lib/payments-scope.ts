@@ -4,6 +4,7 @@
  */
 import type { MatrixRow, MatrixStudentInput } from "@/lib/payment-matrix";
 import { hasUnpaidThisMonth } from "@/lib/payments-summary";
+import { collectedDay, collectedKurus } from "@/lib/queries/money";
 
 export const PAYMENT_STUDENTS_SELECT =
   "id, full_name, parent_name, phone, season, status, created_at, payment_plans(id, item_type, season, total_amount, installment_count, tentative_from, installments(id, due_date, amount, status, paid_at, paid_amount, payment_method))";
@@ -52,11 +53,16 @@ export function seasonsOf(students: PaymentStudent[]): string[] {
     .reverse();
 }
 
-export function resolveScope(params: Params, seasons: string[]): PaymentScope {
+/**
+ * URL'den kapsam. Sezon seçilmemişse (ya da geçersizse) aktif sezon (price_lists.is_active), o da yoksa
+ * listedeki en yeni sezon.
+ */
+export function resolveScope(params: Params, seasons: string[], activeSeason: string | null = null): PaymentScope {
   const seasonParam = first(params.sezon) ?? "";
   const filterParam = first(params.filtre) ?? "";
+  const fallback = activeSeason && seasons.includes(activeSeason) ? activeSeason : (seasons[0] ?? "");
   return {
-    season: seasons.includes(seasonParam) ? seasonParam : (seasons[0] ?? ""),
+    season: seasons.includes(seasonParam) ? seasonParam : fallback,
     query: (first(params.q) ?? "").trim(),
     filter: filterParam in PAYMENT_FILTERS ? (filterParam as PaymentFilterKey) : "tumu",
     includePast: first(params.gecmis) === "1",
@@ -91,4 +97,27 @@ export function filterRows(rows: MatrixRow[], filter: PaymentFilterKey, currentM
     if (filter === "plansiz") return !row.hasPlan;
     return true;
   });
+}
+
+/**
+ * [fromDay, toDayExclusive) İstanbul günlerinde tahsil edilen, yalnız `season` sezonunun planlarından
+ * (öğrenci durumu ve arama süzgeci uygulanmaz: sezonun bütün tahsilatı). Tek tanım lib/queries/money.
+ */
+export function collectedInSeasonKurus(
+  students: PaymentStudent[],
+  season: string,
+  fromDay: string,
+  toDayExclusive: string,
+): number {
+  let kurus = 0;
+  for (const student of students) {
+    for (const plan of student.payment_plans ?? []) {
+      if (plan.season !== season) continue;
+      for (const row of plan.installments ?? []) {
+        const day = collectedDay(row);
+        if (day && day >= fromDay && day < toDayExclusive) kurus += collectedKurus(row);
+      }
+    }
+  }
+  return kurus;
 }

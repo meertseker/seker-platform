@@ -16,6 +16,7 @@ import {
 import { businessMinutesBetween, type BusinessHours } from "@/lib/lead-flow/business-hours";
 import { summarizeVisits, VISIT_SOURCE_LABELS, type VisitRow, type VisitSummary } from "@/lib/queries/site-visits";
 import { collectedKurus, receivableKurus } from "@/lib/queries/money";
+import { inSeason } from "@/lib/queries/season";
 import type { Role } from "@/lib/role-access";
 import {
   agingOf,
@@ -84,6 +85,8 @@ export type RawInstallment = {
   paid_at: string | null;
   paid_amount: number | string | null;
   item_type: string | null;
+  /** Taksitin planının sezonu (payment_plans.season). */
+  season: string | null;
 };
 export type RawOverdue = { amount: number | string; days_overdue: number; item_type: string | null };
 export type RawRefund = { amount: number | string; refund_date: string };
@@ -109,6 +112,8 @@ export type RawUpload = { platform: string; status: string; conversion_at: strin
 export type RawVisit = VisitRow & { day: string };
 
 export type ManagerInput = {
+  /** Para toplamlarının sezonu (aktif sezon). null: süzgeç yok, bütün sezonlar sayılır. */
+  season: string | null;
   installments: RawInstallment[];
   overdue: RawOverdue[];
   refunds: RawRefund[];
@@ -330,6 +335,8 @@ export type LostSection = { total: number; prevTotal: number; bars: { label: str
 export type OffersSection = { created: number; approved: number; avgDiscount: number | null; pending: number; tables: ReportTable[] };
 
 export type MoneyBlock = {
+  /** Tahsilat ve vadesi gelen bu sezonun planlarından; geciken bütün sezonlar (Gecikenler ile aynı). */
+  season: string | null;
   expectedKurus: number;
   collectedKurus: number;
   dueCollectedRatio: number | null;
@@ -532,7 +539,7 @@ function buildSummary(input: ReportInput, facts: LeadFacts[]): SummarySection {
   if (manager) {
     const paid = (r: DayRange) =>
       sum(
-        manager.installments
+        seasonInstallments(manager)
           .filter((i) => i.status === "odendi" && isoInRange(i.paid_at, r))
           .map(collectedKurus),
       );
@@ -549,7 +556,7 @@ function buildSummary(input: ReportInput, facts: LeadFacts[]): SummarySection {
         kind: "tl",
         change: change(paid(period), paid(prev)),
         goodWhen: "up",
-        helper: "Dönemde ödendi işaretlenen taksitler",
+        helper: manager.season ? `Dönemde ödendi işaretlenen taksitler · ${manager.season} sezonu` : "Dönemde ödendi işaretlenen taksitler",
         href: "/odemeler",
       },
       {
@@ -1096,6 +1103,14 @@ function buildOffers(input: ReportInput, pending: number): OffersSection {
 
 // ---- Öğrenciler ve tahsilat ----
 
+/**
+ * Para toplamlarına giren taksitler: yalnız seçili (aktif) sezonun planları. Geçmiş sezonun ödemeleri bu yılın
+ * aylık rakamlarına karışmaz. Geciken (v_overdue_installments) bilinçli olarak sezon ayırmaz.
+ */
+export function seasonInstallments(m: Pick<ManagerInput, "installments" | "season">): RawInstallment[] {
+  return m.installments.filter((i) => inSeason(i.season, m.season));
+}
+
 function buildStudents(input: ReportInput): StudentsSection {
   const active = input.students.filter((s) => s.status === "aktif");
   const left = input.students.filter((s) => inRange(s.left_date, input.period)).length;
@@ -1135,7 +1150,7 @@ function buildStudents(input: ReportInput): StudentsSection {
   const m = input.manager;
   if (m) {
     const range = input.period;
-    const live = m.installments.filter((i) => i.status !== "iptal");
+    const live = seasonInstallments(m).filter((i) => i.status !== "iptal");
     const due = live.filter((i) => inRange(i.due_date, range));
     const paid = live.filter((i) => i.status === "odendi" && isoInRange(i.paid_at, range));
     // Tek tanımlar (lib/queries/money): alacak iptal hariç tutar, tahsilat ödenen tutar.
@@ -1153,6 +1168,7 @@ function buildStudents(input: ReportInput): StudentsSection {
       if (i.status === "odendi" && i.paid_at) bump(colByMonth, monthOfIso(i.paid_at), collectedKurus(i));
     }
     money = {
+      season: m.season,
       expectedKurus,
       collectedKurus: collected,
       dueCollectedRatio: ratio(dueCollected, expectedKurus),
@@ -1173,7 +1189,7 @@ function buildStudents(input: ReportInput): StudentsSection {
     tables.push(
       {
         id: "tahsilat",
-        title: `Tahsilat · ${range.label}`,
+        title: m.season ? `Tahsilat · ${range.label} · ${m.season} sezonu` : `Tahsilat · ${range.label}`,
         columns: [col("kalem", "Kalem", "text"), col("beklenen", "Vadesi gelen", "tl"), col("tahsil", "Tahsil edilen", "tl"), col("geciken", "Geciken (bugün)", "tl")],
         rows: items
           .map((item) => ({
@@ -1195,7 +1211,7 @@ function buildStudents(input: ReportInput): StudentsSection {
       },
       {
         id: "tahsilat-12-ay",
-        title: "Son 12 ay: beklenen ve tahsil edilen",
+        title: m.season ? `Son 12 ay: beklenen ve tahsil edilen · ${m.season} sezonu` : "Son 12 ay: beklenen ve tahsil edilen",
         columns: [col("ay", "Ay", "text"), col("beklenen", "Vadesi gelen", "tl"), col("tahsil", "Tahsil edilen", "tl"), col("oran", "Oran", "pct")],
         rows: months.map((mm, i) => {
           const e = money!.trend.series[0].values[i];
