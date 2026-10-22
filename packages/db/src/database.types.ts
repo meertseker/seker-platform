@@ -655,14 +655,14 @@ isOneToOne: false
                   ]
                 },"tasks": {
                   Row: {
-                    "assigned_to": string,"auto_generated": boolean,"created_at": string,"due_at": string | null,"due_date": string,"id": string,"lead_id": string | null,"rule_key": string | null,"status": string,"title": string,"updated_at": string
+                    "assigned_to": string,"auto_generated": boolean,"created_at": string,"due_at": string | null,"due_date": string,"id": string,"lead_id": string | null,"rule_key": string | null,"status": string,"student_id": string | null,"title": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "assigned_to": string,"auto_generated"?: boolean,"created_at"?: string,"due_at"?: string | null,"due_date": string,"id"?: string,"lead_id"?: string | null,"rule_key"?: string | null,"status"?: string,"title": string,"updated_at"?: string
+                    "assigned_to": string,"auto_generated"?: boolean,"created_at"?: string,"due_at"?: string | null,"due_date": string,"id"?: string,"lead_id"?: string | null,"rule_key"?: string | null,"status"?: string,"student_id"?: string | null,"title": string,"updated_at"?: string
                   }
                   Update: {
-                    "assigned_to"?: string,"auto_generated"?: boolean,"created_at"?: string,"due_at"?: string | null,"due_date"?: string,"id"?: string,"lead_id"?: string | null,"rule_key"?: string | null,"status"?: string,"title"?: string,"updated_at"?: string
+                    "assigned_to"?: string,"auto_generated"?: boolean,"created_at"?: string,"due_at"?: string | null,"due_date"?: string,"id"?: string,"lead_id"?: string | null,"rule_key"?: string | null,"status"?: string,"student_id"?: string | null,"title"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -676,6 +676,38 @@ isOneToOne: false
       columns: ["lead_id"]
 isOneToOne: false
       referencedRelation: "leads"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tasks_student_id_fkey"
+      columns: ["student_id"]
+isOneToOne: false
+      referencedRelation: "students"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"veli_gorusmeleri": {
+                  Row: {
+                    "author_id": string,"contact_with": string,"contacted_at": string,"created_at": string,"id": string,"note": string | null,"outcome": string,"promise_amount": number | null,"promise_date": string | null,"student_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "author_id": string,"contact_with": string,"contacted_at"?: string,"created_at"?: string,"id"?: string,"note"?: string | null,"outcome": string,"promise_amount"?: number | null,"promise_date"?: string | null,"student_id": string
+                  }
+                  Update: {
+                    "author_id"?: string,"contact_with"?: string,"contacted_at"?: string,"created_at"?: string,"id"?: string,"note"?: string | null,"outcome"?: string,"promise_amount"?: number | null,"promise_date"?: string | null,"student_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "veli_gorusmeleri_author_id_fkey"
+      columns: ["author_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "veli_gorusmeleri_student_id_fkey"
+      columns: ["student_id"]
+isOneToOne: false
+      referencedRelation: "students"
       referencedColumns: ["id"]
     }
                   ]
@@ -747,6 +779,14 @@ isOneToOne: false
       referencedRelation: "media_assets"
       referencedColumns: ["id"]
     }
+                  ]
+                },"v_former_overdue_installments": {
+                  Row: {
+                    "amount": number | null,"days_overdue": number | null,"due_date": string | null,"family_phone": string | null,"installment_id": string | null,"item_type": string | null,"season": string | null,"student_id": string | null,"student_name": string | null,"student_status": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
                   ]
                 },"v_overdue_installments": {
                   Row: {

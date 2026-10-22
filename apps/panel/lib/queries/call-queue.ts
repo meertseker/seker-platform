@@ -6,6 +6,7 @@ import { type BusinessHours, businessMinutesBetween, clockStart } from "@/lib/le
 import { FOLLOWUP_STEPS, LEAD_TASK_KINDS } from "@/lib/lead-flow/followups";
 import { LEAD_SOURCES, label } from "@/lib/constants";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
+import { PROMISE_RULE_PREFIX } from "@/lib/veli-gorusmesi";
 
 /** Kartta görünen kaynak: mesaj kanalı önce; Instagram reklamı ile Google reklamı ayrı yazılır. */
 export function queueSourceLabel(source: string, channel: string | null, adPlatform?: string | null): string {
@@ -208,6 +209,8 @@ type LeadJoin = {
   converted_student_id?: string | null;
 };
 
+type StudentJoin = { id: string; full_name: string };
+
 export type FollowupRow = {
   id: string;
   title: string;
@@ -215,6 +218,8 @@ export type FollowupRow = {
   due_at: string | null;
   due_date: string;
   lead?: LeadJoin | LeadJoin[] | null;
+  /** Öğrenciye bağlı görev (ödeme sözü); lead ile birlikte dolu olmaz. */
+  student?: StudentJoin | StudentJoin[] | null;
 };
 
 /** Otomatik görev kurallarının önekleri (followups.ts, recordCall). */
@@ -248,6 +253,9 @@ export type FollowupItem = {
   action: FollowupAction;
   leadId: string | null;
   leadName: string | null;
+  /** Öğrenciye bağlı görevde satır öğrenci sayfasına gider. */
+  studentId: string | null;
+  studentName: string | null;
   phone: string | null;
   title: string;
   subtitle: string;
@@ -264,9 +272,14 @@ const timeFormatter = new Intl.DateTimeFormat("tr-TR", {
   timeZone: "Europe/Istanbul",
 });
 
-function subtitleFor(ruleKey: string | null, title: string, leadName: string | null): string {
+function subtitleFor(ruleKey: string | null, title: string, leadName: string | null, studentName: string | null = null): string {
   const [kind, , step] = (ruleKey ?? "").split(":");
   switch (kind) {
+    case PROMISE_RULE_PREFIX: {
+      // "Ad: 30 Kasım ödeme sözü — ödeme geldi mi?" → "30 Kasım ödeme sözü — ödeme geldi mi?"
+      const prefix = studentName ? `${studentName}: ` : null;
+      return prefix && title.startsWith(prefix) ? title.slice(prefix.length) : title;
+    }
     case "takip": {
       const n = Number(step);
       if (Number.isInteger(n) && n > FOLLOWUP_STEPS) return "Son deneme";
@@ -296,15 +309,18 @@ export function labelFollowups(rows: FollowupRow[], now: Date): FollowupItem[] {
   });
   return sorted.map((r) => {
     const lead = Array.isArray(r.lead) ? (r.lead[0] ?? null) : (r.lead ?? null);
+    const student = Array.isArray(r.student) ? (r.student[0] ?? null) : (r.student ?? null);
     return {
       id: r.id,
       ruleKey: r.rule_key,
       action: followupAction(r.rule_key),
       leadId: lead?.id ?? null,
       leadName: lead?.parent_name ?? null,
+      studentId: student?.id ?? null,
+      studentName: student?.full_name ?? null,
       phone: lead?.phone ?? null,
       title: r.title,
-      subtitle: subtitleFor(r.rule_key, r.title, lead?.parent_name ?? null),
+      subtitle: subtitleFor(r.rule_key, r.title, lead?.parent_name ?? null, student?.full_name ?? null),
       time: r.due_at ? timeFormatter.format(new Date(r.due_at)) : null,
       dueNow: !!r.due_at && Date.parse(r.due_at) <= now.getTime(),
     };
@@ -336,7 +352,9 @@ export async function loadFollowupTasks(
 ): Promise<FollowupItem[]> {
   let query = supabase
     .from("tasks")
-    .select("id, title, rule_key, due_at, due_date, lead:leads(id, parent_name, phone, status, converted_student_id)")
+    .select(
+      "id, title, rule_key, due_at, due_date, lead:leads(id, parent_name, phone, status, converted_student_id), student:students(id, full_name)",
+    )
     .eq("status", "acik")
     .lte("due_date", today)
     .order("due_at", { ascending: true, nullsFirst: false })

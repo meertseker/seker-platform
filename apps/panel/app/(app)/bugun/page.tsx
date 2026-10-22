@@ -78,6 +78,7 @@ interface TaskRow {
   rule_key: string | null;
   lead_id: string | null;
   lead?: LeadJoin | LeadJoin[] | null;
+  student?: { id: string; full_name: string } | { id: string; full_name: string }[] | null;
 }
 
 interface StaleLeadRow {
@@ -198,12 +199,15 @@ function TodaySection({
 }
 
 function FollowupRowView({ task, waMessage }: { task: FollowupItem; waMessage?: string }) {
+  // Öğrenciye bağlı görev (ödeme sözü) öğrenci sayfasına gider.
+  const name = task.leadName ?? task.studentName;
+  const href = task.leadId ? `/leads/${task.leadId}` : task.studentId ? `/ogrenciler/${task.studentId}` : null;
   const body = (
     <>
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-[15px] font-semibold text-foreground">{task.leadName ?? task.title}</span>
+        <span className="truncate text-[15px] font-semibold text-foreground">{name ?? task.title}</span>
         <span className="truncate text-[13px] text-muted-foreground">
-          {task.leadName ? task.subtitle : "Genel görev"}
+          {name ? task.subtitle : "Genel görev"}
         </span>
       </div>
       {task.dueNow ? (
@@ -219,8 +223,8 @@ function FollowupRowView({ task, waMessage }: { task: FollowupItem; waMessage?: 
 
   return (
     <li className="flex items-center gap-2 pr-2">
-      {task.leadId ? (
-        <Link href={`/leads/${task.leadId}`} className={`${rowClass} min-w-0 hover:text-primary-strong`}>
+      {href ? (
+        <Link href={href} className={`${rowClass} min-w-0 hover:text-primary-strong`}>
           {body}
         </Link>
       ) : (
@@ -351,7 +355,9 @@ export default async function Home({
   // İleri tarihli açık görevler: bugünküler "Takip aramaları"nda, bunlar aşağıdaki listede.
   let laterTasksQuery = supabase
     .from("tasks")
-    .select("id, title, due_date, rule_key, lead_id, lead:leads(id, parent_name, phone, first_contact_at)")
+    .select(
+      "id, title, due_date, rule_key, lead_id, lead:leads(id, parent_name, phone, first_contact_at), student:students(id, full_name)",
+    )
     .eq("status", "acik")
     .gt("due_date", today)
     .order("due_date", { ascending: true })
@@ -585,6 +591,7 @@ export default async function Home({
           <ul className="space-y-3">
             {laterTasks.slice(0, followupLimit).map((task) => {
               const lead = one(task.lead);
+              const student = one(task.student);
 
               return (
                 <li
@@ -601,6 +608,13 @@ export default async function Home({
                             className="font-semibold text-foreground hover:underline"
                           >
                             {lead.parent_name}
+                          </Link>
+                        ) : student ? (
+                          <Link
+                            href={`/ogrenciler/${student.id}`}
+                            className="font-semibold text-foreground hover:underline"
+                          >
+                            {student.full_name}
                           </Link>
                         ) : (
                           <span>Genel görev</span>

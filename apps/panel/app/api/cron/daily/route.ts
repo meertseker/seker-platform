@@ -11,6 +11,7 @@ import { fetchOverdueTotal } from "@/lib/queries/money";
 import { formatTRY } from "@/lib/money";
 import { loadFutureVisitLeadIds } from "@/lib/queries/stale-leads";
 import { insertNotifications } from "@/lib/notifications/insert";
+import { createPromiseTasks } from "@/lib/queries/promise-tasks";
 
 type StaleLead = {
   id: string;
@@ -84,6 +85,15 @@ export async function GET(req: NextRequest) {
   // İleri tarihli ziyareti olan veli takipsiz değildir (randevu durumu listede olduğu için).
   for (const l of dropLeadsWithFutureVisit((staleLeads ?? []) as StaleLead[], futureVisitIds)) {
     await createStaleLeadTask(l, today, days);
+  }
+
+  // Kural (borç takibi): söz günü gelmiş, tutulmamış ödeme sözü → görüşmeyi kaydedene görev.
+  // Hata loglanır, diğer kuralları durdurmaz.
+  let promiseTasks = 0;
+  try {
+    promiseTasks = await createPromiseTasks(db, today);
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : "Ödeme sözü görevleri açılamadı");
   }
 
   // Gürültü kontrolü: dünden kalan okunmamış "randevu_bugun" bildirimleri bayatlar; bugünün satırları oluşmadan önce okundu yapılır.
@@ -165,5 +175,5 @@ export async function GET(req: NextRequest) {
       await supersedeOldSummaries(y.id);
     }
   }
-  return NextResponse.json({ ok: true, staleLeads: staleLeads?.length ?? 0, appts: appts?.length ?? 0 });
+  return NextResponse.json({ ok: true, staleLeads: staleLeads?.length ?? 0, appts: appts?.length ?? 0, promiseTasks });
 }

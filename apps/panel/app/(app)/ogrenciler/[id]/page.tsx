@@ -15,6 +15,10 @@ import { WhatsAppButton } from "@/components/whatsapp-button";
 import { StudentEditForm } from "@/components/student-edit-form";
 import { RefundPanel, type RefundItem } from "@/components/refund-panel";
 import { StudentLeaveForm } from "@/components/student-leave-form";
+import { PromiseBadge, VeliGorusmeleriList } from "@/components/veli-gorusmeleri";
+import { VeliGorusmesiForm } from "@/components/veli-gorusmesi-form";
+import { fetchGorusmeler } from "@/lib/queries/veli-gorusmeleri";
+import { openPromises } from "@/lib/veli-gorusmesi";
 import {
   ITEM_TYPES,
   label,
@@ -245,10 +249,12 @@ export default async function StudentDetailPage({
   const matrixInput = { ...student, payment_plans: student.payment_plans ?? [] };
   const matrix = buildPaymentMatrix([matrixInput], today, student.season);
   const row = matrix.rows[0];
-  const [traces, paymentEvents] = await Promise.all([
+  const [traces, paymentEvents, gorusmeler] = await Promise.all([
     fetchPaymentTraces(supabase, [student.id]),
     fetchPaymentEvents(supabase, student.id),
+    fetchGorusmeler(supabase, [student.id]),
   ]);
+  const openPromise = openPromises(gorusmeler)[0] ?? null;
   const history = buildPaymentHistory(
     plans.flatMap((plan) =>
       (plan.installments ?? []).map((inst) => ({
@@ -441,6 +447,28 @@ export default async function StudentDetailPage({
         {history.length > 0 || hasRow ? (
           <PaymentHistory entries={history} role={profile.role} studentName={student.full_name} />
         ) : null}
+
+        <section id="gorusmeler" className="scroll-mt-20 rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Veli görüşmeleri</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Ödeme için veliyle yapılan görüşmeler ve verilen sözler.
+            </p>
+            {openPromise ? (
+              <div className="mt-2">
+                <PromiseBadge row={openPromise} today={today} />
+              </div>
+            ) : null}
+          </div>
+          {profile.role === "yonetici" || profile.role === "danisman" ? (
+            <div className="mt-4">
+              <VeliGorusmesiForm studentId={student.id} />
+            </div>
+          ) : null}
+          <div className="mt-5">
+            <VeliGorusmeleriList rows={gorusmeler} />
+          </div>
+        </section>
 
         {student.status === "ayrildi" ? (
           <RefundPanel studentId={student.id} canManage={profile.role === "yonetici"} refunds={refunds} />

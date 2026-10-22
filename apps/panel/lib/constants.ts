@@ -95,6 +95,7 @@ export const EVENT_LABELS = {
   arama_kaydi: "Arama kaydedildi",
   mesaj_tekrar: "Mesajla tekrar yazdı",
   ustlenildi: "Aramak için üstlendi",
+  veli_gorusmesi: "Veli görüşmesi",
 } as const;
 
 export const CONVERSION_ACTIONS = {

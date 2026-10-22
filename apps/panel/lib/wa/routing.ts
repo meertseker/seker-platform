@@ -20,6 +20,7 @@ export const WA_HEDEF_TURLERI: Record<WaHedef, readonly string[]> = {
     "taksit_guncellendi",
     "zam_uygulandi",
     "tutar_kesinlesti",
+    "veli_gorusmesi",
   ],
   kayit: [
     "lead_olusturuldu",

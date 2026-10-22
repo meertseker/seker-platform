@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { PaymentPanelButton, PaymentPanelHost, type CellPaymentContext, type TraceDTO } from "@/components/payment-matrix-cell";
 import { ReminderButton } from "@/components/reminder-button";
+import { LastGorusmeLine, PromiseBadge } from "@/components/veli-gorusmeleri";
+import { VeliGorusmesiForm } from "@/components/veli-gorusmesi-form";
+import type { GorusmeWithAuthor } from "@/lib/queries/veli-gorusmeleri";
 import { formatTRY } from "@/lib/money";
 import { reminderMessage, type OverdueStudent } from "@/lib/overdue";
 import { installmentLabel, shortDate } from "@/lib/payment-labels";
@@ -12,15 +15,25 @@ const dateFormatter = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: 
 /**
  * Gecikenler kartı. "Ödeme al" Ödemeler ekranı ve öğrenci sayfasıyla aynı ay panelini açar
  * (en eski geciken ay; panelde diğer bekleyen aylara geçilir, kalanı kapat / düzelt oradan).
+ * Son veli görüşmesi ve açık ödeme sözü kartta görünür; "Görüşme ekle" kartın altında açılır.
  */
 export function OverdueStudentCard({
   student,
   lastReminder,
   panel,
+  lastGorusme = null,
+  openPromise = null,
+  today,
+  statusLabel,
 }: {
   student: OverdueStudent;
   lastReminder: TraceDTO | null;
   panel: { columns: PanelColumn[]; payment: CellPaymentContext; role: Role };
+  lastGorusme?: GorusmeWithAuthor | null;
+  openPromise?: GorusmeWithAuthor | null;
+  today: string;
+  /** Eski öğrenci alacağında öğrencinin durumu ("Ayrıldı", "Mezun"). */
+  statusLabel?: string;
 }) {
   const message = reminderMessage(student);
   const ids = student.items.map((item) => item.installmentId);
@@ -48,7 +61,22 @@ export function OverdueStudentCard({
                   ? `${shortDate(lastReminder.at)} hatırlatıldı · ${lastReminder.actorName ?? "Panel"}`
                   : "Henüz hatırlatılmadı"}
               </span>
+              {statusLabel ? (
+                <span className="rounded-full bg-surface px-2.5 py-0.5 text-sm font-semibold text-muted-foreground ring-1 ring-inset ring-border">
+                  {statusLabel}
+                </span>
+              ) : null}
             </div>
+            {lastGorusme || openPromise ? (
+              <div className="mt-2 flex flex-col gap-1.5">
+                {openPromise ? (
+                  <span>
+                    <PromiseBadge row={openPromise} today={today} />
+                  </span>
+                ) : null}
+                {lastGorusme ? <LastGorusmeLine row={lastGorusme} /> : null}
+              </div>
+            ) : null}
             <ul className="mt-2 space-y-1 text-base text-foreground">
               {student.items.map((item) => (
                 <li key={item.installmentId} className="flex flex-wrap gap-x-2">
@@ -66,6 +94,11 @@ export function OverdueStudentCard({
             <ReminderButton studentId={student.studentId} installmentIds={ids} phone={student.phone} message={message} />
           </div>
         </div>
+        {panel.role === "yonetici" || panel.role === "danisman" ? (
+          <div className="mt-3 border-t border-red-200 pt-3">
+            <VeliGorusmesiForm studentId={student.studentId} compact />
+          </div>
+        ) : null}
       </li>
     </PaymentPanelHost>
   );

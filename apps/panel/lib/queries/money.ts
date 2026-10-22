@@ -71,6 +71,9 @@ const PAGE = 1000;
 /** Geciken satırlar DB'de bu görünümden okunur (aktif öğrenci süzgeci görünümde). */
 export const OVERDUE_VIEW = "v_overdue_installments";
 
+/** Ayrılan / mezun öğrencinin vadesi geçmiş bekleyen taksitleri ("Eski öğrenci alacakları"; 0023). Geciken toplamına girmez. */
+export const FORMER_OVERDUE_VIEW = "v_former_overdue_installments";
+
 /**
  * [fromDay, toDayExclusive) İstanbul günlerinde tahsil edilen toplam. PostgREST satır sınırında
  * toplam kesilmesin diye sayfa sayfa okunur.

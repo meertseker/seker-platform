@@ -12,6 +12,7 @@ import {
   type ItemType,
 } from "@/lib/constants";
 import { installmentLabel } from "@/lib/payment-labels";
+import { CALL_OUTCOMES, CONTACT_WITH } from "@/lib/veli-gorusmesi";
 
 /** Kuyruktaki bir satır: bir events kaydı ya da bir görüşme notu. */
 export interface WaItem {
@@ -479,6 +480,23 @@ function describe(item: WaItem, ctx: WaContext): Line | null {
         );
       }
       return { icon: "✂️", title: "Kalan kapatıldı", lines };
+    }
+    case "veli_gorusmesi": {
+      // Borç görüşmesi: kiminle · sonuç, söz satırı ve kısaltılmış not (tam metin panelde).
+      const who = str(p.contactWith);
+      const outcome = str(p.outcome);
+      const head = [who ? label(CONTACT_WITH, who) : null, outcome ? label(CALL_OUTCOMES, outcome).toLocaleLowerCase("tr") : null]
+        .filter(Boolean)
+        .join(" · ");
+      const lines: string[] = [];
+      const promiseDate = str(p.promiseDate);
+      if (outcome === "soz_verdi" && promiseDate) {
+        const amount = money(p.promiseAmountTl);
+        lines.push(`Ödeme sözü: ${formatDate(promiseDate)}${amount ? ` · ${amount}` : ""}`);
+      }
+      const note = str(p.note);
+      if (note) lines.push(...quote(note, 300));
+      return { icon: "📞", title: head ? `Veli görüşmesi: ${head}` : "Veli görüşmesi", lines };
     }
     case "odeme_hatirlatildi": {
       const count = Array.isArray(p.installmentIds) ? p.installmentIds.length : 0;
