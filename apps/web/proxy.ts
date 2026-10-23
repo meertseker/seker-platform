@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { LANDING_PAGES } from '@/content/landingPages';
 import { AGE_GROUPS_CONTENT } from '@/content/ageGroups';
-import { LP_SLUG_RE } from '@seker/shared/landing';
-import { lookupLpStatus, lpProxyDecision } from '@/lib/landing/status';
+import { lookupLpStatus, lpNeedsLookup, lpProxyDecision, previewProxyDecision } from '@/lib/landing/status';
 
 /**
  * Kök layout'taki Suspense (fallback={null}) kabuğu 200 ile akıttığından, sayfa içindeki notFound()
@@ -25,7 +24,11 @@ const notFoundRewrite = (request: NextRequest) =>
   NextResponse.rewrite(new URL('/_not-found-slug', request.url), { status: 404 });
 
 export async function proxy(request: NextRequest) {
-  const [, section, rawSlug] = request.nextUrl.pathname.split('/');
+  const [, section, rawSlug, token] = request.nextUrl.pathname.split('/');
+  // /lp/onizleme/<token>: biçimi bozuk token sayfa render edilmeden gerçek 404.
+  if (section === 'lp' && rawSlug === 'onizleme' && token !== undefined) {
+    return previewProxyDecision(token).kind === 'next' ? NextResponse.next() : notFoundRewrite(request);
+  }
   if (!rawSlug || !KNOWN[section]) return NextResponse.next();
   let slug: string;
   try {
@@ -36,7 +39,7 @@ export async function proxy(request: NextRequest) {
   if (KNOWN[section].has(slug)) return NextResponse.next();
   if (section !== 'lp') return notFoundRewrite(request);
 
-  const status = LP_SLUG_RE.test(slug) ? await lookupLpStatus(slug) : null;
+  const status = lpNeedsLookup(slug, KNOWN.lp) ? await lookupLpStatus(slug) : null;
   const decision = lpProxyDecision(slug, KNOWN.lp, status);
   if (decision.kind === 'redirect') return NextResponse.redirect(new URL(decision.to, request.url), 302);
   if (decision.kind === 'notFound') return notFoundRewrite(request);
@@ -44,5 +47,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/lp/:slug', '/yas-gruplari/:slug'],
+  matcher: ['/lp/:slug', '/lp/onizleme/:token', '/yas-gruplari/:slug'],
 };

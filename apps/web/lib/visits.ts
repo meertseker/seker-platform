@@ -2,7 +2,7 @@
  * Çerezsiz anonim ziyaret sayacı: tarayıcıda kaynak/cihaz sınıflandırması ve sunucuda doğrulama.
  * Hiçbir kimlik, çerez veya tarayıcı depolaması kullanılmaz; yalnızca toplam sayı tutulur (bkz. 0011_site_visits.sql).
  */
-
+import { isPreviewPath } from './previewPath';
 import { isMetaPaid } from './metaClick';
 
 export const VISIT_SOURCES = ['google_ads', 'meta_ads', 'arama', 'sosyal', 'kampanya', 'diger_site', 'dogrudan', 'site_ici'] as const;
@@ -63,6 +63,8 @@ export function normalizeVisitPath(raw: unknown): string | null {
   if (path.length > 1) path = path.replace(/\/+$/, '');
   if (!path || path.length > 200 || !PATH_OK.test(path)) return null;
   if (EXCLUDED_PREFIXES.some((prefix) => path.startsWith(prefix))) return null;
+  // Gizli önizleme sayılmaz; token site_visits'e yazılmaz.
+  if (isPreviewPath(path)) return null;
   return path;
 }
 

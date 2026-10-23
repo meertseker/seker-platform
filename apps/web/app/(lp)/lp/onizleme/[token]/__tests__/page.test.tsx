@@ -51,6 +51,7 @@ describe('/lp/onizleme/[token]', () => {
     const metadata = await generateMetadata();
     expect(metadata.robots).toEqual({ index: false, follow: false });
     expect(metadata.title).toBe('Önizleme');
+    expect(metadata.referrer).toBe('no-referrer');
   });
 
   it('formDisabled verilmeyen LandingView önizleme notu ve fieldset içermez', () => {

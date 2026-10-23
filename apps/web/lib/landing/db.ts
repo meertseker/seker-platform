@@ -4,15 +4,13 @@ import { connection } from 'next/server';
 import { createAdminSupabase } from '@seker/auth/admin';
 import {
   LP_SLUG_RE,
+  PREVIEW_TOKEN_RE,
   pageFieldsToLandingFields,
   parseLandingFields,
   type LandingFields,
 } from '@seker/shared/landing';
 
 export type DbLandingPage = { slug: string; status: 'yayinda'; fields: LandingFields };
-
-/** randomBytes(32).toString('base64url') → 43 karakter (0024 check'i ≥ 43). */
-const PREVIEW_TOKEN_RE = /^[A-Za-z0-9_-]{43,}$/;
 
 /**
  * Yayındaki veritabanı reklam sayfası. `landing_pages` anon'a kapalı (RLS), bu yüzden service_role ile okunur;

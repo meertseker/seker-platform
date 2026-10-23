@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { isPreviewPath } from '@/lib/previewPath';
 import { classifyEntrySource, deviceFromUserAgent, isEntrance, type VisitPayload } from '@/lib/visits';
 
 /**
@@ -14,6 +15,8 @@ export default function VisitBeacon() {
 
   useEffect(() => {
     if (!pathname) return;
+    // Gizli reklam sayfası önizlemesi sayılmaz (token site_visits'e gitmez).
+    if (isPreviewPath(pathname)) return;
     // Öğretmen siteyi düzenlerken gezintisi sayılmaz.
     if (document.body.classList.contains('seker-editing')) return;
 

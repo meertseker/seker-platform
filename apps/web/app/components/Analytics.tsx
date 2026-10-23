@@ -1,5 +1,6 @@
 import Script from 'next/script';
 import { isEditing } from '@/lib/content/getContent';
+import { PREVIEW_PATH_GUARD_JS } from '@/lib/previewPath';
 
 /** gtag.js ile yüklenen Google etiketleri: Google Ads (AW-<rakam>) ve Google Analytics 4 (G-<harf/rakam>). */
 const ADS_TAG_ID = /^AW-\d+$/;
@@ -20,6 +21,9 @@ export default async function Analytics() {
   // Düzenleme (draft) modunda etiketler yüklenmez: öğretmenin gezintisi ölçüme karışmasın.
   if (await isEditing()) return null;
 
+  // Gizli reklam sayfası önizlemesinde (/lp/onizleme/…) satır içi betikler çalışmaz: GTM yüklenmez, gtag config
+  // (page_view) çağrılmaz. gtag.js dosyası yüklenir ama config olmadan ölçüm göndermez. Kök layout statik kalsın
+  // diye yol sunucuda değil tarayıcıda denetlenir (lib/previewPath.ts).
   // Onay varsayılanları (ConsentDefaults) beforeInteractive ile önce kurulur; Google etiketleri veli
   // çerezleri kabul edene kadar çerez yazmaz. GTM'e ayrıca Google Ads/GA4 etiketi eklenirse ilgili
   // değişken boşaltılmalı, yoksa etiket iki kez çalışır.
@@ -27,7 +31,7 @@ export default async function Analytics() {
     <>
       {gtmId && (
         <Script id="gtm" strategy="afterInteractive">
-          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+          {`if (!${PREVIEW_PATH_GUARD_JS}) (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
@@ -42,8 +46,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             strategy="afterInteractive"
           />
           <Script id="google-tag" strategy="afterInteractive">
-            {`window.gtag('js', new Date());
-${gtagIds.map((id) => `window.gtag('config', '${id}');`).join('\n')}`}
+            {`if (!${PREVIEW_PATH_GUARD_JS}) {
+window.gtag('js', new Date());
+${gtagIds.map((id) => `window.gtag('config', '${id}');`).join('\n')}
+}`}
           </Script>
         </>
       )}

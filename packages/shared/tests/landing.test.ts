@@ -4,6 +4,7 @@ import {
   RESERVED_LP_SLUGS,
   LP_SLUG_RE,
   ARCHIVE_REDIRECT_PATH,
+  PREVIEW_TOKEN_RE,
   AD_PRIMARY_TEXT_MAX,
   AD_HEADLINE_MAX,
   LP_MEDIA_OPTIONS,
@@ -174,5 +175,14 @@ describe('parseLandingFields', () => {
     expect(f.bodyBlocks).toEqual([{ heading: 'a', text: 'b' }]);
     expect(f.mediaKey).toBe('gardenWide');
     expect(parseLandingFields({ mediaKey: 'yok' }).mediaKey).toBeNull();
+  });
+});
+
+describe('PREVIEW_TOKEN_RE', () => {
+  it('base64url 43+ karakteri kabul eder, kısa ya da yabancı karakterliyi reddeder', () => {
+    expect(PREVIEW_TOKEN_RE.test('Ab9_-'.repeat(8) + 'xyz')).toBe(true);
+    expect(PREVIEW_TOKEN_RE.test('A'.repeat(42))).toBe(false);
+    expect(PREVIEW_TOKEN_RE.test(`${'A'.repeat(43)}!`)).toBe(false);
+    expect(PREVIEW_TOKEN_RE.test(`${'A'.repeat(43)}/x`)).toBe(false);
   });
 });

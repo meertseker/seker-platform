@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CODE_LP_SLUGS } from '@seker/shared/landing';
-import { lookupLpStatus, lpProxyDecision } from '../status';
+import {
+  LP_STATUS_CACHE_MAX,
+  lookupLpStatus,
+  lpNeedsLookup,
+  lpProxyDecision,
+  lpStatusCacheSize,
+  previewProxyDecision,
+  resetLpStatusCache,
+} from '../status';
 
 const CODE: ReadonlySet<string> = new Set(CODE_LP_SLUGS);
 
@@ -98,5 +106,59 @@ describe('lookupLpStatus', () => {
     const s = slug();
     await lookupLpStatus(s, { fetchFn: (() => Promise.reject(new Error('ağ'))) as unknown as typeof fetch });
     expect(await lookupLpStatus(s, { fetchFn: (() => json([{ status: 'yayinda' }])) as unknown as typeof fetch })).toBe('yayinda');
+  });
+});
+
+describe('ayrılmış önizleme yolu ve token', () => {
+  it('çıplak /lp/onizleme sorgusuz 404', () => {
+    expect(lpNeedsLookup('onizleme', CODE)).toBe(false);
+    expect(lpProxyDecision('onizleme', CODE, null)).toEqual({ kind: 'notFound' });
+  });
+
+  it('yalnız kod dışı, kurala uyan, ayrılmamış slug sorgulanır', () => {
+    expect(lpNeedsLookup('beykent-anaokulu', CODE)).toBe(false);
+    expect(lpNeedsLookup('Kotu_Slug', CODE)).toBe(false);
+    expect(lpNeedsLookup('ilk-hafta-uyum', CODE)).toBe(true);
+    expect(lpNeedsLookup('onizleme-2', CODE)).toBe(true);
+  });
+
+  it('biçimi bozuk token 404, biçimi doğru token sayfaya geçer', () => {
+    expect(previewProxyDecision('kisa')).toEqual({ kind: 'notFound' });
+    expect(previewProxyDecision(`${'A'.repeat(43)}!`)).toEqual({ kind: 'notFound' });
+    expect(previewProxyDecision('A'.repeat(43))).toEqual({ kind: 'next' });
+  });
+});
+
+describe('durum önbelleği sınırı', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://db.test');
+    vi.stubEnv('SUPABASE_SECRET_KEY', 'gizli');
+    resetLpStatusCache();
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it(`${LP_STATUS_CACHE_MAX + 1} farklı slug sonrası en çok ${LP_STATUS_CACHE_MAX} kayıt; en eski düşer`, async () => {
+    expect(LP_STATUS_CACHE_MAX).toBe(500);
+    const fetchFn = vi.fn(() => Promise.resolve(new Response('[]', { status: 200 })));
+    const deps = { fetchFn: fetchFn as unknown as typeof fetch, now: () => 1_000 };
+    for (let i = 0; i <= LP_STATUS_CACHE_MAX; i++) await lookupLpStatus(`sinir-${i}`, deps);
+    expect(lpStatusCacheSize()).toBeLessThanOrEqual(LP_STATUS_CACHE_MAX);
+    expect(fetchFn).toHaveBeenCalledTimes(LP_STATUS_CACHE_MAX + 1);
+    await lookupLpStatus(`sinir-${LP_STATUS_CACHE_MAX}`, deps); // en yeni: önbellekte
+    expect(fetchFn).toHaveBeenCalledTimes(LP_STATUS_CACHE_MAX + 1);
+    await lookupLpStatus('sinir-0', deps); // en eski: düşmüştü
+    expect(fetchFn).toHaveBeenCalledTimes(LP_STATUS_CACHE_MAX + 2);
+    expect(lpStatusCacheSize()).toBeLessThanOrEqual(LP_STATUS_CACHE_MAX);
+  });
+
+  it('süresi dolan kayıt yenisiyle değişir, boyut artmaz', async () => {
+    let t = 0;
+    const fetchFn = vi.fn(() => Promise.resolve(new Response('[]', { status: 200 })));
+    const deps = { fetchFn: fetchFn as unknown as typeof fetch, now: () => t };
+    await lookupLpStatus('tek-sayfa', deps);
+    t = 60_000;
+    await lookupLpStatus('tek-sayfa', deps);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(lpStatusCacheSize()).toBe(1);
   });
 });

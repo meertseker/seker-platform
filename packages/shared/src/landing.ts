@@ -19,6 +19,9 @@ export const RESERVED_LP_SLUGS: readonly string[] = [...CODE_LP_SLUGS, 'onizleme
 export const LP_SLUG_RE = /^[a-z0-9-]{3,60}$/;
 export const ARCHIVE_REDIRECT_PATH = '/lp/az-mevcutlu-anaokulu';
 
+/** Önizleme token biçimi: randomBytes(32).toString('base64url') → 43 karakter (0024 check'i ≥ 43). */
+export const PREVIEW_TOKEN_RE = /^[A-Za-z0-9_-]{43,}$/;
+
 export const AD_PRIMARY_TEXT_MAX = 125;
 export const AD_HEADLINE_MAX = 40;
 

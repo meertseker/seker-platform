@@ -1,3 +1,5 @@
+import { isPreviewPath } from './previewPath';
+
 export const TRACKED_EVENTS = [
   'lead_submit',
   'whatsapp_click',
@@ -13,6 +15,8 @@ export function trackEvent(name: TrackedEvent, payload: Record<string, unknown> 
   if (typeof window === 'undefined' || !window.dataLayer) return;
   // Öğretmen siteyi düzenlerken bağlantılara tıklaması reklam/analitik olayı üretmemeli.
   if (document.body.classList.contains('seker-editing')) return;
+  // Gizli önizlemede ölçüm yok (lib/previewPath.ts).
+  if (isPreviewPath(window.location.pathname)) return;
   window.dataLayer.push({ event: name, ...payload });
   // GA4 doğrudan gtag.js ile yüklüyse olay ona da gider (dataLayer nesneleri yalnız GTM'in işidir).
   // send_to yalnız GA4: Google Ads etiketine dönüşüm olmayan olay gönderilmez. Onay yoksa gtag çerez yazmaz.

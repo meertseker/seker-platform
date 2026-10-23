@@ -13,7 +13,8 @@ import { currentYear } from '@/lib/time';
  * `[slug]` rotasıyla çakışmaz; `/lp/onizleme/<token>` proxy eşleştiricisine (`/lp/:slug`) girmez.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: 'Önizleme', robots: { index: false, follow: false } };
+  // no-referrer: token'lı adres dış kaynaklara (ör. etiket betikleri) Referer başlığıyla gitmez.
+  return { title: 'Önizleme', robots: { index: false, follow: false }, referrer: 'no-referrer' };
 }
 
 export default async function PreviewRoute({ params }: { params: Promise<{ token: string }> }) {

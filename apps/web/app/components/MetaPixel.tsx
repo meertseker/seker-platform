@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { readConsent } from '@/lib/consent';
 import { CONSENT_EVENT, metaPixelId } from '@/lib/metaPixel';
+import { isPreviewPath } from '@/lib/previewPath';
 
 type Fbq = ((...args: unknown[]) => void) & {
   callMethod?: (...args: unknown[]) => void;
@@ -50,6 +51,8 @@ export default function MetaPixel() {
 
   useEffect(() => {
     if (!id) return;
+    // Gizli reklam sayfası önizlemesinde piksel yüklenmez (token'lı adres Meta'ya gitmez).
+    if (isPreviewPath(window.location.pathname)) return;
     const tryLoad = () => {
       try {
         if (readConsent(window.localStorage) === 'granted') loadPixel(id);
