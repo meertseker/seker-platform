@@ -95,7 +95,7 @@ describe("0025 ad_change_log", () => {
     expect(old.error).toBeNull();
   });
   it("bilinmeyen eylem ve kaynak reddedilir", async () => {
-    const a = await admin.from("ad_change_log").insert({ ...base, action: "kampanya_kur", source: "icerik" });
+    const a = await admin.from("ad_change_log").insert({ ...base, action: "olmayan_eylem", source: "icerik" });
     expect(a.error?.code).toBe("23514");
     const s = await admin.from("ad_change_log").insert({ ...base, action: "ig_yayin", source: "baska" });
     expect(s.error?.code).toBe("23514");
