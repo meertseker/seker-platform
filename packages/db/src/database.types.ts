@@ -175,14 +175,14 @@ isOneToOne: false
                   ]
                 },"content_items": {
                   Row: {
-                    "approved_at": string | null,"approved_by": string | null,"approver_face_check": boolean | null,"audience": string | null,"brief": string | null,"caption": string | null,"code": string,"created_at": string,"created_by": string | null,"due_at": string | null,"face_answer": boolean | null,"id": string,"ig_media_id": string | null,"ig_permalink": string | null,"ig_published_at": string | null,"kind": string,"learned_note": string | null,"media_meta": Json | null,"media_path": string | null,"owner_id": string,"page_fields": Json | null,"platform": string,"review_note": string | null,"stage": string,"stage_changed_at": string,"status": string,"submitted_at": string | null,"topic": string,"updated_at": string,"week_start": string
+                    "approved_at": string | null,"approved_by": string | null,"approver_face_check": boolean | null,"audience": string | null,"brief": string | null,"caption": string | null,"code": string,"created_at": string,"created_by": string | null,"due_at": string | null,"face_answer": boolean | null,"id": string,"ig_container_id": string | null,"ig_media_id": string | null,"ig_permalink": string | null,"ig_publish_error": string | null,"ig_publish_requested_at": string | null,"ig_publish_requested_by": string | null,"ig_publish_scheduled_at": string | null,"ig_publish_status": string,"ig_published_at": string | null,"kind": string,"learned_note": string | null,"media_meta": Json | null,"media_path": string | null,"owner_id": string,"page_fields": Json | null,"platform": string,"review_note": string | null,"stage": string,"stage_changed_at": string,"status": string,"submitted_at": string | null,"topic": string,"updated_at": string,"week_start": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "approved_at"?: string | null,"approved_by"?: string | null,"approver_face_check"?: boolean | null,"audience"?: string | null,"brief"?: string | null,"caption"?: string | null,"code": string,"created_at"?: string,"created_by"?: string | null,"due_at"?: string | null,"face_answer"?: boolean | null,"id"?: string,"ig_media_id"?: string | null,"ig_permalink"?: string | null,"ig_published_at"?: string | null,"kind": string,"learned_note"?: string | null,"media_meta"?: Json | null,"media_path"?: string | null,"owner_id": string,"page_fields"?: Json | null,"platform": string,"review_note"?: string | null,"stage"?: string,"stage_changed_at"?: string,"status"?: string,"submitted_at"?: string | null,"topic": string,"updated_at"?: string,"week_start": string
+                    "approved_at"?: string | null,"approved_by"?: string | null,"approver_face_check"?: boolean | null,"audience"?: string | null,"brief"?: string | null,"caption"?: string | null,"code": string,"created_at"?: string,"created_by"?: string | null,"due_at"?: string | null,"face_answer"?: boolean | null,"id"?: string,"ig_container_id"?: string | null,"ig_media_id"?: string | null,"ig_permalink"?: string | null,"ig_publish_error"?: string | null,"ig_publish_requested_at"?: string | null,"ig_publish_requested_by"?: string | null,"ig_publish_scheduled_at"?: string | null,"ig_publish_status"?: string,"ig_published_at"?: string | null,"kind": string,"learned_note"?: string | null,"media_meta"?: Json | null,"media_path"?: string | null,"owner_id": string,"page_fields"?: Json | null,"platform": string,"review_note"?: string | null,"stage"?: string,"stage_changed_at"?: string,"status"?: string,"submitted_at"?: string | null,"topic": string,"updated_at"?: string,"week_start": string
                   }
                   Update: {
-                    "approved_at"?: string | null,"approved_by"?: string | null,"approver_face_check"?: boolean | null,"audience"?: string | null,"brief"?: string | null,"caption"?: string | null,"code"?: string,"created_at"?: string,"created_by"?: string | null,"due_at"?: string | null,"face_answer"?: boolean | null,"id"?: string,"ig_media_id"?: string | null,"ig_permalink"?: string | null,"ig_published_at"?: string | null,"kind"?: string,"learned_note"?: string | null,"media_meta"?: Json | null,"media_path"?: string | null,"owner_id"?: string,"page_fields"?: Json | null,"platform"?: string,"review_note"?: string | null,"stage"?: string,"stage_changed_at"?: string,"status"?: string,"submitted_at"?: string | null,"topic"?: string,"updated_at"?: string,"week_start"?: string
+                    "approved_at"?: string | null,"approved_by"?: string | null,"approver_face_check"?: boolean | null,"audience"?: string | null,"brief"?: string | null,"caption"?: string | null,"code"?: string,"created_at"?: string,"created_by"?: string | null,"due_at"?: string | null,"face_answer"?: boolean | null,"id"?: string,"ig_container_id"?: string | null,"ig_media_id"?: string | null,"ig_permalink"?: string | null,"ig_publish_error"?: string | null,"ig_publish_requested_at"?: string | null,"ig_publish_requested_by"?: string | null,"ig_publish_scheduled_at"?: string | null,"ig_publish_status"?: string,"ig_published_at"?: string | null,"kind"?: string,"learned_note"?: string | null,"media_meta"?: Json | null,"media_path"?: string | null,"owner_id"?: string,"page_fields"?: Json | null,"platform"?: string,"review_note"?: string | null,"stage"?: string,"stage_changed_at"?: string,"status"?: string,"submitted_at"?: string | null,"topic"?: string,"updated_at"?: string,"week_start"?: string
                   }
                   Relationships: [
                     {
@@ -194,6 +194,12 @@ isOneToOne: false
     },{
       foreignKeyName: "content_items_created_by_fkey"
       columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "content_items_ig_publish_requested_by_fkey"
+      columns: ["ig_publish_requested_by"]
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
