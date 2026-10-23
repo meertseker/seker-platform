@@ -39,6 +39,7 @@ const PHONE = { width: 390, height: 780 };
 const DESKTOP = { width: 1280, height: 900 };
 const PHONE_MAX_SCALE = 0.8;
 const BLOCK_SLOTS = 3;
+const LOAD_FAILED = "Sayfa bilgisi yüklenemedi. Sayfayı yenileyip tekrar deneyin.";
 
 type View = "telefon" | "masaustu";
 type Mode = "onizleme" | "duzenle";
@@ -57,7 +58,13 @@ export function PagePublishPanel({ contentId }: { contentId: string }) {
   const [warning, setWarning] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const result = await loadPagePanel(contentId);
+    let result: Awaited<ReturnType<typeof loadPagePanel>>;
+    try {
+      result = await loadPagePanel(contentId);
+    } catch {
+      setLoadError(LOAD_FAILED);
+      return null;
+    }
     if ("error" in result) {
       setLoadError(result.error);
       return null;
@@ -69,11 +76,15 @@ export function PagePublishPanel({ contentId }: { contentId: string }) {
 
   useEffect(() => {
     let alive = true;
-    loadPagePanel(contentId).then((result) => {
-      if (!alive) return;
-      if ("error" in result) setLoadError(result.error);
-      else setData(result);
-    });
+    loadPagePanel(contentId)
+      .then((result) => {
+        if (!alive) return;
+        if ("error" in result) setLoadError(result.error);
+        else setData(result);
+      })
+      .catch(() => {
+        if (alive) setLoadError(LOAD_FAILED);
+      });
     return () => {
       alive = false;
     };
@@ -158,6 +169,11 @@ export function PagePublishPanel({ contentId }: { contentId: string }) {
         title="Sayfa önizleme ve yayın"
         description={data ? `${data.code} · Sayfa · ${PLATFORM_LABEL[data.platform]}` : undefined}
       >
+        {data && loadError ? (
+          <p role="alert" className="mb-4 rounded-xl bg-destructive-soft px-3 py-2 text-sm text-destructive">
+            {loadError}
+          </p>
+        ) : null}
         {data ? (
           <PanelBody
             key={`${data.page?.status ?? "yok"}-${data.page?.publishedAt ?? ""}`}
@@ -170,7 +186,9 @@ export function PagePublishPanel({ contentId }: { contentId: string }) {
             reload={reload}
           />
         ) : (
-          <p className="text-sm text-muted-foreground">{loadError ?? "Yükleniyor…"}</p>
+          <p role={loadError ? "alert" : undefined} className={`text-sm ${loadError ? "text-destructive" : "text-muted-foreground"}`}>
+            {loadError ?? "Yükleniyor…"}
+          </p>
         )}
       </Sheet>
     </div>
@@ -446,7 +464,7 @@ function PublishForm({
               href={`${data.siteBase.replace(/\/+$/, "")}/lp/${data.page.slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 break-all font-semibold underline"
+              className="inline-flex min-h-11 items-center gap-1 break-all font-semibold underline"
             >
               {host}/lp/{data.page.slug}
               <ExternalLink aria-hidden className="size-3.5 shrink-0" />
