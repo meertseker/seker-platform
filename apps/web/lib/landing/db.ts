@@ -19,6 +19,7 @@ export type DbLandingPage = { slug: string; status: 'yayinda'; fields: LandingFi
  * Next 16.2 belgeleri (node_modules/next/dist/docs/01-app/03-api-reference):
  * - 01-directives/use-cache.md, 04-functions/cacheTag.md
  * - 04-functions/cacheLife.md § "Conditional cache lifetimes": dallarda farklı cacheLife; çağrı başına tek çağrı.
+ * - 04-functions/cacheLife.md § "Preset cache profiles": `hours` = stale 5 dk, revalidate 1 saat, expire 1 gün.
  *   https://nextjs.org/docs/app/api-reference/functions/cacheLife#conditional-cache-lifetimes
  */
 export async function getPublishedLandingPage(slug: string): Promise<DbLandingPage | null> {
@@ -44,7 +45,9 @@ export async function getPublishedLandingPage(slug: string): Promise<DbLandingPa
       cacheLife('minutes');
       return null;
     }
-    cacheLife('max');
+    // 'hours' (stale 5 dk, revalidate 1 saat, expire 1 gün; cacheLife.md "Preset cache profiles"):
+    // panelin /api/revalidate çağrısı kaçarsa düzenleme en geç bir saat içinde görünür.
+    cacheLife('hours');
     return { slug, status: 'yayinda', fields: parseLandingFields(data.fields) };
   } catch (err) {
     console.error('[lp] yayındaki sayfa okunamadı', (err as { code?: string })?.code ?? 'istisna');

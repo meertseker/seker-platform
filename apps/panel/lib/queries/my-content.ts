@@ -134,6 +134,7 @@ export function buildTimeline(item: MyContentItem, now: Date): TimelineEvent[] {
   }
   if (item.igPublishedAt) done("Instagram'da yayınlandı", when(item.igPublishedAt, now));
   if (item.page?.publishedAt) done("Sayfa yayına girdi", item.page.slug ? `/lp/${item.page.slug}` : null);
+  if (item.page?.status === "arsiv") done("Sayfa arşive alındı", null);
   if (item.kind === "reels" && item.stage === "test") done("Reklam testine girdi", when(item.stageChangedAt, now));
   if (item.stage === "kazanan") done("Büyütmeye taşındı", when(item.stageChangedAt, now));
   if (item.stage === "arsiv") done("Arşive alındı", when(item.stageChangedAt, now));
@@ -156,6 +157,7 @@ export function statusPill(item: MyContentItem): { text: string; tone: "ok" | "w
   if (item.status === "teslim") return { text: "Onay bekliyor", tone: "warn" };
   if (item.status === "duzeltme") return { text: "Düzeltme istendi", tone: "warn" };
   if (item.stage === "organik") return { text: "Instagram'da", tone: "ok" };
+  if (item.kind === "sayfa" && item.page?.status === "arsiv") return { text: "Arşivde", tone: "muted" };
   if (item.stage === "test" && item.kind === "sayfa" && item.page?.status !== "yayinda") {
     return { text: "Yayın bekliyor", tone: "warn" };
   }

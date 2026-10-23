@@ -65,6 +65,21 @@ describe('POST /api/revalidate', () => {
     expect((await POST(bad)).status).toBe(400);
   });
 
+  it('env sırrının başındaki/sonundaki boşluk ve satır sonu yok sayılır', async () => {
+    vi.stubEnv('WEB_REVALIDATE_SECRET', ` ${SECRET}
+`);
+    const res = await POST(req({ slug: 'ilk-hafta-uyum' }, `Bearer ${SECRET}`));
+    expect(res.status).toBe(200);
+    expect(revalidateTag).toHaveBeenCalledWith('lp:ilk-hafta-uyum', { expire: 0 });
+  });
+
+  it('yalnız boşluktan oluşan sır tanımsız sayılır: 503', async () => {
+    vi.stubEnv('WEB_REVALIDATE_SECRET', '  ');
+    const res = await POST(req({ slug: 'ilk-hafta-uyum' }, 'Bearer   '));
+    expect(res.status).toBe(503);
+    expect(revalidateTag).not.toHaveBeenCalled();
+  });
+
   it('doğru sır ve slug: lp:<slug> etiketi anında düşer, 200', async () => {
     const res = await POST(req({ slug: 'ilk-hafta-uyum' }, `Bearer ${SECRET}`));
     expect(res.status).toBe(200);

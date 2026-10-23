@@ -25,7 +25,9 @@ function builder(table: string) {
 
 vi.mock('@seker/auth/admin', () => ({ createAdminSupabase: () => ({ from: builder }) }));
 vi.mock('next/server', () => ({ connection: vi.fn(async () => undefined) }));
+vi.mock('next/cache', () => ({ cacheLife: vi.fn(), cacheTag: vi.fn() }));
 
+import { cacheLife, cacheTag } from 'next/cache';
 import { getPreviewLandingPage, getPublishedLandingPage } from '../db';
 
 const TOKEN = 'A'.repeat(43);
@@ -33,6 +35,8 @@ const TOKEN = 'A'.repeat(43);
 beforeEach(() => {
   calls.length = 0;
   result = { data: null, error: null };
+  vi.mocked(cacheLife).mockClear();
+  vi.mocked(cacheTag).mockClear();
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
@@ -45,6 +49,19 @@ describe('getPublishedLandingPage', () => {
     expect(calls[0].eq).toContainEqual(['slug', 'ilk-hafta-uyum']);
     expect(calls[0].eq).toContainEqual(['status', 'yayinda']);
     expect(page).toEqual({ slug: 'ilk-hafta-uyum', status: 'yayinda', fields: expect.objectContaining({ h1: 'Başlık' }) });
+  });
+
+  it("bulunan sayfa 'hours' profiliyle önbelleğe girer (yenileme kaçarsa en geç bir saat)", async () => {
+    result = { data: { slug: 'ilk-hafta-uyum', status: 'yayinda', fields: {} }, error: null };
+    await getPublishedLandingPage('ilk-hafta-uyum');
+    expect(cacheTag).toHaveBeenCalledWith('lp:ilk-hafta-uyum');
+    expect(cacheLife).toHaveBeenCalledTimes(1);
+    expect(cacheLife).toHaveBeenCalledWith('hours');
+  });
+
+  it("satır yoksa 'minutes' profili", async () => {
+    await getPublishedLandingPage('ilk-hafta-uyum');
+    expect(cacheLife).toHaveBeenCalledWith('minutes');
   });
 
   it('satır yoksa null', async () => {

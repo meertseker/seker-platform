@@ -14,6 +14,7 @@ export type FieldCheck = { label: string; summary: string; count: string | null;
 const TITLE_MIN = 10;
 const OK = "Kontrol geçti";
 const AD_EMPTY = "Boş · Instagram reklamı için gerekir";
+const MEDIA_DEFAULT = "Seçilmedi · varsayılan fotoğraf kullanılır";
 
 /** Yalnız yasaklı ifade kontrolü (uzunluk sınırı yok). */
 function bannedOnly(text: string, banned: string[]) {
@@ -53,7 +54,8 @@ export function pageFieldChecks(fields: LandingFields, opts: { banned: string[];
   out.push(
     media
       ? { label: "Görsel", summary: media.label, count: null, ok: true, message: OK }
-      : { label: "Görsel", summary: "", count: null, ok: false, message: "Görsel seçilmedi" },
+      : // Engel değil: web sayfası varsayılan fotoğrafa (bahçe atölyeleri) düşer.
+        { label: "Görsel", summary: "", count: null, ok: true, message: MEDIA_DEFAULT },
   );
 
   const allText = [

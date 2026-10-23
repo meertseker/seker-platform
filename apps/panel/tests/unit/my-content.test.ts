@@ -84,6 +84,14 @@ describe("buildTimeline", () => {
     expect(events[events.length - 1].title).toBe("Henüz bu içerikten veli gelmedi");
   });
 
+  it("arşivdeki sayfa: yayına girdi ve arşive alındı satırları", () => {
+    const archived = { ...page, page: { ...page.page!, status: "arsiv" as const } };
+    const titles = buildTimeline(archived, NOW).map((e) => e.title);
+    expect(titles).toContain("Sayfa yayına girdi");
+    expect(titles.indexOf("Sayfa arşive alındı")).toBe(titles.indexOf("Sayfa yayına girdi") + 1);
+    expect(buildTimeline(page, NOW).map((e) => e.title)).not.toContain("Sayfa arşive alındı");
+  });
+
   it("teslimde bekleyen içerikte sayı satırı yok", () => {
     const events = buildTimeline(
       { ...reels, status: "teslim", stage: "kontrol", approvedAt: null, igPublishedAt: null, summary: { ...reels.summary!, leads: 0 } },
@@ -122,6 +130,7 @@ describe("statusPill", () => {
     });
     expect(statusPill({ ...page, page: null })).toEqual({ text: "Yayın bekliyor", tone: "warn" });
     expect(statusPill(page)).toEqual({ text: "Reklam testinde", tone: "ok" });
+    expect(statusPill({ ...page, page: { ...page.page!, status: "arsiv" } })).toEqual({ text: "Arşivde", tone: "muted" });
     expect(statusPill(reels)).toEqual({ text: "Reklam testinde", tone: "ok" });
     expect(statusPill({ ...reels, stage: "kazanan" })).toEqual({ text: "Büyütmede", tone: "ok" });
     expect(statusPill({ ...reels, stage: "arsiv" })).toEqual({ text: "Arşivde", tone: "muted" });

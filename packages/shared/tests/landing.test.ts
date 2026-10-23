@@ -11,6 +11,8 @@ import {
   isLpMediaKey,
   pageFieldsToLandingFields,
   parseLandingFields,
+  metaDescriptionFor,
+  followSubheadInMeta,
   slugify,
   suggestSlug,
   slugError,
@@ -145,6 +147,29 @@ describe('pageFieldsToLandingFields', () => {
     expect(f.metaDescription.endsWith('ders')).toBe(true);
     expect(f.metaDescription).toBe(f.metaDescription.trimEnd());
     expect(f.metaDescription.split(' ').every((w) => w === 'ders')).toBe(true);
+  });
+});
+
+describe('followSubheadInMeta', () => {
+  const prev = pageFieldsToLandingFields({ baslik: 'İlk hafta uyum', alt_baslik: 'Eski alt başlık' });
+  it('metaDescriptionFor pageFieldsToLandingFields ile aynı kesimi verir', () => {
+    const long = 'kelime '.repeat(40).trim();
+    expect(metaDescriptionFor(long)).toBe(pageFieldsToLandingFields({ alt_baslik: long }).metaDescription);
+    expect(metaDescriptionFor(long).length).toBeLessThanOrEqual(160);
+  });
+  it('açıklama eski alt başlıktan türemişse yeni alt başlığı izler (160 kuralıyla)', () => {
+    const long = 'uzun '.repeat(50).trim();
+    const next = followSubheadInMeta(prev, { ...prev, subhead: long });
+    expect(next.metaDescription).toBe(metaDescriptionFor(long));
+    expect(next.metaDescription.length).toBeLessThanOrEqual(160);
+  });
+  it('özel yazılmış açıklama korunur', () => {
+    const custom = { ...prev, metaDescription: 'Elle yazılmış açıklama' };
+    expect(followSubheadInMeta(custom, { ...custom, subhead: 'Yeni alt' }).metaDescription).toBe('Elle yazılmış açıklama');
+  });
+  it('diğer alanlara dokunmaz', () => {
+    const next = { ...prev, subhead: 'Yeni alt', h1: 'Yeni başlık', metaTitle: 'X' };
+    expect(followSubheadInMeta(prev, next)).toEqual({ ...next, metaDescription: 'Yeni alt' });
   });
 });
 

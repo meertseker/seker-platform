@@ -252,6 +252,14 @@ describe("publishLandingPage", () => {
     expect(pageWrites()).toHaveLength(0);
   });
 
+  it("görseli seçilmemiş onaylı sayfa yayınlanır (varsayılan fotoğraf)", async () => {
+    item.page_fields = { ...PAGE_FIELDS, mediaKey: undefined };
+    const res = await publishLandingPage(CID, SLUG);
+    expect(res).toMatchObject({ ok: true });
+    const w = pageWrites().find((o) => o.op === "update")!;
+    expect((w.payload as { fields: { mediaKey: unknown } }).fields.mediaKey).toBeNull();
+  });
+
   it("revalidate başarısızsa yayın yine ok döner ve uyarı verir", async () => {
     revalidateWebPage.mockResolvedValue({ ok: false, reason: "ulasilamadi" });
     expect(await publishLandingPage(CID, SLUG)).toEqual({
@@ -286,6 +294,36 @@ describe("updateLandingPageFields", () => {
     expect((w[0].payload as { fields: { h1: string } }).fields.h1).toBe("Yeni başlık bu hafta");
     expect(Object.keys(w[0].payload as object)).toEqual(["fields"]);
     expect(revalidateWebPage).toHaveBeenCalledWith(SLUG);
+  });
+
+  it("düzenlemede revalidate başarısızsa kayıt ok, uyarı bir saat içinde der", async () => {
+    page = pageRow();
+    revalidateWebPage.mockResolvedValue({ ok: false, reason: "ayar-yok" });
+    expect(await updateLandingPageFields(CID, fields())).toEqual({
+      ok: true,
+      warning: "Değişiklik kaydedildi; site yenilemesi gecikti, en geç bir saat içinde görünür.",
+    });
+    expect(pageWrites()).toHaveLength(1);
+  });
+
+  it("arama açıklaması alt başlıktan türemişse yeni alt başlığı izler", async () => {
+    page = pageRow();
+    await updateLandingPageFields(CID, { ...(fields() as object), subhead: "Yeni alt başlık" } as never);
+    expect((pageWrites()[0].payload as { fields: { metaDescription: string } }).fields.metaDescription).toBe(
+      "Yeni alt başlık",
+    );
+  });
+
+  it("elle yazılmış arama açıklaması korunur", async () => {
+    page = pageRow({ fields: { ...(pageRow().fields as object), metaDescription: "Özel açıklama" } });
+    await updateLandingPageFields(CID, {
+      ...(fields() as object),
+      subhead: "Yeni alt başlık",
+      metaDescription: "Özel açıklama",
+    } as never);
+    expect((pageWrites()[0].payload as { fields: { metaDescription: string } }).fields.metaDescription).toBe(
+      "Özel açıklama",
+    );
   });
 
   it("arşivdeki sayfada yazar ama siteyi yenilemez", async () => {

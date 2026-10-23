@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminSupabase } from "@seker/auth/admin";
 import {
+  followSubheadInMeta,
   pageFieldsToLandingFields,
   parseLandingFields,
   slugError,
@@ -34,6 +35,8 @@ const BOARD = "/reklam/icerik";
 const SLUG_TAKEN = "Bu adres başka bir sayfada kullanılıyor";
 const SLUG_LOCKED = "Yayından sonra adres değişmez";
 const REVALIDATE_LATE = "Sayfa kaydedildi; site yenilemesi gecikti, birkaç dakika içinde açılır.";
+// Düzenleme: web yayındaki sayfayı en çok bir saat önbellekte tutar (apps/web/lib/landing/db.ts, cacheLife('hours')).
+const REVALIDATE_LATE_EDIT = "Değişiklik kaydedildi; site yenilemesi gecikti, en geç bir saat içinde görünür.";
 
 const ITEM_COLUMNS = "id, code, kind, platform, status, stage, owner_id, page_fields, topic";
 
@@ -88,10 +91,10 @@ async function fieldRules(admin: SupabaseClient) {
   return { banned: rules.banned, pageTitleMax: rules.limits.pageTitle };
 }
 
-async function refreshSite(slug: string | null): Promise<string | null> {
+async function refreshSite(slug: string | null, late = REVALIDATE_LATE): Promise<string | null> {
   if (!slug) return null;
   const r = await revalidateWebPage(slug);
-  return r.ok ? null : REVALIDATE_LATE;
+  return r.ok ? null : late;
 }
 
 /** Öğretmen kendi, yönetici her sayfa içeriğinin önizlemesini açar (gerekirse taslak satırı açılır). */
@@ -200,14 +203,15 @@ export async function updateLandingPageFields(
   // Taslak satırın alanları ilk yayında page_fields'ten yeniden kurulur; düzenleme yalnız yayından sonra.
   if (!current?.publishedAt) return { error: "Önce sayfayı yayınlayın" };
 
-  const clean = parseLandingFields(fields);
+  // Arama açıklaması alt başlıktan türemişse yeni alt başlığı izler; elle yazılmışsa korunur.
+  const clean = followSubheadInMeta(current.fields, parseLandingFields(fields));
   const bad = pageFieldChecks(clean, await fieldRules(admin)).filter((c) => !c.ok);
   if (bad.length > 0) return { error: "Kaydetmek için eksikleri tamamla", blockers: bad.map((c) => `${c.label}: ${c.message}`) };
 
   const { error } = await admin.from("landing_pages").update({ fields: clean }).eq("content_id", item.id);
   if (error) return { error: "Sayfa kaydedilemedi" };
 
-  const warning = current.status === "yayinda" ? await refreshSite(current.slug) : null;
+  const warning = current.status === "yayinda" ? await refreshSite(current.slug, REVALIDATE_LATE_EDIT) : null;
   revalidatePath(BOARD);
   return { ok: true, warning };
 }

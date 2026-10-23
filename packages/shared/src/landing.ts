@@ -82,8 +82,22 @@ export function pageFieldsToLandingFields(pf: Record<string, unknown>): LandingF
     adPrimaryText: str(pf.adPrimaryText),
     adHeadline: str(pf.adHeadline),
     metaTitle: h1,
-    metaDescription: cutAtWord(subhead, META_DESCRIPTION_MAX),
+    metaDescription: metaDescriptionFor(subhead),
   };
+}
+
+/** Alt başlıktan türetilen arama açıklaması: en çok 160 karakter, kelime sınırında. */
+export function metaDescriptionFor(subhead: string): string {
+  return cutAtWord(subhead, META_DESCRIPTION_MAX);
+}
+
+/**
+ * Düzenlemede arama açıklaması alt başlığı izler: önceki açıklama önceki alt başlıktan türemişse
+ * yeni alt başlıktan yeniden üretilir; elle yazılmış (farklı) açıklama korunur.
+ */
+export function followSubheadInMeta(prev: LandingFields, next: LandingFields): LandingFields {
+  if (prev.metaDescription !== metaDescriptionFor(prev.subhead)) return next;
+  return { ...next, metaDescription: metaDescriptionFor(next.subhead) };
 }
 
 /** DB'deki `landing_pages.fields` jsonb'sini savunmacı okur. */

@@ -24,7 +24,8 @@ function authorized(header: string | null, secret: string): boolean {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const secret = process.env.WEB_REVALIDATE_SECRET;
+  // Panel de kırpar (apps/panel/lib/pages/revalidate.ts); .env'deki boşluk/CR kalıcı 401'e dönmesin.
+  const secret = process.env.WEB_REVALIDATE_SECRET?.trim();
   if (!secret) return reply(503, { ok: false });
   if (!authorized(request.headers.get('authorization'), secret)) return reply(401, { ok: false });
 

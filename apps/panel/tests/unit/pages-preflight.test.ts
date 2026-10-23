@@ -84,8 +84,16 @@ describe("pagePublishBlockers", () => {
   it("yasaklı reklam başlığı", () => {
     expect(blockers({ ...CLEAN, adHeadline: "En iyi okul" })).toContain('Reklam başlığı: "en iyi" kanıt ister, kullanılamaz');
   });
-  it("görsel yok", () => {
-    expect(blockers({ ...CLEAN, mediaKey: null })).toContain("Görsel: Görsel seçilmedi");
+  it("görsel yok yayını engellemez; uyarı olarak görünür", () => {
+    expect(blockers({ ...CLEAN, mediaKey: null })).toEqual([]);
+    const g = pageFieldChecks({ ...CLEAN, mediaKey: null }, OPTS).find((c) => c.label === "Görsel")!;
+    expect(g).toEqual({
+      label: "Görsel",
+      summary: "",
+      count: null,
+      ok: true,
+      message: "Seçilmedi · varsayılan fotoğraf kullanılır",
+    });
   });
   it("sayfa olmayan içerik", () => {
     expect(blockers(CLEAN, { kind: "reels" })).toContain("Bu içerik sayfa değil");
