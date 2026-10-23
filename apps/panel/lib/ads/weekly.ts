@@ -62,6 +62,11 @@ export function mondayOf(day: string): string {
   return addDaysToDateString(day, -((dow + 6) % 7));
 }
 
+/** `now`'ın İstanbul haftasının Pazartesi 00:00'ı, UTC ISO (haftalık yeni reklam sınırı). */
+export function istanbulWeekStartIso(now: Date): string {
+  return weekRange(mondayOf(istanbulDateString(now))).from;
+}
+
 /** Son tamamlanmış haftanın Pazartesisi (bu haftanın Pazartesisinden 7 gün önce). */
 export function lastCompletedWeekStart(now: Date): string {
   return addDaysToDateString(mondayOf(istanbulDateString(now)), -7);

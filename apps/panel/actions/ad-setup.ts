@@ -10,14 +10,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireRole } from "@/lib/auth";
 import { getAdSettings } from "@/lib/ads/ad-settings";
 import type { AdSetup } from "@/lib/ads/ad-setup";
+import { moveContentStage } from "@/actions/content";
 import { buildAdTestContext, type AdTestView } from "@/lib/ads/ad-test-context";
 import { monthlyCapCheck, templateGaps, validateAdTemplate, type AdTemplate, type AdTemplateInput } from "@/lib/ads/ad-template";
-import { readMetaConfig } from "@/lib/ads/meta/config";
+import { readMetaConfig, type MetaConfig } from "@/lib/ads/meta/config";
 import { runSetupSteps } from "@/lib/ads/meta/setup";
 import { insertCreatedAdObjects, type AdObjectSyncRow } from "@/lib/ads/objects-store";
+import type { PreflightResult } from "@/lib/ads/preflight";
+import type { ContentForAd } from "@/lib/ads/preflight-sources";
+import { supabaseRecommendationStore } from "@/lib/ads/recommendations";
 import { executeSetupChange, type SetupResult } from "@/lib/ads/setup-gate";
-import { planCampaignSetup, SCALE_CAMPAIGN_NAME, TEST_CAMPAIGN_NAME } from "@/lib/ads/setup-plans";
+import { adName, planCampaignSetup, SCALE_CAMPAIGN_NAME, TEST_CAMPAIGN_NAME, type PlannedChange } from "@/lib/ads/setup-plans";
 import { supabaseSetupStore } from "@/lib/ads/setup-store";
+import { istanbulWeekStartIso } from "@/lib/ads/weekly";
 import { loadGateStatus, supabaseAdChangeStore, type AdChangeLogRow } from "@/lib/ads/writes";
 import { istanbulDateString } from "@/lib/lead-flow/business-hours";
 
@@ -26,6 +31,9 @@ const MSG_LOG_FAILED = "Kayıt yazılamadı; değişiklik yapılmadı.";
 const MICROS_PER_TL = 1_000_000;
 const IN_FLIGHT_MS = 10 * 60 * 1000;
 const MSG_IN_FLIGHT = "Kurulum sürüyor ya da daha önce yapıldı; Reklam Yöneticisi'ni kontrol edin.";
+const AD_PATHS = ["/reklam/icerik", "/reklam/kampanyalar", "/reklam/hafta"];
+const MIN_REASON = 10;
+const MSG_ALREADY_LAUNCHED = "Bu içerik için reklam zaten kuruldu ya da kuruluyor.";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function templateValue(t: AdTemplate): AdTemplateInput {
@@ -268,4 +276,232 @@ export async function previewAdTest(contentId: string): Promise<AdTestView | { e
     { skip72hReason: null },
   );
   return "error" in result ? { error: result.error } : result.view;
+}
+
+/**
+ * Aynı süreçte aynı içerik için eşzamanlı "Reklamı kur" (çift tıklama) kilidi. `launchInFlight` okuması ile
+ * kapının bekleyen kaydı arasındaki boşluğu kapatır; süreçler arası koruma kayıt defterindeki bekleyen satırdır.
+ */
+const launching = new Set<string>();
+
+export type LaunchAdTestOptions = {
+  mode: "kur" | "goster";
+  reason?: string;
+  skip72h?: boolean;
+  recommendationId?: string;
+};
+
+export type LaunchAdTestResult = SetupResult & { checklist?: PreflightResult };
+
+type LaunchGateInput = {
+  db: SupabaseClient;
+  profileId: string;
+  now: Date;
+  cfg: MetaConfig;
+  mode: "kur" | "goster";
+  content: ContentForAd;
+  planned: PlannedChange;
+  checklist: PreflightResult;
+  reason: string | undefined;
+  skip72h: boolean;
+  recommendationId: string | undefined;
+};
+
+function revalidateAdPaths(): void {
+  for (const p of AD_PATHS) revalidatePath(p);
+}
+
+async function runLaunchGate(i: LaunchGateInput): Promise<SetupResult> {
+  const { db, cfg } = i;
+  try {
+    return await executeSetupChange(
+      {
+        store: supabaseAdChangeStore(db),
+        actorId: i.profileId,
+        env: process.env,
+        gateStatus: async () => loadGateStatus(db, i.now, await getAdSettings(db)),
+        run: (steps) => runSetupSteps(cfg, steps, fetch),
+      },
+      {
+        action: "reklam_kur",
+        level: "ad",
+        objectId: i.content.id,
+        objectName: adName(i.content.code, i.content.topic),
+        source: i.recommendationId ? "oneri" : "icerik",
+        mode: i.mode,
+        ...(i.reason !== undefined ? { reason: i.reason } : {}),
+        extraReasonRequired: i.skip72h ? "72 saat beklenmeden teste alınıyor" : null,
+        ...(i.recommendationId ? { recommendationId: i.recommendationId } : {}),
+        oldValue: null,
+        planned: i.planned,
+        // contentCode: change-log latestByKey içerik koduyla eşler; kurulan reklam kimliği new_value.ids.ad'de.
+        logExtra: { contentCode: i.content.code, checklist: i.checklist },
+      },
+    );
+  } catch {
+    console.error("[ads] reklam kurulum kapısı başarısız");
+    return { error: "İşlem yapılamadı, tekrar deneyin." };
+  }
+}
+
+function launchedRows(adId: string, content: ContentForAd, setup: AdSetup, template: AdTemplate, keys: Set<string>): AdObjectSyncRow[] {
+  // Bütçe kampanyada (CBO); set ve reklam kampanyanın bütçesini ve kaynağını devralır (createdRows ile aynı).
+  const micros = Math.round(template.testGunlukTl * MICROS_PER_TL);
+  const base = {
+    platform: "meta" as const,
+    campaignId: setup.testCampaignId,
+    status: "ACTIVE",
+    dailyBudgetMicros: micros,
+    budgetResource: setup.testCampaignId,
+  };
+  const rows: AdObjectSyncRow[] = [
+    {
+      ...base,
+      level: "ad",
+      objectId: adId,
+      parentId: setup.testAdsetId,
+      name: adName(content.code, content.topic),
+      contentCode: content.code,
+      // Yeni reklam Meta incelemesine girer; sabah senkronu gerçek durumu yazar.
+      effectiveStatus: "PENDING_REVIEW",
+    },
+  ];
+  if (keys.has("activateCampaign")) {
+    rows.push({ ...base, level: "campaign", objectId: setup.testCampaignId, parentId: null, name: TEST_CAMPAIGN_NAME, contentCode: null });
+  }
+  if (keys.has("activateAdset")) {
+    rows.push({
+      ...base,
+      level: "adset",
+      objectId: setup.testAdsetId,
+      parentId: setup.testCampaignId,
+      name: `Test · Okul çevresi ${template.yaricapKm} km`,
+      contentCode: null,
+    });
+  }
+  return rows;
+}
+
+/**
+ * Z4 "Reklam testine al" (§4): Test setine yalnız kreatif + reklam ekler; kampanya ve set Z6 kurulumundan gelir.
+ * "kur": 9 kontrol yeşil olmalı, içerik için kurulu/kuruluyor reklam olmamalı, haftalık sınır (şablon) aşılmamalı;
+ * kırmızı kapı ve 72 saat atlaması gerekçe ister (kayıt yazılmadan döner). "goster": hiçbir denetime takılmaz,
+ * yalnız `uygulanmadi_kapali` kaydı yazar; aşama, `ad_objects` ve haftalık sayı değişmez.
+ */
+export async function launchAdTest(contentId: string, opts: LaunchAdTestOptions): Promise<LaunchAdTestResult> {
+  const profile = await requireRole("yonetici");
+  if (typeof contentId !== "string" || !UUID.test(contentId)) return { error: "Geçersiz içerik." };
+  const mode = opts?.mode;
+  if (mode !== "kur" && mode !== "goster") return { error: "Geçersiz kip." };
+  const reason = typeof opts.reason === "string" ? opts.reason : undefined;
+  const skip72h = opts.skip72h === true;
+  const recommendationId = opts.recommendationId;
+  if (recommendationId !== undefined && (typeof recommendationId !== "string" || !UUID.test(recommendationId))) {
+    return { error: "Geçersiz öneri." };
+  }
+  // Review Focus 4: istemci atlatılıp skip72h gerekçesiz gelirse hiçbir şey okunmadan ve yazılmadan döner.
+  if (mode === "kur" && skip72h && (reason?.trim().length ?? 0) < MIN_REASON) {
+    return {
+      error: `72 saat beklenmeden teste almak için nedenini yazın (en az ${MIN_REASON} karakter).`,
+      needsReason: true,
+    };
+  }
+
+  const db = createAdminSupabase() as unknown as SupabaseClient;
+  const store = supabaseSetupStore(db);
+  const now = new Date();
+  const ctx = await buildAdTestContext(
+    { db, store, env: process.env, fetchFn: fetch, now, actorName: profile.full_name },
+    contentId,
+    { skip72hReason: skip72h ? (reason ?? null) : null },
+  );
+  if ("error" in ctx) return { error: ctx.error };
+  const { view, planned, content, setup } = ctx;
+  const checklist = view.checklist;
+
+  let cfg: MetaConfig | null;
+  try {
+    cfg = readMetaConfig(process.env);
+  } catch {
+    cfg = null;
+  }
+  const gateInput = { db, profileId: profile.id, now, mode, content, checklist, reason, skip72h, recommendationId };
+
+  if (mode === "goster") {
+    if (!planned || !cfg) {
+      // Kurulacak adım yoksa kapı kayıt yazmaz ("Kurulacak adım yok."); nedeni ve kontrolleri döneriz.
+      const why = view.blockText ?? "kurulum ya da Meta yapılandırması eksik";
+      return { error: `Panel şunu kuracaktı: plan oluşturulamadı (${why})`, checklist };
+    }
+    const shown = await runLaunchGate({ ...gateInput, cfg, planned });
+    revalidateAdPaths();
+    return { ...shown, checklist };
+  }
+
+  // kur: kırmızı kontrol listesinin tek bekçisi (kapı gerekçeyle geçilir, kontrol listesi geçilmez).
+  if (!checklist.ok || !planned || !setup || !cfg) {
+    return {
+      error: view.blockText ?? "Reklam kurulamaz: plan oluşturulamadı (kurulum ya da Meta yapılandırması eksik).",
+      checklist,
+    };
+  }
+  if (launching.has(content.id)) return { error: MSG_ALREADY_LAUNCHED };
+  launching.add(content.id);
+  try {
+    let template: AdTemplate;
+    try {
+      const since = new Date(now.getTime() - IN_FLIGHT_MS).toISOString();
+      if (await store.launchInFlight(content.id, since)) return { error: MSG_ALREADY_LAUNCHED };
+      template = await store.template();
+      const limit = template.haftalikYeniReklam;
+      if ((await store.weekLaunches(istanbulWeekStartIso(now))) >= limit) {
+        return { error: `Bu hafta ${limit} reklam kuruldu; hesap güvenliği için yenisi gelecek Pazartesi.` };
+      }
+    } catch {
+      console.error("[ads] reklam kurulumu için okuma başarısız");
+      return { error: "İşlem yapılamadı, tekrar deneyin." };
+    }
+
+    const result = await runLaunchGate({ ...gateInput, cfg, planned });
+    if (!("ok" in result) || result.status !== "uygulandi") {
+      revalidateAdPaths();
+      return result;
+    }
+
+    const adId = result.ids.ad;
+    const keys = new Set(planned.steps.map((s) => s.key));
+    try {
+      await insertCreatedAdObjects(db, launchedRows(adId, content, setup, template, keys), profile.id);
+    } catch {
+      // Kayıt `uygulandi` olduğu için ikinci kurulum yine engellenir; sabah senkronu nesneleri Meta'dan yazar.
+      console.error("[ads] kurulan reklam ad_objects'e yazılamadı");
+    }
+
+    let message = `Testte · reklam ${adId}`;
+    if (result.message.endsWith("kayıt güncellenemedi")) message += " · kayıt güncellenemedi";
+    if (content.kind === "reels" && content.stage === "organik") {
+      // B3: aşama mevcut moveContentStage ile (kendi yönetici denetimi ve geçiş kuralıyla) değişir; hata kaydı bozmaz.
+      try {
+        const moved = await moveContentStage(content.id, "test");
+        if ("error" in moved) message += ` · aşama değiştirilemedi: ${moved.error}`;
+      } catch {
+        message += " · aşama değiştirilemedi";
+      }
+    }
+
+    if (recommendationId) {
+      const recs = supabaseRecommendationStore(db);
+      try {
+        // Başkası karara bağladıysa (claim null) sonucu üzerine yazılmaz.
+        if (await recs.claim(recommendationId, profile.id)) await recs.finish(recommendationId, message);
+      } catch {
+        console.error("[ads] öneri sonucu yazılamadı");
+      }
+    }
+
+    revalidateAdPaths();
+    return { ...result, message };
+  } finally {
+    launching.delete(content.id);
+  }
 }
