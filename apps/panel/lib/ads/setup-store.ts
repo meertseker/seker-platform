@@ -23,9 +23,11 @@ export type SetupStore = {
   weekLaunches(sinceIso: string): Promise<number>;
   /**
    * Bu içerik için reklam kurulmuş ya da kuruluyor mu: uygulanmış `reklam_kur` kaydı, `sinceIso`'dan (son 10 dk)
-   * beri platform yanıtı bekleyen kayıt ya da Test setinde aynı içerik kodlu reklam.
+   * beri platform yanıtı bekleyen kayıt ya da Test setinde aynı içerik kodlu reklam → true.
+   * `failedSinceIso`'dan beri yarıda kalmış ve reklamı (`new_value.ids.ad`) Meta'da açılmış `hata` kaydı → "yarim"
+   * (yeniden deneme ikinci reklam açar; Mert bakmalı).
    */
-  launchInFlight(contentId: string, sinceIso: string): Promise<boolean>;
+  launchInFlight(contentId: string, sinceIso: string, failedSinceIso?: string): Promise<InFlight>;
   /**
    * Kampanya kurulumu yapılmış ya da sürüyor mu: uygulanmış `kampanya_kur` kaydı ya da `sinceIso`'dan (son 10 dk)
    * beri platform yanıtı bekleyen kayıt. "Sadece göster" kayıtları (`uygulanmadi_kapali`) sayılmaz.
@@ -33,13 +35,23 @@ export type SetupStore = {
   campaignSetupInFlight(sinceIso: string): Promise<boolean>;
   /**
    * Bu Test reklamı Büyütme'ye taşınmış ya da taşınıyor mu: uygulanmış `buyutmeye_tasi` kaydı, `sinceIso`'dan
-   * (son 10 dk) beri platform yanıtı bekleyen kayıt ya da Büyütme setinde aynı içerik kodlu reklam.
+   * (son 10 dk) beri platform yanıtı bekleyen kayıt ya da Büyütme setinde aynı içerik kodlu reklam → true.
+   * `failedSinceIso`'dan beri yarıda kalmış ve kopyası (`new_value.ids.copy`) Meta'da açılmış `hata` kaydı → "yarim".
    */
-  scaleInFlight(testAdId: string, code: string, scaleAdsetId: string, sinceIso: string): Promise<boolean>;
+  scaleInFlight(
+    testAdId: string,
+    code: string,
+    scaleAdsetId: string,
+    sinceIso: string,
+    failedSinceIso?: string,
+  ): Promise<InFlight>;
   testAdForCode(code: string, testAdsetId: string): Promise<TestAdRow[]>;
   /** Reklam setinde `status = ACTIVE` reklam sayısı (Z4 "<n> reklam çalışıyor"). Okuma hatasında atar. */
   activeAdsInAdset(adsetId: string): Promise<number>;
 };
+
+/** false: serbest; true: kurulu ya da kuruluyor; "yarim": önceki deneme yarıda kaldı, Meta'da nesne açıldı. */
+export type InFlight = boolean | "yarim";
 
 export type TestAdRow = {
   adId: string;
@@ -51,7 +63,9 @@ export type TestAdRow = {
 
 const MICROS_PER_TL = 1_000_000;
 
-type LogStatusRow = { status: string; error: string | null; created_at: string };
+type LogStatusRow = { status: string; error: string | null; created_at: string; new_value?: unknown };
+
+const LOG_STATUS_COLUMNS = "status, error, created_at, new_value";
 
 /** Uygulanmış kayıt ya da `sinceIso`'dan beri platform yanıtı bekleyen kayıt. */
 function appliedOrPending(rows: LogStatusRow[], sinceIso: string): boolean {
@@ -59,6 +73,23 @@ function appliedOrPending(rows: LogStatusRow[], sinceIso: string): boolean {
   return rows.some(
     (r) => r.status === "uygulandi" || (r.status === "hata" && r.error === SETUP_PENDING_ERROR && Date.parse(r.created_at) >= since),
   );
+}
+
+/**
+ * `failedSinceIso`'dan beri yazılmış, `new_value.ids` içinde `idKey` (ad / copy) taşıyan `hata` kaydı: platformda
+ * nesne kuruldu; yeniden deneme ikinci nesne açar. Pencere verilmezse bu denetim yapılmaz.
+ */
+function failedWithObject(rows: LogStatusRow[], idKey: "ad" | "copy", failedSinceIso: string | undefined): boolean {
+  if (!failedSinceIso) return false;
+  const since = Date.parse(failedSinceIso);
+  return rows.some((r) => {
+    if (r.status !== "hata" || Date.parse(r.created_at) < since) return false;
+    const nv = r.new_value;
+    const ids = nv && typeof nv === "object" ? (nv as Record<string, unknown>).ids : null;
+    if (!ids || typeof ids !== "object" || Array.isArray(ids)) return false;
+    const id = (ids as Record<string, unknown>)[idKey];
+    return typeof id === "string" && id.length > 0;
+  });
 }
 
 function must(error: { message?: string } | null): void {
@@ -137,17 +168,19 @@ export function supabaseSetupStore(db: SupabaseClient): SetupStore {
       return count ?? 0;
     },
 
-    async launchInFlight(contentId, sinceIso) {
+    async launchInFlight(contentId, sinceIso, failedSinceIso) {
       const { data, error } = await db
         .from("ad_change_log")
-        .select("status, error, created_at")
+        .select(LOG_STATUS_COLUMNS)
         .eq("action", "reklam_kur")
         .eq("object_id", contentId)
         .in("status", ["uygulandi", "hata"])
         .order("created_at", { ascending: false })
         .limit(50);
       must(error);
-      if (appliedOrPending((data ?? []) as LogStatusRow[], sinceIso)) return true;
+      const rows = (data ?? []) as LogStatusRow[];
+      if (appliedOrPending(rows, sinceIso)) return true;
+      if (failedWithObject(rows, "ad", failedSinceIso)) return "yarim";
 
       // Panel dışında (ya da kaydı kaybolmuş) kurulmuş reklam: Test setinde aynı içerik kodu.
       const content = await db.from("content_items").select("code").eq("id", contentId).maybeSingle();
@@ -180,17 +213,19 @@ export function supabaseSetupStore(db: SupabaseClient): SetupStore {
       return appliedOrPending((data ?? []) as LogStatusRow[], sinceIso);
     },
 
-    async scaleInFlight(testAdId, code, scaleAdsetId, sinceIso) {
+    async scaleInFlight(testAdId, code, scaleAdsetId, sinceIso, failedSinceIso) {
       const { data, error } = await db
         .from("ad_change_log")
-        .select("status, error, created_at")
+        .select(LOG_STATUS_COLUMNS)
         .eq("action", "buyutmeye_tasi")
         .eq("object_id", testAdId)
         .in("status", ["uygulandi", "hata"])
         .order("created_at", { ascending: false })
         .limit(50);
       must(error);
-      if (appliedOrPending((data ?? []) as LogStatusRow[], sinceIso)) return true;
+      const rows = (data ?? []) as LogStatusRow[];
+      if (appliedOrPending(rows, sinceIso)) return true;
+      if (failedWithObject(rows, "copy", failedSinceIso)) return "yarim";
       const ads = await db
         .from("ad_objects")
         .select("object_id")

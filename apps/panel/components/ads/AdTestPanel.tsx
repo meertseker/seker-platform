@@ -32,8 +32,7 @@ const btnSecondary = `min-h-14 cursor-pointer rounded-xl border border-input bg-
 const label = "text-xs font-bold uppercase tracking-wide text-muted-foreground";
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-const BOTTOM_NOTE =
-  "İlk hafta \"sadece göster\" modunda açılır: panel ne kuracağını yazar, Mert Reklam Yöneticisi'nden doğrular, sonra canlı. Kurulduktan sonra kart \"Testte · reklam 1208…\" olur; harcama ve veli sayıları ertesi sabahtan itibaren karta ve Kampanyalar'a düşer.";
+const SPEND_NOTE = "Harcama ve veli sayıları ertesi sabahtan itibaren karta ve Kampanyalar'a düşer.";
 const MSG_FAILED = "İşlem yapılamadı, tekrar deneyin.";
 
 const noopSubscribe = () => () => {};
@@ -124,7 +123,7 @@ export function AdTestPanel({ item, recommendationId, trigger = "button" }: Prop
           Reklam testine al
         </button>
       )}
-      <AdTestDialog open={open} onClose={() => setOpen(false)} code={item.code} kind={item.kind}>
+      <AdTestDialog open={open} onClose={() => setOpen(false)} pending={pending} code={item.code} kind={item.kind}>
         {loading || (!view && !loadError) ? (
           <p aria-busy="true" className="text-sm text-muted-foreground">
             Kontroller yapılıyor…
@@ -143,7 +142,9 @@ export function AdTestPanel({ item, recommendationId, trigger = "button" }: Prop
             pending={pending}
             result={result}
             onRun={run}
-            onClose={() => setOpen(false)}
+            onClose={() => {
+              if (!pending) setOpen(false);
+            }}
           />
         )}
       </AdTestDialog>
@@ -262,13 +263,6 @@ function TestBody({
               72 saati bekleme{view.hoursLeft !== null ? ` (kalan ${view.hoursLeft} saat)` : ""}
             </label>
           ) : null}
-
-          {view.checklist.ok ? (
-            <p className="rounded-xl border border-warning/40 bg-warning-soft px-3 py-2.5 text-xs text-warning">
-              Biri kırmızı olsa düğme kapanır ve ne eksik olduğunu yazar. Örnek: &quot;Sayfa henüz yayında değil: önce Sayfayı
-              yayınla.&quot;
-            </p>
-          ) : null}
         </div>
       </div>
 
@@ -301,6 +295,12 @@ function TestBody({
         </div>
       ) : null}
 
+      {view.reactivateWarning ? (
+        <p className="rounded-xl border border-warning/40 bg-warning-soft px-3 py-2.5 text-sm text-warning">
+          {view.reactivateWarning}
+        </p>
+      ) : null}
+
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
@@ -314,7 +314,7 @@ function TestBody({
         <button type="button" onClick={() => onRun("goster")} disabled={pending} className={`${btnSecondary} w-full sm:w-auto`}>
           Sadece göster, kurma
         </button>
-        <button type="button" onClick={onClose} className={`${btnSecondary} w-full sm:w-auto`}>
+        <button type="button" onClick={onClose} disabled={pending} className={`${btnSecondary} w-full sm:w-auto`}>
           Vazgeç
         </button>
       </div>
@@ -331,7 +331,7 @@ function TestBody({
             {result.ids &&
             Object.keys(result.ids).length > 0 &&
             !Object.values(result.ids).every((id) => result.error.includes(id)) ? (
-              <p className="mt-1">Yarım kalan nesneler (hepsi DURAKLATILMIŞ): {Object.values(result.ids).join(", ")}</p>
+              <p className="mt-1">Yarım kalan nesneler: {Object.values(result.ids).join(", ")}</p>
             ) : null}
           </div>
         ) : null}
@@ -340,7 +340,7 @@ function TestBody({
         ) : null}
       </div>
 
-      <p className="text-sm text-muted-foreground">{BOTTOM_NOTE}</p>
+      <p className="text-sm text-muted-foreground">{SPEND_NOTE}</p>
     </div>
   );
 }
@@ -405,22 +405,28 @@ function Preview({ view }: { view: AdTestView }) {
   );
 }
 
-/** Geniş pencere (üç sütun); Sheet'in odak tuzağı, Esc ve aria-modal davranışı. Telefonda tam ekran. */
+/**
+ * Geniş pencere (üç sütun); Sheet'in odak tuzağı, Esc ve aria-modal davranışı. Telefonda tam ekran.
+ * İstek sürerken (`pending`) Esc, arka plan ve ✕ pencereyi kapatmaz: sonuç ya da hata kaybolmasın.
+ */
 function AdTestDialog({
   open,
   onClose,
+  pending,
   code,
   kind,
   children,
 }: {
   open: boolean;
   onClose: () => void;
+  pending: boolean;
   code: string;
   kind: "reels" | "sayfa";
   children: React.ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
+  const pendingRef = useRef(pending);
   const titleId = useId();
   const descId = useId();
   const isClient = useIsClient();
@@ -428,6 +434,15 @@ function AdTestDialog({
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
+
+  /** Kullanıcının kapatması (Esc, arka plan, ✕): istek sürerken yok sayılır. */
+  const requestClose = () => {
+    if (!pendingRef.current) onCloseRef.current();
+  };
 
   useEffect(() => {
     if (!open || !isClient) return;
@@ -439,7 +454,7 @@ function AdTestDialog({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onCloseRef.current();
+        if (!pendingRef.current) onCloseRef.current();
         return;
       }
       // Odak tuzağı: Tab arkadaki sayfaya kaçmasın, pencerenin içinde dönsün.
@@ -476,7 +491,7 @@ function AdTestDialog({
   // Portal: üst öğedeki backdrop-filter/transform, fixed katmanı içine hapsetmesin.
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center sm:p-4">
-      <div aria-hidden="true" className="scrim absolute inset-0 animate-scrim-in" onClick={() => onCloseRef.current()} />
+      <div aria-hidden="true" className="scrim absolute inset-0 animate-scrim-in" onClick={requestClose} />
       <div
         ref={panelRef}
         role="dialog"
@@ -500,9 +515,10 @@ function AdTestDialog({
           </div>
           <button
             type="button"
-            onClick={() => onCloseRef.current()}
+            onClick={requestClose}
+            disabled={pending}
             aria-label="Pencereyi kapat"
-            className={`inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground ${focus}`}
+            className={`inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 ${focus}`}
           >
             <X aria-hidden className="size-5" />
           </button>

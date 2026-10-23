@@ -279,6 +279,37 @@ describe("executeSetupChange", () => {
     expect(nv.summary).toEqual(SUMMARY);
   });
 
+  it("I2: bir açma (ACTIVE) adımı başarılıysa 'hepsi DURAKLATILMIŞ' demez; açılan kimlikleri ve Mert'i söyler", async () => {
+    const scaleSteps: SetupStep[] = [
+      { key: "copy", label: "Kopya", path: "9002/copies", params: { adset_id: "5004", status_option: "PAUSED" }, result: "copied_ad_id" },
+      { key: "pauseTest", label: "Test'i durdur", path: "9002", params: { status: "PAUSED" }, result: "success" },
+      { key: "activateCampaign", label: "Kampanyayı aç", path: "5003", params: { status: "ACTIVE" }, result: "success" },
+      { key: "activateAdset", label: "Seti aç", path: "5004", params: { status: "ACTIVE" }, result: "success" },
+      { key: "activateCopy", label: "Kopyayı aç", path: { ref: "copy", suffix: "" }, params: { status: "ACTIVE" }, result: "success" },
+    ];
+    const { d } = deps({
+      run: async () => ({ ok: false, ids: { copy: "9100" }, failedKey: "activateAdset", error: "Seti aç: zaman aşımı" }),
+    });
+    const res = await executeSetupChange(
+      d,
+      input({ action: "buyutmeye_tasi", objectId: "9002", planned: { steps: scaleSteps, summary: ["Kopya"] } }),
+    );
+    expect("error" in res && res.error).toBe(
+      "Uygulanamadı: Seti aç: zaman aşımı · kayda geçti · Yarım kalan nesneler: 9100 · Açılan (ACTIVE) nesneler: 5003 · " +
+        "Mert'e haber verin, Reklam Yöneticisi'ni kontrol etsin.",
+    );
+    expect("error" in res && res.error).not.toContain("hepsi DURAKLATILMIŞ");
+  });
+
+  it("I2: açılan son adım ref ise kimliği kurulan nesneden okunur", async () => {
+    const { d } = deps({
+      run: async () => ({ ok: false, ids: { creative: "901", ad: "902" }, failedKey: "later", error: "Sonraki: hata" }),
+    });
+    const steps: SetupStep[] = [...STEPS, { key: "later", label: "Sonraki", path: "777", params: { status: "PAUSED" }, result: "success" }];
+    const res = await executeSetupChange(d, input({ planned: { steps, summary: SUMMARY } }));
+    expect("error" in res && res.error).toContain("Açılan (ACTIVE) nesneler: 902");
+  });
+
   it("ilk adımda patlarsa yarım kalan nesne satırı yok", async () => {
     const { d } = deps({ run: async () => ({ ok: false, ids: {}, failedKey: "creative", error: "Kreatif: hata" }) });
     const res = await executeSetupChange(d, input());

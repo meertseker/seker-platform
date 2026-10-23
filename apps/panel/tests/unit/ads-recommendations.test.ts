@@ -8,6 +8,7 @@ const revalidatePath = vi.fn();
 const applyAdChange = vi.fn();
 const moveContentStage = vi.fn();
 const moveToScale = vi.fn();
+const adSetup = vi.fn(async (): Promise<unknown> => ({ testCampaignId: "1", testAdsetId: "2", scaleCampaignId: "3", scaleAdsetId: "4" }));
 const store = {
   get: vi.fn(),
   claim: vi.fn(async (): Promise<RecommendationRow | null> => null),
@@ -22,6 +23,7 @@ vi.mock("@seker/auth/admin", () => ({ createAdminSupabase: () => ({}) }));
 vi.mock("@/actions/ad-changes", () => ({ applyAdChange: (...a: unknown[]) => applyAdChange(...a) }));
 vi.mock("@/actions/content", () => ({ moveContentStage: (...a: unknown[]) => moveContentStage(...a) }));
 vi.mock("@/actions/ad-setup", () => ({ moveToScale: (...a: unknown[]) => moveToScale(...a) }));
+vi.mock("@/lib/ads/setup-store", () => ({ supabaseSetupStore: () => ({ setup: () => adSetup() }) }));
 vi.mock("@/lib/ads/recommendations", async (orig) => {
   const actual = await orig<typeof import("@/lib/ads/recommendations")>();
   return { ...actual, supabaseRecommendationStore: () => store };
@@ -345,6 +347,7 @@ describe("approveRecommendation / holdRecommendation", () => {
     store.claim.mockResolvedValue(null);
     store.hold.mockResolvedValue(true);
     store.get.mockResolvedValue(rec({}));
+    adSetup.mockResolvedValue({ testCampaignId: "1", testAdsetId: "2", scaleCampaignId: "3", scaleAdsetId: "4" });
     vi.useFakeTimers();
     // Salı 20 Ekim 2026, İstanbul: son tamamlanmış hafta 12 Ekim.
     vi.setSystemTime(new Date("2026-10-20T09:00:00Z"));
@@ -487,6 +490,33 @@ describe("approveRecommendation / holdRecommendation", () => {
     store.release.mockClear();
     moveToScale.mockResolvedValue({ error: "Bu içeriğin Test'te reklamı yok." });
     expect(await approveRecommendation(REC_ID)).toEqual({ error: "Bu içeriğin Test'te reklamı yok." });
+    expect(store.release).toHaveBeenCalledWith(REC_ID);
+  });
+
+  it("I1: Meta büyüt, kampanyalar henüz kurulmadı: eski davranış (yalnız aşama → kazanan), Meta'ya dokunulmaz", async () => {
+    const contentId = "11111111-1111-4111-8111-111111111111";
+    given(rec({ ruleKey: "buyut", action: { kind: "stage", contentId, to: "kazanan" } }));
+    adSetup.mockResolvedValue(null);
+    moveContentStage.mockResolvedValue({ ok: true });
+    const result =
+      "✓ Aşama Kazanan'a taşındı · Meta'da değişiklik yapılmadı: Test ve Büyütme kampanyaları henüz kurulmadı";
+    expect(await approveRecommendation(REC_ID)).toEqual({ ok: true, result });
+    expect(moveContentStage).toHaveBeenCalledWith(contentId, "kazanan");
+    expect(moveToScale).not.toHaveBeenCalled();
+    expect(store.finish).toHaveBeenCalledWith(REC_ID, result);
+
+    // Aşama geçişi olmazsa öneri yeniden açılır.
+    moveContentStage.mockResolvedValue({ error: "Bu aşama geçişi yapılamaz" });
+    expect(await approveRecommendation(REC_ID)).toEqual({ error: "Bu aşama geçişi yapılamaz" });
+    expect(store.release).toHaveBeenCalledWith(REC_ID);
+  });
+
+  it("I1: kurulum okunamazsa aşama da değişmez, öneri yeniden açılır", async () => {
+    given(rec({ ruleKey: "buyut", action: { kind: "stage", contentId: "11111111-1111-4111-8111-111111111111", to: "kazanan" } }));
+    adSetup.mockRejectedValue(new Error("db"));
+    expect(await approveRecommendation(REC_ID)).toEqual({ error: "İşlem yapılamadı, tekrar deneyin." });
+    expect(moveContentStage).not.toHaveBeenCalled();
+    expect(moveToScale).not.toHaveBeenCalled();
     expect(store.release).toHaveBeenCalledWith(REC_ID);
   });
 

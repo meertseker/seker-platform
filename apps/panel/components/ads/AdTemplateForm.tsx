@@ -138,7 +138,7 @@ export function AdTemplateForm({ template, updatedText }: { template: AdTemplate
         <TextField label="Enlem" placeholder="41,0123" decimal {...bind("lat")} />
         <TextField label="Boylam" placeholder="28,6401" decimal help="Haritada okulun üstüne sağ tıklayınca görünen iki sayı." {...bind("lng")} />
         <TextField label="Yarıçap" unit="km" help="Servis semtlerinin hepsi içinde kalır." {...bind("yaricapKm")} />
-        <fieldset>
+        <fieldset className="min-w-0">
           <legend className={label}>Yaş aralığı</legend>
           <div className="mt-1 flex items-center gap-2">
             <label htmlFor="ad-sablon-yasMin" className="sr-only">
@@ -152,7 +152,7 @@ export function AdTemplateForm({ template, updatedText }: { template: AdTemplate
               value={f.yasMin}
               onChange={(e) => set("yasMin")(e.target.value)}
               aria-describedby={describedBy("ad-sablon-yas-yardim", hasError && ERROR_ID)}
-              className={field}
+              className={`${field} min-w-0`}
             />
             <span aria-hidden="true" className="text-muted-foreground">
               –
@@ -168,7 +168,7 @@ export function AdTemplateForm({ template, updatedText }: { template: AdTemplate
               value={f.yasMax}
               onChange={(e) => set("yasMax")(e.target.value)}
               aria-describedby={describedBy("ad-sablon-yas-yardim", hasError && ERROR_ID)}
-              className={field}
+              className={`${field} min-w-0`}
             />
           </div>
           <p id="ad-sablon-yas-yardim" className={hint}>

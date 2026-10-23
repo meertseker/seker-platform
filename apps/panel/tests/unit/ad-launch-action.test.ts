@@ -3,7 +3,7 @@ import type { AdSetup } from "@/lib/ads/ad-setup";
 import { DEFAULT_AD_TEMPLATE, type AdTemplate } from "@/lib/ads/ad-template";
 import type { PreflightResult } from "@/lib/ads/preflight";
 import type { ContentForAd } from "@/lib/ads/preflight-sources";
-import { adName, planAdTest } from "@/lib/ads/setup-plans";
+import { adName, PLACEHOLDER_SETUP, planAdTest } from "@/lib/ads/setup-plans";
 import type { AdChangeLogRow, GateStatus } from "@/lib/ads/writes";
 
 const requireRole = vi.fn();
@@ -61,7 +61,7 @@ const setupStore = {
   objectStatus: vi.fn(async () => null),
   activeStudentNames: vi.fn(async () => []),
   weekLaunches: vi.fn(async () => 0),
-  launchInFlight: vi.fn(async () => false),
+  launchInFlight: vi.fn(async (): Promise<boolean | "yarim"> => false),
   campaignSetupInFlight: vi.fn(async () => false),
   testAdForCode: vi.fn(async () => []),
   activeAdsInAdset: vi.fn(async () => 0),
@@ -141,6 +141,8 @@ function context(o: {
   activate?: boolean;
   content?: Partial<ContentForAd>;
   needs72h?: boolean;
+  /** Kampanyalar henüz kurulmadı: plan yer tutucu kimliklerle, bağlamda setup null. */
+  noSetup?: boolean;
 } = {}) {
   const checklist = o.checklist ?? GREEN;
   const content = { ...CONTENT, ...o.content };
@@ -149,7 +151,7 @@ function context(o: {
       ? null
       : planAdTest({
           adAccountId: "act_42",
-          setup: SETUP,
+          setup: o.noSetup ? PLACEHOLDER_SETUP : SETUP,
           code: CODE,
           name: NAME,
           link: `https://yeni.sekeranaokulu.com/lp/az-mevcutlu-anaokulu?utm_source=instagram&utm_medium=paid_social&utm_content=${CODE}`,
@@ -176,7 +178,7 @@ function context(o: {
     },
     planned,
     content,
-    setup: SETUP,
+    setup: o.noSetup ? null : SETUP,
   };
 }
 
@@ -353,7 +355,40 @@ describe("launchAdTest", () => {
     setupStore.launchInFlight.mockResolvedValue(true);
     const res = await launchAdTest(ID, { mode: "kur" });
     expect(res).toEqual({ error: "Bu içerik için reklam zaten kuruldu ya da kuruluyor." });
-    expect(setupStore.launchInFlight).toHaveBeenCalledWith(ID, "2026-10-22T08:50:00.000Z");
+    expect(setupStore.launchInFlight).toHaveBeenCalledWith(ID, "2026-10-22T08:50:00.000Z", "2026-10-21T09:00:00.000Z");
+    expect(changeStore.insertLog).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("I2: önceki deneme yarıda kaldı ve reklam Meta'da kuruldu: yeniden kurulmaz, Mert'e haber verilir", async () => {
+    setupStore.launchInFlight.mockResolvedValue("yarim");
+    const res = await launchAdTest(ID, { mode: "kur" });
+    expect(res).toEqual({
+      error: "Bu içerik için önceki kurulum yarıda kaldı ve Meta'da reklam açıldı; ikinci kez kurulmaz. Mert'e haber verin.",
+    });
+    expect(changeStore.insertLog).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("I1: kampanyalar kurulmadan 'Sadece göster': yer tutuculu plan kaydı yazılır, POST yok", async () => {
+    buildAdTestContext.mockResolvedValue(context({ noSetup: true, checklist: RED }));
+    const res = await launchAdTest(ID, { mode: "goster" });
+    expect(res).toMatchObject({ ok: true, status: "uygulanmadi_kapali", message: "Kaydedildi · uygulanmadı: sadece göster" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({ action: "reklam_kur", status: "uygulanmadi_kapali", objectId: ID });
+    const nv = logs[0].newValue as { mode: string; summary: string[]; steps: { params: Record<string, unknown> }[] };
+    expect(nv.mode).toBe("goster");
+    expect(nv.summary.join(" | ")).toContain("(Test reklam seti · henüz kurulmadı)");
+    expect(nv.steps.some((s) => s.params.adset_id === "(Test reklam seti · henüz kurulmadı)")).toBe(true);
+    expect(moveContentStage).not.toHaveBeenCalled();
+    expect(insertCreatedAdObjects).not.toHaveBeenCalled();
+  });
+
+  it("I1: kampanyalar kurulmadan 'kur' yine reddedilir (kontroller yeşil olsa bile), kayıt ve POST yok", async () => {
+    buildAdTestContext.mockResolvedValue(context({ noSetup: true }));
+    const res = await launchAdTest(ID, { mode: "kur" });
+    expect(res).toHaveProperty("error");
     expect(changeStore.insertLog).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
   });

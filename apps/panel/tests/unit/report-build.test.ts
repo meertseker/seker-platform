@@ -418,7 +418,7 @@ describe("rapor (yönetici)", () => {
     expect(t.rows).toEqual([
       {
         tarih: "12 Eki 09:40",
-        eylem: "R-2645-B reklamı kuruldu · Test · Instagram",
+        eylem: "R-2645-B reklamı kurulacaktı · Test · Instagram",
         nesne: "R-2645-B",
         kim: "Mehtap",
         gerekce: "",
@@ -436,7 +436,7 @@ describe("rapor (yönetici)", () => {
       },
       {
         tarih: "3 Eki 03:00",
-        eylem: "Mevcut veli kitlesi güncellendi (120 telefon)",
+        eylem: "Mevcut veli kitlesi güncellenemedi (120 telefon)",
         nesne: "kitle",
         kim: "Sistem",
         gerekce: "",

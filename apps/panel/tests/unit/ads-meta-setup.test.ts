@@ -48,7 +48,7 @@ function json(body: unknown, status = 200): Response {
 /** Sırayla yanıt veren sahte fetch; çağrıları kaydeder. */
 function fakeFetch(responses: Array<[unknown, number?]>) {
   const queue = [...responses];
-  return vi.fn(async (_url: string, _init?: RequestInit) => {
+  return vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async () => {
     const next = queue.shift();
     if (!next) throw new Error("beklenmeyen çağrı");
     return json(next[0], next[1] ?? 200);

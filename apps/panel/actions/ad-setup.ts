@@ -38,10 +38,17 @@ const SETTINGS_PATH = "/reklam/ayarlar";
 const MSG_LOG_FAILED = "Kayıt yazılamadı; değişiklik yapılmadı.";
 const MICROS_PER_TL = 1_000_000;
 const IN_FLIGHT_MS = 10 * 60 * 1000;
+/**
+ * Yarıda kalmış ve Meta'da reklam/kopya açmış `hata` kaydı bu süre boyunca yeniden denemeyi engeller (I2). Sonrasında
+ * sabah senkronu nesneyi ad_objects'e yazmış olur ve aynı engel oradan gelir.
+ */
+const FAILED_BLOCK_MS = 24 * 60 * 60 * 1000;
 const MSG_IN_FLIGHT = "Kurulum sürüyor ya da daha önce yapıldı; Reklam Yöneticisi'ni kontrol edin.";
 const AD_PATHS = ["/reklam/icerik", "/reklam/kampanyalar", "/reklam/hafta"];
 const MIN_REASON = 10;
 const MSG_ALREADY_LAUNCHED = "Bu içerik için reklam zaten kuruldu ya da kuruluyor.";
+const MSG_LAUNCH_PARTIAL =
+  "Bu içerik için önceki kurulum yarıda kaldı ve Meta'da reklam açıldı; ikinci kez kurulmaz. Mert'e haber verin.";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function templateValue(t: AdTemplate): AdTemplateInput {
@@ -483,7 +490,10 @@ export async function launchAdTest(contentId: string, opts: LaunchAdTestOptions)
     let template: AdTemplate;
     try {
       const since = new Date(now.getTime() - IN_FLIGHT_MS).toISOString();
-      if (await store.launchInFlight(content.id, since)) return { error: MSG_ALREADY_LAUNCHED };
+      const failedSince = new Date(now.getTime() - FAILED_BLOCK_MS).toISOString();
+      const inFlight = await store.launchInFlight(content.id, since, failedSince);
+      if (inFlight === "yarim") return { error: MSG_LAUNCH_PARTIAL };
+      if (inFlight) return { error: MSG_ALREADY_LAUNCHED };
       template = await store.template();
       const limit = template.haftalikYeniReklam;
       if ((await store.weekLaunches(istanbulWeekStartIso(now))) >= limit) {
@@ -543,6 +553,8 @@ export async function launchAdTest(contentId: string, opts: LaunchAdTestOptions)
 const scaling = new Set<string>();
 
 const MSG_ALREADY_SCALED = "Bu içerik Büyütme'ye zaten taşındı ya da taşınıyor.";
+const MSG_SCALE_PARTIAL =
+  "Bu içeriğin önceki Büyütme'ye taşıması yarıda kaldı ve Meta'da kopya açıldı; ikinci kez taşınmaz. Mert'e haber verin.";
 const MSG_NO_SETUP = "Önce Ayarlar'da Test ve Büyütme kampanyalarını kurun.";
 const SCALE_SOURCES = ["kampanyalar", "oneri"] as const;
 
@@ -724,9 +736,10 @@ export async function moveToScale(contentId: string, opts: MoveToScaleOptions): 
   try {
     try {
       const since = new Date(now.getTime() - IN_FLIGHT_MS).toISOString();
-      if (await store.scaleInFlight(testAd.adId, content.code, setup.scaleAdsetId, since)) {
-        return { error: MSG_ALREADY_SCALED };
-      }
+      const failedSince = new Date(now.getTime() - FAILED_BLOCK_MS).toISOString();
+      const inFlight = await store.scaleInFlight(testAd.adId, content.code, setup.scaleAdsetId, since, failedSince);
+      if (inFlight === "yarim") return { error: MSG_SCALE_PARTIAL };
+      if (inFlight) return { error: MSG_ALREADY_SCALED };
     } catch {
       console.error("[ads] büyütmeye taşıma için okuma başarısız");
       return { error: "İşlem yapılamadı, tekrar deneyin." };

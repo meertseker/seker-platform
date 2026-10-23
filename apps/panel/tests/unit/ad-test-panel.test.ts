@@ -37,6 +37,7 @@ function view(over: Partial<AdTestView> = {}, red: Partial<Record<PreflightKey, 
     gateRed: [],
     writeEnabled: true,
     existing: null,
+    reactivateWarning: null,
     ...over,
   };
 }

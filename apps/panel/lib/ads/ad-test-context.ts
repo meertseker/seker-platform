@@ -22,6 +22,7 @@ import {
   adLink,
   adName,
   adUrlTags,
+  PLACEHOLDER_SETUP,
   planAdTest,
   REELS_FALLBACK_SLUG,
   TEST_CAMPAIGN_NAME,
@@ -50,6 +51,8 @@ export type AdTestView = {
   gateRed: string[];
   writeEnabled: boolean;
   existing: { adId: string; review: string | null } | null;
+  /** Kurulum duraklatılmış Test kampanyasını/setini yeniden açacaksa düğmeden önceki uyarı satırı; yoksa null. */
+  reactivateWarning: string | null;
 };
 
 export type AdTestContextDeps = {
@@ -63,7 +66,10 @@ export type AdTestContextDeps = {
 
 export type AdTestContext = {
   view: AdTestView;
-  /** Kurulacak adımlar; kurulum, sayfa kimliği, Meta yapılandırması ya da kaynak eksikse null. */
+  /**
+   * Kurulacak adımlar; sayfa kimliği, Meta yapılandırması ya da kaynak eksikse null. Kampanyalar henüz kurulmadıysa
+   * (setup null) yer tutucu kimliklerle kurulur: yalnız "Sadece göster" içindir, "kur" setup olmadan reddedilir.
+   */
   planned: PlannedChange | null;
   content: ContentForAd;
   setup: AdSetup | null;
@@ -73,6 +79,20 @@ const HOUR_MS = 3_600_000;
 const MSG_NOT_FOUND = "İçerik bulunamadı.";
 const MSG_NOT_INSTAGRAM = "Yalnız Instagram içerikleri reklam testine alınır.";
 const MSG_READ_FAILED = "Bilgiler okunamadı, tekrar deneyin.";
+const PLACEHOLDER_NOTE = "Test ve Büyütme kampanyaları henüz kurulmadı: kimlikler Ayarlar'daki kurulumdan sonra belli olur.";
+
+/** M3: plan duraklatılmış Test kampanyasını/setini açacaksa uyarı (kurulum yoksa ilk kurulumdur, uyarı yok). */
+export function reactivateWarning(activateCampaign: boolean, activateAdset: boolean): string | null {
+  const what =
+    activateCampaign && activateAdset
+      ? "Test kampanyası ve reklam seti"
+      : activateCampaign
+        ? "Test kampanyası"
+        : activateAdset
+          ? "Test reklam seti"
+          : null;
+  return what ? `${what} duraklatılmış; kurulunca yeniden açılır ve içindeki diğer reklamlar da yayına girer.` : null;
+}
 
 function safeMetaConfig(env: Record<string, string | undefined>): MetaConfig | null {
   try {
@@ -209,6 +229,8 @@ export async function buildAdTestContext(
       { label: "Kayıt", value: `Kuran: ${deps.actorName} · eski/yeni değer kayda geçer`, sub: null },
     ];
 
+    const activateCampaign = testCampaignStatus !== "ACTIVE";
+    const activateAdset = testAdsetStatus !== "ACTIVE";
     const first = testAds[0] ?? null;
     const view: AdTestView = {
       contentId: content.id,
@@ -232,14 +254,16 @@ export async function buildAdTestContext(
       gateRed: gate.labels,
       writeEnabled: adsWriteEnabled(env),
       existing: first ? { adId: first.adId, review: reviewLabel(first.effectiveStatus, first.reviewFeedback) } : null,
+      reactivateWarning: setup ? reactivateWarning(activateCampaign, activateAdset) : null,
     };
 
     const source = adSourceFor(content, landing);
     let planned: PlannedChange | null = null;
-    if (cfg && setup && pageId && source && (source.kind !== "reels" || igUserId)) {
+    if (cfg && pageId && source && (source.kind !== "reels" || igUserId)) {
+      // I1: kampanyalar kurulmadan da "Sadece göster" Mert'in karşılaştıracağı planı yazar (yer tutucu kimliklerle).
       planned = planAdTest({
         adAccountId: cfg.adAccountId,
-        setup,
+        setup: setup ?? PLACEHOLDER_SETUP,
         code: content.code,
         name,
         link,
@@ -247,9 +271,10 @@ export async function buildAdTestContext(
         source,
         pageId,
         igUserId,
-        activateCampaign: testCampaignStatus !== "ACTIVE",
-        activateAdset: testAdsetStatus !== "ACTIVE",
+        activateCampaign,
+        activateAdset,
       });
+      if (!setup) planned = { steps: planned.steps, summary: [PLACEHOLDER_NOTE, ...planned.summary] };
     }
 
     return { view, planned, content, setup };

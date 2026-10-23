@@ -3,7 +3,8 @@
 // Panelin önerdiği kararlar: Onayla / Şimdilik bekle. İkisi de kayda geçer (kim, ne zaman, sonuç).
 // Platform eylemi değişiklik kapısından (applyAdChange) geçer: kırmızı kapı ve büyütme sınırı orada denetlenir,
 // ad_change_log'a source="oneri" ile yazılır. Aşama eylemi moveContentStage ile; Meta'da "büyüt" (→ kazanan)
-// platformda da uygulanır (moveToScale: kopya Büyütme'ye, Test'teki durur), "teste al" Z4 penceresinden onaylanır.
+// platformda da uygulanır (moveToScale: kopya Büyütme'ye, Test'teki durur; kampanyalar henüz kurulmadıysa yalnız aşama),
+// "teste al" Z4 penceresinden onaylanır.
 // Yazımlar yalnız gizli anahtarlı istemcidedir ve her biri önce requireRole("yonetici") ile rolü doğrular.
 
 import { revalidatePath } from "next/cache";
@@ -14,6 +15,7 @@ import { applyAdChange } from "@/actions/ad-changes";
 import { moveToScale } from "@/actions/ad-setup";
 import { moveContentStage } from "@/actions/content";
 import { getAdSettings } from "@/lib/ads/ad-settings";
+import { supabaseSetupStore } from "@/lib/ads/setup-store";
 import {
   APPLIED_RESULT,
   CLOSED_RESULT,
@@ -33,6 +35,9 @@ const DECIDED = "Bu öneri için karar zaten verildi.";
 const INVALID = "Bu öneri artık geçerli değil.";
 const PAST_WEEK = "Bu öneri geçmiş bir haftaya ait.";
 const USE_AD_TEST_PANEL = "Reklam testine al penceresinden onaylayın.";
+/** Kampanyalar kurulmadan Meta "büyüt": eski davranış (yalnız aşama), Meta'ya dokunulmaz. */
+const STAGE_ONLY_NO_SETUP =
+  "✓ Aşama Kazanan'a taşındı · Meta'da değişiklik yapılmadı: Test ve Büyütme kampanyaları henüz kurulmadı";
 const PATH = "/reklam/hafta";
 
 type Decision = { ok: true; result: string } | { error: string; needsReason?: boolean };
@@ -72,6 +77,20 @@ export async function approveRecommendation(id: string, reason?: string): Promis
     const why = typeof reason === "string" && reason.trim() ? reason : undefined;
     if (!action) {
       result = NO_OBJECT_RESULT;
+    } else if (
+      action.kind === "stage" &&
+      action.to === "kazanan" &&
+      rec.platform === "meta" &&
+      // Okuma hatasında atar → öneri yeniden açılır (kurulum yok sanılıp yalnız aşama değişmez).
+      !(await supabaseSetupStore(db()).setup())
+    ) {
+      // I1: Test/Büyütme kampanyaları henüz kurulmadı (ilk hafta "sadece göster"): main'deki gibi yalnız aşama.
+      const moved = await moveContentStage(action.contentId, "kazanan");
+      if ("error" in moved) {
+        await store.release(id);
+        return { error: moved.error };
+      }
+      result = STAGE_ONLY_NO_SETUP;
     } else if (action.kind === "stage" && action.to === "kazanan" && rec.platform === "meta") {
       // Büyütmeye taşı: aşama moveToScale içinde, yalnız platformda uygulanınca değişir.
       const moved = await moveToScale(action.contentId, { mode: "kur", reason: why, source: "oneri", recommendationId: id });

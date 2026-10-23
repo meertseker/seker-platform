@@ -56,8 +56,16 @@ function tlAmount(v: unknown): string {
   return Number.isInteger(tl) ? intFormatter.format(tl) : kurusFormatter.format(tl);
 }
 
+/** Kurulum eylemlerinde fiil kaydın durumuna uyar: uygulandı → yapıldı, uygulanmadı → yapılacaktı, hata → yapılamadı. */
+function verb(s: AdChangeStatus, done: string, planned: string, failed: string): string {
+  if (s === "uygulandi") return done;
+  if (s === "uygulanmadi_kapali") return planned;
+  return failed;
+}
+
 /** Eylemin metni, ör. "S-2644-I durduruldu". */
 export function actionText(e: ChangeLogEntry): string {
+  const s = e.status;
   switch (e.action) {
     case "pause":
       return `${name(e)} durduruldu`;
@@ -66,19 +74,25 @@ export function actionText(e: ChangeLogEntry): string {
     case "budget":
       return `${name(e)} bütçesi ${tlAmount(e.oldValue?.daily_budget_tl)} → ${tlAmount(e.newValue?.daily_budget_tl)} TL`;
     case "reklam_kur":
-      return `${codeOf(e)} reklamı kuruldu · Test · Instagram`;
+      return `${codeOf(e)} reklamı ${verb(s, "kuruldu", "kurulacaktı", "kurulamadı")} · Test · Instagram`;
     case "buyutmeye_tasi":
-      return `${codeOf(e)} Büyütme'ye taşındı · Test'teki reklam durdu`;
+      return `${codeOf(e)} Büyütme'ye ${verb(
+        s,
+        "taşındı · Test'teki reklam durdu",
+        "taşınacaktı · Test'teki reklam duracaktı",
+        "taşınamadı",
+      )}`;
     case "kampanya_kur":
-      return "Test ve Büyütme kampanyaları kuruldu";
+      return `Test ve Büyütme kampanyaları ${verb(s, "kuruldu", "kurulacaktı", "kurulamadı")}`;
     case "kitle_guncelle": {
       const n = num(e.newValue?.count);
-      return `Mevcut veli kitlesi güncellendi (${n === null ? "?" : intFormatter.format(n)} telefon)`;
+      const v = verb(s, "güncellendi", "güncellenecekti", "güncellenemedi");
+      return `Mevcut veli kitlesi ${v} (${n === null ? "?" : intFormatter.format(n)} telefon)`;
     }
     case "ig_yayin":
       return `${codeOf(e)} Instagram'da yayınlandı`;
     case "sablon":
-      return "Reklam şablonu güncellendi";
+      return `Reklam şablonu ${verb(s, "güncellendi", "güncellenecekti", "güncellenemedi")}`;
     default:
       return name(e);
   }

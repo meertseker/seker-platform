@@ -99,7 +99,7 @@ function makeStore() {
     setup: vi.fn(async (): Promise<AdSetup | null> => SETUP),
     saveSetup: vi.fn(async () => undefined),
     monthMetaSpendTl: vi.fn(async () => 0),
-    objectStatus: vi.fn(async (): Promise<string | null> => "ACTIVE"),
+    objectStatus: vi.fn<(level: string, id: string) => Promise<string | null>>(async () => "ACTIVE"),
     activeStudentNames: vi.fn(async (): Promise<string[]> => []),
     weekLaunches: vi.fn(async () => 0),
     launchInFlight: vi.fn(async () => false),
@@ -233,6 +233,10 @@ describe("buildAdTestContext", () => {
       "activateAdset",
       "activateAd",
     ]);
+    // Z4 (M3): duraklatılmış Test kampanyası/seti yeniden açılacaksa düğmeden önce uyarı.
+    expect(r.view.reactivateWarning).toBe(
+      "Test kampanyası ve reklam seti duraklatılmış; kurulunca yeniden açılır ve içindeki diğer reklamlar da yayına girer.",
+    );
     expect(store.activeAdsInAdset).toHaveBeenCalledWith("200");
     expect(store.objectStatus).toHaveBeenCalledWith("campaign", "100");
     expect(store.objectStatus).toHaveBeenCalledWith("adset", "200");
@@ -242,9 +246,19 @@ describe("buildAdTestContext", () => {
     const r2 = await buildAdTestContext(deps({ store: store2 }), "c1", { skip72hReason: null });
     if ("error" in r2) throw new Error(r2.error);
     expect(r2.view.rows[2].sub).toBe("25–45 yaş · geniş hedefleme");
+    // İkisi de ACTIVE: uyarı yok.
+    expect(r2.view.reactivateWarning).toBeNull();
+
+    const store3 = makeStore();
+    store3.objectStatus.mockImplementation(async (level?: string) => (level === "adset" ? "PAUSED" : "ACTIVE"));
+    const r3 = await buildAdTestContext(deps({ store: store3 }), "c1", { skip72hReason: null });
+    if ("error" in r3) throw new Error(r3.error);
+    expect(r3.view.reactivateWarning).toBe(
+      "Test reklam seti duraklatılmış; kurulunca yeniden açılır ve içindeki diğer reklamlar da yayına girer.",
+    );
   });
 
-  it("kurulum yoksa 0 reklam, #9 kırmızı, plan yok, existing null", async () => {
+  it("kurulum yoksa 0 reklam, #9 kırmızı, existing null; 'Sadece göster' için yer tutuculu plan (I1)", async () => {
     const store = makeStore();
     store.setup.mockResolvedValue(null);
     const r = await buildAdTestContext(deps({ store }), "c1", { skip72hReason: null });
@@ -252,7 +266,14 @@ describe("buildAdTestContext", () => {
     expect(r.view.rows[0].sub).toBe("200 TL/gün, kampanya bütçesi · 0 reklam çalışıyor");
     expect(r.view.checklist.items[8]).toMatchObject({ key: "hesap", ok: false, label: "Test kampanyası kurulmamış" });
     expect(r.view.rows[2].sub).toBe("25–45 yaş · geniş hedefleme");
-    expect(r.planned).toBeNull();
+    expect(r.setup).toBeNull();
+    expect(r.planned?.steps.map((s) => s.key)).toEqual(["creative", "ad", "activateCampaign", "activateAdset", "activateAd"]);
+    expect(r.planned?.steps[1].params.adset_id).toBe("(Test reklam seti · henüz kurulmadı)");
+    expect(r.planned?.steps[2].path).toBe("(Test kampanyası · henüz kurulmadı)");
+    expect(r.planned?.summary[0]).toBe(
+      "Test ve Büyütme kampanyaları henüz kurulmadı: kimlikler Ayarlar'daki kurulumdan sonra belli olur.",
+    );
+    expect(r.view.reactivateWarning).toBeNull();
     expect(r.view.existing).toBeNull();
     expect(store.activeAdsInAdset).not.toHaveBeenCalled();
     expect(store.testAdForCode).not.toHaveBeenCalled();

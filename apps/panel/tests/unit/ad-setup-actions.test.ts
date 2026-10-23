@@ -488,6 +488,50 @@ describe("supabaseSetupStore", () => {
     ).toBe(false);
   });
 
+  it("I2: launchInFlight/scaleInFlight: yakın zamanda kimlikli (ad/copy) hata kaydı varsa 'yarim' (tekrar deneme engellenir)", async () => {
+    const store = await real();
+    const since = "2026-10-20T08:50:00.000Z";
+    const failedSince = "2026-10-19T09:00:00.000Z";
+    const dbWith = (rows: unknown[]) => {
+      const r = recordingDb({
+        ad_change_log: { data: rows, error: null },
+        content_items: { data: null, error: null },
+        app_settings: { data: null, error: null },
+        ad_objects: { data: [], error: null },
+      });
+      return r;
+    };
+    const failed = (ids: Record<string, string>, at = "2026-10-20T07:00:00Z") => [
+      { status: "hata", error: "Reklamı aç: zaman aşımı", created_at: at, new_value: { ids } },
+    ];
+    // Reklam kuruldu, açma patladı: aynı içerik yeniden kurulmaz.
+    const launch = dbWith(failed({ creative: "901", ad: "902" }));
+    expect(await store(launch.db as never).launchInFlight("c1", since, failedSince)).toBe("yarim");
+    expect(launch.calls[0].ops).toContainEqual(["select", ["status, error, created_at, new_value"]]);
+    // Yalnız kreatif kurulduysa (reklam yok) yeniden denenebilir.
+    expect(await store(dbWith(failed({ creative: "901" })).db as never).launchInFlight("c1", since, failedSince)).toBe(false);
+    // Eski (pencere dışı) hata engellemez.
+    expect(
+      await store(dbWith(failed({ ad: "902" }, "2026-10-18T07:00:00Z")).db as never).launchInFlight("c1", since, failedSince),
+    ).toBe(false);
+
+    // Büyütme: kopya kuruldu, sonraki adım patladı.
+    const scale = dbWith(failed({ copy: "9100" }));
+    expect(await store(scale.db as never).scaleInFlight("9002", "R-1", "4", since, failedSince)).toBe("yarim");
+    expect(scale.calls[0].ops).toContainEqual(["select", ["status, error, created_at, new_value"]]);
+    expect(await store(dbWith(failed({})).db as never).scaleInFlight("9002", "R-1", "4", since, failedSince)).toBe(false);
+    // Uygulanmış kayıt yine true (eski kontroller korunur).
+    expect(
+      await store(dbWith([{ status: "uygulandi", error: null, created_at: "2026-10-01T00:00:00Z", new_value: {} }]).db as never).scaleInFlight(
+        "9002",
+        "R-1",
+        "4",
+        since,
+        failedSince,
+      ),
+    ).toBe(true);
+  });
+
   it("launchInFlight: Test setinde aynı içerik kodlu reklam varsa true", async () => {
     const { db, calls } = recordingDb({
       ad_change_log: { data: [], error: null },

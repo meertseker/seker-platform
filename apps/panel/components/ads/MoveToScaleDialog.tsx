@@ -39,14 +39,26 @@ type Props = {
 
 export function MoveToScaleDialog({ target, onClose, gate, writeEnabled }: Props) {
   const code = target?.row.contentCode ?? "";
+  // İstek sürerken kullanıcı pencereyi kapatamaz (Esc, arka plan, ✕, Vazgeç): sonuç ya da hata kaybolmasın.
+  const [busy, setBusy] = useState(false);
   return (
     <ScaleDialogShell
       open={target !== null}
       onClose={onClose}
+      pending={busy}
       title={`${code} Büyütme'ye taşınsın mı?`}
       description={target?.row.name ?? ""}
     >
-      {target ? <Body key={target.row.key} target={target} gate={gate} writeEnabled={writeEnabled} onClose={onClose} /> : null}
+      {target ? (
+        <Body
+          key={target.row.key}
+          target={target}
+          gate={gate}
+          writeEnabled={writeEnabled}
+          onClose={onClose}
+          onPendingChange={setBusy}
+        />
+      ) : null}
     </ScaleDialogShell>
   );
 }
@@ -56,11 +68,14 @@ function Body({
   gate,
   writeEnabled,
   onClose,
+  onPendingChange,
 }: {
   target: MoveToScaleTarget;
   gate: { red: boolean; labels: string[] };
   writeEnabled: boolean;
+  /** Başarıda pencereyi kapatır (istek bitmiştir); kullanıcı kapatması kabukta pending ile engellenir. */
   onClose: () => void;
+  onPendingChange: (pending: boolean) => void;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -69,6 +84,11 @@ function Body({
   const [serverNeedsReason, setServerNeedsReason] = useState(false);
   const [result, setResult] = useState<SetupResult | null>(null);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    onPendingChange(pending);
+  }, [pending, onPendingChange]);
+  useEffect(() => () => onPendingChange(false), [onPendingChange]);
 
   const needsReason = gate.red || serverNeedsReason;
   const reasonLen = reason.trim().length;
@@ -146,7 +166,7 @@ function Body({
         <button type="button" onClick={() => run("goster")} disabled={pending} className={`${btnSecondary} w-full sm:w-auto`}>
           Sadece göster
         </button>
-        <button type="button" onClick={onClose} className={`${btnSecondary} w-full sm:w-auto`}>
+        <button type="button" onClick={onClose} disabled={pending} className={`${btnSecondary} w-full sm:w-auto`}>
           Vazgeç
         </button>
       </div>
@@ -158,7 +178,7 @@ function Body({
             {result.ids &&
             Object.keys(result.ids).length > 0 &&
             !Object.values(result.ids).every((id) => result.error.includes(id)) ? (
-              <p className="mt-1">Yarım kalan nesneler (hepsi DURAKLATILMIŞ): {Object.values(result.ids).join(", ")}</p>
+              <p className="mt-1">Yarım kalan nesneler: {Object.values(result.ids).join(", ")}</p>
             ) : null}
           </div>
         ) : null}
@@ -170,22 +190,28 @@ function Body({
   );
 }
 
-/** Pencere kabuğu (AdTestPanel'deki gibi): portal, odak tuzağı, Esc, aria-modal. Telefonda alttan tam genişlik. */
+/**
+ * Pencere kabuğu (AdTestPanel'deki gibi): portal, odak tuzağı, Esc, aria-modal. Telefonda alttan tam genişlik.
+ * İstek sürerken (`pending`) Esc, arka plan ve ✕ pencereyi kapatmaz.
+ */
 function ScaleDialogShell({
   open,
   onClose,
+  pending,
   title,
   description,
   children,
 }: {
   open: boolean;
   onClose: () => void;
+  pending: boolean;
   title: string;
   description: string;
   children: React.ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
+  const pendingRef = useRef(pending);
   const titleId = useId();
   const descId = useId();
   const isClient = useIsClient();
@@ -193,6 +219,15 @@ function ScaleDialogShell({
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
+
+  /** Kullanıcının kapatması (Esc, arka plan, ✕): istek sürerken yok sayılır. */
+  const requestClose = () => {
+    if (!pendingRef.current) onCloseRef.current();
+  };
 
   useEffect(() => {
     if (!open || !isClient) return;
@@ -204,7 +239,7 @@ function ScaleDialogShell({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onCloseRef.current();
+        if (!pendingRef.current) onCloseRef.current();
         return;
       }
       // Odak tuzağı: Tab arkadaki sayfaya kaçmasın, pencerenin içinde dönsün.
@@ -241,7 +276,7 @@ function ScaleDialogShell({
   // Portal: üst öğedeki backdrop-filter/transform, fixed katmanı içine hapsetmesin.
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
-      <div aria-hidden="true" className="scrim absolute inset-0 animate-scrim-in" onClick={() => onCloseRef.current()} />
+      <div aria-hidden="true" className="scrim absolute inset-0 animate-scrim-in" onClick={requestClose} />
       <div
         ref={panelRef}
         role="dialog"
@@ -265,9 +300,10 @@ function ScaleDialogShell({
           </div>
           <button
             type="button"
-            onClick={() => onCloseRef.current()}
+            onClick={requestClose}
+            disabled={pending}
             aria-label="Pencereyi kapat"
-            className={`inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground ${focus}`}
+            className={`inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 ${focus}`}
           >
             <X aria-hidden className="size-5" />
           </button>

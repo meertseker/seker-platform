@@ -112,6 +112,33 @@ describe("actionText", () => {
       "Reklam şablonu güncellendi",
     );
   });
+
+  it("kurulum eylemlerinde fiil duruma uyar (uygulandı / sadece göster / hata)", () => {
+    const at = (action: ChangeLogEntry["action"], status: ChangeLogEntry["status"], newValue: Record<string, unknown> = {}) =>
+      actionText(entry({ action, status, objectName: "R-2645-B · Konu", newValue: { contentCode: "R-2645-B", ...newValue } }));
+    expect(at("reklam_kur", "uygulandi")).toBe("R-2645-B reklamı kuruldu · Test · Instagram");
+    expect(at("reklam_kur", "uygulanmadi_kapali")).toBe("R-2645-B reklamı kurulacaktı · Test · Instagram");
+    expect(at("reklam_kur", "hata")).toBe("R-2645-B reklamı kurulamadı · Test · Instagram");
+    expect(at("buyutmeye_tasi", "uygulandi")).toBe("R-2645-B Büyütme'ye taşındı · Test'teki reklam durdu");
+    expect(at("buyutmeye_tasi", "uygulanmadi_kapali")).toBe("R-2645-B Büyütme'ye taşınacaktı · Test'teki reklam duracaktı");
+    expect(at("buyutmeye_tasi", "hata")).toBe("R-2645-B Büyütme'ye taşınamadı");
+    expect(at("kampanya_kur", "uygulandi")).toBe("Test ve Büyütme kampanyaları kuruldu");
+    expect(at("kampanya_kur", "uygulanmadi_kapali")).toBe("Test ve Büyütme kampanyaları kurulacaktı");
+    expect(at("kampanya_kur", "hata")).toBe("Test ve Büyütme kampanyaları kurulamadı");
+    expect(at("kitle_guncelle", "uygulandi", { count: 12 })).toBe("Mevcut veli kitlesi güncellendi (12 telefon)");
+    expect(at("kitle_guncelle", "uygulanmadi_kapali", { count: 12 })).toBe("Mevcut veli kitlesi güncellenecekti (12 telefon)");
+    expect(at("kitle_guncelle", "hata", { count: 12 })).toBe("Mevcut veli kitlesi güncellenemedi (12 telefon)");
+    expect(at("sablon", "uygulandi")).toBe("Reklam şablonu güncellendi");
+    expect(at("sablon", "uygulanmadi_kapali")).toBe("Reklam şablonu güncellenecekti");
+    expect(at("sablon", "hata")).toBe("Reklam şablonu güncellenemedi");
+  });
+
+  it("sadece göster satırı: 'kuruldu' demez", () => {
+    const e = entry({ action: "reklam_kur", status: "uygulanmadi_kapali", objectName: "R-2644-A · Konu", newValue: { mode: "goster" } });
+    expect(changeLine(e, "Zehra Gürsel", NOW)).toBe(
+      "Kaydedildi · uygulanmadı · R-2644-A reklamı kurulacaktı · Test · Instagram · Zehra Gürsel · 10 Kasım 08:14",
+    );
+  });
 });
 
 describe("statusText ve önekler", () => {

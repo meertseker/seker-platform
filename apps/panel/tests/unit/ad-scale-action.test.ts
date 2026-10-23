@@ -74,7 +74,7 @@ const setupStore = {
   weekLaunches: vi.fn(async () => 0),
   launchInFlight: vi.fn(async () => false),
   campaignSetupInFlight: vi.fn(async () => false),
-  scaleInFlight: vi.fn(async () => false),
+  scaleInFlight: vi.fn(async (): Promise<boolean | "yarim"> => false),
   testAdForCode: vi.fn(async (): Promise<TestAdRow[]> => [TEST_AD]),
   activeAdsInAdset: vi.fn(async () => 0),
 };
@@ -220,14 +220,14 @@ describe("moveToScale", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("kur: kopya Büyütme setine, sonra kopya ACTIVE, sonra Test PAUSED; nesneler, aşama, mesaj", async () => {
+  it("kur: kopya Büyütme setine (PAUSED), sonra Test PAUSED, sonra kopya ACTIVE; nesneler, aşama, mesaj", async () => {
     const res = await moveToScale(ID, { mode: "kur" });
     expect(res).toMatchObject({ ok: true, status: "uygulandi", message: `✓ ${CODE} Büyütme'ye taşındı · Test'teki reklam durdu` });
 
-    expect(postPaths()).toEqual(["9002/copies", "9100", "9002"]);
+    expect(postPaths()).toEqual(["9002/copies", "9002", "9100"]);
     expect(bodyOf(0).get("adset_id")).toBe(SETUP.scaleAdsetId);
-    expect(bodyOf(1).get("status")).toBe("ACTIVE");
-    expect(bodyOf(2).get("status")).toBe("PAUSED");
+    expect(bodyOf(1).get("status")).toBe("PAUSED");
+    expect(bodyOf(2).get("status")).toBe("ACTIVE");
 
     expect(logs).toHaveLength(1);
     expect(logs[0]).toMatchObject({
@@ -257,7 +257,7 @@ describe("moveToScale", () => {
     setupStore.objectStatus.mockResolvedValue("PAUSED");
     const res = await moveToScale(ID, { mode: "kur" });
     expect(res).toMatchObject({ ok: true, status: "uygulandi" });
-    expect(postPaths()).toEqual(["9002/copies", SETUP.scaleCampaignId, SETUP.scaleAdsetId, "9100", "9002"]);
+    expect(postPaths()).toEqual(["9002/copies", "9002", SETUP.scaleCampaignId, SETUP.scaleAdsetId, "9100"]);
     const [, rows] = insertCreatedAdObjects.mock.calls[0] as [unknown, Record<string, unknown>[]];
     expect(rows).toEqual(
       expect.arrayContaining([
@@ -314,7 +314,16 @@ describe("moveToScale", () => {
   it("daha önce taşınmışsa ya da taşınıyorsa ikinci kez taşınmaz", async () => {
     setupStore.scaleInFlight.mockResolvedValue(true);
     expect(await moveToScale(ID, { mode: "kur" })).toEqual({ error: MSG_ALREADY });
-    expect(setupStore.scaleInFlight).toHaveBeenCalledWith("9002", CODE, SETUP.scaleAdsetId, expect.any(String));
+    expect(setupStore.scaleInFlight).toHaveBeenCalledWith("9002", CODE, SETUP.scaleAdsetId, "2026-10-22T08:50:00.000Z", "2026-10-21T09:00:00.000Z");
+    expect(logs).toHaveLength(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("I2: önceki taşıma yarıda kaldı ve kopya Meta'da kuruldu: yeniden taşınmaz, Mert'e haber verilir", async () => {
+    setupStore.scaleInFlight.mockResolvedValue("yarim");
+    expect(await moveToScale(ID, { mode: "kur" })).toEqual({
+      error: "Bu içeriğin önceki Büyütme'ye taşıması yarıda kaldı ve Meta'da kopya açıldı; ikinci kez taşınmaz. Mert'e haber verin.",
+    });
     expect(logs).toHaveLength(0);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -338,6 +347,21 @@ describe("moveToScale", () => {
     expect(JSON.stringify(res)).not.toContain("EAAtokentoken");
     expect(moveContentStage).not.toHaveBeenCalled();
     expect(insertCreatedAdObjects).not.toHaveBeenCalled();
+  });
+
+  it("I2: Test'i durdurma patlarsa hiçbir şey açılmamıştır; mesaj 'hepsi DURAKLATILMIŞ' der", async () => {
+    setupStore.objectStatus.mockResolvedValue("PAUSED");
+    fetchSpy.mockImplementation(async (url: string) => {
+      if (String(url).endsWith("/copies")) return okJson({ copied_ad_id: "9100" });
+      return new Response(JSON.stringify({ error: { message: "zaman aşımı" } }), { status: 500 });
+    });
+    const res = await moveToScale(ID, { mode: "kur" });
+    // Kopya (PAUSED) kuruldu, Test'i durdurma patladı: ACTIVE yapan hiçbir istek gitmedi.
+    expect(postPaths()).toEqual(["9002/copies", "9002"]);
+    for (let i = 0; i < fetchSpy.mock.calls.length; i++) expect(bodyOf(i).get("status")).not.toBe("ACTIVE");
+    expect(res).toMatchObject({ error: expect.stringContaining("Yarım kalan nesneler (hepsi DURAKLATILMIŞ): 9100") });
+    expect(logs[0]).toMatchObject({ status: "hata" });
+    expect(logs[0].newValue).toMatchObject({ ids: { copy: "9100" }, failedKey: "pauseTest" });
   });
 
   it("öneriden: kaynak oneri ve öneri kimliği kayda geçer", async () => {

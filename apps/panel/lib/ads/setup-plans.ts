@@ -22,6 +22,21 @@ export type PlannedChange = { steps: SetupStep[]; summary: string[] };
 export const TEST_CAMPAIGN_NAME = "Test · Instagram";
 export const SCALE_CAMPAIGN_NAME = "Büyütme · Instagram";
 
+/**
+ * Kampanyalar henüz kurulmadıysa "Sadece göster" planı bu yer tutucularla yazılır (I1): ilk hafta Mert'in
+ * karşılaştıracağı kayıt satırı oluşur. Kimlik biçiminde değildir; Meta'ya gidemez (runSetupSteps yolu reddeder)
+ * ve "kur" kurulum olmadan zaten reddedilir.
+ */
+export const PLACEHOLDER_SETUP: AdSetup = {
+  testCampaignId: "(Test kampanyası · henüz kurulmadı)",
+  testAdsetId: "(Test reklam seti · henüz kurulmadı)",
+  scaleCampaignId: "(Büyütme kampanyası · henüz kurulmadı)",
+  scaleAdsetId: "(Büyütme reklam seti · henüz kurulmadı)",
+  exclusionAudienceId: null,
+  createdAt: "",
+  createdBy: "",
+};
+
 /** B10 genel sayfası: haftanın Instagram sayfası yayında değilse Reels reklamı buraya gider. */
 export const REELS_FALLBACK_SLUG = "az-mevcutlu-anaokulu";
 
@@ -197,7 +212,11 @@ export function planAdTest(i: {
   return { steps, summary };
 }
 
-/** "Büyütmeye taşı": Test reklamı Büyütme setine kopyalanır, kopya açılır, Test'teki durur. */
+/**
+ * "Büyütmeye taşı": Test reklamı Büyütme setine DURAKLATILMIŞ kopyalanır, Test'teki durur, sonra (gerekirse
+ * Büyütme kampanyası/seti ve) kopya açılır. Sıra bilerek böyle: durdurma patlarsa hiçbir şey açılmamıştır;
+ * açma patlarsa iki reklam aynı anda harcamaz.
+ */
 export function planMoveToScale(i: {
   setup: AdSetup;
   testAdId: string;
@@ -205,8 +224,11 @@ export function planMoveToScale(i: {
   activateCampaign: boolean;
   activateAdset: boolean;
 }): PlannedChange {
-  const steps: SetupStep[] = [copyAdToAdset({ key: "copy", adId: i.testAdId, adsetId: i.setup.scaleAdsetId })];
-  const summary: string[] = [`Kopya: ${i.adName} → ${SCALE_CAMPAIGN_NAME}`];
+  const steps: SetupStep[] = [
+    copyAdToAdset({ key: "copy", adId: i.testAdId, adsetId: i.setup.scaleAdsetId }),
+    setObjectStatus({ key: "pauseTest", objectId: i.testAdId, status: "PAUSED", label: "Test'teki reklamı durdur" }),
+  ];
+  const summary: string[] = [`Kopya: ${i.adName} → ${SCALE_CAMPAIGN_NAME}`, "Test'teki reklam durur"];
 
   if (i.activateCampaign) {
     steps.push(
@@ -233,9 +255,5 @@ export function planMoveToScale(i: {
 
   steps.push(setObjectStatus({ key: "activateCopy", objectId: ref("copy"), status: "ACTIVE", label: "Kopyayı aç" }));
   summary.push("Kopya açılır");
-  steps.push(
-    setObjectStatus({ key: "pauseTest", objectId: i.testAdId, status: "PAUSED", label: "Test'teki reklamı durdur" }),
-  );
-  summary.push("Test'teki reklam durur");
   return { steps, summary };
 }

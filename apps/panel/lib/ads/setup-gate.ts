@@ -133,6 +133,35 @@ function scrub(text: string, secrets: string[]): string {
 }
 
 /**
+ * Yarıda kalan çalıştırmada başarıyla ACTIVE yapılan nesnelerin kimlikleri (patlayan adımdan öncekiler).
+ * Patlayan adım bilinmiyorsa hepsi başarılı sayılır (güvenli taraf: "hepsi duraklatılmış" denmez).
+ */
+function openedIds(steps: SetupStep[], ids: Record<string, string>, failedKey: string): string[] {
+  const failedAt = steps.findIndex((s) => s.key === failedKey);
+  const done = failedAt < 0 ? steps : steps.slice(0, failedAt);
+  const out: string[] = [];
+  for (const s of done) {
+    if (s.params.status !== "ACTIVE") continue;
+    const id = typeof s.path === "string" ? s.path : ids[s.path.ref];
+    if (id) out.push(id);
+  }
+  return out;
+}
+
+/** Hata mesajının kuyruğu: kurulan kimlikler; bir şey açıldıysa "hepsi DURAKLATILMIŞ" denmez, Mert'e haber istenir. */
+function partialTail(steps: SetupStep[], ids: Record<string, string>, failedKey: string): string {
+  const built = Object.values(ids);
+  const opened = openedIds(steps, ids, failedKey);
+  if (opened.length === 0) {
+    return built.length > 0 ? ` · Yarım kalan nesneler (hepsi DURAKLATILMIŞ): ${built.join(", ")}` : "";
+  }
+  return (
+    (built.length > 0 ? ` · Yarım kalan nesneler: ${built.join(", ")}` : "") +
+    ` · Açılan (ACTIVE) nesneler: ${opened.join(", ")} · Mert'e haber verin, Reklam Yöneticisi'ni kontrol etsin.`
+  );
+}
+
+/**
  * Kurulum kapısı. "kur" modunda reklam_kur / buyutmeye_tasi kapı kırmızıyken en az 10 karakter gerekçe ister
  * (engellemez); extraReasonRequired (72 saat) da aynı gerekçeyi ister. "goster" modu hiçbir kontrole takılmaz,
  * kayıt `uygulanmadi_kapali` olur ve platforma gidilmez. Bayrak kapalıyken de aynı.
@@ -227,9 +256,7 @@ export async function executeSetupChange(deps: SetupDeps, input: SetupChangeInpu
     const text = scrub(outcome.error, secrets);
     const newValue = { ...baseValue, ids, ...(outcome.failedKey ? { failedKey: outcome.failedKey } : {}) };
     await deps.store.updateLog(logId, { status: "hata", error: text, newValue }).catch(() => undefined);
-    const built = Object.values(ids);
-    const tail = built.length > 0 ? ` · Yarım kalan nesneler (hepsi DURAKLATILMIŞ): ${built.join(", ")}` : "";
-    return { error: `Uygulanamadı: ${text} · kayda geçti${tail}`, ids };
+    return { error: `Uygulanamadı: ${text} · kayda geçti${partialTail(steps, ids, outcome.failedKey)}`, ids };
   }
 
   // Platformda uygulandı: kayıt güncellenemese de başarı döner (yalan söylemez), mesaj bunu belirtir.

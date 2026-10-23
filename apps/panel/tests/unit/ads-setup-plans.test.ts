@@ -224,19 +224,21 @@ describe("planMoveToScale", () => {
       activateCampaign: false,
       activateAdset: false,
     });
-    expect(keys(p)).toEqual(["copy", "activateCopy", "pauseTest"]);
+    // I2: Test'teki reklam, hiçbir şey açılmadan önce durur; durdurma patlarsa açılmış nesne yoktur.
+    expect(keys(p)).toEqual(["copy", "pauseTest", "activateCopy"]);
     expect(p.steps[0].path).toBe("3001/copies");
     expect(p.steps[0].params.adset_id).toBe("2002");
+    expect(p.steps[0].params.status_option).toBe("PAUSED");
     expect(p.steps[0].result).toBe("copied_ad_id");
-    expect(p.steps[1].path).toEqual({ ref: "copy", suffix: "" });
-    expect(p.steps[1].params).toEqual({ status: "ACTIVE" });
+    expect(p.steps[1].path).toBe("3001");
+    expect(p.steps[1].params).toEqual({ status: "PAUSED" });
     const last = p.steps[p.steps.length - 1];
-    expect(last.path).toBe("3001");
-    expect(last.params).toEqual({ status: "PAUSED" });
+    expect(last.path).toEqual({ ref: "copy", suffix: "" });
+    expect(last.params).toEqual({ status: "ACTIVE" });
     expect(p.summary).toEqual([
       "Kopya: R-2644-A · İlk hafta uyum → Büyütme · Instagram",
-      "Kopya açılır",
       "Test'teki reklam durur",
+      "Kopya açılır",
     ]);
     expectCleanSummary(p);
   });
@@ -249,9 +251,10 @@ describe("planMoveToScale", () => {
       activateCampaign: true,
       activateAdset: true,
     });
-    expect(keys(p)).toEqual(["copy", "activateCampaign", "activateAdset", "activateCopy", "pauseTest"]);
-    expect(p.steps[1].path).toBe("2001");
-    expect(p.steps[2].path).toBe("2002");
+    // Test'teki reklam durmadan Büyütme kampanyası/seti ve kopya açılmaz.
+    expect(keys(p)).toEqual(["copy", "pauseTest", "activateCampaign", "activateAdset", "activateCopy"]);
+    expect(p.steps[2].path).toBe("2001");
+    expect(p.steps[3].path).toBe("2002");
     expect(p.summary).toContain("Büyütme kampanyası açılır");
     expect(p.summary).toContain("Büyütme reklam seti açılır");
   });
