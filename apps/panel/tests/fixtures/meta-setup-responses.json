@@ -1,0 +1,17 @@
+{
+  "campaign": { "id": "111" },
+  "adset": { "id": "444" },
+  "creative": { "id": "222" },
+  "ad": { "id": "555" },
+  "copy": { "copied_ad_id": "333" },
+  "success": { "success": true },
+  "adsetError": {
+    "error": {
+      "message": "Invalid parameter (token META-GIZLI-ANAHTAR)",
+      "type": "OAuthException",
+      "code": 100
+    }
+  },
+  "accountActive": { "id": "act_42", "account_status": 1, "currency": "TRY", "name": "Şeker Anaokulu" },
+  "accountUnsettled": { "id": "act_42", "account_status": 3, "disable_reason": 0, "currency": "TRY", "name": "Şeker Anaokulu" }
+}
