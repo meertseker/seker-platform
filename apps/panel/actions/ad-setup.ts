@@ -17,11 +17,18 @@ import { readMetaConfig, type MetaConfig } from "@/lib/ads/meta/config";
 import { runSetupSteps } from "@/lib/ads/meta/setup";
 import { insertCreatedAdObjects, type AdObjectSyncRow } from "@/lib/ads/objects-store";
 import type { PreflightResult } from "@/lib/ads/preflight";
-import type { ContentForAd } from "@/lib/ads/preflight-sources";
+import { loadContentForAd, type ContentForAd } from "@/lib/ads/preflight-sources";
 import { supabaseRecommendationStore } from "@/lib/ads/recommendations";
 import { executeSetupChange, type SetupResult } from "@/lib/ads/setup-gate";
-import { adName, planCampaignSetup, SCALE_CAMPAIGN_NAME, TEST_CAMPAIGN_NAME, type PlannedChange } from "@/lib/ads/setup-plans";
-import { supabaseSetupStore } from "@/lib/ads/setup-store";
+import {
+  adName,
+  planCampaignSetup,
+  planMoveToScale,
+  SCALE_CAMPAIGN_NAME,
+  TEST_CAMPAIGN_NAME,
+  type PlannedChange,
+} from "@/lib/ads/setup-plans";
+import { supabaseSetupStore, type TestAdRow } from "@/lib/ads/setup-store";
 import { istanbulWeekStartIso } from "@/lib/ads/weekly";
 import { loadGateStatus, supabaseAdChangeStore, type AdChangeLogRow } from "@/lib/ads/writes";
 import { istanbulDateString } from "@/lib/lead-flow/business-hours";
@@ -503,5 +510,243 @@ export async function launchAdTest(contentId: string, opts: LaunchAdTestOptions)
     return { ...result, message };
   } finally {
     launching.delete(content.id);
+  }
+}
+
+
+/** Aynı süreçte aynı içerik için eşzamanlı "Büyütmeye taşı" kilidi (launching ile aynı amaç). */
+const scaling = new Set<string>();
+
+const MSG_ALREADY_SCALED = "Bu içerik Büyütme'ye zaten taşındı ya da taşınıyor.";
+const MSG_NO_SETUP = "Önce Ayarlar'da Test ve Büyütme kampanyalarını kurun.";
+const SCALE_SOURCES = ["kampanyalar", "oneri"] as const;
+
+export type MoveToScaleOptions = {
+  mode: "kur" | "goster";
+  reason?: string;
+  source?: (typeof SCALE_SOURCES)[number];
+  recommendationId?: string;
+};
+
+function scaledRows(
+  copyId: string,
+  testAd: TestAdRow,
+  code: string,
+  setup: AdSetup,
+  template: AdTemplate,
+  keys: Set<string>,
+): AdObjectSyncRow[] {
+  // Bütçe kampanyada (CBO); set ve reklam kampanyanın bütçesini ve kaynağını devralır (createdRows ile aynı).
+  const scaleMicros = Math.round(template.buyutmeGunlukTl * MICROS_PER_TL);
+  const testMicros = Math.round(template.testGunlukTl * MICROS_PER_TL);
+  const scale = {
+    platform: "meta" as const,
+    campaignId: setup.scaleCampaignId,
+    status: "ACTIVE",
+    dailyBudgetMicros: scaleMicros,
+    budgetResource: setup.scaleCampaignId,
+  };
+  const rows: AdObjectSyncRow[] = [
+    // Kopya: sabah senkronu gerçek inceleme durumunu yazar.
+    { ...scale, level: "ad", objectId: copyId, parentId: setup.scaleAdsetId, name: testAd.name, contentCode: code },
+    {
+      platform: "meta",
+      level: "ad",
+      objectId: testAd.adId,
+      parentId: setup.testAdsetId,
+      campaignId: setup.testCampaignId,
+      name: testAd.name,
+      status: "PAUSED",
+      dailyBudgetMicros: testMicros,
+      budgetResource: setup.testCampaignId,
+      contentCode: code,
+      effectiveStatus: "PAUSED",
+      reviewFeedback: testAd.reviewFeedback,
+    },
+  ];
+  if (keys.has("activateCampaign")) {
+    rows.push({ ...scale, level: "campaign", objectId: setup.scaleCampaignId, parentId: null, name: SCALE_CAMPAIGN_NAME, contentCode: null });
+  }
+  if (keys.has("activateAdset")) {
+    rows.push({
+      ...scale,
+      level: "adset",
+      objectId: setup.scaleAdsetId,
+      parentId: setup.scaleCampaignId,
+      name: `Büyütme · Okul çevresi ${template.yaricapKm} km`,
+      contentCode: null,
+    });
+  }
+  return rows;
+}
+
+/**
+ * "Büyütmeye taşı" (§4, M1): içeriğin Test'teki tek reklamı Büyütme setine kopyalanır, kopya açılır, Test'teki durur.
+ * "kur": aylık tavan (B8) geçilemez; kırmızı kapı gerekçe ister (B7). Bayrak kapalıyken ya da "goster" kipinde
+ * yalnız `uygulanmadi_kapali` kaydı yazılır; aşama ve `ad_objects` değişmez. Uygulanınca aşama `kazanan`.
+ */
+export async function moveToScale(contentId: string, opts: MoveToScaleOptions): Promise<SetupResult> {
+  const profile = await requireRole("yonetici");
+  if (typeof contentId !== "string" || !UUID.test(contentId)) return { error: "Geçersiz içerik." };
+  const mode = opts?.mode;
+  if (mode !== "kur" && mode !== "goster") return { error: "Geçersiz kip." };
+  const source = opts.source ?? "kampanyalar";
+  if (!(SCALE_SOURCES as readonly string[]).includes(source)) return { error: "Geçersiz kaynak." };
+  const reason = typeof opts.reason === "string" ? opts.reason : undefined;
+  const recommendationId = opts.recommendationId;
+  if (recommendationId !== undefined && (typeof recommendationId !== "string" || !UUID.test(recommendationId))) {
+    return { error: "Geçersiz öneri." };
+  }
+
+  let cfg: MetaConfig | null;
+  try {
+    cfg = readMetaConfig(process.env);
+  } catch {
+    cfg = null;
+  }
+  if (!cfg) return { error: "Meta bağlı değil" };
+  const metaCfg = cfg;
+
+  const db = createAdminSupabase() as unknown as SupabaseClient;
+  const store = supabaseSetupStore(db);
+  const now = new Date();
+  const today = istanbulDateString(now);
+
+  let content: ContentForAd;
+  let setup: AdSetup;
+  let testAd: TestAdRow;
+  let template: AdTemplate;
+  let campaignStatus: string | null;
+  let adsetStatus: string | null;
+  try {
+    const found = await loadContentForAd(db, contentId);
+    if (!found) return { error: "İçerik bulunamadı." };
+    content = found;
+    const current = await store.setup();
+    if (!current) return { error: MSG_NO_SETUP };
+    setup = current;
+    const ads = await store.testAdForCode(content.code, setup.testAdsetId);
+    if (ads.length === 0) return { error: "Bu içeriğin Test'te reklamı yok." };
+    if (ads.length > 1) return { error: "Bu koda bağlı birden fazla Test reklamı var; Kampanyalar'dan seçin." };
+    testAd = ads[0];
+    [template, campaignStatus, adsetStatus] = await Promise.all([
+      store.template(),
+      store.objectStatus("campaign", setup.scaleCampaignId),
+      store.objectStatus("adset", setup.scaleAdsetId),
+    ]);
+    if (mode === "kur") {
+      const [settings, monthSpendTl] = await Promise.all([getAdSettings(db), store.monthMetaSpendTl(today)]);
+      const cap = monthlyCapCheck({
+        monthSpendTl,
+        testGunlukTl: template.testGunlukTl,
+        buyutmeGunlukTl: template.buyutmeGunlukTl,
+        metaTl: settings.monthlyBudget.metaTl,
+        today,
+      });
+      if (!cap.ok) return { error: cap.message };
+    }
+  } catch {
+    console.error("[ads] büyütmeye taşıma için okuma başarısız");
+    return { error: "İşlem yapılamadı, tekrar deneyin." };
+  }
+
+  const planned = planMoveToScale({
+    setup,
+    testAdId: testAd.adId,
+    adName: testAd.name,
+    activateCampaign: campaignStatus !== "ACTIVE",
+    activateAdset: adsetStatus !== "ACTIVE",
+  });
+  const runGate = async (): Promise<SetupResult> => {
+    try {
+      return await executeSetupChange(
+        {
+          store: supabaseAdChangeStore(db),
+          actorId: profile.id,
+          env: process.env,
+          gateStatus: async () => loadGateStatus(db, now, await getAdSettings(db)),
+          run: (steps) => runSetupSteps(metaCfg, steps, fetch),
+        },
+        {
+          action: "buyutmeye_tasi",
+          level: "ad",
+          objectId: testAd.adId,
+          objectName: testAd.name,
+          source,
+          mode,
+          ...(reason !== undefined ? { reason } : {}),
+          ...(recommendationId ? { recommendationId } : {}),
+          oldValue: { adId: testAd.adId, adsetId: setup.testAdsetId, status: testAd.status },
+          planned,
+          // contentCode: change-log latestByKey içerik koduyla eşler; kopyanın kimliği new_value.ids.copy'de.
+          logExtra: { contentCode: content.code },
+        },
+      );
+    } catch {
+      console.error("[ads] büyütmeye taşıma kapısı başarısız");
+      return { error: "İşlem yapılamadı, tekrar deneyin." };
+    }
+  };
+
+  if (mode === "goster") {
+    const shown = await runGate();
+    revalidateAdPaths();
+    return shown;
+  }
+
+  if (scaling.has(content.id)) return { error: MSG_ALREADY_SCALED };
+  scaling.add(content.id);
+  try {
+    try {
+      const since = new Date(now.getTime() - IN_FLIGHT_MS).toISOString();
+      if (await store.scaleInFlight(testAd.adId, content.code, setup.scaleAdsetId, since)) {
+        return { error: MSG_ALREADY_SCALED };
+      }
+    } catch {
+      console.error("[ads] büyütmeye taşıma için okuma başarısız");
+      return { error: "İşlem yapılamadı, tekrar deneyin." };
+    }
+
+    const result = await runGate();
+    if (!("ok" in result) || result.status !== "uygulandi") {
+      revalidateAdPaths();
+      return result;
+    }
+
+    const copyId = result.ids.copy;
+    const keys = new Set(planned.steps.map((s) => s.key));
+    try {
+      await insertCreatedAdObjects(db, scaledRows(copyId, testAd, content.code, setup, template, keys), profile.id);
+    } catch {
+      // Kayıt `uygulandi` olduğu için ikinci taşıma yine engellenir; sabah senkronu nesneleri Meta'dan yazar.
+      console.error("[ads] taşınan reklam ad_objects'e yazılamadı");
+    }
+
+    let message = `✓ ${content.code} Büyütme'ye taşındı · Test'teki reklam durdu`;
+    if (result.message.endsWith("kayıt güncellenemedi")) message += " · kayıt güncellenemedi";
+    if (content.stage !== "kazanan") {
+      // B3: aşama mevcut moveContentStage ile (kendi yönetici denetimi ve geçiş kuralıyla); hata kaydı bozmaz.
+      try {
+        const moved = await moveContentStage(content.id, "kazanan");
+        if ("error" in moved) message += ` · aşama değiştirilemedi: ${moved.error}`;
+      } catch {
+        message += " · aşama değiştirilemedi";
+      }
+    }
+
+    if (recommendationId) {
+      const recs = supabaseRecommendationStore(db);
+      try {
+        // Öneriden (approveRecommendation) gelindiyse öneri zaten ayrılmıştır (claim null); sonucu o yazar.
+        if (await recs.claim(recommendationId, profile.id)) await recs.finish(recommendationId, message);
+      } catch {
+        console.error("[ads] öneri sonucu yazılamadı");
+      }
+    }
+
+    revalidateAdPaths();
+    return { ...result, message };
+  } finally {
+    scaling.delete(content.id);
   }
 }

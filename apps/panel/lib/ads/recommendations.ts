@@ -76,6 +76,8 @@ export type RecommendationRow = {
   status: RecStatus;
   result: string | null;
   decidedAt: string | null;
+  /** Karar verenin profil kimliği (onaylayan ya da bekleten). */
+  decidedBy: string | null;
 };
 
 export const HOLD_RESULT = "Bekletiliyor · gelecek hafta tekrar sorulur";
@@ -301,6 +303,7 @@ type DbRec = {
   status: RecStatus;
   result: string | null;
   decided_at: string | null;
+  decided_by: string | null;
 };
 
 const keyOf = (ruleKey: string, objectKey: string) => `${ruleKey}|${objectKey}`;
@@ -361,7 +364,7 @@ export async function syncRecommendations(db: SupabaseClient, weekStart: string,
   }
 }
 
-const REC_COLUMNS = "id, week_start, rule_key, object_key, platform, title, why, action, blocked_reason, status, result, decided_at";
+const REC_COLUMNS = "id, week_start, rule_key, object_key, platform, title, why, action, blocked_reason, status, result, decided_at, decided_by";
 
 export function toRecommendationRow(r: DbRec): RecommendationRow {
   return {
@@ -377,6 +380,7 @@ export function toRecommendationRow(r: DbRec): RecommendationRow {
     status: r.status,
     result: r.result,
     decidedAt: r.decided_at,
+    decidedBy: r.decided_by ?? null,
   };
 }
 

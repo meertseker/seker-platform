@@ -2,7 +2,8 @@
 
 // Panelin önerdiği kararlar: Onayla / Şimdilik bekle. İkisi de kayda geçer (kim, ne zaman, sonuç).
 // Platform eylemi değişiklik kapısından (applyAdChange) geçer: kırmızı kapı ve büyütme sınırı orada denetlenir,
-// ad_change_log'a source="oneri" ile yazılır. Aşama eylemi moveContentStage ile.
+// ad_change_log'a source="oneri" ile yazılır. Aşama eylemi moveContentStage ile; Meta'da "büyüt" (→ kazanan)
+// platformda da uygulanır (moveToScale: kopya Büyütme'ye, Test'teki durur), "teste al" Z4 penceresinden onaylanır.
 // Yazımlar yalnız gizli anahtarlı istemcidedir ve her biri önce requireRole("yonetici") ile rolü doğrular.
 
 import { revalidatePath } from "next/cache";
@@ -10,6 +11,7 @@ import { createAdminSupabase } from "@seker/auth/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireRole } from "@/lib/auth";
 import { applyAdChange } from "@/actions/ad-changes";
+import { moveToScale } from "@/actions/ad-setup";
 import { moveContentStage } from "@/actions/content";
 import { getAdSettings } from "@/lib/ads/ad-settings";
 import {
@@ -30,6 +32,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DECIDED = "Bu öneri için karar zaten verildi.";
 const INVALID = "Bu öneri artık geçerli değil.";
 const PAST_WEEK = "Bu öneri geçmiş bir haftaya ait.";
+const USE_AD_TEST_PANEL = "Reklam testine al penceresinden onaylayın.";
 const PATH = "/reklam/hafta";
 
 type Decision = { ok: true; result: string } | { error: string; needsReason?: boolean };
@@ -52,6 +55,8 @@ export async function approveRecommendation(id: string, reason?: string): Promis
   const current = await store.get(id);
   if (!current) return { error: "Öneri bulunamadı." };
   if (current.weekStart !== lastCompletedWeekStart(new Date())) return { error: PAST_WEEK };
+  // M1: Meta "teste al" yalnız Z4 penceresinden (9 kontrol, plan, gerekçe); burada ayrılmaz.
+  if (current.ruleKey === "teste_al" && current.platform === "meta") return { error: USE_AD_TEST_PANEL };
 
   // Önce ayırma: uygulanan eylem ayrılan satırınkidir (okuma ile ayırma arasında tazelenen öneri eski eylemle uygulanmaz).
   const rec = await store.claim(id, profile.id);
@@ -64,8 +69,17 @@ export async function approveRecommendation(id: string, reason?: string): Promis
   let result: string;
   try {
     const action = rec.action;
+    const why = typeof reason === "string" && reason.trim() ? reason : undefined;
     if (!action) {
       result = NO_OBJECT_RESULT;
+    } else if (action.kind === "stage" && action.to === "kazanan" && rec.platform === "meta") {
+      // Büyütmeye taşı: aşama moveToScale içinde, yalnız platformda uygulanınca değişir.
+      const moved = await moveToScale(action.contentId, { mode: "kur", reason: why, source: "oneri", recommendationId: id });
+      if ("error" in moved) {
+        await store.release(id);
+        return moved.needsReason ? { error: moved.error, needsReason: true } : { error: moved.error };
+      }
+      result = moved.status === "uygulandi" ? moved.message : CLOSED_RESULT;
     } else if (action.kind === "stage") {
       const moved = await moveContentStage(action.contentId, action.to);
       if ("error" in moved) {
@@ -78,7 +92,7 @@ export async function approveRecommendation(id: string, reason?: string): Promis
         ...action,
         source: "oneri",
         recommendationId: id,
-        reason: typeof reason === "string" && reason.trim() ? reason : undefined,
+        reason: why,
       });
       if ("error" in applied) {
         await store.release(id);

@@ -7,6 +7,7 @@ const requireRole = vi.fn();
 const revalidatePath = vi.fn();
 const applyAdChange = vi.fn();
 const moveContentStage = vi.fn();
+const moveToScale = vi.fn();
 const store = {
   get: vi.fn(),
   claim: vi.fn(async (): Promise<RecommendationRow | null> => null),
@@ -20,12 +21,13 @@ vi.mock("@/lib/auth", () => ({ requireRole: (...a: unknown[]) => requireRole(...
 vi.mock("@seker/auth/admin", () => ({ createAdminSupabase: () => ({}) }));
 vi.mock("@/actions/ad-changes", () => ({ applyAdChange: (...a: unknown[]) => applyAdChange(...a) }));
 vi.mock("@/actions/content", () => ({ moveContentStage: (...a: unknown[]) => moveContentStage(...a) }));
+vi.mock("@/actions/ad-setup", () => ({ moveToScale: (...a: unknown[]) => moveToScale(...a) }));
 vi.mock("@/lib/ads/recommendations", async (orig) => {
   const actual = await orig<typeof import("@/lib/ads/recommendations")>();
   return { ...actual, supabaseRecommendationStore: () => store };
 });
 
-import { accusative, buildRecommendations, genitive } from "@/lib/ads/recommendations";
+import { accusative, buildRecommendations, genitive, readWeekRecommendations } from "@/lib/ads/recommendations";
 import { fatigueNumbers } from "@/lib/queries/recommendations";
 import { approveRecommendation, holdRecommendation } from "@/actions/recommendations";
 
@@ -331,6 +333,7 @@ function rec(over: Partial<RecommendationRow>): RecommendationRow {
     status: "acik",
     result: null,
     decidedAt: null,
+    decidedBy: null,
     ...over,
   };
 }
@@ -437,14 +440,70 @@ describe("approveRecommendation / holdRecommendation", () => {
     );
   });
 
-  it("aşama eylemi moveContentStage ile", async () => {
+  it("aşama eylemi moveContentStage ile (Google)", async () => {
     given(
-      rec({ ruleKey: "buyut", action: { kind: "stage", contentId: "11111111-1111-4111-8111-111111111111", to: "kazanan" } }),
+      rec({
+        ruleKey: "buyut",
+        platform: "google",
+        action: { kind: "stage", contentId: "11111111-1111-4111-8111-111111111111", to: "kazanan" },
+      }),
     );
     moveContentStage.mockResolvedValue({ ok: true });
     expect(await approveRecommendation(REC_ID)).toEqual({ ok: true, result: "✓ Uygulandı · kayda geçti" });
     expect(moveContentStage).toHaveBeenCalledWith("11111111-1111-4111-8111-111111111111", "kazanan");
     expect(applyAdChange).not.toHaveBeenCalled();
+  });
+
+  it("Meta büyüt önerisi: moveToScale (kur, oneri, öneri kimliği, gerekçe) ile uygulanır", async () => {
+    const contentId = "11111111-1111-4111-8111-111111111111";
+    given(rec({ ruleKey: "buyut", action: { kind: "stage", contentId, to: "kazanan" } }));
+    moveToScale.mockResolvedValue({ ok: true, status: "uygulandi", ids: { copy: "9100" }, message: "✓ R-2643-B Büyütme'ye taşındı · Test'teki reklam durdu" });
+    expect(await approveRecommendation(REC_ID, "Kazanan belli, taşıyalım")).toEqual({
+      ok: true,
+      result: "✓ R-2643-B Büyütme'ye taşındı · Test'teki reklam durdu",
+    });
+    expect(moveToScale).toHaveBeenCalledWith(contentId, {
+      mode: "kur",
+      reason: "Kazanan belli, taşıyalım",
+      source: "oneri",
+      recommendationId: REC_ID,
+    });
+    expect(moveContentStage).not.toHaveBeenCalled();
+    expect(applyAdChange).not.toHaveBeenCalled();
+    expect(store.finish).toHaveBeenCalledWith(REC_ID, "✓ R-2643-B Büyütme'ye taşındı · Test'teki reklam durdu");
+  });
+
+  it("Meta büyüt: canlı yazım kapalıyken sonuç kapalı metni; gerekçe istenirse öneri yeniden açılır", async () => {
+    const contentId = "11111111-1111-4111-8111-111111111111";
+    given(rec({ ruleKey: "buyut", action: { kind: "stage", contentId, to: "kazanan" } }));
+    moveToScale.mockResolvedValue({ ok: true, status: "uygulanmadi_kapali", summary: [], message: "x" });
+    expect(await approveRecommendation(REC_ID)).toEqual({ ok: true, result: "Kaydedildi · uygulanmadı: canlı yazım kapalı" });
+    expect(moveToScale).toHaveBeenLastCalledWith(contentId, expect.objectContaining({ reason: undefined }));
+
+    moveToScale.mockResolvedValue({ error: "Bir kapı kırmızı (Randevu verilen). ...", needsReason: true });
+    expect(await approveRecommendation(REC_ID)).toEqual({ error: "Bir kapı kırmızı (Randevu verilen). ...", needsReason: true });
+    expect(store.release).toHaveBeenCalledWith(REC_ID);
+
+    store.release.mockClear();
+    moveToScale.mockResolvedValue({ error: "Bu içeriğin Test'te reklamı yok." });
+    expect(await approveRecommendation(REC_ID)).toEqual({ error: "Bu içeriğin Test'te reklamı yok." });
+    expect(store.release).toHaveBeenCalledWith(REC_ID);
+  });
+
+  it("Meta teste_al önerisi panelden onaylanmaz: Z4'e yönlendirir, öneri ayrılmaz", async () => {
+    given(rec({ ruleKey: "teste_al", action: { kind: "stage", contentId: "11111111-1111-4111-8111-111111111111", to: "test" } }));
+    expect(await approveRecommendation(REC_ID)).toEqual({ error: "Reklam testine al penceresinden onaylayın." });
+    expect(store.claim).not.toHaveBeenCalled();
+    expect(moveContentStage).not.toHaveBeenCalled();
+    expect(moveToScale).not.toHaveBeenCalled();
+  });
+
+  it("Meta sonucsuz önerisi yalnız aşama (arşiv)", async () => {
+    given(rec({ ruleKey: "sonucsuz", action: { kind: "stage", contentId: "11111111-1111-4111-8111-111111111111", to: "arsiv" } }));
+    moveContentStage.mockResolvedValue({ ok: true });
+    expect(await approveRecommendation(REC_ID)).toEqual({ ok: true, result: "✓ Uygulandı · kayda geçti" });
+    expect(moveContentStage).toHaveBeenCalledWith("11111111-1111-4111-8111-111111111111", "arsiv");
+    expect(moveToScale).not.toHaveBeenCalled();
   });
 
   it("aşama geçişi başarısızsa öneri yeniden açılır", async () => {
@@ -491,5 +550,43 @@ describe("approveRecommendation / holdRecommendation", () => {
     expect(store.hold).toHaveBeenCalledWith(REC_ID, "yon-1", "Bekletiliyor · gelecek hafta tekrar sorulur", expect.any(String));
     store.hold.mockResolvedValue(false);
     expect(await holdRecommendation(REC_ID)).toEqual({ error: "Bu öneri için karar zaten verildi." });
+  });
+});
+
+describe("readWeekRecommendations", () => {
+  it("karar verenin kimliğini (decidedBy) taşır", async () => {
+    const select = vi.fn();
+    const chain = {
+      select: (cols: string) => {
+        select(cols);
+        return chain;
+      },
+      eq: () => chain,
+      neq: () => chain,
+      order: async () => ({
+        data: [
+          {
+            id: REC_ID,
+            week_start: "2026-10-12",
+            rule_key: "buyut",
+            object_key: "R-2643-B",
+            platform: "meta",
+            title: "t",
+            why: "w",
+            action: null,
+            blocked_reason: null,
+            status: "onaylandi",
+            result: "✓",
+            decided_at: "2026-10-20T09:00:00Z",
+            decided_by: "yon-1",
+          },
+        ],
+        error: null,
+      }),
+    };
+    const db = { from: () => chain } as unknown as Parameters<typeof readWeekRecommendations>[0];
+    const rows = await readWeekRecommendations(db, "2026-10-12");
+    expect(select.mock.calls[0][0]).toContain("decided_by");
+    expect(rows[0]).toMatchObject({ decidedBy: "yon-1", decidedAt: "2026-10-20T09:00:00Z" });
   });
 });

@@ -103,6 +103,7 @@ function makeStore() {
     weekLaunches: vi.fn(async () => 0),
     launchInFlight: vi.fn(async () => false),
     campaignSetupInFlight: vi.fn(async () => false),
+    scaleInFlight: vi.fn(async () => false),
     testAdForCode: vi.fn(async (): Promise<TestAd[]> => []),
     activeAdsInAdset: vi.fn(async () => 2),
   };

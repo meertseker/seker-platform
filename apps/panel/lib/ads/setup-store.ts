@@ -31,6 +31,11 @@ export type SetupStore = {
    * beri platform yanıtı bekleyen kayıt. "Sadece göster" kayıtları (`uygulanmadi_kapali`) sayılmaz.
    */
   campaignSetupInFlight(sinceIso: string): Promise<boolean>;
+  /**
+   * Bu Test reklamı Büyütme'ye taşınmış ya da taşınıyor mu: uygulanmış `buyutmeye_tasi` kaydı, `sinceIso`'dan
+   * (son 10 dk) beri platform yanıtı bekleyen kayıt ya da Büyütme setinde aynı içerik kodlu reklam.
+   */
+  scaleInFlight(testAdId: string, code: string, scaleAdsetId: string, sinceIso: string): Promise<boolean>;
   testAdForCode(code: string, testAdsetId: string): Promise<TestAdRow[]>;
   /** Reklam setinde `status = ACTIVE` reklam sayısı (Z4 "<n> reklam çalışıyor"). Okuma hatasında atar. */
   activeAdsInAdset(adsetId: string): Promise<number>;
@@ -173,6 +178,29 @@ export function supabaseSetupStore(db: SupabaseClient): SetupStore {
         .limit(50);
       must(error);
       return appliedOrPending((data ?? []) as LogStatusRow[], sinceIso);
+    },
+
+    async scaleInFlight(testAdId, code, scaleAdsetId, sinceIso) {
+      const { data, error } = await db
+        .from("ad_change_log")
+        .select("status, error, created_at")
+        .eq("action", "buyutmeye_tasi")
+        .eq("object_id", testAdId)
+        .in("status", ["uygulandi", "hata"])
+        .order("created_at", { ascending: false })
+        .limit(50);
+      must(error);
+      if (appliedOrPending((data ?? []) as LogStatusRow[], sinceIso)) return true;
+      const ads = await db
+        .from("ad_objects")
+        .select("object_id")
+        .eq("platform", "meta")
+        .eq("level", "ad")
+        .eq("content_code", code)
+        .eq("parent_id", scaleAdsetId)
+        .limit(1);
+      must(ads.error);
+      return (ads.data ?? []).length > 0;
     },
 
     async testAdForCode(code, testAdsetId) {
