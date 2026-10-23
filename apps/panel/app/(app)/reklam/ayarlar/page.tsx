@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AdSettingsForm } from "@/components/ad-settings-form";
 import { ConnectionsCard } from "@/components/ads/ConnectionsCard";
 import { loadConnections } from "@/lib/ads/connections-cache";
+import { AdTemplateSection } from "@/components/ads/AdTemplateSection";
 import { requireRole } from "@/lib/auth";
 import { getAdSettings } from "@/lib/ads/ad-settings";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -21,6 +22,7 @@ export default async function ReklamAyarlarPage() {
         <p className="mt-1 text-sm text-muted-foreground">Reklam kararlarında kullanılan hedef, kapı eşikleri, bütçe ve içerik kontrolleri.</p>
       </header>
       <ConnectionsCard snapshot={await loadConnections()} />
+      <AdTemplateSection />
       <AdSettingsForm settings={settings} />
     </div>
   );
