@@ -6,3 +6,6 @@
 
 # Pencere Ayarlar'daki mesaiyi kapsamalı; mesai dışı çalışmaları route kendisi atlar.
 */5 7-19 * * 1-6 . /app/env.sh; curl -fsS -m 60 -H "Authorization: Bearer $CRON_SECRET" http://panel:3000/api/cron/leads > /dev/null 2>> /proc/1/fd/1
+
+# Instagram yayın kuyruğu (Reklam Konsolu B); IG_PUBLISH_ENABLED boşken route yalnız "kapalı" kaydeder.
+*/5 7-22 * * * . /app/env.sh; curl -fsS -m 240 -H "Authorization: Bearer $CRON_SECRET" http://panel:3000/api/cron/content > /dev/null 2>> /proc/1/fd/1
