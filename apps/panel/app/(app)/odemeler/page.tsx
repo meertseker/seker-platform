@@ -1,3 +1,4 @@
+import { AutoFilterForm } from "@/components/auto-filter-form";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { AlertTriangle, Banknote, Clock, Download, PiggyBank } from "lucide-react";
@@ -321,7 +322,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         />
       </section>
 
-      <form
+      <AutoFilterForm
         action="/odemeler"
         className="grid gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:grid-cols-[1fr_12rem_auto] sm:items-end"
       >
@@ -356,7 +357,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         </button>
         {filter !== "tumu" ? <input type="hidden" name="filtre" value={filter} /> : null}
         {includePast ? <input type="hidden" name="gecmis" value="1" /> : null}
-      </form>
+      </AutoFilterForm>
 
       <div className="flex flex-wrap items-center gap-2">
         {(Object.keys(FILTERS) as FilterKey[]).map((key) => {

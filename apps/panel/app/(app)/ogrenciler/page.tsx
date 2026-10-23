@@ -1,3 +1,4 @@
+import { AutoFilterForm } from "@/components/auto-filter-form";
 import Link from "next/link";
 import {
   label,
@@ -113,7 +114,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         </p>
       </div>
 
-      <form
+      <AutoFilterForm
         action="/ogrenciler"
         className="grid gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:grid-cols-[1fr_14rem_auto] sm:items-end"
       >
@@ -146,7 +147,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         >
           Filtrele
         </button>
-      </form>
+      </AutoFilterForm>
 
       {error ? (
         <p className="rounded-2xl bg-destructive-soft px-4 py-3 text-sm font-medium text-red-700">
