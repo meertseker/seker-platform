@@ -65,6 +65,9 @@ let fetchSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // Salı: Pazartesi kitle güncellemesi (K23) bu dosyanın beklediği yanıta girmesin; o adım ads-cron-audience.test.ts'te.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-27T06:00:00+03:00"));
   inserts.length = 0;
   yoneticiler = [{ id: "y1" }];
   fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("gerçek ağ çağrısı yasak"));
@@ -83,6 +86,7 @@ afterEach(() => {
   expect(fetchSpy).not.toHaveBeenCalled();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("GET /api/cron/ads · Meta", () => {
