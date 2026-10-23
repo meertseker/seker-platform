@@ -91,6 +91,12 @@ describe("nextStep", () => {
     expect(nextStep(row({ igPublishStatus: "isleniyor", igContainerId: "1", updatedAt: ago(30_000) }), NOW)).toEqual({ kind: "wait" }));
   it("3 dk önce → poll", () =>
     expect(nextStep(row({ igPublishStatus: "isleniyor", igContainerId: "1", updatedAt: ago(180_000) }), NOW)).toEqual({ kind: "poll" }));
+  it("gece açılan konteyner sabah zaman aşımına düşmez (süre 07:00'den sayılır)", () => {
+    const morning = new Date("2026-10-25T07:00:00+03:00");
+    const r = row({ igPublishStatus: "isleniyor", igContainerId: "1", updatedAt: "2026-10-24T22:52:00+03:00" });
+    expect(nextStep(r, morning)).toEqual({ kind: "poll" });
+    expect(nextStep(r, new Date("2026-10-25T08:01:00+03:00")).kind).toBe("fail");
+  });
   it("yayinda → wait", () => expect(nextStep(row({ igPublishStatus: "yayinda" }), NOW)).toEqual({ kind: "wait" }));
 });
 
