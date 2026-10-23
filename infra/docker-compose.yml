@@ -37,6 +37,7 @@ services:
       S3_BUCKET: ${S3_BUCKET}
       S3_REGION: ${S3_REGION}
       AWS_REGION: ${S3_REGION}
+      WEB_REVALIDATE_SECRET: ${WEB_REVALIDATE_SECRET:-}
     volumes:
       - web_cache:/app/apps/web/.next/cache
     mem_limit: 600m
@@ -73,6 +74,7 @@ services:
       SITE_PUBLIC_URL: ${SITE_PUBLIC_URL:-}
       ADS_WRITE_ENABLED: ${ADS_WRITE_ENABLED:-}
       CONTENT_VIDEO_MAX_MB: ${CONTENT_VIDEO_MAX_MB:-}
+      WEB_REVALIDATE_SECRET: ${WEB_REVALIDATE_SECRET:-}
     mem_limit: 700m
 
   # WhatsApp HTTP API: okulun numarası "bağlı cihaz" olarak buradan bağlanır.
