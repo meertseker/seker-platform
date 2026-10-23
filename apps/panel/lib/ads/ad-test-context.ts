@@ -254,7 +254,8 @@ export async function buildAdTestContext(
       gateRed: gate.labels,
       writeEnabled: adsWriteEnabled(env),
       existing: first ? { adId: first.adId, review: reviewLabel(first.effectiveStatus, first.reviewFeedback) } : null,
-      reactivateWarning: setup ? reactivateWarning(activateCampaign, activateAdset) : null,
+      // Sette başka reklam yoksa (ilk kurulum) yeniden açılacak bir şey yok; uyarı gösterilmez.
+      reactivateWarning: setup && activeAds > 0 ? reactivateWarning(activateCampaign, activateAdset) : null,
     };
 
     const source = adSourceFor(content, landing);

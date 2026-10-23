@@ -233,10 +233,8 @@ describe("buildAdTestContext", () => {
       "activateAdset",
       "activateAd",
     ]);
-    // Z4 (M3): duraklatılmış Test kampanyası/seti yeniden açılacaksa düğmeden önce uyarı.
-    expect(r.view.reactivateWarning).toBe(
-      "Test kampanyası ve reklam seti duraklatılmış; kurulunca yeniden açılır ve içindeki diğer reklamlar da yayına girer.",
-    );
+    // Sette başka reklam yok (ilk kurulum): yeniden açılacak bir şey yok, uyarı yok.
+    expect(r.view.reactivateWarning).toBeNull();
     expect(store.activeAdsInAdset).toHaveBeenCalledWith("200");
     expect(store.objectStatus).toHaveBeenCalledWith("campaign", "100");
     expect(store.objectStatus).toHaveBeenCalledWith("adset", "200");
@@ -249,7 +247,18 @@ describe("buildAdTestContext", () => {
     // İkisi de ACTIVE: uyarı yok.
     expect(r2.view.reactivateWarning).toBeNull();
 
+    // Z4 (M3): sette başka reklam varken duraklatılmış kampanya/set yeniden açılacaksa düğmeden önce uyarı.
+    const store4 = makeStore();
+    store4.objectStatus.mockResolvedValue("PAUSED");
+    store4.activeAdsInAdset.mockResolvedValue(2);
+    const r4 = await buildAdTestContext(deps({ store: store4 }), "c1", { skip72hReason: null });
+    if ("error" in r4) throw new Error(r4.error);
+    expect(r4.view.reactivateWarning).toBe(
+      "Test kampanyası ve reklam seti duraklatılmış; kurulunca yeniden açılır ve içindeki diğer reklamlar da yayına girer.",
+    );
+
     const store3 = makeStore();
+    store3.activeAdsInAdset.mockResolvedValue(1);
     store3.objectStatus.mockImplementation(async (level?: string) => (level === "adset" ? "PAUSED" : "ACTIVE"));
     const r3 = await buildAdTestContext(deps({ store: store3 }), "c1", { skip72hReason: null });
     if ("error" in r3) throw new Error(r3.error);
