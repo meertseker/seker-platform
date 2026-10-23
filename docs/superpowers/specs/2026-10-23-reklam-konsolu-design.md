@@ -345,6 +345,29 @@ Birleştirme sırası **A → B → C**; ikinci ve üçüncü dal rebase eder. P
   birleştirilir; randevu `appointments` üzerinden, kayıt `leads.status='kazanildi'`. C'ye bağımlı değil.
   §9'daki "`ad_objects.content_code` yoksa eklenir" 0018'de zaten var; 0026 bu maddeyi atlar.
 
+Plan yazımı sonrası ek kararlar (23.10 gece; planlar bunlara göre yazıldı):
+- **B12. Optimizasyon hedefi** `OFFSITE_CONVERSIONS` (piksel `LEAD` olayı, `destination_type=WEBSITE`);
+  B4'teki `optimization_goal=LEAD` bu şekilde okunur (`meta-apply.mjs` ile aynı).
+- **B13. Bağlantı etiketleri.** `utm_source`, `utm_medium`, `utm_content=<kod>` doğrudan bağlantıya
+  yazılır; `url_tags` yalnız `utm_campaign={{campaign.id}}` taşır (Kampanyalar kimlikle eşler). Meta
+  Reels kreatifinde `url_tags`'ı yok sayarsa kod yine gelir.
+- **B14. Reels reklamının bağlantısı.** Aynı haftanın `S-<yyww>-I` sayfası yayındaysa o; değilse
+  `/lp/az-mevcutlu-anaokulu`. Z4 bağlantıyı gösterir; başka yayındaki sayfa seçimi sabah sorusu.
+- **B15. Şablon değişikliği kaydı.** 0026 `action` listesine `sablon` eklenir (`source='ayarlar'`,
+  `old_value/new_value` şablonun eski/yeni hali). M2 kayıt defteri yalnız `ad_change_log` okur; sayfa
+  yayını (A) bu turda kayda girmez, Instagram yayını (B) girer.
+- **B16. Kitle.** 25–45 yaşı tutmak için `targeting_automation.advantage_audience=0`; yerleşim yalnız
+  Instagram. Meta'nın geniş kitle önerisi sabah sorusuna yazılır; Ayarlar'da açılabilir yapılmaz (bu tur).
+- **B17. Z6 tek kampanya satırı.** B'nin `ConnectionsCard`'ı `extraRows` alır ve **kampanya satırı
+  çizmez**; C "Test ve Büyütme kampanyaları" satırını `extraRows` ile ekler.
+- **B18. Görsel adresi.** A, `apps/panel/lib/pages/media.ts` içinde `mediaUrlFor(mediaKey): string`
+  (mutlak adres, `SITE_PUBLIC_URL` tabanlı) dışa açar; C sayfa reklamı görselini buradan alır. A'nın
+  planı başka ad kullandıysa spec'teki ad geçerlidir.
+- **B19. Haftalık sınır.** Haftada en çok 4 yeni reklam (`reklam_kur`, `uygulandi`) sert reddedilir;
+  "sadece göster" sayılmaz. Eşik `reklam_sablonu.haftalikYeniReklam` (varsayılan 4).
+- **B20. Eski "Teste al" düğmesi.** İçerik kartındaki aşama-taşıyan eski düğme C birleşene kadar kalır;
+  C birleşince kaldırılması koordinatörün birleştirme notuna yazılır (tek satır).
+
 ## 14. Builder'a bırakılanlar
 
 - Web'de dinamik LP için `dynamicParams`, önbellek etiketi ve yeniden doğrulama ucunun şekli.
