@@ -345,6 +345,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"landing_pages": {
+                  Row: {
+                    "archived_at": string | null,"content_id": string,"created_at": string,"fields": NonNullable<Json>,"id": string,"preview_token": string,"published_at": string | null,"published_by": string | null,"slug": string | null,"status": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "archived_at"?: string | null,"content_id": string,"created_at"?: string,"fields"?: NonNullable<Json>,"id"?: string,"preview_token": string,"published_at"?: string | null,"published_by"?: string | null,"slug"?: string | null,"status"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "archived_at"?: string | null,"content_id"?: string,"created_at"?: string,"fields"?: NonNullable<Json>,"id"?: string,"preview_token"?: string,"published_at"?: string | null,"published_by"?: string | null,"slug"?: string | null,"status"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "landing_pages_content_id_fkey"
+      columns: ["content_id"]
+isOneToOne: true
+      referencedRelation: "content_items"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "landing_pages_published_by_fkey"
+      columns: ["published_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"lead_notes": {
                   Row: {
                     "author_id": string,"body": string,"created_at": string,"id": string,"lead_id": string
@@ -807,6 +833,11 @@ isOneToOne: false
                            },
 "can_edit_site":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"content_owner_summary":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "appointments": number,"approved_by_name": string,"code": string,"content_id": string,"enrolled": number,"last_sync_at": string,"leads": number
+            }[]
                            },
 "create_web_lead":
 { Args: { "p_consent_at": string,"p_gclid": string,"p_landing_path": string,"p_meta"?: Json,"p_parent_name": string,"p_phone": string,"p_utm": Json }; Returns: Json
