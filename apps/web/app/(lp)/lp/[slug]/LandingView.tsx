@@ -42,10 +42,13 @@ export default function LandingView({
   slug,
   data,
   year,
+  formDisabled = false,
 }: {
   slug: string;
   data: ReaderData;
   year?: number;
+  /** Gizli önizleme (/lp/onizleme/<token>): form kapalı, gönderilmez; üstünde açıklama notu. */
+  formDisabled?: boolean;
 }) {
   const c = makeReader(data);
   const k = (field: string) => `lp.${slug}.${field}`;
@@ -133,10 +136,21 @@ export default function LandingView({
             id="form"
             className="mt-8 scroll-mt-3 border-t border-rule bg-paper-warm px-5 pt-8 pb-10 sm:px-6 lg:sticky lg:top-6 lg:mt-0 lg:rounded-[28px] lg:border lg:bg-white lg:p-8 lg:shadow-[0_18px_50px_-24px_rgb(46_16_101/0.35)]"
           >
+            {formDisabled && (
+              <p role="note" className="mb-4 rounded-xl border-2 border-dashed border-rule bg-white px-4 py-3 text-sm font-semibold text-ink">
+                Önizleme · bu form gönderilmez
+              </p>
+            )}
             <Editable c={c} k={k('formHeading')} as="h2" className="text-[1.625rem] text-ink lg:text-[1.5rem]" />
             <Editable c={c} k={k('formIntro')} as="p" className="mt-1.5 text-[15px] text-ink-soft" />
             <div className="mt-6">
-              <LeadForm data={pickData(data, ['form.'])} qualify currentYear={year} />
+              {formDisabled ? (
+                <fieldset disabled>
+                  <LeadForm data={pickData(data, ['form.'])} qualify currentYear={year} />
+                </fieldset>
+              ) : (
+                <LeadForm data={pickData(data, ['form.'])} qualify currentYear={year} />
+              )}
             </div>
           </div>
         </div>
