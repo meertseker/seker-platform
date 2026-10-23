@@ -3,13 +3,15 @@
 // Yalnız gizli anahtarlı istemciyle ve requireRole("yonetici") sonrası kullanılır.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAllPages } from "@/lib/content/board";
-import { AD_SETUP_KEY, getAdSetup, type AdSetup } from "./ad-setup";
-import { AD_TEMPLATE_KEY, getAdTemplate, type AdTemplate, type AdTemplateInput } from "./ad-template";
+import { AD_SETUP_KEY, parseAdSetup, type AdSetup } from "./ad-setup";
+import { AD_TEMPLATE_KEY, parseAdTemplate, type AdTemplate, type AdTemplateInput } from "./ad-template";
 import { SETUP_PENDING_ERROR } from "./setup-gate";
 
 export type SetupStore = {
+  /** Okuma hatasında atar (varsayılana düşmez). */
   template(): Promise<AdTemplate>;
   saveTemplate(v: AdTemplateInput, actorId: string, at: string): Promise<void>;
+  /** Kurulum yoksa null; okuma hatasında atar ("kurulu değil" sanılıp ikinci kurulum açılmasın). */
   setup(): Promise<AdSetup | null>;
   saveSetup(s: AdSetup): Promise<void>;
   /** Ay başından bugüne (bugün dahil, İstanbul tarihi) Meta harcaması, TL (kuruşa yuvarlı). */
@@ -24,18 +26,40 @@ export type SetupStore = {
    * beri platform yanıtı bekleyen kayıt ya da Test setinde aynı içerik kodlu reklam.
    */
   launchInFlight(contentId: string, sinceIso: string): Promise<boolean>;
+  /**
+   * Kampanya kurulumu yapılmış ya da sürüyor mu: uygulanmış `kampanya_kur` kaydı ya da `sinceIso`'dan (son 10 dk)
+   * beri platform yanıtı bekleyen kayıt. "Sadece göster" kayıtları (`uygulanmadi_kapali`) sayılmaz.
+   */
+  campaignSetupInFlight(sinceIso: string): Promise<boolean>;
   testAdForCode(code: string, testAdsetId: string): Promise<{ adId: string; name: string; status: string | null }[]>;
 };
 
 const MICROS_PER_TL = 1_000_000;
+
+type LogStatusRow = { status: string; error: string | null; created_at: string };
+
+/** Uygulanmış kayıt ya da `sinceIso`'dan beri platform yanıtı bekleyen kayıt. */
+function appliedOrPending(rows: LogStatusRow[], sinceIso: string): boolean {
+  const since = Date.parse(sinceIso);
+  return rows.some(
+    (r) => r.status === "uygulandi" || (r.status === "hata" && r.error === SETUP_PENDING_ERROR && Date.parse(r.created_at) >= since),
+  );
+}
 
 function must(error: { message?: string } | null): void {
   if (error) throw new Error("db");
 }
 
 export function supabaseSetupStore(db: SupabaseClient): SetupStore {
+  const readSetting = async (key: string): Promise<unknown> => {
+    const { data, error } = await db.from("app_settings").select("value").eq("key", key).maybeSingle();
+    must(error);
+    return (data as { value?: unknown } | null)?.value;
+  };
+  const setup = async () => parseAdSetup(await readSetting(AD_SETUP_KEY));
+
   return {
-    template: () => getAdTemplate(db),
+    template: async () => parseAdTemplate(await readSetting(AD_TEMPLATE_KEY)),
 
     async saveTemplate(v, actorId, at) {
       const value: AdTemplate = { ...v, updatedBy: actorId, updatedAt: at };
@@ -43,7 +67,7 @@ export function supabaseSetupStore(db: SupabaseClient): SetupStore {
       must(error);
     },
 
-    setup: () => getAdSetup(db),
+    setup,
 
     async saveSetup(s) {
       const { error } = await db.from("app_settings").upsert({ key: AD_SETUP_KEY, value: s }, { onConflict: "key" });
@@ -108,31 +132,37 @@ export function supabaseSetupStore(db: SupabaseClient): SetupStore {
         .order("created_at", { ascending: false })
         .limit(50);
       must(error);
-      const since = Date.parse(sinceIso);
-      const logged = ((data ?? []) as { status: string; error: string | null; created_at: string }[]).some(
-        (r) =>
-          r.status === "uygulandi" ||
-          (r.status === "hata" && r.error === SETUP_PENDING_ERROR && Date.parse(r.created_at) >= since),
-      );
-      if (logged) return true;
+      if (appliedOrPending((data ?? []) as LogStatusRow[], sinceIso)) return true;
 
       // Panel dışında (ya da kaydı kaybolmuş) kurulmuş reklam: Test setinde aynı içerik kodu.
       const content = await db.from("content_items").select("code").eq("id", contentId).maybeSingle();
       must(content.error);
       const code = (content.data as { code: string | null } | null)?.code;
       if (!code) return false;
-      const setup = await getAdSetup(db);
-      if (!setup) return false;
+      const current = await setup();
+      if (!current) return false;
       const ads = await db
         .from("ad_objects")
         .select("object_id")
         .eq("platform", "meta")
         .eq("level", "ad")
         .eq("content_code", code)
-        .eq("parent_id", setup.testAdsetId)
+        .eq("parent_id", current.testAdsetId)
         .limit(1);
       must(ads.error);
       return (ads.data ?? []).length > 0;
+    },
+
+    async campaignSetupInFlight(sinceIso) {
+      const { data, error } = await db
+        .from("ad_change_log")
+        .select("status, error, created_at")
+        .eq("action", "kampanya_kur")
+        .in("status", ["uygulandi", "hata"])
+        .order("created_at", { ascending: false })
+        .limit(50);
+      must(error);
+      return appliedOrPending((data ?? []) as LogStatusRow[], sinceIso);
     },
 
     async testAdForCode(code, testAdsetId) {

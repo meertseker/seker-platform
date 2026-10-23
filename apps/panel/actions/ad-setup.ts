@@ -23,6 +23,8 @@ import { istanbulDateString } from "@/lib/lead-flow/business-hours";
 const SETTINGS_PATH = "/reklam/ayarlar";
 const MSG_LOG_FAILED = "Kayıt yazılamadı; değişiklik yapılmadı.";
 const MICROS_PER_TL = 1_000_000;
+const IN_FLIGHT_MS = 10 * 60 * 1000;
+const MSG_IN_FLIGHT = "Kurulum sürüyor ya da daha önce yapıldı; Reklam Yöneticisi'ni kontrol edin.";
 
 function templateValue(t: AdTemplate): AdTemplateInput {
   return {
@@ -162,6 +164,9 @@ export async function setupMetaCampaigns(opts: { mode: "kur" | "goster" }): Prom
     const gaps = templateGaps(template);
     if (gaps.length > 0) return { error: `Reklam şablonu eksik: ${gaps.join(", ")}` };
     if (mode === "kur") {
+      // Çift tıklama / iki yönetici / önceki kurulumun kimlikleri kaydedilemediyse: ikinci ücretli kurulum açılmasın.
+      const since = new Date(now.getTime() - IN_FLIGHT_MS).toISOString();
+      if (await store.campaignSetupInFlight(since)) return { error: MSG_IN_FLIGHT };
       const [settings, monthSpendTl] = await Promise.all([getAdSettings(db), store.monthMetaSpendTl(today)]);
       const cap = monthlyCapCheck({
         monthSpendTl,

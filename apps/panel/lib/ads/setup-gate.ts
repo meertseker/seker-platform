@@ -65,7 +65,6 @@ const MSG_LOG_FAILED = "Kayıt yazılamadı; değişiklik yapılmadı.";
 const MSG_GATE_FAILED = "Bu haftanın kapıları hesaplanamadı; şimdilik kurulamaz.";
 /** Platforma gitmeden yazılan kaydın bekleme metni; yanıt gelmezse kayıt bu metinle `hata` kalır. */
 export const SETUP_PENDING_ERROR = "Platform yanıtı bekleniyor";
-const PENDING = SETUP_PENDING_ERROR;
 
 const DONE_TEXT: Record<SetupAction, string> = {
   kampanya_kur: "Kampanyalar kuruldu",
@@ -190,7 +189,7 @@ export async function executeSetupChange(deps: SetupDeps, input: SetupChangeInpu
     recommendationId: input.recommendationId ?? null,
     // Uygulanacaksa kayıt platforma gitmeden yazılır; yanıt gelmezse "hata" olarak kalır.
     status: live ? "hata" : "uygulanmadi_kapali",
-    error: live ? PENDING : null,
+    error: live ? SETUP_PENDING_ERROR : null,
     actorId: deps.actorId,
   };
 

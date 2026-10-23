@@ -47,6 +47,7 @@ const setupStore = {
   activeStudentNames: vi.fn(async () => []),
   weekLaunches: vi.fn(async () => 0),
   launchInFlight: vi.fn(async () => false),
+  campaignSetupInFlight: vi.fn(async () => false),
   testAdForCode: vi.fn(async () => []),
 };
 
@@ -111,6 +112,7 @@ beforeEach(() => {
   setupStore.template.mockResolvedValue(FILLED);
   setupStore.setup.mockResolvedValue(null);
   setupStore.monthMetaSpendTl.mockResolvedValue(0);
+  setupStore.campaignSetupInFlight.mockResolvedValue(false);
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -315,6 +317,35 @@ describe("setupMetaCampaigns", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/reklam/ayarlar");
   });
 
+  it("kurulum okunamazsa (geçici hata) kurulmaz: istek ve kayıt yok", async () => {
+    vi.stubEnv("ADS_WRITE_ENABLED", "true");
+    setupStore.setup.mockRejectedValueOnce(new Error("db"));
+    expect(await setupMetaCampaigns({ mode: "kur" })).toEqual({ error: "İşlem yapılamadı, tekrar deneyin." });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(changeStore.insertLog).not.toHaveBeenCalled();
+    expect(setupStore.saveSetup).not.toHaveBeenCalled();
+  });
+
+  it("kurulum sürüyor ya da daha önce uygulandıysa 'kur' reddedilir (son 10 dk penceresiyle sorulur)", async () => {
+    vi.stubEnv("ADS_WRITE_ENABLED", "true");
+    setupStore.campaignSetupInFlight.mockResolvedValue(true);
+    expect(await setupMetaCampaigns({ mode: "kur" })).toEqual({
+      error: "Kurulum sürüyor ya da daha önce yapıldı; Reklam Yöneticisi'ni kontrol edin.",
+    });
+    expect(setupStore.campaignSetupInFlight).toHaveBeenCalledWith("2026-10-20T08:50:00.000Z");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(changeStore.insertLog).not.toHaveBeenCalled();
+  });
+
+  it("'goster' kipi kurulum-sürüyor denetimine takılmaz", async () => {
+    vi.stubEnv("ADS_WRITE_ENABLED", "true");
+    setupStore.campaignSetupInFlight.mockResolvedValue(true);
+    const res = await setupMetaCampaigns({ mode: "goster" });
+    expect(res).toMatchObject({ ok: true, status: "uygulanmadi_kapali" });
+    expect(setupStore.campaignSetupInFlight).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("yarıda patlarsa reklam_kurulum yazılmaz", async () => {
     vi.stubEnv("ADS_WRITE_ENABLED", "true");
     fetchSpy
@@ -414,6 +445,36 @@ describe("supabaseSetupStore", () => {
     const obj = calls.find((c) => c.table === "ad_objects");
     expect(obj?.ops).toContainEqual(["eq", ["content_code", "R-2643-A"]]);
     expect(obj?.ops).toContainEqual(["eq", ["parent_id", "2"]]);
+  });
+
+  it("campaignSetupInFlight: uygulanmış ya da son 10 dk bekleyen kampanya_kur varsa true; eski bekleyen ve 'goster' kaydı engellemez", async () => {
+    const store = await real();
+    const since = "2026-10-20T08:50:00.000Z";
+    const check = async (rows: unknown[]) => {
+      const { db, calls } = recordingDb({ ad_change_log: { data: rows, error: null } });
+      const res = await store(db as never).campaignSetupInFlight(since);
+      expect(calls[0].ops).toContainEqual(["eq", ["action", "kampanya_kur"]]);
+      return res;
+    };
+    expect(await check([{ status: "uygulandi", error: null, created_at: "2026-10-01T00:00:00Z" }])).toBe(true);
+    expect(await check([{ status: "hata", error: "Platform yanıtı bekleniyor", created_at: "2026-10-20T08:55:00Z" }])).toBe(true);
+    expect(await check([{ status: "hata", error: "Platform yanıtı bekleniyor", created_at: "2026-10-20T08:00:00Z" }])).toBe(false);
+    expect(await check([{ status: "uygulanmadi_kapali", error: null, created_at: "2026-10-20T08:55:00Z" }])).toBe(false);
+    expect(await check([{ status: "hata", error: "Invalid parameter", created_at: "2026-10-20T08:55:00Z" }])).toBe(false);
+  });
+
+  it("setup() ve template() okuma hatasında atar (varsayılana düşmez)", async () => {
+    const store = await real();
+    const { db } = recordingDb({ app_settings: { data: null, error: { message: "timeout" } } });
+    await expect(store(db as never).setup()).rejects.toThrow();
+    await expect(store(db as never).template()).rejects.toThrow();
+  });
+
+  it("setup() satır yoksa null, dolu kurulumu okur", async () => {
+    const store = await real();
+    expect(await store(recordingDb({ app_settings: { data: { value: {} }, error: null } }).db as never).setup()).toBeNull();
+    const full = { testCampaignId: "1", testAdsetId: "2", scaleCampaignId: "3", scaleAdsetId: "4" };
+    expect(await store(recordingDb({ app_settings: { data: { value: full }, error: null } }).db as never).setup()).toMatchObject(full);
   });
 
   it("activeStudentNames aktif öğrencilerin tam adlarını döner", async () => {
