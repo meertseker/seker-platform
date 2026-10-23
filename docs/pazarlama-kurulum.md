@@ -181,6 +181,22 @@ Sırayla, atlamadan:
 
 Çocuğa ait hiçbir veri (ad, yaş, doğum tarihi, semt, not) Meta'ya gitmez; yalnız SHA-256'lı telefon ve lead kimliği, çerez onayı varsa `fbc`/`fbp` ve (yalnız `Lead`'de) tarayıcı bilgisi.
 
+### Instagram'a yayın (Paket B)
+Panel onaylanan Reels'i Instagram'a kendisi gönderir (Content Publishing API: konteyner → durum → yayın). Kapalı gelir; aşağıdakiler tamamlanmadan açma.
+
+| Değişken | Ne işe yarar | Boşsa |
+|---|---|---|
+| `META_INSTAGRAM_USER_ID` | Instagram işletme hesabı kimliği (zaten organik sayılar için var) | Bağlantı kartı gri "Kurulmadı", yayın yok |
+| `META_FACEBOOK_PAGE_ID` | Instagram'ın bağlı olduğu Facebook sayfası. Meta Business Suite → Ayarlar → Sayfa → Sayfa kimliği | Bağlantı kartı gri, "Facebook sayfası bağlı değil" |
+| `IG_PUBLISH_ENABLED` | İçerik yayını ana anahtarı; yalnız `true` ise Instagram'a gider | "Instagram'da yayınla" yalnız kayda yazar (`ad_change_log`, `uygulanmadi_kapali`), Instagram'a hiçbir istek gitmez |
+
+- **Hesap şartları:** Instagram hesabı profesyonel (işletme) olmalı ve bir Facebook sayfasına bağlı olmalı. Sistem kullanıcısı anahtarında `instagram_basic`, `instagram_content_publish`, `pages_read_engagement` (sayfada İşletme rolüyle `ads_management` ya da `ads_read`) izinleri.
+- **Açma:** Paket B canlıya alındıktan sonra Ayarlar → Bağlantılar'da "Instagram hesabı" ve "Facebook sayfası" satırları yeşilken `IG_PUBLISH_ENABLED=true`, `docker compose up -d panel`. Kapalıyken basılan "Yayınla"lar sonradan **kendiliğinden yayınlanmaz**; Zehra yeniden basar.
+- **Cron:** `*/5 7-22 * * *` → `/api/cron/content` (koordinatör crontab'a ekler). Zamanlanmış yayınlar ve Instagram'ın işlemeyi bitirmediği videolar bu koşuda tamamlanır. Gece (23:00–07:00) koşu yok; o saate planlanan yayın sabah 07:00'den sonraki ilk koşuda çıkar.
+- **Günlük yayın hakkı** API'den okunur (`content_publishing_limit`); Meta sayfaları 25, 50 ve 100 diye farklı sayılar veriyor, panel hesabın gerçek sayısını gösterir.
+- **Bağlantı kartları** sabah 06:00 cron'unda ve Ayarlar açılınca (15 dakika önbellekli) yenilenir. Kartlar yalnız okur; hiçbir şey yazmaz.
+- **İlk gerçek yayında doğrulanacaklar:** (1) Meta imzalı Supabase video adresini indirebiliyor mu (hata 2207052 "videoyu indiremedi" gelirse bu varsayım yanlıştır; Mert'e yaz). (2) Konteyner hata durumundaki `status` metninin biçimi (panel içindeki rakamı alt kod olarak okur).
+
 ### Masaüstü betikleri
 `C:\Users\meert\Desktop\seker-reklam-araclar\` içinde (repo dışı, anahtar dosyası `seker-meta-ads-anahtarlar.txt`):
 - `meta-read.mjs`: yalnız okur (hesap, kampanyalar, reklam setleri, reklamlar, son 7 gün özeti).

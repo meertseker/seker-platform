@@ -68,6 +68,16 @@ Menüde "Reklam" grubu var: "Bu hafta", "Görev ver", "İçerik panosu", "Kampan
 - Google'da bir bütçe birden fazla kampanya arasında paylaşılıyorsa değişiklik hepsini etkiler; pencere bunu da yazar.
 - Panelden hiçbir zaman yeni kampanya, reklam seti ya da reklam oluşturulmaz. Bunu Mert yapar.
 
+## Reels'i Instagram'da yayınlama
+
+- İçerik panosunda Kontrol kartında videoyu izleyin, "Instagram'da böyle görünecek" önizlemesine ve "Otomatik kontroller"e bakın. MEB kutusunu işaretleyip "Onayla ve yayına hazırla"ya basın; "Instagram'da yayınla" penceresi kendiliğinden açılır.
+- Açıklamayı pencerede son kez düzeltebilirsiniz. Yasaklı ifade ya da sınır aşımı varsa düğme kapanır ve sebep yazar.
+- "Şimdi" ya da "Saat seç". 23:00–07:00 arası seçilen saat ertesi sabah 07:00'den sonra yayınlanır; pencere bunu söyler.
+- Yayın olunca kart "Yayında · 72 saat başladı" yazar, bağlantı ve saat görünür, öğretmene bildirim gider. 72 saat sayacı gerçek yayın saatinden başlar.
+- Olmazsa kart "Yayınlanamadı: sebep" yazar ve "Tekrar dene" çıkar. Size de bildirim gelir.
+- "İçerik yayını kapalı" yazıyorsa Instagram'a gönderim henüz açılmadı (Mert açar). Bastığınız yayın kayda geçer, Instagram'a gitmez; açılınca kendiliğinden yayınlanmaz, yeniden basarsınız.
+- Yedek yol: Instagram uygulamasında elle paylaşıp gönderi bağlantısını karttaki "Instagram gönderi bağlantısı" alanına yapıştırın. Planlanmış bir yayından vazgeçmek için kartı "Arşive al"ın.
+
 ## "Canlı yazım kapalı" ne demek
 
 - Panel şimdilik Google ve Instagram'a değişiklik göndermez. Yaptığınız işlem kaydedilir ama platforma gitmez.
