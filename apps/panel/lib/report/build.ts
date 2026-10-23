@@ -1,6 +1,8 @@
 // Rapor ekranının bütün hesabı (saf): yükleyicinin ham satırlarından bölümleri kurar. Saat okumaz; `now` dışarıdan gelir.
 // Tanımlar docs/superpowers/specs/2026-10-20-rapor-paneli-design.md'de.
+import { actionText, statusText, type ChangeLogEntry } from "@/lib/ads/change-log";
 import { buildMarketingReport, type ReportLead, type ReportSpend } from "@/lib/ads/report";
+import type { AdChangeStatus, AdLogAction, AdLogSource } from "@/lib/ads/writes";
 import {
   CONVERSION_UPLOAD_STATUSES,
   ITEM_TYPES,
@@ -110,6 +112,20 @@ export type RawContent = {
 export type RawWa = { status: string; created_at: string };
 export type RawUpload = { platform: string; status: string; conversion_at: string };
 export type RawVisit = VisitRow & { day: string };
+/** ad_change_log satırı (yalnız yönetici okur, RLS). */
+export type RawAdChange = {
+  created_at: string;
+  action: AdLogAction;
+  level: string;
+  object_id: string;
+  object_name: string | null;
+  old_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
+  reason: string | null;
+  status: AdChangeStatus;
+  source: AdLogSource;
+  actor_id: string;
+};
 
 export type ManagerInput = {
   /** Para toplamlarının sezonu (aktif sezon). null: süzgeç yok, bütün sezonlar sayılır. */
@@ -126,6 +142,8 @@ export type ManagerInput = {
   wa: RawWa[];
   uploads: RawUpload[];
   pendingOffers: number;
+  /** Dönemin reklam kayıt defteri (ad_change_log). */
+  adChanges: RawAdChange[];
 };
 
 export type ReportInput = {
@@ -361,6 +379,7 @@ export type SiteSection = {
   conversion: number | null;
   tables: ReportTable[];
 };
+export type AdLogSection = { total: number; tables: ReportTable[] };
 export type AutomationSection = { waSent: number; waFailed: number; uploadsSent: number; uploadsFailed: number; uploadsPending: number; tables: ReportTable[] };
 
 export type Report = {
@@ -374,6 +393,7 @@ export type Report = {
   offers: OffersSection | null;
   students: StudentsSection;
   content: ContentSection | null;
+  adLog: AdLogSection | null;
   site: SiteSection | null;
   automation: AutomationSection | null;
 };
@@ -387,6 +407,7 @@ export const SECTION_IDS = [
   "teklifler",
   "ogrenciler",
   "icerik",
+  "reklam-kaydi",
   "site",
   "otomasyon",
 ] as const;
@@ -401,6 +422,7 @@ export const SECTION_TITLES: Record<SectionId, string> = {
   teklifler: "Teklifler",
   ogrenciler: "Öğrenciler ve tahsilat",
   icerik: "İçerik",
+  "reklam-kaydi": "Reklam kayıt defteri",
   site: "Site trafiği",
   otomasyon: "Otomasyonlar",
 };
@@ -416,6 +438,7 @@ export function sectionTables(report: Report): { id: SectionId; title: string; t
     teklifler: report.offers?.tables ?? null,
     ogrenciler: report.students.tables,
     icerik: report.content?.tables ?? null,
+    "reklam-kaydi": report.adLog?.tables ?? null,
     site: report.site?.tables ?? null,
     otomasyon: report.automation?.tables ?? null,
   };
@@ -1281,6 +1304,92 @@ function buildContent(input: ReportInput, items: RawContent[]): ContentSection {
   };
 }
 
+// ---- Reklam kayıt defteri (yönetici) ----
+
+const AD_LOG_SOURCES: Record<AdLogSource, string> = {
+  kampanyalar: "Kampanyalar",
+  oneri: "Panel önerisi",
+  icerik: "İçerik panosu",
+  ayarlar: "Ayarlar",
+  cron: "Otomatik",
+};
+
+const adLogWhen = new Intl.DateTimeFormat("tr-TR", {
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: "Europe/Istanbul",
+});
+
+/** "10 Kas 08:14" (İstanbul). */
+function adLogTime(iso: string): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  const parts = adLogWhen.formatToParts(at);
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("day")} ${get("month").replace(/\.$/, "")} ${get("hour")}:${get("minute")}`;
+}
+
+function textOf(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
+function buildAdLog(input: ReportInput, changes: RawAdChange[]): AdLogSection {
+  const names = new Map(input.profiles.map((p) => [p.id, p.full_name]));
+  const list = changes
+    .filter((c) => isoInRange(c.created_at, input.period))
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+  const rows: Row[] = list.map((c) => {
+    const entry: ChangeLogEntry = {
+      id: "",
+      createdAt: c.created_at,
+      platform: "",
+      level: c.level,
+      objectId: c.object_id,
+      objectName: c.object_name,
+      action: c.action,
+      oldValue: c.old_value,
+      newValue: c.new_value,
+      reason: c.reason,
+      status: c.status,
+      source: c.source,
+      recommendationId: null,
+      actorId: c.actor_id,
+    };
+    return {
+      tarih: adLogTime(c.created_at),
+      eylem: actionText(entry),
+      nesne: textOf(c.object_name) ?? textOf(c.new_value?.contentCode) ?? c.object_id,
+      kim: names.get(c.actor_id) ?? (c.source === "cron" ? "Sistem" : "Bilinmiyor"),
+      gerekce: textOf(c.reason) ?? "",
+      kaynak: AD_LOG_SOURCES[c.source] ?? c.source,
+      durum: statusText(c.status),
+    };
+  });
+  return {
+    total: rows.length,
+    tables: [
+      {
+        id: "reklam-kaydi",
+        title: `Reklam kayıt defteri · ${input.period.label} · ${formatInt(rows.length)} kayıt`,
+        columns: [
+          col("tarih", "Tarih", "text"),
+          col("eylem", "Eylem", "text"),
+          col("nesne", "Nesne", "text"),
+          col("kim", "Kim", "text"),
+          col("gerekce", "Gerekçe", "text"),
+          col("kaynak", "Kaynak", "text"),
+          col("durum", "Durum", "text"),
+        ],
+        rows,
+        emptyText: "Bu dönemde reklam değişikliği yok.",
+      },
+    ],
+  };
+}
+
 // ---- Site trafiği (yönetici) ----
 
 function buildSite(input: ReportInput, visits: RawVisit[], facts: LeadFacts[]): SiteSection {
@@ -1395,6 +1504,7 @@ export function buildReport(input: ReportInput): Report {
     offers: m ? buildOffers(input, m.pendingOffers) : null,
     students: buildStudents(input),
     content: m ? buildContent(input, m.content) : null,
+    adLog: m ? buildAdLog(input, m.adChanges) : null,
     site: m ? buildSite(input, m.visits, facts) : null,
     automation: m ? buildAutomation(input, m.wa, m.uploads) : null,
   };

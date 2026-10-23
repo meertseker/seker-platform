@@ -73,6 +73,60 @@ const manager: ManagerInput = {
   ],
   uploads: [{ platform: "google", status: "gonderildi", conversion_at: T("2026-10-07T10:00:00") }],
   pendingOffers: 2,
+  adChanges: [
+    {
+      created_at: T("2026-10-10T08:14:00"),
+      action: "pause",
+      level: "ad",
+      object_id: "ad-1",
+      object_name: "S-2644-I",
+      old_value: { status: "ACTIVE" },
+      new_value: { status: "PAUSED" },
+      reason: "3 kat harcadı, nitelikli yok",
+      status: "uygulandi",
+      source: "oneri",
+      actor_id: Z,
+    },
+    {
+      created_at: T("2026-10-12T09:40:00"),
+      action: "reklam_kur",
+      level: "ad",
+      object_id: "content-1",
+      object_name: null,
+      old_value: null,
+      new_value: { contentCode: "R-2645-B" },
+      reason: null,
+      status: "uygulanmadi_kapali",
+      source: "icerik",
+      actor_id: M,
+    },
+    {
+      created_at: T("2026-10-03T03:00:00"),
+      action: "kitle_guncelle",
+      level: "audience",
+      object_id: "kitle",
+      object_name: null,
+      old_value: null,
+      new_value: { count: 120 },
+      reason: null,
+      status: "hata",
+      source: "cron",
+      actor_id: "00000000-0000-0000-0000-0000000000ff",
+    },
+    {
+      created_at: T("2026-09-28T10:00:00"),
+      action: "budget",
+      level: "campaign",
+      object_id: "camp-1",
+      object_name: "Büyütme · Instagram",
+      old_value: { daily_budget_tl: 400 },
+      new_value: { daily_budget_tl: 480 },
+      reason: null,
+      status: "uygulandi",
+      source: "kampanyalar",
+      actor_id: M,
+    },
+  ],
 };
 
 function input(viewer: ReportInput["viewer"] = { id: M, role: "yonetici" }): ReportInput {
@@ -347,9 +401,56 @@ describe("rapor (yönetici)", () => {
       "teklifler",
       "ogrenciler",
       "icerik",
+      "reklam-kaydi",
       "site",
       "otomasyon",
     ]);
+  });
+
+  it("reklam kayıt defteri: dönemin kayıtları, yeniden eskiye, metinler", () => {
+    const log = report.adLog!;
+    expect(log.total).toBe(3);
+    const t = log.tables[0];
+    expect(t.id).toBe("reklam-kaydi");
+    expect(t.title).toBe(`Reklam kayıt defteri · ${report.period.label} · 3 kayıt`);
+    expect(t.columns.map((c) => c.label)).toEqual(["Tarih", "Eylem", "Nesne", "Kim", "Gerekçe", "Kaynak", "Durum"]);
+    expect(t.emptyText).toBe("Bu dönemde reklam değişikliği yok.");
+    expect(t.rows).toEqual([
+      {
+        tarih: "12 Eki 09:40",
+        eylem: "R-2645-B reklamı kuruldu · Test · Instagram",
+        nesne: "R-2645-B",
+        kim: "Mehtap",
+        gerekce: "",
+        kaynak: "İçerik panosu",
+        durum: "Kaydedildi · uygulanmadı",
+      },
+      {
+        tarih: "10 Eki 08:14",
+        eylem: "S-2644-I durduruldu",
+        nesne: "S-2644-I",
+        kim: "Zehra",
+        gerekce: "3 kat harcadı, nitelikli yok",
+        kaynak: "Panel önerisi",
+        durum: "✓ Uygulandı",
+      },
+      {
+        tarih: "3 Eki 03:00",
+        eylem: "Mevcut veli kitlesi güncellendi (120 telefon)",
+        nesne: "kitle",
+        kim: "Sistem",
+        gerekce: "",
+        kaynak: "Otomatik",
+        durum: "Hata",
+      },
+    ]);
+  });
+
+  it("reklam kayıt defteri: dönemde kayıt yoksa boş tablo", () => {
+    const empty = buildReport({ ...input(), manager: { ...manager, adChanges: [] } });
+    expect(empty.adLog?.total).toBe(0);
+    expect(empty.adLog?.tables[0].rows).toEqual([]);
+    expect(empty.adLog?.tables[0].title).toContain("0 kayıt");
   });
 });
 
@@ -362,6 +463,7 @@ describe("rapor (danışman)", () => {
     expect(report.content).toBeNull();
     expect(report.site).toBeNull();
     expect(report.automation).toBeNull();
+    expect(report.adLog).toBeNull();
     expect(report.students.money).toBeNull();
     expect(report.summary.kpis.map((k) => k.key)).toEqual(["aday", "randevu", "ziyaret", "kayit", "ogrenci"]);
     expect(report.sources.tables.map((t) => t.id)).toEqual(["kaynaklar", "kelimeler"]);

@@ -18,7 +18,11 @@ const table: ReportTable = {
 };
 
 function emptyReport(role: "yonetici" | "danisman"): Report {
-  return buildReport({
+  return buildReport(inputFor(role));
+}
+
+function inputFor(role: "yonetici" | "danisman"): Parameters<typeof buildReport>[0] {
+  return {
     now: new Date("2026-10-20T09:00:00Z"),
     period: resolvePeriod({}, "2026-10-20"),
     hours: DEFAULT_BUSINESS_HOURS,
@@ -46,9 +50,10 @@ function emptyReport(role: "yonetici" | "danisman"): Report {
             wa: [],
             uploads: [],
             pendingOffers: 0,
+            adChanges: [],
           }
         : null,
-  });
+  };
 }
 
 describe("CSV", () => {
@@ -87,6 +92,7 @@ describe("Excel", () => {
       "Teklifler",
       "Öğrenciler ve tahsilat",
       "İçerik",
+      "Reklam kayıt defteri",
       "Site trafiği",
       "Otomasyonlar",
     ]);
@@ -104,13 +110,56 @@ describe("Excel", () => {
     expect(sheet.B8).toMatchObject({ t: "n", v: 1234.56 });
     expect(sheet.B8.z).toContain("₺");
     expect(sheet.C8).toMatchObject({ t: "n", v: 0.4256, z: "0.0%" });
-    expect(sheet.A8).toMatchObject({ t: "s", v: '=HYPERLINK("x")' });
+    // Metin hücresi CSV'deki gibi safeText'ten geçer.
+    expect(sheet.A8).toMatchObject({ t: "s", v: `'=HYPERLINK("x")` });
+  });
+
+  it("reklam kayıt defteri sayfası: başlık satırı, kolonlar, formül gibi gerekçe etkisiz", () => {
+    const report = buildReport({
+      ...inputFor("yonetici"),
+      manager: {
+        ...inputFor("yonetici").manager!,
+        adChanges: [
+          {
+            created_at: "2026-10-10T05:14:00Z",
+            action: "pause",
+            level: "ad",
+            object_id: "ad-1",
+            object_name: "S-2644-I",
+            old_value: null,
+            new_value: null,
+            reason: "=HYPERLINK(\"x\")",
+            status: "uygulandi",
+            source: "kampanyalar",
+            actor_id: "u",
+          },
+        ],
+      },
+    });
+    const file = reportFile(report, "reklam-kaydi", "xlsx", "2026-10-20");
+    const book = XLSX.read(file!.body);
+    expect(book.SheetNames).toEqual(["Reklam kayıt defteri"]);
+    const sheet = book.Sheets["Reklam kayıt defteri"];
+    expect(sheet.A1.v).toBe("Şeker Anaokulu raporu · Reklam kayıt defteri");
+    expect(sheet.A6.v).toBe(`Reklam kayıt defteri · ${report.period.label} · 1 kayıt`);
+    expect([sheet.A7.v, sheet.B7.v, sheet.C7.v, sheet.D7.v, sheet.E7.v, sheet.F7.v, sheet.G7.v]).toEqual([
+      "Tarih",
+      "Eylem",
+      "Nesne",
+      "Kim",
+      "Gerekçe",
+      "Kaynak",
+      "Durum",
+    ]);
+    expect(sheet.A8.v).toBe("10 Eki 08:14");
+    expect(sheet.E8).toMatchObject({ t: "s", v: "'=HYPERLINK(\"x\")" });
   });
 
   it("danışman yönetici bölümünü indiremez; tüm rapor yalnız görebildiği bölümler", () => {
     const report = emptyReport("danisman");
     expect(reportFile(report, "teklifler", "xlsx", "2026-10-20")).toBeNull();
     expect(reportFile(report, "site", "csv", "2026-10-20")).toBeNull();
+    expect(reportFile(report, "reklam-kaydi", "xlsx", "2026-10-20")).toBeNull();
     const book = XLSX.read(reportFile(report, "tum", "xlsx", "2026-10-20")!.body);
     expect(book.SheetNames).toEqual(["Özet", "Aday hunisi", "Kaynaklar ve reklam", "Ön büro", "Kayıp nedenleri", "Öğrenciler ve tahsilat"]);
     const summary = XLSX.utils.sheet_to_csv(book.Sheets["Özet"]);

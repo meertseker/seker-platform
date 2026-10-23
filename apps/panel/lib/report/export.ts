@@ -62,7 +62,7 @@ type XCell = string | number | { t: "n"; v: number; z: string } | null;
 
 function xlsxCell(value: Cell | undefined, kind: Column["kind"]): XCell {
   if (value == null) return null;
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return safeText(value);
   const z = FORMATS[kind];
   const v = numberFor(value, kind, "xlsx");
   return z ? { t: "n", v, z } : v;

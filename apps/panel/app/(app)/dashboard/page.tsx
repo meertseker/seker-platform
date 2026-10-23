@@ -3,6 +3,7 @@ import { Download } from "lucide-react";
 import { PeriodPicker } from "@/components/report/period-picker";
 import { downloadHref } from "@/components/report/report-ui";
 import {
+  AdLogView,
   AutomationView,
   ContentView,
   FrontOfficeView,
@@ -101,6 +102,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
           {report.offers ? <OffersView o={report.offers} query={query} /> : null}
           <StudentsView s={report.students} query={query} />
           {report.content ? <ContentView c={report.content} query={query} /> : null}
+          {report.adLog ? <AdLogView a={report.adLog} query={query} /> : null}
           {report.site ? <SiteView s={report.site} query={query} /> : null}
           {report.automation ? <AutomationView a={report.automation} query={query} /> : null}
         </>

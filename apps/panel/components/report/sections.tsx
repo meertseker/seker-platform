@@ -1,5 +1,6 @@
 // Rapor bölümleri. Her bölüm aynı ReportTable'ları gösterir; grafikler tablodaki sayıların görsel özetidir.
 import type {
+  AdLogSection,
   AutomationSection,
   ContentSection,
   FrontOfficeSection,
@@ -470,6 +471,25 @@ export function ContentView({ c, query }: { c: ContentSection; query: string }) 
       <Card>
         <CardTitle>Öğretmen başına</CardTitle>
         <DataTable table={c.tables[0]} />
+      </Card>
+    </Section>
+  );
+}
+
+// ---- Reklam kayıt defteri ----
+
+export function AdLogView({ a, query }: { a: AdLogSection; query: string }) {
+  return (
+    <Section
+      id="reklam-kaydi"
+      title="Reklam kayıt defteri"
+      question="Reklamda kim, ne zaman, neyi değiştirdi?"
+      query={query}
+      links={[{ href: "/reklam/kampanyalar", label: "Kampanyalar" }]}
+    >
+      <Card>
+        <CardTitle hint="Panelden yapılan reklam değişiklikleri; en yeni en üstte.">{`Kim ne yaptı · ${formatInt(a.total)} kayıt`}</CardTitle>
+        <DataTable table={a.tables[0]} />
       </Card>
     </Section>
   );

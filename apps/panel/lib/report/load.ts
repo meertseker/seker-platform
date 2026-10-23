@@ -1,5 +1,5 @@
 // Rapor verisini oturum (RLS) istemcisiyle okur. Bütün sorgular paralel; satırlar sayfa sayfa (PostgREST max_rows),
-// `.in()` listeleri 100'lük parçalarla. Yönetici olmayanda para, reklam, site, içerik ve otomasyon tabloları hiç sorgulanmaz.
+// `.in()` listeleri 100'lük parçalarla. Yönetici olmayanda para, reklam (kayıt defteri dahil), site, içerik ve otomasyon tabloları hiç sorgulanmaz.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readAdsConfig } from "@/lib/ads/config";
 import { readMetaConfig } from "@/lib/ads/meta/config";
@@ -10,6 +10,7 @@ import type { Role } from "@/lib/role-access";
 import {
   buildReport,
   type ManagerInput,
+  type RawAdChange,
   type RawAppt,
   type RawCapacity,
   type RawContent,
@@ -53,7 +54,8 @@ async function loadManager(db: SupabaseClient, sinceDay: string, period: Period)
   type PlanRef = { item_type: string; season: string | null };
   type InstallmentRow = Omit<RawInstallment, "item_type" | "season"> & { plan: PlanRef | PlanRef[] | null };
   type OverdueRow = RawOverdue;
-  const [season, installments, overdue, refunds, spend, campaigns, visits, content, wa, uploads, pending] = await Promise.all([
+  const periodBounds = isoBounds(period);
+  const [season, installments, overdue, refunds, spend, campaigns, visits, content, wa, uploads, pending, adChanges] = await Promise.all([
     fetchActiveSeason(db),
     all<InstallmentRow>((f, t) =>
       db
@@ -106,6 +108,16 @@ async function loadManager(db: SupabaseClient, sinceDay: string, period: Period)
       db.from("conversion_uploads").select("platform, status, conversion_at").gte("conversion_at", prevStart).order("id").range(f, t),
     ),
     db.from("offers").select("id", { count: "exact", head: true }).eq("status", "onay_bekliyor"),
+    all<RawAdChange>((f, t) =>
+      db
+        .from("ad_change_log")
+        .select("created_at, action, level, object_id, object_name, old_value, new_value, reason, status, source, actor_id")
+        .gte("created_at", periodBounds.start)
+        .lt("created_at", periodBounds.end)
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(f, t),
+    ),
   ]);
 
   const activeStatuses = new Set(["ENABLED", "ACTIVE"]);
@@ -133,6 +145,7 @@ async function loadManager(db: SupabaseClient, sinceDay: string, period: Period)
     wa,
     uploads,
     pendingOffers: pending.count ?? 0,
+    adChanges,
   };
 }
 
