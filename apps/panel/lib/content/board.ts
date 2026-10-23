@@ -6,6 +6,9 @@ import type { AdRules } from "./settings";
 import { STAGES, type StageKey } from "./stages";
 import { PAGE_FIELDS } from "./store";
 import { istanbulDateString } from "@/lib/lead-flow/business-hours";
+import { parseReelMediaMeta, type ReelMediaMeta } from "./media-meta";
+import { toIgPublishStatus, type IgPublishStatus } from "./publish-queue";
+import type { CheckLine } from "./reel-review";
 
 export type BoardItem = {
   id: string;
@@ -32,6 +35,16 @@ export type BoardItem = {
   igPermalink: string | null;
   /** Instagram'daki gerçek paylaşım zamanı; bilinmiyorsa 72 saat sayılmaz. */
   igPublishedAt: string | null;
+  // Reklam Konsolu Paket B (Instagram'a yayın)
+  approvedAt: string | null;
+  approverFaceCheck: boolean | null;
+  /** K17 biçim bilgisi; eski yüklemede null. */
+  reelMeta: ReelMediaMeta | null;
+  igPublishStatus: IgPublishStatus;
+  igPublishError: string | null;
+  igPublishScheduledAt: string | null;
+  /** Z1 otomatik kontroller; sayfa doldurur, loadBoardItems null bırakır. */
+  reelChecks: CheckLine[] | null;
 };
 
 export type ContentPerf = {
@@ -384,7 +397,8 @@ export function groupByStage(items: BoardItem[]): BoardColumn[] {
 
 const ITEM_COLUMNS =
   "id, code, kind, platform, topic, audience, brief, owner_id, due_at, status, stage, stage_changed_at, submitted_at, " +
-  "caption, page_fields, media_path, face_answer, review_note, learned_note, ig_permalink, ig_published_at";
+  "caption, page_fields, media_path, face_answer, review_note, learned_note, ig_permalink, ig_published_at, " +
+  "approved_at, approver_face_check, media_meta, ig_publish_status, ig_publish_error, ig_publish_scheduled_at";
 const ARCHIVE_LIMIT = 30;
 
 type ItemRow = {
@@ -394,6 +408,8 @@ type ItemRow = {
   page_fields: Record<string, unknown> | null; media_path: string | null; face_answer: boolean | null;
   review_note: string | null; learned_note: string | null; ig_permalink: string | null;
   ig_published_at: string | null;
+  approved_at: string | null; approver_face_check: boolean | null; media_meta: unknown;
+  ig_publish_status: string | null; ig_publish_error: string | null; ig_publish_scheduled_at: string | null;
 };
 
 const STAGE_KEYS = new Set<string>(STAGES.map((s) => s.key));
@@ -429,6 +445,9 @@ export async function loadBoardItems(supabase: SupabaseClient): Promise<BoardIte
       dueAt: r.due_at, status: r.status, stage: r.stage as StageKey, stageChangedAt: r.stage_changed_at,
       submittedAt: r.submitted_at, caption: r.caption, pageFields: fields, mediaPath: r.media_path,
       faceAnswer: r.face_answer, reviewNote: r.review_note, learnedNote: r.learned_note, igPermalink: r.ig_permalink, igPublishedAt: r.ig_published_at,
+      approvedAt: r.approved_at ?? null, approverFaceCheck: r.approver_face_check ?? null,
+      reelMeta: parseReelMediaMeta(r.media_meta), igPublishStatus: toIgPublishStatus(r.ig_publish_status),
+      igPublishError: r.ig_publish_error ?? null, igPublishScheduledAt: r.ig_publish_scheduled_at ?? null, reelChecks: null,
     };
   });
 }

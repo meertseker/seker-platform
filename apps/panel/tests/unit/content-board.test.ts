@@ -44,6 +44,13 @@ function item(over: Partial<BoardItem>): BoardItem {
     learnedNote: null,
     igPermalink: null,
     igPublishedAt: null,
+    approvedAt: null,
+    approverFaceCheck: null,
+    reelMeta: null,
+    igPublishStatus: "yok",
+    igPublishError: null,
+    igPublishScheduledAt: null,
+    reelChecks: null,
     ...over,
   };
 }
@@ -276,5 +283,33 @@ describe("canConfirmFace", () => {
   });
   it("video yüklenince kutu açılır", () => {
     expect(canConfirmFace("https://x/v.mp4", "hazir")).toBe(true);
+  });
+});
+
+describe("loadBoardItems Instagram yayın alanları", () => {
+  it("yeni alanları taşır; varsayılan yok, K17 nesneye çevrilir", async () => {
+    const { loadBoardItems } = await import("@/lib/content/board");
+    const k17 = { durationS: 34, width: 1080, height: 1920, vertical: true, coverOffsetMs: 1000, subtitled: true };
+    const base = {
+      id: "c1", code: "R-2644-A", kind: "reels", platform: "instagram", topic: "t", audience: null, brief: null, owner_id: "o1",
+      due_at: null, status: "onaylandi", stage: "organik", stage_changed_at: "2026-10-24T06:00:00Z", submitted_at: null,
+      caption: null, page_fields: null, media_path: null, face_answer: false, review_note: null, learned_note: null,
+      ig_permalink: null, ig_published_at: null, approved_at: "2026-10-24T06:00:00Z", approver_face_check: true,
+    };
+    const rows = [
+      { ...base, media_meta: { name: "v.mp4", size: 1, ...k17 }, ig_publish_status: "kuyruk", ig_publish_error: "x", ig_publish_scheduled_at: "2026-10-24T20:00:00Z" },
+      { ...base, id: "c2", code: "R-2644-B", media_meta: { name: "eski.mp4", size: 1 }, ig_publish_status: null, ig_publish_error: null, ig_publish_scheduled_at: null },
+    ];
+    const q: Record<string, unknown> = {};
+    q.select = () => q;
+    q.order = () => q;
+    q.in = () => Promise.resolve({ data: [], error: null });
+    q.limit = () => Promise.resolve({ data: rows, error: null });
+    const items = await loadBoardItems({ from: () => q } as never);
+    expect(items[0]).toMatchObject({
+      approvedAt: "2026-10-24T06:00:00Z", approverFaceCheck: true, reelMeta: k17, igPublishStatus: "kuyruk",
+      igPublishError: "x", igPublishScheduledAt: "2026-10-24T20:00:00Z", reelChecks: null,
+    });
+    expect(items[1]).toMatchObject({ reelMeta: null, igPublishStatus: "yok" });
   });
 });

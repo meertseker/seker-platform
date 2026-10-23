@@ -11,6 +11,9 @@ import {
 } from "@/actions/content";
 import { PagePublishPanel } from "@/components/page-publish-panel";
 import { useToast } from "@/components/toast";
+import { openReelPublish, ReelPublishPanel } from "@/components/reel-publish-panel";
+import { InstagramPreview, ReelAutoChecks } from "@/components/reel-review-extras";
+import type { ReelPanelContext } from "@/lib/content/reel-review";
 import {
   adviceFor,
   canConfirmFace,
@@ -55,6 +58,8 @@ interface Props {
   headingRef?: RefObject<HTMLHeadingElement | null>;
   /** Organik Instagram sayıları (Task 7); verilmezse bölüm gösterilmez. */
   organic?: ReactNode;
+  /** Instagram'a yayın bağlamı (Reklam Konsolu Paket B); null ise yayın paneli yok. */
+  reel?: ReelPanelContext | null;
 }
 
 const nf = new Intl.NumberFormat("tr-TR");
@@ -130,7 +135,7 @@ function remindLink(item: BoardItem, now: Date): string | null {
   return waMeUrl(item.ownerPhone, message);
 }
 
-export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef, organic }: Props) {
+export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef, organic, reel = null }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -201,7 +206,7 @@ export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef
         </div>
 
         {item.stage === "kontrol" ? (
-          <ReviewBlock item={item} videoUrl={videoUrl} faceChecked={faceChecked} onFaceChecked={setFaceChecked} />
+          <ReviewBlock item={item} videoUrl={videoUrl} faceChecked={faceChecked} onFaceChecked={setFaceChecked} reel={reel} />
         ) : null}
         {item.kind === "sayfa" && (item.status === "teslim" || item.status === "onaylandi") ? <PagePublishPanel contentId={item.id} /> : null}
 
@@ -213,10 +218,14 @@ export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef
                 className={btnPrimary}
                 disabled={pending || !canApprove}
                 onClick={() =>
-                  run(() => approveContent(item.id, { noStudentFaceOrName: faceChecked, submittedAt: item.submittedAt }), `${item.code} onaylandı`)
+                  run(
+                    () => approveContent(item.id, { noStudentFaceOrName: faceChecked, submittedAt: item.submittedAt }),
+                    `${item.code} onaylandı`,
+                    () => item.kind === "reels" && openReelPublish(item.id),
+                  )
                 }
               >
-                Onayla
+                {item.kind === "reels" ? "Onayla ve yayına hazırla" : "Onayla"}
               </button>
               <button
                 type="button"
@@ -338,6 +347,8 @@ export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef
           </div>
         ) : null}
 
+        {reel ? <ReelPublishPanel item={item} videoUrl={videoUrl} ctx={reel} now={now} /> : null}
+
         {item.stage === "organik" ? (
           <div className="flex flex-col gap-2">
             <label htmlFor="ig-permalink" className="text-sm font-medium text-foreground">
@@ -423,11 +434,13 @@ function ReviewBlock({
   videoUrl,
   faceChecked,
   onFaceChecked,
+  reel,
 }: {
   item: BoardItem;
   videoUrl: string | null;
   faceChecked: boolean;
   onFaceChecked: (v: boolean) => void;
+  reel: ReelPanelContext | null;
 }) {
   if (item.kind === "sayfa") {
     return (
@@ -441,7 +454,7 @@ function ReviewBlock({
       </dl>
     );
   }
-  return <ReelsReview item={item} videoUrl={videoUrl} faceChecked={faceChecked} onFaceChecked={onFaceChecked} />;
+  return <ReelsReview item={item} videoUrl={videoUrl} faceChecked={faceChecked} onFaceChecked={onFaceChecked} reel={reel} />;
 }
 
 function ReelsReview({
@@ -449,11 +462,13 @@ function ReelsReview({
   videoUrl,
   faceChecked,
   onFaceChecked,
+  reel,
 }: {
   item: BoardItem;
   videoUrl: string | null;
   faceChecked: boolean;
   onFaceChecked: (v: boolean) => void;
+  reel: ReelPanelContext | null;
 }) {
   const [video, setVideo] = useState<ReviewVideo>("yukleniyor");
   const canCheck = canConfirmFace(videoUrl, video);
@@ -484,10 +499,8 @@ function ReelsReview({
         </p>
       ) : null}
       <p className="text-xs text-muted-foreground">Video bağlantısı 10 dakika geçerli; süre dolarsa sayfayı yenileyin.</p>
-      <div className="flex flex-col gap-0.5 text-sm">
-        <span className="text-xs font-semibold text-muted-foreground">Açıklama</span>
-        <span className="whitespace-pre-wrap break-words text-foreground">{item.caption || "—"}</span>
-      </div>
+      <InstagramPreview username={reel?.igUsername ?? null} caption={item.caption ?? ""} videoUrl={videoUrl} coverOffsetMs={item.reelMeta?.coverOffsetMs ?? null} max={reel?.limits.reelsCaption} />
+      <ReelAutoChecks lines={item.reelChecks ?? []} />
       <p className="text-sm text-muted-foreground">
         Öğretmenin cevabı: {item.faceAnswer === false ? "Videoda ya da yazıda öğrenci yüzü ya da adı yok." : "cevap yok"}
       </p>

@@ -15,6 +15,7 @@ import {
 } from "@/lib/content/board";
 import type { OrganicInfo } from "@/lib/content/organic";
 import type { AdRules } from "@/lib/content/settings";
+import type { ReelPanelContext } from "@/lib/content/reel-review";
 
 interface Props {
   items: BoardItem[];
@@ -27,6 +28,8 @@ interface Props {
   nowIso: string;
   /** Organik aşamadaki Reels'lerin Instagram sayıları; kart kimliğine göre. */
   organic?: Record<string, OrganicInfo>;
+  /** Instagram'a yayın bağlamı (Paket B); Reels yoksa null. */
+  reel?: ReelPanelContext | null;
 }
 
 /** Önce ?kod=, yoksa onay bekleyen ilk kart, o da yoksa ilk kart. */
@@ -35,7 +38,7 @@ function initialSelection(items: BoardItem[], code: string | null): string | nul
   return items.find((i) => i.stage === "kontrol")?.code ?? items[0]?.code ?? null;
 }
 
-export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrls, initialCode, nowIso, organic = {} }: Props) {
+export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrls, initialCode, nowIso, organic = {}, reel = null }: Props) {
   const now = useMemo(() => new Date(nowIso), [nowIso]);
   const columns = useMemo(() => groupByStage(items), [items]);
   const [selected, setSelected] = useState<string | null>(() => initialSelection(items, initialCode));
@@ -149,6 +152,7 @@ export function ContentBoard({ items, perf, perfError, rules, teachers, videoUrl
           videoUrl={videoUrls[item.id] ?? null}
           headingRef={headingRef}
           organic={organic[item.id] ? <OrganicNumbers info={organic[item.id]} /> : undefined}
+          reel={reel}
         />
       ) : items.length > 0 ? (
         // Yeni açılan görev sayfa yenilenene kadar listede olmayabilir.
