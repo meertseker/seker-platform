@@ -9,6 +9,8 @@ interface SheetProps {
   onClose: () => void;
   title: string;
   description?: string;
+  /** Geniş ekranda geniş pencere (ör. önizleme + form yan yana). */
+  wide?: boolean;
   children: React.ReactNode;
 }
 
@@ -46,7 +48,7 @@ function currentTranslateY(el: HTMLElement) {
  * Telefonda alttan açılan cam panel, geniş ekranda ortada pencere.
  * Telefonda tutamaçtan sürüklenerek kapanır; Escape veya dış tık da kapatır.
  */
-export function Sheet({ open, onClose, title, description, children }: SheetProps) {
+export function Sheet({ open, onClose, title, description, wide = false, children }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -228,7 +230,7 @@ export function Sheet({ open, onClose, title, description, children }: SheetProp
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className="glass-thick relative max-h-[92dvh] w-full animate-sheet-up overflow-y-auto overscroll-contain rounded-t-[2rem] px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] outline-none sm:max-w-lg sm:animate-materialize sm:rounded-[1.75rem] sm:p-6"
+        className={`glass-thick relative max-h-[92dvh] w-full animate-sheet-up overflow-y-auto overscroll-contain rounded-t-[2rem] px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] outline-none ${wide ? "sm:max-w-6xl" : "sm:max-w-lg"} sm:animate-materialize sm:rounded-[1.75rem] sm:p-6`}
       >
         <div
           onPointerDown={onPointerDown}

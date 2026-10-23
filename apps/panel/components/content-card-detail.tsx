@@ -9,6 +9,7 @@ import {
   requestRevision,
   saveLearnedNote,
 } from "@/actions/content";
+import { PagePublishPanel } from "@/components/page-publish-panel";
 import { useToast } from "@/components/toast";
 import {
   adviceFor,
@@ -202,6 +203,7 @@ export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef
         {item.stage === "kontrol" ? (
           <ReviewBlock item={item} videoUrl={videoUrl} faceChecked={faceChecked} onFaceChecked={setFaceChecked} />
         ) : null}
+        {item.kind === "sayfa" && (item.status === "teslim" || item.status === "onaylandi") ? <PagePublishPanel contentId={item.id} /> : null}
 
         <div className="flex flex-wrap gap-2">
           {kind === "approve" ? (
