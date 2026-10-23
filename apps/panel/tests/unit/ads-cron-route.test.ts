@@ -40,6 +40,8 @@ function query(table: string) {
   };
   return q;
 }
+// Bağlantı durumu yenilemesi (Paket B) ayrı testte; burada ağa gitmesin.
+vi.mock("@/lib/ads/connections-cache", () => ({ refreshConnections: async () => ({}) }));
 vi.mock("@seker/auth/admin", () => ({ createAdminSupabase: () => ({ from: (t: string) => query(t) }) }));
 
 import { NextRequest } from "next/server";

@@ -9,6 +9,7 @@ import { fetchGoogleCampaignStates } from "@/lib/ads/google-objects";
 import { fetchMetaObjects } from "@/lib/ads/meta/objects";
 import { upsertAdObjects } from "@/lib/ads/objects-store";
 import { syncOrganicStats } from "@/lib/content/organic";
+import { refreshConnections } from "@/lib/ads/connections-cache";
 import { supabaseAdsStore, supabaseMetaStore } from "@/lib/ads/store";
 import { istanbulDaysAgo, syncSpend, uploadPending } from "@/lib/ads/sync";
 import { istanbulDateString } from "@/lib/cron-rules";
@@ -124,8 +125,21 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Ayarlar'daki bağlantı kartları (Reklam Konsolu Z6): kendi try'ında; hatası diğer adımları ve ok'u bozmaz.
+  let connections: "yenilendi" | "hata" | undefined;
+  if (metaCfg) {
+    try {
+      await refreshConnections(db);
+      connections = "yenilendi";
+    } catch (e) {
+      connections = "hata";
+      console.error("[cron/ads] bağlantı durumu yenilenemedi", (e as Error).message);
+    }
+  }
+
   const googleBody = cfg ? { spendRows, ...upload, objects: googleObjects } : { skipped: "yapilandirilmamis" };
-  const body = meta ? { ...googleBody, meta } : googleBody;
+  const withMeta = meta ? { ...googleBody, meta } : googleBody;
+  const body = connections ? { ...withMeta, connections } : withMeta;
 
   if (errors.length === 0) return NextResponse.json({ ok: true, ...body });
 

@@ -39,6 +39,8 @@ function query(table: string) {
   };
   return q;
 }
+// Bağlantı durumu yenilemesi (Paket B) ayrı testte; burada ağa gitmesin.
+vi.mock("@/lib/ads/connections-cache", () => ({ refreshConnections: async () => ({}) }));
 vi.mock("@seker/auth/admin", () => ({ createAdminSupabase: () => ({ from: (t: string) => query(t) }) }));
 
 import { NextRequest } from "next/server";
@@ -93,6 +95,7 @@ describe("GET /api/cron/ads · Meta", () => {
       ok: true,
       skipped: "yapilandirilmamis",
       meta: { spendRows: 2, sent: 0, failed: 0, skipped: 0, capi: "kapali", objects: 0 },
+      connections: "yenilendi",
     });
     expect(getAccessToken).not.toHaveBeenCalled();
     expect(metaStore.upsertSpend).toHaveBeenCalledTimes(1);
@@ -129,6 +132,7 @@ describe("GET /api/cron/ads · Meta", () => {
       ok: true,
       skipped: "yapilandirilmamis",
       meta: { spendRows: 0, sent: 3, failed: 0, skipped: 1, capi: "acik", objects: 0 },
+      connections: "yenilendi",
     });
     expect(uploadMetaPending).toHaveBeenCalledTimes(1);
   });

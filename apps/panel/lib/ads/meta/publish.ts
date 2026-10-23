@@ -52,7 +52,8 @@ async function postForm(
   return response.json().catch(() => null);
 }
 
-async function getFields(cfg: MetaConfig, path: string, fields: string, label: string, fetchFn: FetchFn): Promise<unknown> {
+/** GET `{base}/{v}/{path}?fields=…`; anahtar başlıkta, appsecret_proof sorguda. Bağlantı kartları da kullanır. */
+export async function getFields(cfg: MetaConfig, path: string, fields: string, label: string, fetchFn: FetchFn): Promise<unknown> {
   const url = graphUrl(path);
   url.searchParams.set("fields", fields);
   url.searchParams.set("appsecret_proof", appSecretProof(cfg.accessToken, cfg.appSecret));
