@@ -58,6 +58,8 @@ const LEVEL_OF: Record<SetupAction, SetupChangeInput["level"]> = {
 /** Kapıya bakan eylemler (B7); kampanya kurulumu ve kitle güncellemesi bakmaz. */
 const GATED: SetupAction[] = ["reklam_kur", "buyutmeye_tasi"];
 const SECRET_KEYS = new Set(["access_token", "appsecret_proof"]);
+/** new_value'da kapının kendi yazdığı alanlar; logExtra bunları taşıyamaz. */
+const RESERVED_VALUE_KEYS = new Set(["mode", "summary", "steps", "ids", "failedKey"]);
 
 const MSG_GOSTER = "Kaydedildi · uygulanmadı: sadece göster";
 const MSG_CLOSED = "Kaydedildi · uygulanmadı: canlı yazım kapalı";
@@ -166,13 +168,17 @@ export async function executeSetupChange(deps: SetupDeps, input: SetupChangeInpu
   const live = apply && adsWriteEnabled(deps.env);
   const steps = input.planned.steps;
   const summary = [...input.planned.summary];
+  // Çekirdek alanlar en son yayılır: logExtra bunları (ve sonradan eklenen ids/failedKey'i) ezemez.
+  const extraValue = Object.fromEntries(
+    Object.entries(input.logExtra ?? {}).filter(([k]) => !RESERVED_VALUE_KEYS.has(k)),
+  );
   const baseValue = stripSecretKeys({
+    ...extraValue,
     mode: input.mode,
     summary,
     ...(input.logSteps === false
       ? {}
       : { steps: steps.map((s) => ({ key: s.key, label: s.label, path: s.path, params: s.params })) }),
-    ...(input.logExtra ?? {}),
   }) as Record<string, unknown>;
 
   const row: AdChangeLogRow = {

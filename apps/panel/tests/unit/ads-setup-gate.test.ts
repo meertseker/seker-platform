@@ -371,6 +371,39 @@ describe("executeSetupChange", () => {
     }
   });
 
+  it("logExtra çekirdek alanları ezemez (mode, summary, steps, ids; satırın status/action'ı)", async () => {
+    const extra = {
+      mode: "sahte",
+      summary: ["sahte"],
+      steps: [],
+      ids: { x: "1" },
+      status: "uygulandi",
+      action: "sablon",
+      count: 3,
+    };
+    const closed = deps({ enabled: false });
+    await executeSetupChange(closed.d, input({ logExtra: extra }));
+    const row = closed.logs[0];
+    expect(row.status).toBe("uygulanmadi_kapali");
+    expect(row.action).toBe("reklam_kur");
+    const nv = row.newValue as Record<string, unknown>;
+    expect(nv.mode).toBe("kur");
+    expect(nv.summary).toEqual(SUMMARY);
+    expect((nv.steps as unknown[]).length).toBe(STEPS.length);
+    expect(nv.count).toBe(3);
+
+    const live = deps();
+    await executeSetupChange(live.d, input({ logExtra: extra }));
+    const applied = live.logs[0];
+    expect(applied.status).toBe("uygulandi");
+    expect(applied.action).toBe("reklam_kur");
+    const anv = applied.newValue as Record<string, unknown>;
+    expect(anv.mode).toBe("kur");
+    expect(anv.summary).toEqual(SUMMARY);
+    expect((anv.steps as unknown[]).length).toBe(STEPS.length);
+    expect(anv.ids).toEqual({ creative: "901", ad: "902" });
+  });
+
   it("recommendationId kayda geçer", async () => {
     const { d, logs } = deps();
     await executeSetupChange(d, input({ recommendationId: CONTENT_ID, source: "oneri" }));

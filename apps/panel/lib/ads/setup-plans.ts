@@ -4,6 +4,7 @@
 import { formatTl } from "@/lib/content/board";
 import type { AdSetup } from "./ad-setup";
 import type { AdTemplate } from "./ad-template";
+import { createExclusionAudience } from "./meta/audiences";
 import {
   copyAdToAdset,
   createAd,
@@ -58,16 +59,24 @@ function adsetSummary(t: AdTemplate): string {
   );
 }
 
-/** Tek seferlik kurulum: Test ve Büyütme kampanyaları, her birinde tek reklam seti; hepsi PAUSED. */
+/**
+ * Tek seferlik kurulum: Test ve Büyütme kampanyaları, her birinde tek reklam seti; hepsi PAUSED.
+ * `createAudience` (şablonda "mevcut velileri hariç tut" açık, kitle henüz yok): önce boş dışlama kitlesi kurulur,
+ * iki set ona `ref` ile bağlanır; telefonlar ayrı adımda (kitle güncellemesi) yüklenir.
+ */
 export function planCampaignSetup(i: {
   adAccountId: string;
   pixelId: string;
   template: AdTemplate;
   excludedAudienceId: string | null;
+  createAudience?: boolean;
 }): PlannedChange {
   const t = i.template;
   const area = `Okul çevresi ${t.yaricapKm} km`;
+  const newAudience = i.createAudience === true && i.excludedAudienceId === null;
+  const excluded = newAudience ? ref("audience") : i.excludedAudienceId;
   const steps: SetupStep[] = [
+    ...(newAudience ? [createExclusionAudience(i.adAccountId, "audience")] : []),
     createCampaign(i.adAccountId, { key: "testCampaign", name: TEST_CAMPAIGN_NAME, dailyBudgetTl: t.testGunlukTl }),
     createAdSet(i.adAccountId, {
       key: "testAdset",
@@ -75,7 +84,7 @@ export function planCampaignSetup(i: {
       campaign: ref("testCampaign"),
       pixelId: i.pixelId,
       template: t,
-      excludedAudience: i.excludedAudienceId,
+      excludedAudience: excluded,
     }),
     createCampaign(i.adAccountId, {
       key: "scaleCampaign",
@@ -88,7 +97,7 @@ export function planCampaignSetup(i: {
       campaign: ref("scaleCampaign"),
       pixelId: i.pixelId,
       template: t,
-      excludedAudience: i.excludedAudienceId,
+      excludedAudience: excluded,
     }),
   ];
   const summary = [
@@ -97,7 +106,8 @@ export function planCampaignSetup(i: {
     `Kampanya: ${SCALE_CAMPAIGN_NAME} · ${perDay(t.buyutmeGunlukTl)} · DURAKLATILMIŞ`,
     adsetSummary(t),
   ];
-  if (i.excludedAudienceId !== null) summary.push("Mevcut veliler hariç");
+  if (newAudience) summary.push("Özel Hedef Kitle: Mevcut veliler (panel) · telefonlar SHA-256 ile ayrıca yüklenir");
+  if (excluded !== null) summary.push("Mevcut veliler hariç");
   return { steps, summary };
 }
 

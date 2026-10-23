@@ -10,6 +10,7 @@ import { fetchMetaObjects } from "@/lib/ads/meta/objects";
 import { upsertAdObjects } from "@/lib/ads/objects-store";
 import { syncOrganicStats } from "@/lib/content/organic";
 import { refreshConnections } from "@/lib/ads/connections-cache";
+import { isIstanbulMonday, refreshExclusionAudience } from "@/lib/ads/audience-refresh";
 import { supabaseAdsStore, supabaseMetaStore } from "@/lib/ads/store";
 import { istanbulDaysAgo, syncSpend, uploadPending } from "@/lib/ads/sync";
 import { istanbulDateString } from "@/lib/cron-rules";
@@ -48,6 +49,7 @@ export async function GET(req: NextRequest) {
   if (!cfg && !metaCfg) return NextResponse.json({ ok: true, skipped: "yapilandirilmamis" });
 
   const db = createAdminSupabase();
+  const now = new Date();
   const errors: string[] = [];
   let spendRows: number | null = null;
   let upload = { sent: 0, failed: 0, skipped: 0 };
@@ -84,7 +86,16 @@ export async function GET(req: NextRequest) {
 
   // Meta, Google'dan bağımsız: biri patlasa öteki yine çalışır. Yapılandırılmamışsa yanıtta `meta` anahtarı yoktur.
   let meta:
-    | { spendRows: number | null; sent: number; failed: number; skipped: number; capi: "acik" | "kapali"; organic?: number | null; objects?: number | null }
+    | {
+        spendRows: number | null;
+        sent: number;
+        failed: number;
+        skipped: number;
+        capi: "acik" | "kapali";
+        organic?: number | null;
+        objects?: number | null;
+        audience?: { status: string; count: number } | null;
+      }
     | undefined;
   if (metaCfg) {
     const metaStore = supabaseMetaStore(db);
@@ -122,6 +133,19 @@ export async function GET(req: NextRequest) {
       meta.organic = await syncOrganicStats({ cfg: metaCfg, db });
     } catch (e) {
       errors.push(`Meta organik: ${(e as Error).message.slice(0, 240)}`);
+    }
+  }
+
+  // Mevcut veli dışlama kitlesi (K23): yalnız İstanbul Pazartesisi, Meta bölümünün sonunda, kendi try'ında.
+  // Diğer günler yanıtta `audience` anahtarı yoktur.
+  if (metaCfg && meta && isIstanbulMonday(now)) {
+    meta.audience = null;
+    try {
+      const result = await refreshExclusionAudience({ db, cfg: metaCfg, env: process.env, now });
+      meta.audience = { status: result.status, count: result.count };
+      if (result.status === "hata") errors.push(`Meta kitle: ${result.message.slice(0, 240)}`);
+    } catch (e) {
+      errors.push(`Meta kitle: ${(e as Error).message.slice(0, 240)}`);
     }
   }
 

@@ -53,6 +53,7 @@ const setupStore = {
 };
 
 const buildAdTestContext = vi.fn();
+const refreshExclusionAudience = vi.fn();
 
 vi.mock("next/cache", () => ({ revalidatePath: (...a: unknown[]) => revalidatePath(...a) }));
 vi.mock("@/lib/auth", () => ({ requireRole: (...a: unknown[]) => requireRole(...a) }));
@@ -71,6 +72,10 @@ vi.mock("@/lib/ads/writes", async (orig) => {
 vi.mock("@/lib/ads/setup-store", () => ({ supabaseSetupStore: () => setupStore }));
 vi.mock("@/lib/ads/objects-store", () => ({
   insertCreatedAdObjects: (...a: unknown[]) => insertCreatedAdObjects(...a),
+}));
+
+vi.mock("@/lib/ads/audience-refresh", () => ({
+  refreshExclusionAudience: (...a: unknown[]) => refreshExclusionAudience(...a),
 }));
 
 vi.mock("@/lib/ads/ad-test-context", () => ({
@@ -285,6 +290,8 @@ describe("setupMetaCampaigns", () => {
 
   it("bayrak açık + kur: 4 POST (/campaigns, /adsets, /campaigns, /adsets), reklam_kurulum dört kimlikle yazılır, ad_objects'e 4 satır", async () => {
     vi.stubEnv("ADS_WRITE_ENABLED", "true");
+    // Kitle kapalı: K23 kitle adımı yok (kitleli sıra ayrı testte).
+    setupStore.template.mockResolvedValue({ ...FILLED, mevcutVelileriHaricTut: false });
     let n = 100;
     fetchSpy.mockImplementation(async () => okJson({ id: String(++n) }));
     const res = await setupMetaCampaigns({ mode: "kur" });
@@ -324,6 +331,48 @@ describe("setupMetaCampaigns", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/reklam/ayarlar");
   });
 
+  it("K23: kitle açıksa adım sırası customaudiences, campaigns, adsets(excluded_custom_audiences=[{id}]), …; kimlik kaydedilir, telefonlar hemen yüklenir", async () => {
+    vi.stubEnv("ADS_WRITE_ENABLED", "true");
+    refreshExclusionAudience.mockResolvedValue({ status: "uygulandi", count: 37, message: "✓ Kitle güncellendi" });
+    let n = 100;
+    fetchSpy.mockImplementation(async () => okJson({ id: String(++n) }));
+    const res = await setupMetaCampaigns({ mode: "kur" });
+    expect(res).toEqual({
+      ok: true,
+      status: "uygulandi",
+      ids: { audience: "101", testCampaign: "102", testAdset: "103", scaleCampaign: "104", scaleAdset: "105" },
+      message: "✓ Test ve Büyütme kampanyaları kuruldu (DURAKLATILMIŞ) · mevcut veliler kitlesine 37 telefon yüklendi",
+    });
+    const urls = fetchSpy.mock.calls.map((c) => String(c[0]).replace(/^.*\/act_42/, ""));
+    expect(urls).toEqual(["/customaudiences", "/campaigns", "/adsets", "/campaigns", "/adsets"]);
+    for (const i of [2, 4]) {
+      const body = new URLSearchParams(String((fetchSpy.mock.calls[i][1] as RequestInit).body));
+      expect(JSON.parse(body.get("targeting")!).excluded_custom_audiences).toEqual([{ id: "101" }]);
+    }
+    expect(setupStore.saveSetup).toHaveBeenCalledWith(expect.objectContaining({ exclusionAudienceId: "101", testAdsetId: "103" }));
+    expect(refreshExclusionAudience).toHaveBeenCalledTimes(1);
+    expect(refreshExclusionAudience.mock.calls[0][0]).toMatchObject({ source: "ayarlar", actorId: "yon-1" });
+    expect(logs[0]).toMatchObject({ action: "kampanya_kur", status: "uygulandi" });
+  });
+
+  it("K23: kitle telefonları yüklenemezse kurulum yine başarılı, mesaj Pazartesi'yi söyler", async () => {
+    vi.stubEnv("ADS_WRITE_ENABLED", "true");
+    refreshExclusionAudience.mockResolvedValue({ status: "hata", count: 3, message: "şartlar" });
+    let n = 100;
+    fetchSpy.mockImplementation(async () => okJson({ id: String(++n) }));
+    const res = await setupMetaCampaigns({ mode: "kur" });
+    expect(res).toMatchObject({ ok: true, status: "uygulandi" });
+    expect("message" in res && res.message).toContain("Pazartesi yeniden denenir");
+  });
+
+  it("K23: bayrak kapalıyken kitle kurulmaz ve yüklenmez, özet kitle satırını gösterir", async () => {
+    const res = await setupMetaCampaigns({ mode: "kur" });
+    expect(res).toMatchObject({ ok: true, status: "uygulanmadi_kapali" });
+    expect("summary" in res && res.summary.join(" | ")).toContain("Mevcut veliler");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(refreshExclusionAudience).not.toHaveBeenCalled();
+  });
+
   it("kurulum okunamazsa (geçici hata) kurulmaz: istek ve kayıt yok", async () => {
     vi.stubEnv("ADS_WRITE_ENABLED", "true");
     setupStore.setup.mockRejectedValueOnce(new Error("db"));
@@ -355,6 +404,7 @@ describe("setupMetaCampaigns", () => {
 
   it("yarıda patlarsa reklam_kurulum yazılmaz", async () => {
     vi.stubEnv("ADS_WRITE_ENABLED", "true");
+    setupStore.template.mockResolvedValue({ ...FILLED, mevcutVelileriHaricTut: false });
     fetchSpy
       .mockResolvedValueOnce(okJson({ id: "101" }))
       .mockResolvedValueOnce(

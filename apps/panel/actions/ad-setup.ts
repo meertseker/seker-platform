@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireRole } from "@/lib/auth";
 import { getAdSettings } from "@/lib/ads/ad-settings";
 import type { AdSetup } from "@/lib/ads/ad-setup";
+import { refreshExclusionAudience } from "@/lib/ads/audience-refresh";
 import { moveContentStage } from "@/actions/content";
 import { buildAdTestContext, type AdTestView } from "@/lib/ads/ad-test-context";
 import { monthlyCapCheck, templateGaps, validateAdTemplate, type AdTemplate, type AdTemplateInput } from "@/lib/ads/ad-template";
@@ -200,7 +201,14 @@ export async function setupMetaCampaigns(opts: { mode: "kur" | "goster" }): Prom
   }
 
   const pixelId = cfg.pixelId;
-  const planned = planCampaignSetup({ adAccountId: cfg.adAccountId, pixelId, template, excludedAudienceId: null });
+  // K23: şablonda "mevcut velileri hariç tut" açıksa önce boş dışlama kitlesi kurulur, setler ona bağlanır.
+  const planned = planCampaignSetup({
+    adAccountId: cfg.adAccountId,
+    pixelId,
+    template,
+    excludedAudienceId: null,
+    createAudience: template.mevcutVelileriHaricTut,
+  });
 
   let result: SetupResult;
   try {
@@ -236,7 +244,7 @@ export async function setupMetaCampaigns(opts: { mode: "kur" | "goster" }): Prom
       testAdsetId: ids.testAdset,
       scaleCampaignId: ids.scaleCampaign,
       scaleAdsetId: ids.scaleAdset,
-      exclusionAudienceId: null,
+      exclusionAudienceId: ids.audience ?? null,
       createdAt: now.toISOString(),
       createdBy: profile.id,
     };
@@ -256,8 +264,25 @@ export async function setupMetaCampaigns(opts: { mode: "kur" | "goster" }): Prom
       // Sabah senkronu aynı nesneleri Meta'dan görüp yazar.
       console.error("[ads] kurulan kampanyalar ad_objects'e yazılamadı");
     }
+    let message = "✓ Test ve Büyütme kampanyaları kuruldu (DURAKLATILMIŞ)";
+    if (setup.exclusionAudienceId) {
+      // Kitle boş kuruldu; telefonlar hemen yüklenir (kendi kaydıyla). Olmazsa Pazartesi cron'u yeniden dener.
+      const audience = await refreshExclusionAudience({
+        db,
+        cfg,
+        env: process.env,
+        fetchFn: fetch,
+        now,
+        source: "ayarlar",
+        actorId: profile.id,
+      });
+      message +=
+        audience.status === "uygulandi"
+          ? ` · mevcut veliler kitlesine ${audience.count} telefon yüklendi`
+          : ` · kitle telefonları yüklenmedi (${audience.message}); Pazartesi yeniden denenir`;
+    }
     revalidatePath(SETTINGS_PATH);
-    return { ...result, message: "✓ Test ve Büyütme kampanyaları kuruldu (DURAKLATILMIŞ)" };
+    return { ...result, message };
   }
 
   revalidatePath(SETTINGS_PATH);
