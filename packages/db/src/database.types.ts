@@ -47,14 +47,14 @@ isOneToOne: false
                   ]
                 },"ad_objects": {
                   Row: {
-                    "budget_resource": string | null,"campaign_id": string | null,"content_code": string | null,"daily_budget_micros": number | null,"level": string,"name": string,"object_id": string,"parent_id": string | null,"platform": string,"status": string | null,"synced_at": string
+                    "budget_resource": string | null,"campaign_id": string | null,"content_code": string | null,"daily_budget_micros": number | null,"effective_status": string | null,"level": string,"name": string,"object_id": string,"parent_id": string | null,"platform": string,"review_feedback": string | null,"status": string | null,"synced_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "budget_resource"?: string | null,"campaign_id"?: string | null,"content_code"?: string | null,"daily_budget_micros"?: number | null,"level": string,"name": string,"object_id": string,"parent_id"?: string | null,"platform": string,"status"?: string | null,"synced_at"?: string
+                    "budget_resource"?: string | null,"campaign_id"?: string | null,"content_code"?: string | null,"daily_budget_micros"?: number | null,"effective_status"?: string | null,"level": string,"name": string,"object_id": string,"parent_id"?: string | null,"platform": string,"review_feedback"?: string | null,"status"?: string | null,"synced_at"?: string
                   }
                   Update: {
-                    "budget_resource"?: string | null,"campaign_id"?: string | null,"content_code"?: string | null,"daily_budget_micros"?: number | null,"level"?: string,"name"?: string,"object_id"?: string,"parent_id"?: string | null,"platform"?: string,"status"?: string | null,"synced_at"?: string
+                    "budget_resource"?: string | null,"campaign_id"?: string | null,"content_code"?: string | null,"daily_budget_micros"?: number | null,"effective_status"?: string | null,"level"?: string,"name"?: string,"object_id"?: string,"parent_id"?: string | null,"platform"?: string,"review_feedback"?: string | null,"status"?: string | null,"synced_at"?: string
                   }
                   Relationships: [
                     
