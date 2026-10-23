@@ -31,7 +31,17 @@ export type SetupStore = {
    * beri platform yanıtı bekleyen kayıt. "Sadece göster" kayıtları (`uygulanmadi_kapali`) sayılmaz.
    */
   campaignSetupInFlight(sinceIso: string): Promise<boolean>;
-  testAdForCode(code: string, testAdsetId: string): Promise<{ adId: string; name: string; status: string | null }[]>;
+  testAdForCode(code: string, testAdsetId: string): Promise<TestAdRow[]>;
+  /** Reklam setinde `status = ACTIVE` reklam sayısı (Z4 "<n> reklam çalışıyor"). Okuma hatasında atar. */
+  activeAdsInAdset(adsetId: string): Promise<number>;
+};
+
+export type TestAdRow = {
+  adId: string;
+  name: string;
+  status: string | null;
+  effectiveStatus: string | null;
+  reviewFeedback: string | null;
 };
 
 const MICROS_PER_TL = 1_000_000;
@@ -168,18 +178,39 @@ export function supabaseSetupStore(db: SupabaseClient): SetupStore {
     async testAdForCode(code, testAdsetId) {
       const { data, error } = await db
         .from("ad_objects")
-        .select("object_id, name, status")
+        .select("object_id, name, status, effective_status, review_feedback")
         .eq("platform", "meta")
         .eq("level", "ad")
         .eq("content_code", code)
         .eq("parent_id", testAdsetId)
         .order("object_id");
       must(error);
-      return ((data ?? []) as { object_id: string; name: string; status: string | null }[]).map((r) => ({
+      type Row = {
+        object_id: string;
+        name: string;
+        status: string | null;
+        effective_status: string | null;
+        review_feedback: string | null;
+      };
+      return ((data ?? []) as Row[]).map((r) => ({
         adId: r.object_id,
         name: r.name,
         status: r.status,
+        effectiveStatus: r.effective_status ?? null,
+        reviewFeedback: r.review_feedback ?? null,
       }));
+    },
+
+    async activeAdsInAdset(adsetId) {
+      const { count, error } = await db
+        .from("ad_objects")
+        .select("object_id", { count: "exact", head: true })
+        .eq("platform", "meta")
+        .eq("level", "ad")
+        .eq("parent_id", adsetId)
+        .eq("status", "ACTIVE");
+      must(error);
+      return count ?? 0;
     },
   };
 }

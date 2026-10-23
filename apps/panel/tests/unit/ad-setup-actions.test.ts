@@ -49,7 +49,10 @@ const setupStore = {
   launchInFlight: vi.fn(async () => false),
   campaignSetupInFlight: vi.fn(async () => false),
   testAdForCode: vi.fn(async () => []),
+  activeAdsInAdset: vi.fn(async () => 0),
 };
+
+const buildAdTestContext = vi.fn();
 
 vi.mock("next/cache", () => ({ revalidatePath: (...a: unknown[]) => revalidatePath(...a) }));
 vi.mock("@/lib/auth", () => ({ requireRole: (...a: unknown[]) => requireRole(...a) }));
@@ -70,7 +73,11 @@ vi.mock("@/lib/ads/objects-store", () => ({
   insertCreatedAdObjects: (...a: unknown[]) => insertCreatedAdObjects(...a),
 }));
 
-import { saveAdTemplate, setupMetaCampaigns } from "@/actions/ad-setup";
+vi.mock("@/lib/ads/ad-test-context", () => ({
+  buildAdTestContext: (...a: unknown[]) => buildAdTestContext(...a),
+}));
+
+import { previewAdTest, saveAdTemplate, setupMetaCampaigns } from "@/actions/ad-setup";
 
 const INPUT: AdTemplateInput = {
   okulAdres: "Bahçelievler Mah. 1. Sokak No 5, Ankara",
@@ -490,5 +497,36 @@ describe("supabaseSetupStore", () => {
       "upsert",
       [{ key: "reklam_sablonu", value: { ...INPUT, updatedBy: "yon-1", updatedAt: "2026-10-20T09:00:00.000Z" } }, { onConflict: "key" }],
     ]);
+  });
+});
+
+describe("previewAdTest", () => {
+  const ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
+
+  it("yönetici rolü ister; içerik kimliği doğrulanır", async () => {
+    requireRole.mockRejectedValueOnce(new Error("yetki"));
+    await expect(previewAdTest(ID)).rejects.toThrow("yetki");
+    expect(requireRole).toHaveBeenCalledWith("yonetici");
+    expect(await previewAdTest("bozuk")).toEqual({ error: "Geçersiz içerik." });
+    expect(buildAdTestContext).not.toHaveBeenCalled();
+  });
+
+  it("bağlamın görünümünü döner; kuran adı, şimdi ve env sunucudan", async () => {
+    requireRole.mockResolvedValue({ id: "yon-1", role: "yonetici", full_name: "Zehra Gürsel" });
+    const view = { contentId: ID, code: "R-2644-A" };
+    buildAdTestContext.mockResolvedValue({ view, planned: null, content: {}, setup: null });
+    expect(await previewAdTest(ID)).toBe(view);
+    const [deps, contentId, opts] = buildAdTestContext.mock.calls[0];
+    expect(contentId).toBe(ID);
+    expect(opts).toEqual({ skip72hReason: null });
+    expect(deps.actorName).toBe("Zehra Gürsel");
+    expect(deps.now).toEqual(new Date("2026-10-20T09:00:00Z"));
+    expect(deps.env.META_AD_ACCOUNT_ID).toBe("act_42");
+    expect(deps.store).toBe(setupStore);
+  });
+
+  it("bağlam hatasını aynen döner", async () => {
+    buildAdTestContext.mockResolvedValue({ error: "İçerik bulunamadı." });
+    expect(await previewAdTest(ID)).toEqual({ error: "İçerik bulunamadı." });
   });
 });

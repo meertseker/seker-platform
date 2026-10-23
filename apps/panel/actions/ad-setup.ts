@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireRole } from "@/lib/auth";
 import { getAdSettings } from "@/lib/ads/ad-settings";
 import type { AdSetup } from "@/lib/ads/ad-setup";
+import { buildAdTestContext, type AdTestView } from "@/lib/ads/ad-test-context";
 import { monthlyCapCheck, templateGaps, validateAdTemplate, type AdTemplate, type AdTemplateInput } from "@/lib/ads/ad-template";
 import { readMetaConfig } from "@/lib/ads/meta/config";
 import { runSetupSteps } from "@/lib/ads/meta/setup";
@@ -25,6 +26,7 @@ const MSG_LOG_FAILED = "Kayıt yazılamadı; değişiklik yapılmadı.";
 const MICROS_PER_TL = 1_000_000;
 const IN_FLIGHT_MS = 10 * 60 * 1000;
 const MSG_IN_FLIGHT = "Kurulum sürüyor ya da daha önce yapıldı; Reklam Yöneticisi'ni kontrol edin.";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function templateValue(t: AdTemplate): AdTemplateInput {
   return {
@@ -245,4 +247,25 @@ export async function setupMetaCampaigns(opts: { mode: "kur" | "goster" }): Prom
 
   revalidatePath(SETTINGS_PATH);
   return result;
+}
+
+/** Z4 "Reklam testine al" penceresinin verisi: önizleme, şablon satırları, 9 kontrol (yalnız okur). */
+export async function previewAdTest(contentId: string): Promise<AdTestView | { error: string }> {
+  const profile = await requireRole("yonetici");
+  if (typeof contentId !== "string" || !UUID.test(contentId)) return { error: "Geçersiz içerik." };
+
+  const db = createAdminSupabase() as unknown as SupabaseClient;
+  const result = await buildAdTestContext(
+    {
+      db,
+      store: supabaseSetupStore(db),
+      env: process.env,
+      fetchFn: fetch,
+      now: new Date(),
+      actorName: profile.full_name,
+    },
+    contentId,
+    { skip72hReason: null },
+  );
+  return "error" in result ? { error: result.error } : result.view;
 }
