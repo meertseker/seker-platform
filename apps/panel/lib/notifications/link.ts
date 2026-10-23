@@ -31,12 +31,14 @@ export function notificationHref(
     case "santral_senkron_hata":
       return "/ayarlar";
     case "icerik_teslim":
+    case "ig_yayin_hata":
       return typeof payload.code === "string" && payload.code
         ? `/reklam/icerik?kod=${encodeURIComponent(payload.code)}`
         : "/reklam/icerik";
     case "icerik_gorev":
     case "icerik_duzeltme":
     case "icerik_onay":
+    case "ig_yayinlandi":
       return "/gorevim";
     default:
       return leadHref;

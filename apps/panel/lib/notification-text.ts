@@ -115,6 +115,12 @@ export function notificationText(n: NotificationLike): string {
     }
     case "icerik_onay":
       return `${str(payload.code) ?? "İçerik"} onaylandı`;
+    case "ig_yayinlandi":
+      return `${str(payload.code) ?? "İçerik"} Instagram'da yayınlandı`;
+    case "ig_yayin_hata": {
+      const err = str(payload.error);
+      return `${str(payload.code) ?? "İçerik"} Instagram'da yayınlanamadı${err ? `: ${err}` : ""}`;
+    }
     default:
       return `Yeni bir sistem bildirimi (${n.type.replace(/_/g, " ")})`;
   }
@@ -156,6 +162,9 @@ export function notificationHint(n: NotificationLike): string | null {
     case "icerik_duzeltme":
       return "Düzeltip yeniden teslim edin.";
     case "icerik_onay":
+    case "ig_yayinlandi":
       return null;
+    case "ig_yayin_hata":
+      return "İçerik panosunda tekrar deneyin ya da bağlantıyı elle yapıştırın.";
   }
 }

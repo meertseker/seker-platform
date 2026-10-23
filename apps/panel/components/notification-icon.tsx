@@ -44,6 +44,8 @@ const ICONS: Record<NotificationType, { icon: LucideIcon; tone: Tone }> = {
   icerik_teslim: { icon: Clapperboard, tone: "primary" },
   icerik_duzeltme: { icon: Clapperboard, tone: "warning" },
   icerik_onay: { icon: Clapperboard, tone: "accent" },
+  ig_yayinlandi: { icon: Clapperboard, tone: "accent" },
+  ig_yayin_hata: { icon: Clapperboard, tone: "destructive" },
 };
 
 const FALLBACK = { icon: Bell, tone: "muted" as Tone };

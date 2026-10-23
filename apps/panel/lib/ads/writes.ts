@@ -52,15 +52,16 @@ export type AdObjectRow = {
 
 export type AdChangeLogRow = {
   platform: "google" | "meta";
-  level: "campaign" | "adset" | "ad";
+  /** "icerik": Instagram içerik yayını (Paket B). */
+  level: "campaign" | "adset" | "ad" | "icerik";
   objectId: string;
   objectName: string;
-  action: "pause" | "resume" | "budget";
+  action: "pause" | "resume" | "budget" | "ig_yayin";
   oldValue: Record<string, unknown> | null;
   newValue: Record<string, unknown> | null;
   reason: string | null;
   gateRed: boolean;
-  source: "kampanyalar" | "oneri";
+  source: "kampanyalar" | "oneri" | "icerik" | "ayarlar" | "cron";
   recommendationId: string | null;
   status: AdChangeStatus;
   error: string | null;

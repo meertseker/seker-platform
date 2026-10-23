@@ -19,6 +19,8 @@ export const NOTIFICATION_TYPES = [
   "icerik_teslim",
   "icerik_duzeltme",
   "icerik_onay",
+  "ig_yayinlandi",
+  "ig_yayin_hata",
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

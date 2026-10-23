@@ -52,6 +52,8 @@ export interface MediaRef {
   permalink: string;
   /** Instagram'daki paylaşım zamanı (Meta'nın verdiği biçim). */
   timestamp: string | null;
+  /** Gönderi açıklaması (yayın kurtarmasında eşleme için). */
+  caption?: string | null;
 }
 
 /**
@@ -62,19 +64,19 @@ export interface MediaRef {
 export async function listMedia(cfg: MetaConfig, fetchFn: FetchFn = fetch): Promise<MediaRef[]> {
   if (!cfg.instagramUserId) return [];
   const first = new URL(`${META_GRAPH_BASE}/${META_GRAPH_API_VERSION}/${cfg.instagramUserId}/media`);
-  first.searchParams.set("fields", "id,permalink,media_product_type,timestamp");
+  first.searchParams.set("fields", "id,permalink,media_product_type,timestamp,caption");
   first.searchParams.set("limit", "50");
   const out: MediaRef[] = [];
   let url: URL | null = signed(first, cfg);
   for (let page = 0; url && page < MEDIA_PAGES; page++) {
-    const body: { data?: { id?: string; permalink?: string; timestamp?: string }[]; paging?: { next?: string } } = await getJson(
+    const body: { data?: { id?: string; permalink?: string; timestamp?: string; caption?: string }[]; paging?: { next?: string } } = await getJson(
       url,
       cfg,
       fetchFn,
       "Instagram medya listesi alınamadı",
     );
     if (!Array.isArray(body.data)) throw new MetaApiError("Meta yanıtı beklenmeyen biçimde", 502);
-    for (const m of body.data) if (m.id && m.permalink) out.push({ id: String(m.id), permalink: m.permalink, timestamp: m.timestamp ?? null });
+    for (const m of body.data) if (m.id && m.permalink) out.push({ id: String(m.id), permalink: m.permalink, timestamp: m.timestamp ?? null, caption: m.caption ?? null });
     url = body.paging?.next ? nextUrl(body.paging.next, cfg) : null;
   }
   return out;

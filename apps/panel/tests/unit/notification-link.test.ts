@@ -32,6 +32,10 @@ describe("notificationHref", () => {
     expect(href("icerik_teslim")).toBe("/reklam/icerik");
     for (const t of ["icerik_gorev", "icerik_duzeltme", "icerik_onay"]) expect(href(t, { code: "R-1" })).toBe("/gorevim");
   });
+  it("Instagram yayın türleri", () => {
+    expect(href("ig_yayin_hata", { code: "R-2644-A" })).toBe("/reklam/icerik?kod=R-2644-A");
+    expect(href("ig_yayinlandi", { code: "R-2644-A" })).toBe("/gorevim");
+  });
   it("bilinmeyen tür", () => {
     expect(href("kayit_yenileme", { leadId: "L1" })).toBe("/bildirimler");
   });

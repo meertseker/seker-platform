@@ -69,8 +69,8 @@ describe("notificationText teklif_karsi_onaylandi", () => {
 });
 
 describe("notificationText tüm türler", () => {
-  it("18 tür kayıtlı", () => {
-    expect(NOTIFICATION_TYPES).toHaveLength(18);
+  it("20 tür kayıtlı", () => {
+    expect(NOTIFICATION_TYPES).toHaveLength(20);
     expect(isNotificationType("geciken_ozet")).toBe(true);
     expect(isNotificationType("baska")).toBe(false);
   });
@@ -145,5 +145,16 @@ describe("teklif adlı metinler", () => {
     expect(
       notificationText({ type: "teklif_karsi_onaylandi", payload: { counterPrice: 18000, parentName: "Ayşe Yılmaz" } }),
     ).toBe("Ayşe Yılmaz teklifi karşı rakamla onaylandı: 18.000,00 ₺");
+  });
+});
+
+describe("Instagram yayın bildirimleri", () => {
+  it("yayınlandı ve hata metni", () => {
+    expect(notificationText({ type: "ig_yayinlandi", payload: { code: "R-2644-A" } })).toBe("R-2644-A Instagram'da yayınlandı");
+    expect(notificationText({ type: "ig_yayin_hata", payload: { code: "R-2644-A", error: "Onay geri alındı" } })).toBe(
+      "R-2644-A Instagram'da yayınlanamadı: Onay geri alındı",
+    );
+    expect(notificationHint({ type: "ig_yayinlandi", payload: {} })).toBeNull();
+    expect(notificationHint({ type: "ig_yayin_hata", payload: {} })).toBe("İçerik panosunda tekrar deneyin ya da bağlantıyı elle yapıştırın.");
   });
 });
