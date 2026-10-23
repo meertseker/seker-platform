@@ -4,6 +4,9 @@ import { checkText } from "./checks";
 import { REELS_AD_MAX_S, reelFormatLines } from "./media-meta";
 import type { ContentLimits } from "./settings";
 
+/** publish-runner ile aynı metin (sunucu modülünü istemciye çekmemek için burada da tanımlı). */
+export const RECOVER_MISSING_TEXT = "Instagram'da yayınlandı ama bağlantı bulunamadı; bağlantıyı elle yapıştırın";
+
 export type CheckLine = { ok: boolean; tone: "ok" | "warn" | "bad"; text: string };
 
 /** Z1 "Otomatik kontroller": biçim+süre, açıklama, öğretmen cevabı, altyazı. */
@@ -53,7 +56,7 @@ export type PanelState =
   | { kind: "planli"; at: string }
   | { kind: "isleniyor" }
   | { kind: "yayinda"; publishedAt: string; permalink: string | null }
-  | { kind: "hata"; error: string }
+  | { kind: "hata"; error: string; retry: boolean }
   | { kind: "elle"; permalink: string }
   | { kind: "gizli" };
 
@@ -69,7 +72,8 @@ export function reelPanelState(item: BoardItem): PanelState {
     case "yayinda":
       return { kind: "yayinda", publishedAt: item.igPublishedAt ?? item.stageChangedAt, permalink: item.igPermalink };
     case "hata":
-      return { kind: "hata", error: item.igPublishError ?? "bilinmeyen hata" };
+      // Yayın olmuş ama bağlantı bulunamamışsa yeniden yayınlamak çift gönderi olur: tekrar dene yok.
+      return { kind: "hata", error: item.igPublishError ?? "bilinmeyen hata", retry: item.igPublishError !== RECOVER_MISSING_TEXT };
     default:
       return { kind: "hazir" };
   }

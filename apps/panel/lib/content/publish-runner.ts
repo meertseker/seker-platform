@@ -37,7 +37,8 @@ export type ProcessResult = { status: IgPublishStatus; error: string | null };
 
 export const FLAG_OFF_TEXT = "İçerik yayını kapatıldı; açılınca yeniden yayınlayın";
 export const NOT_CONNECTED_TEXT = "Instagram bağlantısı kurulmadı";
-export const RECOVER_MISSING_TEXT = "Instagram'da yayınlandı ama bağlantı bulunamadı; bağlantıyı elle yapıştırın";
+export { RECOVER_MISSING_TEXT } from "./reel-review";
+import { RECOVER_MISSING_TEXT } from "./reel-review";
 
 /** Meta zamanı "2026-10-24T09:12:00+0000" → ISO; okunamazsa null. */
 function isoFromMeta(ts: string | null): string | null {
@@ -138,7 +139,11 @@ export async function processItem(deps: PublishDeps, id: string): Promise<Proces
         { videoUrl, caption: row.caption ?? "", thumbOffsetMs: row.mediaMeta?.coverOffsetMs ?? DEFAULT_COVER_OFFSET_MS },
         fetchFn,
       );
-      await store.transition(row.id, "isleniyor", { ig_container_id: containerId });
+      if (!(await store.transition(row.id, "isleniyor", { ig_container_id: containerId }))) {
+        // Satır bu arada değişti (ör. cron kapattı); bu konteyner kullanılmaz.
+        const changed = await store.load(row.id);
+        return { status: changed?.igPublishStatus ?? current, error: null };
+      }
     }
 
     // 3. Yoklama.
@@ -163,12 +168,23 @@ export async function processItem(deps: PublishDeps, id: string): Promise<Proces
       return succeed({ id: hit.id, permalink: hit.permalink, timestamp: hit.timestamp });
     }
 
-    const mediaId = await publishContainer(cfg, containerId!, fetchFn);
+    // Çift yayına karşı sahiplenme: aynı anı okuyan ikinci koşu media_publish çağırmaz.
+    if (!(await store.claim(row.id, fresh.updatedAt))) return { status: fresh.igPublishStatus, error: null };
+    let mediaId: string;
+    try {
+      mediaId = await publishContainer(cfg, containerId!, fetchFn);
+    } catch (err) {
+      // Açık 4xx Meta reddi: yayın olmadı. Zaman aşımı, ağ ya da 5xx: Meta yayınlamış olabilir; satır
+      // isleniyor kalır, sonraki yoklama PUBLISHED görürse kurtarır, FINISHED görürse yeniden dener.
+      if (err instanceof MetaApiError && err.status >= 400 && err.status < 500) return fail(igErrorText(err));
+      console.error("[ig-yayin] media_publish belirsiz:", row.code, err instanceof Error ? err.message : String(err));
+      return { status: current, error: null };
+    }
     let media: { id: string; permalink: string | null; timestamp: string | null } = { id: mediaId, permalink: null, timestamp: null };
     try {
       media = await fetchPublishedMedia(cfg, mediaId, fetchFn);
     } catch {
-      // Yayın oldu; bağlantı sabah senkronunda ya da elle tamamlanır.
+      // Yayın oldu; bağlantı okunamazsa medya kimliğiyle kaydedilir, bağlantı elle yapıştırılabilir.
     }
     return succeed(media);
   } catch (err) {

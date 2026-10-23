@@ -82,6 +82,8 @@ describe("nextStep", () => {
       kind: "fail",
       error: "Konteyner kaydı yok; tekrar deneyin",
     }));
+  it("konteyner yokken 60 sn içinde güncellenmişse bekler (eylem konteyneri açıyor)", () =>
+    expect(nextStep(row({ igPublishStatus: "isleniyor", updatedAt: ago(10_000) }), NOW)).toEqual({ kind: "wait" }));
   it("61 dk önce → zaman aşımı", () =>
     expect(nextStep(row({ igPublishStatus: "isleniyor", igContainerId: "1", updatedAt: ago(61 * 60_000) }), NOW)).toEqual({
       kind: "fail",

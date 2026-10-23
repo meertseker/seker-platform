@@ -31,6 +31,11 @@ export interface PublishStore {
   listActive(limit: number): Promise<QueueRow[]>;
   /** Koşullu güncelleme: satır hâlâ `from` durumundaysa yazar; etkilenen satır yoksa false. */
   transition(id: string, from: IgPublishStatus, patch: TransitionPatch): Promise<boolean>;
+  /**
+   * media_publish'ten hemen önce sahiplenme: satır hâlâ `isleniyor` ve `updated_at` okunan değerse dokunur
+   * (tetikleyici updated_at'i ilerletir); aynı anı okuyan ikinci koşu kaybeder ve yayınlamaz.
+   */
+  claim(id: string, updatedAt: string): Promise<boolean>;
   signedVideoUrl(path: string, seconds: number): Promise<string>;
   insertLog(row: AdChangeLogRow): Promise<string>;
   /** Bu içeriğin "Yayın sürüyor" bekleyen en yeni ig_yayin kaydını sonuçla günceller; yoksa hiçbir şey yapmaz. */
@@ -118,6 +123,17 @@ export function supabasePublishStore(db: SupabaseClient): PublishStore {
         .update(patch)
         .eq("id", id)
         .eq("ig_publish_status", from)
+        .select("id");
+      must(error);
+      return (data ?? []).length > 0;
+    },
+    async claim(id, updatedAt) {
+      const { data, error } = await db
+        .from("content_items")
+        .update({ ig_publish_error: null })
+        .eq("id", id)
+        .eq("ig_publish_status", "isleniyor")
+        .eq("updated_at", updatedAt)
         .select("id");
       must(error);
       return (data ?? []).length > 0;

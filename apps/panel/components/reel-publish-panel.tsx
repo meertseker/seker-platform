@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { publishReel } from "@/actions/instagram";
 import { InstagramPreview } from "@/components/reel-review-extras";
@@ -12,29 +12,10 @@ import { scheduleWarning } from "@/lib/content/publish-queue";
 import { permalinkLabel, reelPanelState, type ReelPanelContext } from "@/lib/content/reel-review";
 import { formatDayTime, istanbulLocalInput, parseIstanbulDateTime } from "@/lib/lead-flow/business-hours";
 
-const STORAGE_PREFIX = "z2:";
-
 /** "1. saniyeyi" / "ilk kareyi". */
 function coverPick(ms: number): string {
   const s = Math.round(ms / 1000);
   return s <= 0 ? "ilk kareyi" : `${s}. saniyeyi`;
-}
-
-/** Onaydan sonra Z2'nin kendiliğinden açılması için işaret bırakır (sayfa yenilenince panel okur). */
-export function openReelPublish(contentId: string): void {
-  try {
-    window.sessionStorage.setItem(`${STORAGE_PREFIX}${contentId}`, "1");
-  } catch {
-    // Depolama kapalıysa pencere elle açılır.
-  }
-}
-
-function takeOpenFlag(contentId: string): boolean {
-  try {
-    return window.sessionStorage.getItem(`${STORAGE_PREFIX}${contentId}`) === "1";
-  } catch {
-    return false;
-  }
 }
 
 const btnPrimary =
@@ -49,21 +30,23 @@ export function ReelPublishPanel({
   videoUrl,
   ctx,
   now,
+  autoOpen = false,
 }: {
   item: BoardItem;
   videoUrl: string | null;
   ctx: ReelPanelContext;
   now: Date;
+  /** "Onayla ve yayına hazırla"dan hemen sonra true. */
+  autoOpen?: boolean;
 }) {
   const state = reelPanelState(item);
-  const [open, setOpen] = useState(() => (state.kind === "hazir" || state.kind === "hata") && typeof window !== "undefined" && takeOpenFlag(item.id));
-  useEffect(() => {
-    try {
-      window.sessionStorage.removeItem(`${STORAGE_PREFIX}${item.id}`);
-    } catch {
-      // yok sayılır
-    }
-  }, [item.id]);
+  const [open, setOpen] = useState(false);
+  // Onaydan sonra (Z1 → Z2) pencere bir kez kendiliğinden açılır; kart yenilenip "hazir" olunca.
+  const [autoDone, setAutoDone] = useState(false);
+  if (autoOpen && !autoDone && state.kind === "hazir") {
+    setAutoDone(true);
+    setOpen(true);
+  }
 
   if (state.kind === "gizli") return null;
 
@@ -119,11 +102,13 @@ export function ReelPublishPanel({
             <p role="status" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm text-destructive-strong">
               Yayınlanamadı: {state.error}
             </p>
-            <div>
-              <button type="button" className={btnSecondary} onClick={() => setOpen(true)}>
-                Tekrar dene
-              </button>
-            </div>
+            {state.retry ? (
+              <div>
+                <button type="button" className={btnSecondary} onClick={() => setOpen(true)}>
+                  Tekrar dene
+                </button>
+              </div>
+            ) : null}
           </>
         );
       case "elle":

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { clientFor, admin } from "./helpers";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { supabasePublishStore } from "@/lib/content/publish-store";
 
 // 0025 ig_yayin: Instagram yayın durumu kolonları yalnız servis rolüyle yazılır (K16);
 // ad_change_log ig_yayin eylemini ve yeni kaynakları kabul eder (spec §15 B2).
@@ -99,5 +100,18 @@ describe("0025 ad_change_log", () => {
     expect(a.error?.code).toBe("23514");
     const s = await admin.from("ad_change_log").insert({ ...base, action: "ig_yayin", source: "baska" });
     expect(s.error?.code).toBe("23514");
+  });
+});
+
+describe("supabasePublishStore.claim", () => {
+  it("aynı updated_at ile ikinci sahiplenme kaybeder; koşullu geçiş yanlış durumda false", async () => {
+    const row = await newReels({ ig_publish_status: "isleniyor", ig_container_id: "1799" });
+    const store = supabasePublishStore(admin);
+    const loaded = await store.load(row.id);
+    expect(loaded?.igPublishStatus).toBe("isleniyor");
+    expect(await store.claim(row.id, loaded!.updatedAt)).toBe(true);
+    expect(await store.claim(row.id, loaded!.updatedAt)).toBe(false);
+    expect(await store.transition(row.id, "kuyruk", { ig_publish_status: "hata" })).toBe(false);
+    expect(await store.transition(row.id, "isleniyor", { ig_publish_status: "hata", ig_publish_error: "x" })).toBe(true);
   });
 });

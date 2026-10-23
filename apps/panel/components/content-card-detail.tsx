@@ -11,7 +11,7 @@ import {
 } from "@/actions/content";
 import { PagePublishPanel } from "@/components/page-publish-panel";
 import { useToast } from "@/components/toast";
-import { openReelPublish, ReelPublishPanel } from "@/components/reel-publish-panel";
+import { ReelPublishPanel } from "@/components/reel-publish-panel";
 import { InstagramPreview, ReelAutoChecks } from "@/components/reel-review-extras";
 import type { ReelPanelContext } from "@/lib/content/reel-review";
 import {
@@ -146,6 +146,7 @@ export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState(item.learnedNote ?? "");
   const [permalink, setPermalink] = useState(item.igPermalink ?? "");
+  const [reelJustApproved, setReelJustApproved] = useState(false);
 
   const advice = adviceFor(item, perf, rules, now);
   const stage = STAGES.find((s) => s.key === item.stage);
@@ -221,7 +222,7 @@ export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef
                   run(
                     () => approveContent(item.id, { noStudentFaceOrName: faceChecked, submittedAt: item.submittedAt }),
                     `${item.code} onaylandı`,
-                    () => item.kind === "reels" && openReelPublish(item.id),
+                    () => item.kind === "reels" && setReelJustApproved(true),
                   )
                 }
               >
@@ -347,7 +348,7 @@ export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef
           </div>
         ) : null}
 
-        {reel ? <ReelPublishPanel item={item} videoUrl={videoUrl} ctx={reel} now={now} /> : null}
+        {reel ? <ReelPublishPanel item={item} videoUrl={videoUrl} ctx={reel} now={now} autoOpen={reelJustApproved} /> : null}
 
         {item.stage === "organik" ? (
           <div className="flex flex-col gap-2">

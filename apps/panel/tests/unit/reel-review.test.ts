@@ -76,7 +76,12 @@ describe("reelPanelState", () => {
     expect(reelPanelState(item({ igPublishStatus: "hata", igPublishError: "Onay geri alındı" }))).toEqual({
       kind: "hata",
       error: "Onay geri alındı",
+      retry: true,
     }));
+  it("yayınlandı ama bağlantı bulunamadıysa tekrar dene yok", () =>
+    expect(
+      reelPanelState(item({ igPublishStatus: "hata", igPublishError: "Instagram'da yayınlandı ama bağlantı bulunamadı; bağlantıyı elle yapıştırın" })),
+    ).toMatchObject({ kind: "hata", retry: false }));
   it("elle bağlanmış", () =>
     expect(reelPanelState(item({ igPermalink: "https://www.instagram.com/reel/X1/" }))).toEqual({
       kind: "elle",

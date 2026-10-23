@@ -44,10 +44,14 @@ function row(extra: Partial<QueueRow> = {}): QueueRow {
   };
 }
 
-function fakeStore(rows: QueueRow[], opts: { loseTransition?: boolean; loads?: (QueueRow | null | Error)[] } = {}) {
+function fakeStore(
+  rows: QueueRow[],
+  opts: { loseTransition?: boolean; loseClaim?: boolean; loseContainerWrite?: boolean; loads?: (QueueRow | null | Error)[] } = {},
+) {
   const map = new Map(rows.map((r) => [r.id, { ...r }]));
   const calls = {
     transitions: [] as { id: string; from: IgPublishStatus; patch: TransitionPatch }[],
+    claims: [] as { id: string; updatedAt: string }[],
     finish: [] as { contentId: string; status: string; error: string | null; extra?: Record<string, unknown> }[],
     owner: [] as { type: string; payload: Record<string, unknown> }[],
     managers: [] as { type: string; payload: Record<string, unknown> }[],
@@ -67,9 +71,18 @@ function fakeStore(rows: QueueRow[], opts: { loseTransition?: boolean; loads?: (
     async listActive(limit) {
       return [...map.values()].filter((r) => r.igPublishStatus === "kuyruk" || r.igPublishStatus === "isleniyor").slice(0, limit);
     },
+    async claim(id, updatedAt) {
+      calls.claims.push({ id, updatedAt });
+      if (opts.loseClaim) return false;
+      const r = map.get(id);
+      if (!r || r.igPublishStatus !== "isleniyor" || r.updatedAt !== updatedAt) return false;
+      r.updatedAt = new Date(NOW.getTime() + 1).toISOString();
+      return true;
+    },
     async transition(id, from, patch) {
       calls.transitions.push({ id, from, patch });
       if (opts.loseTransition) return false;
+      if (opts.loseContainerWrite && "ig_container_id" in patch && patch.ig_container_id) return false;
       const r = map.get(id);
       if (!r || r.igPublishStatus !== from) return false;
       if (patch.ig_publish_status) r.igPublishStatus = patch.ig_publish_status;
@@ -292,6 +305,51 @@ describe("processItem", () => {
       status: "hata",
       error: "Instagram'da yayınlandı ama bağlantı bulunamadı; bağlantıyı elle yapıştırın",
     });
+  });
+});
+
+describe("inceleme düzeltmeleri", () => {
+  it("sahiplenme kaybedilirse media_publish çağrılmaz (iki koşu aynı konteyner)", async () => {
+    const { store, calls } = fakeStore([row({ igPublishStatus: "isleniyor", igContainerId: "1799000000000001" })], { loseClaim: true });
+    const f = fakeFetch();
+    const res = await processItem(deps(store, f), "c1");
+    expect(res.status).toBe("isleniyor");
+    expect(calls.claims).toHaveLength(1);
+    expect(metaCalls(f).some((c) => c.endsWith("/media_publish"))).toBe(false);
+  });
+
+  it("media_publish zaman aşımında satır isleniyor kalır (sonraki yoklama kurtarır)", async () => {
+    const { store, map, calls } = fakeStore([row({ igPublishStatus: "isleniyor", igContainerId: "1799000000000001" })]);
+    const f = fakeFetch({ publish: new Response("bad gateway", { status: 502 }) });
+    expect(await processItem(deps(store, f), "c1")).toEqual({ status: "isleniyor", error: null });
+    expect(map.get("c1")!.igPublishStatus).toBe("isleniyor");
+    expect(calls.managers).toHaveLength(0);
+  });
+
+  it("media_publish ağ hatasında da isleniyor kalır", async () => {
+    const { store, map } = fakeStore([row({ igPublishStatus: "isleniyor", igContainerId: "1799000000000001" })]);
+    const base = fakeFetch();
+    const f = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      if (String(input).endsWith("/media_publish")) throw new TypeError("fetch failed");
+      return base(input, init);
+    });
+    expect((await processItem(deps(store, f as never), "c1")).status).toBe("isleniyor");
+    expect(map.get("c1")!.igPublishStatus).toBe("isleniyor");
+  });
+
+  it("media_publish açık 4xx Meta hatasında hata olur", async () => {
+    const { store } = fakeStore([row({ igPublishStatus: "isleniyor", igContainerId: "1799000000000001" })]);
+    const f = fakeFetch({ publish: new Response(JSON.stringify({ error: { message: "x", code: 25, error_subcode: 2207050 } }), { status: 400 }) });
+    expect((await processItem(deps(store, f), "c1")).status).toBe("hata");
+  });
+
+  it("konteyner kimliği yazılamazsa yoklama yapılmaz", async () => {
+    const { store } = fakeStore([row()], { loseContainerWrite: true });
+    const f = fakeFetch();
+    const res = await processItem(deps(store, f), "c1");
+    expect(metaCalls(f).some((c) => c.includes("/1799000000000001"))).toBe(false);
+    expect(metaCalls(f).some((c) => c.endsWith("/media_publish"))).toBe(false);
+    expect(res.status).not.toBe("yayinda");
   });
 });
 

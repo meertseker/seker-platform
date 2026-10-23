@@ -78,14 +78,15 @@ export function nextStep(row: QueueRow, now: Date): QueueStep {
     return { kind: "create" };
   }
   if (row.igPublishStatus === "isleniyor") {
-    if (!row.igContainerId) return { kind: "fail", error: "Konteyner kaydı yok; tekrar deneyin" };
     const updated = Date.parse(row.updatedAt);
+    // Eylem konteyneri açarken (1–30 sn) cron araya girmesin: önce bekleme payı.
+    if (now.getTime() - updated < POLL_GRACE_MS) return { kind: "wait" };
+    if (!row.igContainerId) return { kind: "fail", error: "Konteyner kaydı yok; tekrar deneyin" };
     // Gece koşu yok (07–22): akşam açılan konteynerin süresi o günün 07:00'sinden sayılır.
     const windowStart = istanbulAt(istanbulDateString(now), "07:00").getTime();
     if (now.getTime() - Math.max(updated, windowStart) > CONTAINER_TIMEOUT_MS) {
       return { kind: "fail", error: "Instagram videoyu 1 saatte işleyemedi; tekrar deneyin" };
     }
-    if (now.getTime() - updated < POLL_GRACE_MS) return { kind: "wait" };
     return { kind: "poll" };
   }
   return { kind: "wait" };
