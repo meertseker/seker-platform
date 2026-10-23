@@ -38,7 +38,26 @@ export async function loadChangeLog(
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error("Reklam kayıt defteri okunamadı");
-  return ((data ?? []) as LogDbRow[]).map((r) => ({
+  return ((data ?? []) as LogDbRow[]).map(toEntry);
+}
+
+/** Verilen önerilerden gelen kayıtlar (M1 "kim, ne zaman" satırı), en yeni önce. Boş listede sorgu yapılmaz. */
+export async function loadChangeLogForRecommendations(supabase: SupabaseClient, ids: string[]): Promise<ChangeLogEntry[]> {
+  const out: ChangeLogEntry[] = [];
+  for (const part of chunk([...new Set(ids.filter(Boolean))], IN_CHUNK)) {
+    const { data, error } = await supabase
+      .from("ad_change_log")
+      .select(LOG_COLUMNS)
+      .in("recommendation_id", part)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error("Reklam kayıt defteri okunamadı");
+    out.push(...((data ?? []) as LogDbRow[]).map(toEntry));
+  }
+  return out;
+}
+
+function toEntry(r: LogDbRow): ChangeLogEntry {
+  return {
     id: r.id,
     createdAt: r.created_at,
     platform: r.platform,
@@ -53,7 +72,7 @@ export async function loadChangeLog(
     source: r.source,
     recommendationId: r.recommendation_id,
     actorId: r.actor_id,
-  }));
+  };
 }
 
 /** Kimlik → ad soyad (profiles.full_name). Boş listede sorgu yapılmaz. */

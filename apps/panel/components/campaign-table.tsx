@@ -4,7 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { linkAdToContent } from "@/actions/ad-changes";
 import { AdChangeDialog, type AdChangeKind } from "@/components/ad-change-dialog";
+import { ChangeLine, LatestChangeLine } from "@/components/ads/ChangeLine";
+import { MoveToScaleDialog, type MoveToScaleTarget } from "@/components/ads/MoveToScaleDialog";
 import { useToast } from "@/components/toast";
+import type { AdSetup } from "@/lib/ads/ad-setup";
+import { canMoveToScale } from "@/lib/ads/campaign-scale";
 import type { CampaignRow } from "@/lib/ads/campaigns";
 import { instagramCodes, statusLabel } from "@/lib/ads/change-text";
 
@@ -30,12 +34,41 @@ type Props = {
   writeEnabled: boolean;
   scaleMaxPct: number;
   targetTl: number;
+  /** Tek seferlik Meta kurulumu; "Büyütmeye taşı" yalnız Test setindeki reklamda. */
+  setup: AdSetup | null;
+  /** Satır anahtarı → son kayıt satırı (satır altı gri). */
+  changeLines: Record<string, string>;
+  /** Aralıktaki en yeni kayıt satırı (tablo altı). */
+  latestLine: string | null;
+  /** İçerik kodu → content_items.id (moveToScale içerik kimliği ister). */
+  contentIds: Record<string, string>;
 };
 
+const REVIEW_CLASS = (review: string) =>
+  review.startsWith("Reddedildi")
+    ? "bg-destructive-soft text-destructive-strong"
+    : review === "Sorunlu"
+      ? "bg-warning-soft text-warning"
+      : "bg-muted text-muted-foreground";
+
 /** Kampanyalar tablosu: platform süzgeci, onaylı Durdur/Başlat/Bütçe ve kodsuz reklamı koda bağlama. */
-export function CampaignTable({ heading, children, rows, codes, gate, writeEnabled, scaleMaxPct, targetTl }: Props) {
+export function CampaignTable({
+  heading,
+  children,
+  rows,
+  codes,
+  gate,
+  writeEnabled,
+  scaleMaxPct,
+  targetTl,
+  setup,
+  changeLines,
+  latestLine,
+  contentIds,
+}: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [target, setTarget] = useState<{ row: CampaignRow; kind: AdChangeKind } | null>(null);
+  const [scaleTarget, setScaleTarget] = useState<MoveToScaleTarget | null>(null);
   const shown = rows.filter((r) => filter === "all" || r.platform === filter);
 
   return (
@@ -86,12 +119,21 @@ export function CampaignTable({ heading, children, rows, codes, gate, writeEnabl
             </thead>
             <tbody className="tabular-nums">
               {shown.map((row) => (
-                <Row key={row.key} row={row} codes={codes} onAction={(kind) => setTarget({ row, kind })} />
+                <Row
+                  key={row.key}
+                  row={row}
+                  codes={codes}
+                  changeLine={changeLines[row.key] ?? null}
+                  scaleContentId={canMoveToScale(row, setup) && row.contentCode ? (contentIds[row.contentCode] ?? null) : null}
+                  onAction={(kind) => setTarget({ row, kind })}
+                  onScale={(contentId) => setScaleTarget({ row, contentId })}
+                />
               ))}
             </tbody>
           </table>
         </div>
       )}
+      {latestLine ? <LatestChangeLine line={latestLine} /> : null}
       <p className="text-sm text-muted-foreground">
         {`Hedef: nitelikli veli başı en fazla ${tlFormatter.format(targetTl)} TL (Ayarlar ve hedefler'den değişir). Yeşil = hedefin altında, kırmızı = 2 katından fazla.`}
       </p>
@@ -103,11 +145,27 @@ export function CampaignTable({ heading, children, rows, codes, gate, writeEnabl
         writeEnabled={writeEnabled}
         scaleMaxPct={scaleMaxPct}
       />
+      <MoveToScaleDialog target={scaleTarget} onClose={() => setScaleTarget(null)} gate={gate} writeEnabled={writeEnabled} />
     </div>
   );
 }
 
-function Row({ row, codes, onAction }: { row: CampaignRow; codes: { code: string; topic: string }[]; onAction: (kind: AdChangeKind) => void }) {
+function Row({
+  row,
+  codes,
+  changeLine,
+  scaleContentId,
+  onAction,
+  onScale,
+}: {
+  row: CampaignRow;
+  codes: { code: string; topic: string }[];
+  changeLine: string | null;
+  /** Büyütmeye taşınabilir satırda içerik kimliği; değilse null (düğme yok). */
+  scaleContentId: string | null;
+  onAction: (kind: AdChangeKind) => void;
+  onScale: (contentId: string) => void;
+}) {
   const cell = "border-b border-border px-3.5 py-3 text-right";
   const status = statusLabel(row);
   const actionable = row.objectId !== "" && row.status !== null;
@@ -125,8 +183,18 @@ function Row({ row, codes, onAction }: { row: CampaignRow; codes: { code: string
           {status ? (
             <span className={`text-xs ${row.status === "durduruldu" ? "text-destructive-strong" : "text-muted-foreground"}`}>{status}</span>
           ) : null}
+          {row.review ? (
+            <span className={`max-w-80 rounded-full px-2 py-0.5 text-[11.5px] font-semibold [overflow-wrap:anywhere] ${REVIEW_CLASS(row.review)}`}>
+              {row.review}
+            </span>
+          ) : null}
           {row.unmatched ? <LinkCode adId={row.objectId} codes={instagramCodes(codes)} /> : null}
         </div>
+        {changeLine ? (
+          <div className={`max-w-xl ${row.depth === 1 ? "pl-7" : ""}`}>
+            <ChangeLine line={changeLine} />
+          </div>
+        ) : null}
       </th>
       <td className={cell}>{row.spendKurus > 0 ? money(row.spendKurus) : "—"}</td>
       <td className={cell}>
@@ -160,6 +228,16 @@ function Row({ row, codes, onAction }: { row: CampaignRow; codes: { code: string
             >
               {row.selfPaused ? "Başlat" : "Durdur"}
             </button>
+            {scaleContentId ? (
+              <button
+                type="button"
+                onClick={() => onScale(scaleContentId)}
+                aria-label={`${row.contentCode ?? row.name} Büyütme'ye taşı`}
+                className="min-h-11 cursor-pointer rounded-lg border border-instagram/40 bg-instagram-soft px-2.5 text-[13px] font-semibold text-instagram hover:bg-instagram-soft/70"
+              >
+                Büyütmeye taşı
+              </button>
+            ) : null}
           </div>
         ) : null}
       </td>

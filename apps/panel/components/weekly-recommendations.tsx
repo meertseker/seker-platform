@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { approveRecommendation, holdRecommendation } from "@/actions/recommendations";
+import { AdTestPanel } from "@/components/ads/AdTestPanel";
+import { showAdTestButton, type AdTestItem } from "@/lib/ads/ad-test-panel";
 import type { RecommendationRow } from "@/lib/ads/recommendations";
 
 const MIN_REASON = 10;
@@ -23,15 +25,21 @@ const PAST_OPEN = "Karar verilmedi · geçmiş hafta";
  * 2 · Panelin önerdiği kararlar. Onayla / Şimdilik bekle; sonuç yazısı eylemden gelir.
  * Kapı kırmızıyken ya da artış haftalık büyütme sınırını aştığında bütçe artışı gerekçe (en az 10 karakter) ister.
  * `readOnly`: geçmiş bir hafta açıkken karar düğmeleri yoktur, yalnız durum gösterilir.
+ * `whoWhen`: karar verilmiş önerinin "✓ Uygulandı · <ad> · <zaman> · "<gerekçe>"" satırı (sunucuda recWhoWhen).
+ * `adTestItems`: Meta "teste al" önerisinde "Onayla" yerine Z4 "Reklam testine al" penceresi bu içerikle açılır.
  */
 export function WeeklyRecommendations({
   recs,
   redGates,
   readOnly = false,
+  whoWhen = {},
+  adTestItems = {},
 }: {
   recs: RecommendationRow[];
   redGates: string[];
   readOnly?: boolean;
+  whoWhen?: Record<string, string>;
+  adTestItems?: Record<string, AdTestItem>;
 }) {
   const router = useRouter();
   const [state, setState] = useState<Record<string, RowState>>({});
@@ -85,6 +93,10 @@ export function WeeklyRecommendations({
             const busy = busyId === r.id;
             const reason = s.reason ?? "";
             const plat = r.platform ? PLATFORM[r.platform] : null;
+            // Meta "teste al": onay Z4 penceresinden (9 kontrol + plan); sunucu buradan onayı reddeder.
+            const adTest = r.ruleKey === "teste_al" && r.platform === "meta";
+            const testItem = adTest ? adTestItems[r.id] : undefined;
+            const who = decided ? whoWhen[r.id] : undefined;
             return (
               <li key={r.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-3.5">
                 <div className="flex flex-wrap items-center gap-3">
@@ -96,6 +108,7 @@ export function WeeklyRecommendations({
                   <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-0.5">
                     <span className="text-base font-bold text-foreground">{r.title}</span>
                     <span className="text-[13.5px] text-muted-foreground">{r.why}</span>
+                    {who ? <span className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{who}</span> : null}
                   </div>
                   {decided ? (
                     <span
@@ -105,22 +118,32 @@ export function WeeklyRecommendations({
                       {decided}
                     </span>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        aria-expanded={blocked ? !!s.reasonOpen : undefined}
-                        onClick={() =>
-                          blocked ? patch(r.id, { reasonOpen: !s.reasonOpen }) : run(r.id, () => approveRecommendation(r.id))
-                        }
-                        className={`${btn} ${
-                          blocked
-                            ? "border border-border bg-muted text-muted-foreground hover:bg-border/60"
-                            : "bg-primary text-on-primary hover:bg-primary-strong disabled:opacity-60"
-                        }`}
-                      >
-                        {blocked ? r.blockedReason : busy ? "Uygulanıyor…" : "Onayla"}
-                      </button>
+                    <div className="flex flex-wrap items-start gap-2">
+                      {adTest ? (
+                        testItem && showAdTestButton(testItem) ? (
+                          <AdTestPanel item={testItem} recommendationId={r.id} trigger="inline" />
+                        ) : (
+                          <span className="inline-flex min-h-11 max-w-64 items-center text-sm text-muted-foreground">
+                            İçerik reklam testine hazır değil (onaylı ve organik ya da test aşamasında olmalı).
+                          </span>
+                        )
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          aria-expanded={blocked ? !!s.reasonOpen : undefined}
+                          onClick={() =>
+                            blocked ? patch(r.id, { reasonOpen: !s.reasonOpen }) : run(r.id, () => approveRecommendation(r.id))
+                          }
+                          className={`${btn} ${
+                            blocked
+                              ? "border border-border bg-muted text-muted-foreground hover:bg-border/60"
+                              : "bg-primary text-on-primary hover:bg-primary-strong disabled:opacity-60"
+                          }`}
+                        >
+                          {blocked ? r.blockedReason : busy ? "Uygulanıyor…" : "Onayla"}
+                        </button>
+                      )}
                       <button
                         type="button"
                         disabled={busy}

@@ -4,11 +4,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LeadStatus } from "@/lib/constants";
 import { getAdSettings, type AdSettings } from "@/lib/ads/ad-settings";
+import { getAdSetup, type AdSetup } from "@/lib/ads/ad-setup";
+import { changeLine, latestByKey, type ChangeLogEntry } from "@/lib/ads/change-log";
 import type { CampaignLead, CampaignObject, CampaignSpendRow } from "@/lib/ads/campaigns";
 import { adsWriteEnabled, loadGateStatus, type GateStatus } from "@/lib/ads/writes";
 import { mondayOf } from "@/lib/ads/weekly";
-import { fetchAllPages } from "@/lib/content/board";
+import { IN_CHUNK, chunk, fetchAllPages } from "@/lib/content/board";
 import { addDaysToDateString, istanbulDateString } from "@/lib/lead-flow/business-hours";
+import { loadChangeLog, loadProfileNames } from "@/lib/queries/change-log";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 /** K10: maliyete giren veli (gclid, source=reklam ya da ad_platform dolu) PostgREST `or` biçiminde. */
@@ -67,6 +70,14 @@ export type CampaignPageData = {
   gate: GateStatus;
   writeEnabled: boolean;
   today: string;
+  /** Tek seferlik Meta kurulumu (Test/Büyütme kimlikleri); yapılmamışsa null. */
+  setup: AdSetup | null;
+  /** Kayıt anahtarı (nesne kimliği, reklam kimliği, içerik kodu, öneri kimliği) → hazır kayıt satırı (en yeni). */
+  changes: Map<string, string>;
+  /** Aralıktaki en yeni kayıt satırı (tablo altı); kayıt yoksa null. */
+  latestLine: string | null;
+  /** Test setindeki kodlu Meta reklamlarının içerik kodu → content_items.id ("Büyütmeye taşı" için). */
+  contentIds: Record<string, string>;
 };
 
 /** YYYY-MM-DD gününün İstanbul'daki başlangıcı (UTC ISO). */
@@ -184,12 +195,56 @@ async function loadCodes(supabase: SupabaseClient, today: string): Promise<Conte
   return rows.map((r) => ({ code: r.code, topic: r.topic }));
 }
 
+/** Kişi adı yoksa Rapor kayıt defteriyle aynı yedek. */
+function actorLabel(names: Map<string, string>, e: ChangeLogEntry): string {
+  return names.get(e.actorId) ?? (e.source === "cron" ? "Sistem" : "Bilinmiyor");
+}
+
+/** Aralığın kayıtları → anahtar başına en yeni satır ve en yeni satır. Okunamazsa boş (ekran bozulmaz). */
+async function loadChanges(
+  supabase: SupabaseClient,
+  from: string,
+  to: string,
+  now: Date,
+): Promise<{ changes: Map<string, string>; latestLine: string | null }> {
+  const entries = await loadChangeLog(supabase, istanbulDayStartIso(from), istanbulDayStartIso(addDaysToDateString(to, 1)));
+  const names = await loadProfileNames(supabase, entries.map((e) => e.actorId));
+  const changes = new Map<string, string>();
+  for (const [key, e] of latestByKey(entries)) changes.set(key, changeLine(e, actorLabel(names, e), now));
+  // loadChangeLog en yeni önce döner.
+  const latestLine = entries[0] ? changeLine(entries[0], actorLabel(names, entries[0]), now) : null;
+  return { changes, latestLine };
+}
+
+/** Test setindeki kodlu Meta reklamlarının içerik kimlikleri (kod → id). */
+async function loadScaleContentIds(
+  supabase: SupabaseClient,
+  objects: CampaignObject[],
+  setup: AdSetup | null,
+): Promise<Record<string, string>> {
+  if (!setup) return {};
+  const codes = [
+    ...new Set(
+      objects
+        .filter((o) => o.platform === "meta" && o.level === "ad" && o.parentId === setup.testAdsetId && o.contentCode)
+        .map((o) => o.contentCode as string),
+    ),
+  ];
+  const out: Record<string, string> = {};
+  for (const part of chunk(codes, IN_CHUNK)) {
+    const { data, error } = await supabase.from("content_items").select("id, code").in("code", part);
+    if (error) throw new Error("İçerik kimlikleri okunamadı");
+    for (const r of (data ?? []) as { id: string; code: string }[]) out[r.code] = r.id;
+  }
+  return out;
+}
+
 export async function loadCampaignPage(from: string, to: string): Promise<CampaignPageData> {
   const supabase = (await createServerSupabase()) as unknown as SupabaseClient;
   const now = new Date();
   const today = istanbulDateString(now);
   const settings = await getAdSettings(supabase);
-  const [spend, objects, leads, monthSpendKurus, codes, gate] = await Promise.all([
+  const [spend, objects, leads, monthSpendKurus, codes, gate, setup, changeData] = await Promise.all([
     loadSpend(supabase, from, to),
     loadObjects(supabase),
     loadLeads(supabase, from, to),
@@ -203,6 +258,33 @@ export async function loadCampaignPage(from: string, to: string): Promise<Campai
       console.error("[kampanyalar] kapılar hesaplanamadı:", e instanceof Error ? e.message : "bilinmeyen");
       return { red: false, labels: [] } as GateStatus;
     }),
+    getAdSetup(supabase).catch((e: unknown) => {
+      console.error("[kampanyalar] reklam kurulumu okunamadı:", e instanceof Error ? e.message : "bilinmeyen");
+      return null;
+    }),
+    // Kayıt satırları yalnız bilgi içindir; okunamazsa tablo satırsız açılır.
+    loadChanges(supabase, from, to, now).catch((e: unknown) => {
+      console.error("[kampanyalar] kayıt defteri okunamadı:", e instanceof Error ? e.message : "bilinmeyen");
+      return { changes: new Map<string, string>(), latestLine: null };
+    }),
   ]);
-  return { spend, objects, leads, monthSpendKurus, settings, codes, gate, writeEnabled: adsWriteEnabled(), today };
+  const contentIds = await loadScaleContentIds(supabase, objects, setup).catch((e: unknown) => {
+    console.error("[kampanyalar] içerik kimlikleri okunamadı:", e instanceof Error ? e.message : "bilinmeyen");
+    return {} as Record<string, string>;
+  });
+  return {
+    spend,
+    objects,
+    leads,
+    monthSpendKurus,
+    settings,
+    codes,
+    gate,
+    writeEnabled: adsWriteEnabled(),
+    today,
+    setup,
+    changes: changeData.changes,
+    latestLine: changeData.latestLine,
+    contentIds,
+  };
 }

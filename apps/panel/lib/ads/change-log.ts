@@ -1,6 +1,7 @@
 // Reklam kayıt satırı metinleri (K25, saf): ne yapıldı, durum, kim, ne zaman, gerekçe.
 // Kampanyalar (Z5), Bu hafta (M1) ve Rapor kayıt defteri (M2) aynı biçimleyiciyi kullanır.
 import { istanbulDateString } from "@/lib/lead-flow/business-hours";
+import type { RecommendationRow } from "./recommendations";
 import type { AdChangeStatus, AdLogAction, AdLogSource } from "./writes";
 
 export type ChangeLogEntry = {
@@ -138,4 +139,41 @@ export function latestByKey(entries: ChangeLogEntry[]): Map<string, ChangeLogEnt
     }
   }
   return out;
+}
+
+/** Kişi adı; bilinmiyorsa "Bilinmiyor" (Rapor kayıt defteriyle aynı). */
+function actorName(names: Map<string, string>, id: string | null | undefined): string {
+  return (id ? names.get(id) : undefined) ?? "Bilinmiyor";
+}
+
+/**
+ * M1 öneri kartında karar sonrası satır: "✓ Uygulandı · Zehra Gürsel · bugün 08:14 · "<gerekçe>"".
+ * Kayıt satırı (öneri kimliğiyle `latestByKey`) varsa durum, zaman ve gerekçe ondan; yoksa (aşama kararı, nesne yok)
+ * durum öneri sonucundan ("✓" ile başlıyorsa uygulandı), zaman karar anından. Bekletilen: "Bekletildi · <ad> · <zaman>".
+ * Açık ya da geçersiz öneride null.
+ */
+export function recWhoWhen(
+  rec: RecommendationRow,
+  names: Map<string, string>,
+  logs: Map<string, ChangeLogEntry>,
+  now: Date,
+): string | null {
+  if (rec.status === "bekletildi") {
+    return ["Bekletildi", actorName(names, rec.decidedBy), rec.decidedAt ? whenText(rec.decidedAt, now) : ""]
+      .filter(Boolean)
+      .join(" · ");
+  }
+  if (rec.status !== "onaylandi") return null;
+  const log = logs.get(rec.id);
+  const who = actorName(names, rec.decidedBy ?? log?.actorId);
+  if (log) {
+    const parts = [statusText(log.status), who, whenText(log.createdAt, now)];
+    const reason = str(log.reason);
+    if (reason) parts.push(`"${reason}"`);
+    return parts.filter(Boolean).join(" · ");
+  }
+  const applied = (rec.result ?? "").startsWith("✓");
+  return [applied ? statusText("uygulandi") : statusText("uygulanmadi_kapali"), who, rec.decidedAt ? whenText(rec.decidedAt, now) : ""]
+    .filter(Boolean)
+    .join(" · ");
 }

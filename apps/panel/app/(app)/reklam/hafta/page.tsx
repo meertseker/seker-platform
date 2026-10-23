@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { refreshWeekRecommendations } from "@/actions/recommendations";
 import type { WeeklySlot } from "@/actions/weekly";
@@ -9,6 +10,8 @@ import { WeeklyRecommendations } from "@/components/weekly-recommendations";
 import { WeeklyTeam } from "@/components/weekly-team";
 import { requireRole } from "@/lib/auth";
 import { getAdSettings } from "@/lib/ads/ad-settings";
+import type { AdTestItem } from "@/lib/ads/ad-test-panel";
+import { latestByKey, recWhoWhen } from "@/lib/ads/change-log";
 import type { RecommendationRow } from "@/lib/ads/recommendations";
 import {
   anyGateRed,
@@ -22,6 +25,7 @@ import {
 import { loadTeachers } from "@/lib/content/board";
 import { addDaysToDateString, formatDayTime } from "@/lib/lead-flow/business-hours";
 import { getLeadFlowSettings } from "@/lib/lead-flow/settings";
+import { loadChangeLogForRecommendations, loadProfileNames } from "@/lib/queries/change-log";
 import { loadWeekRecommendations } from "@/lib/queries/recommendations";
 import { loadWeeklyData } from "@/lib/queries/weekly";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -45,6 +49,51 @@ const SLOTS: { slot: WeeklySlot; label: string; prefix: "R" | "S"; letter: strin
   { slot: "sayfa_google", label: "Sayfa · Google", prefix: "S", letter: "G" },
   { slot: "sayfa_instagram", label: "Sayfa · Instagram", prefix: "S", letter: "I" },
 ];
+
+type Db = Awaited<ReturnType<typeof createServerSupabase>>;
+
+/** Karar verilmiş önerilerin "kim, ne zaman" satırları (öneri kimliği → satır). */
+async function loadWhoWhen(supabase: Db, recs: RecommendationRow[], now: Date): Promise<Record<string, string>> {
+  const decided = recs.filter((r) => r.status === "onaylandi" || r.status === "bekletildi");
+  if (decided.length === 0) return {};
+  const db = supabase as unknown as SupabaseClient;
+  const entries = await loadChangeLogForRecommendations(db, decided.map((r) => r.id));
+  const names = await loadProfileNames(db, [...decided.map((r) => r.decidedBy ?? ""), ...entries.map((e) => e.actorId)]);
+  const logs = latestByKey(entries);
+  const out: Record<string, string> = {};
+  for (const r of decided) {
+    const line = recWhoWhen(r, names, logs, now);
+    if (line) out[r.id] = line;
+  }
+  return out;
+}
+
+/** Açık Meta "teste al" önerilerinin Z4 penceresi için içerik bilgisi (öneri kimliği → içerik). */
+async function loadAdTestItems(supabase: Db, recs: RecommendationRow[]): Promise<Record<string, AdTestItem>> {
+  const wanted = new Map<string, string>();
+  for (const r of recs) {
+    if (r.status === "acik" && r.ruleKey === "teste_al" && r.platform === "meta" && r.action?.kind === "stage") {
+      wanted.set(r.id, r.action.contentId);
+    }
+  }
+  if (wanted.size === 0) return {};
+  const { data, error } = await supabase
+    .from("content_items")
+    .select("id, code, kind, stage, status, platform")
+    .in("id", [...new Set(wanted.values())]);
+  if (error) throw new Error("İçerikler okunamadı");
+  const byId = new Map(
+    ((data ?? []) as { id: string; code: string; kind: string; stage: string; status: string; platform: string | null }[]).map((c) => [c.id, c]),
+  );
+  const out: Record<string, AdTestItem> = {};
+  for (const [recId, contentId] of wanted) {
+    const c = byId.get(contentId);
+    if (c && (c.kind === "reels" || c.kind === "sayfa")) {
+      out[recId] = { id: c.id, code: c.code, kind: c.kind, stage: c.stage, status: c.status, platform: c.platform };
+    }
+  }
+  return out;
+}
 
 /** `?hafta=YYYY-MM-DD` geçerli bir Pazartesi ve en geç son tamamlanmış haftaysa o; değilse son tamamlanmış hafta. */
 function pickWeek(raw: string | string[] | undefined, latest: string): string {
@@ -76,6 +125,18 @@ export default async function BuHaftaPage({ searchParams }: { searchParams: Sear
     }),
     supabase.from("content_items").select("code, kind, owner_id").eq("week_start", taskWeek),
     supabase.from("weekly_reviews").select("topic, saved_at").eq("week_start", weekStart).maybeSingle(),
+  ]);
+
+  // Kim/ne zaman satırları ve Z4 içerikleri yalnız bilgi içindir; okunamazsa kartlar satırsız açılır.
+  const [whoWhen, adTestItems] = await Promise.all([
+    loadWhoWhen(supabase, recs, now).catch((e: unknown): Record<string, string> => {
+      console.error("[hafta] karar satırları okunamadı:", e instanceof Error ? e.message : "bilinmeyen");
+      return {};
+    }),
+    loadAdTestItems(supabase, recs).catch((e: unknown): Record<string, AdTestItem> => {
+      console.error("[hafta] teste alınacak içerikler okunamadı:", e instanceof Error ? e.message : "bilinmeyen");
+      return {};
+    }),
   ]);
 
   const gates = computeWeekGates(data, now, hours, settings);
@@ -145,7 +206,13 @@ export default async function BuHaftaPage({ searchParams }: { searchParams: Sear
       </header>
 
       <WeeklyGates gates={gates} topLost={funnel.lostReasons[0] ?? null} />
-      <WeeklyRecommendations recs={recs} redGates={red.labels} readOnly={weekStart !== latest} />
+      <WeeklyRecommendations
+        recs={recs}
+        redGates={red.labels}
+        readOnly={weekStart !== latest}
+        whoWhen={whoWhen}
+        adTestItems={adTestItems}
+      />
       <WeeklyFunnel funnel={funnel} />
       <WeeklyTeam rows={team} />
       <WeeklyPlan

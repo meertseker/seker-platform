@@ -60,6 +60,12 @@ export default async function KampanyalarPage({ searchParams }: { searchParams: 
   const rows = buildCampaignRows(data.spend, data.objects, data.leads, data.settings);
   const kpis = buildKpis(rows);
   const pace = budgetPace(data.monthSpendKurus, data.settings, data.today);
+  // Satır altı kayıt satırı: nesne kimliğiyle (reklam kurulumu ve taşıma kopyası da bu kimlikle anahtarlanır).
+  const changeLines: Record<string, string> = {};
+  for (const r of rows) {
+    const line = r.objectId ? data.changes.get(r.objectId) : undefined;
+    if (line) changeLines[r.key] = line;
+  }
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-[1180px]">
@@ -71,6 +77,10 @@ export default async function KampanyalarPage({ searchParams }: { searchParams: 
         writeEnabled={data.writeEnabled}
         scaleMaxPct={data.settings.scaleMaxPct}
         targetTl={data.settings.targetTl}
+        setup={data.setup}
+        changeLines={changeLines}
+        latestLine={data.latestLine}
+        contentIds={data.contentIds}
       >
         <form method="get" className="flex flex-wrap items-end gap-2">
           <label className="text-sm">
