@@ -108,14 +108,14 @@ Menüde "Reklam" grubu var: "Bu hafta", "Görev ver", "İçerik panosu", "Kampan
 
 - Ayarlar → Ayarlar ve hedefler'de, Bağlantılar kartının altında iki bölüm vardır: "Test ve Büyütme kampanyaları" kartı ve "Reklam şablonu".
 - Şablon her reklamda aynı kalan ayarlardır: Test ve Büyütme kampanyalarının günlük bütçesi, okulun konumu ve yarıçap, yaş aralığı, kampanya hedefi, reklam düğmesi, haftalık en çok yeni reklam sayısı (varsayılan 4) ve mevcut velilerin dışarıda tutulması. Kaydedince kimin, ne zaman değiştirdiği yazar ve kayda geçer.
-- "Kampanyaları kur" bir kez yapılır: Meta'da Test ve Büyütme kampanyalarını ve reklam setlerini **duraklatılmış** açar. Kart "Hazır" yazınca bir daha görünmez.
+- "Kampanyaları kur" bir kez yapılır: Meta'da Test ve Büyütme kampanyalarını ve reklam setlerini **duraklatılmış** açar. Kurulunca kart "Hazır" yazar ve düğmeler kalkar.
 - Şablonu yönetici değiştirir. Bütçe ve konum değişikliği yalnız bundan sonra kurulan reklamları etkiler.
 - Aylık Meta bütçesi (Ayarlar'daki "Aylık bütçe") ayın kalanına yetmiyorsa kurulum yapılmaz ve pencere sebebini yazar.
 
 ## Reklam testine al
 
 - İçerik panosunda Instagram'da yayında olan bir Reels'in ya da yayınlanmış bir sayfanın kartında "Reklam testine al"a basın. Bu hafta ekranındaki "Teste al" önerisi de aynı pencereyi açar.
-- Pencere 9 kontrolü sırayla gösterir: onay ve MEB kutusu, yayın (Reels için Instagram'da en az 72 saat), reklam adı, bağlantıdaki etiketler, piksel, bütçe ve şablon, yasaklı ifade ya da öğrenci adı, video ya da görsel biçimi, reklam hesabı. Yeşil tik tamam, kırmızıda yanında ne yapılacağı yazar ("Onaya dön", "Ayarlar'a git", "Mert'e söyleyin" gibi).
+- Pencere 9 kontrolü sırayla gösterir: onay ve MEB kutusu, yayın (Reels için Instagram'da en az 72 saat), reklam adı, bağlantıdaki etiketler, piksel, bütçe ve şablon, yasaklı ifade ya da öğrenci adı, video ya da görsel biçimi, reklam hesabı. Yeşil tik tamam, kırmızıda yanında ne yapılacağı yazar ("Onaya dön", "Ayarlar'a git", "Mert'e haber verin" gibi).
 - Biri kırmızıysa "Reklamı kur ve başlat" kapanır. Önce sorunu giderin, pencereyi yeniden açın.
 - 72 saat dolmadan teste almak isterseniz "72 saati bekleme" kutusunu işaretleyip en az 10 karakterlik bir gerekçe yazın. Gerekçe kayda geçer.
 - Bütçe kapılarından biri kırmızıysa (Bu hafta ekranındaki kapılar) pencere bunu yazar ve gerekçe ister. Gerekçesiz kurulmaz.
@@ -124,9 +124,9 @@ Menüde "Reklam" grubu var: "Bu hafta", "Görev ver", "İçerik panosu", "Kampan
 ## "Sadece göster"
 
 - Canlı yazım kapalı olsa da açık olsa da her pencerede "Sadece göster" vardır. Meta'ya hiçbir şey göndermez.
-- Basınca "Panel şunu kuracaktı:" listesi çıkar: reklam adı, hangi kampanyaya ve sete gideceği, bağlantı, günlük bütçe, düğme. Bu liste kayda da yazılır.
+- Basınca "Panel şunu kuracaktı:" listesi çıkar: kreatif (gönderi ya da sayfa görseli, düğme ve bağlantı), reklam adı ve hangi kampanyaya ve sete gideceği. Kampanyalar henüz kurulmadıysa kampanya ve set yerine "henüz kurulmadı" yazar. Bu liste kayda da yazılır.
 - Listeyi Reklam Yöneticisi'ndeki ayarlarla karşılaştırmak için kullanın. Bir satır yanlış görünüyorsa Mert'e kaydın saatini söyleyin.
-- Canlı yazım kapalıyken "Reklamı kur ve başlat" da yalnız kayda yazar: "Kaydedildi · uygulanmadı: canlı yazım kapalı". Hata değildir.
+- Canlı yazım kapalıyken "Reklamı kur ve başlat" kapalıdır; pencere "Canlı yazım kapalı: yalnız 'Sadece göster' çalışır." yazar. Hata değildir.
 
 ## Büyütmeye taşı
 
@@ -135,6 +135,8 @@ Menüde "Reklam" grubu var: "Bu hafta", "Görev ver", "İçerik panosu", "Kampan
 - Kapı kırmızıysa gerekçe ister. "Taşı" en az 10 karakterlik gerekçeden sonra açılır.
 - "Sadece göster" burada da yalnız kayda yazar. "Vazgeç" hiçbir şey yapmaz.
 - Taşınınca içerik panosunda kart "Kazanan" aşamasına geçer.
+- Test ve Büyütme kampanyaları henüz kurulmadıysa Bu hafta'daki "Büyüt" onayı yalnız kartı "Kazanan"a taşır, Meta'da bir şey değişmez; sonuç satırı bunu yazar.
+- Test kampanyası ya da seti elle duraklatıldıysa pencere uyarır: kurulum onu yeniden açar ve içindeki diğer reklamlar da yayına girer.
 
 ## Uygulandı satırı ve Reklam kayıt defteri
 

@@ -226,7 +226,7 @@ Panel Reels ve sayfaları Meta'da reklam olarak kurar: bir kez Test ve Büyütme
 
 **(e) TRY bütçe birimi doğrulaması:** İlk gerçek "Kampanyaları kur"dan önce yapılır.
 1. Reklam Yöneticisi'nde elle günlük 200 TL bütçeli bir kampanya açılır.
-2. Bütçesi `meta-read.mjs` ya da paneldeki `metaGetDailyBudget` ile okunur. `20000` dönmelidir (×100).
+2. Bütçesi masaüstündeki `meta-read.mjs` ile okunur. `20000` dönmelidir (×100).
 3. Farklı dönerse `apps/panel/lib/ads/meta/setup.ts` içindeki `TRY_MINOR_PER_TL` düzeltilmeden bayrak açılmaz.
 
 **(f) Bayrak açılışı (koordinatör işi):**
