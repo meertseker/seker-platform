@@ -1,0 +1,11 @@
+{
+  "container": { "id": "1799000000000001" },
+  "statusFinished": { "status_code": "FINISHED", "status": "Finished: Media container successfully created", "id": "1799000000000001" },
+  "statusInProgress": { "status_code": "IN_PROGRESS", "status": "In Progress", "id": "1799000000000001" },
+  "statusError": { "status_code": "ERROR", "status": "Error: 2207026", "id": "1799000000000001" },
+  "statusWeird": { "status_code": "SOMETHING_NEW", "id": "1799000000000001" },
+  "publish": { "id": "17900000000000077" },
+  "media": { "id": "17900000000000077", "permalink": "https://www.instagram.com/reel/C9xkAbCd/", "timestamp": "2026-10-24T09:12:00+0000" },
+  "limit": { "data": [{ "quota_usage": 3, "config": { "quota_total": 50, "quota_duration": 86400 } }] },
+  "errorLimit": { "error": { "message": "The user has reached the daily publishing limit", "type": "OAuthException", "code": 9, "error_subcode": 2207042 } }
+}

@@ -15,7 +15,13 @@ const INSIGHT_FIELDS =
 const ATTRIBUTION_WINDOWS = ["7d_click", "1d_view"];
 
 export class MetaApiError extends Error {
-  constructor(message: string, readonly status: number, readonly code: number | null = null) {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code: number | null = null,
+    /** Meta `error_subcode` (Instagram yayın hataları 2207xxx). */
+    readonly subcode: number | null = null,
+  ) {
     super(message);
     this.name = "MetaApiError";
   }
@@ -39,14 +45,16 @@ export async function toApiError(
   const raw = await response.text();
   let message = raw ? `HTTP ${response.status}: ${raw}` : `HTTP ${response.status}`;
   let code: number | null = null;
+  let subcode: number | null = null;
   try {
-    const parsed = JSON.parse(raw) as { error?: { message?: string; code?: number } };
+    const parsed = JSON.parse(raw) as { error?: { message?: string; code?: number; error_subcode?: number } };
     if (parsed.error?.message) message = parsed.error.message;
     if (typeof parsed.error?.code === "number") code = parsed.error.code;
+    if (typeof parsed.error?.error_subcode === "number") subcode = parsed.error.error_subcode;
   } catch {
     // JSON değilse ham metin
   }
-  return new MetaApiError(`${label}: ${sanitize(message, cfg)}`, response.status, code);
+  return new MetaApiError(`${label}: ${sanitize(message, cfg)}`, response.status, code, subcode);
 }
 
 export function headers(cfg: MetaConfig): Record<string, string> {

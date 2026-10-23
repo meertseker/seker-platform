@@ -18,6 +18,8 @@ export interface MetaConfig {
   capiEnabled: boolean;
   /** Instagram işletme hesabı kimliği (META_INSTAGRAM_USER_ID); yoksa organik sayılar kapalı. */
   instagramUserId?: string | null;
+  /** Instagram hesabının bağlı olduğu Facebook sayfası (META_FACEBOOK_PAGE_ID); yalnız bağlantı kartı okur. */
+  facebookPageId?: string | null;
 }
 
 /**
@@ -42,7 +44,16 @@ export function readMetaConfig(
     testEventCode: env.META_CAPI_TEST_CODE?.trim() || null,
     capiEnabled: env.META_CAPI_ENABLED === "true" && pixelId !== null,
     instagramUserId: env.META_INSTAGRAM_USER_ID?.trim() || null,
+    facebookPageId: env.META_FACEBOOK_PAGE_ID?.trim() || null,
   };
+}
+
+/**
+ * Instagram içerik yayını bayrağı (spec K22). Yalnız "true" iken panel Reels'i Instagram'a gönderir;
+ * ADS_WRITE_ENABLED'a bağlı değildir. Kapalıyken "Yayınla" yalnız ad_change_log satırı yazar.
+ */
+export function igPublishEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return env.IG_PUBLISH_ENABLED === "true";
 }
 
 /**
