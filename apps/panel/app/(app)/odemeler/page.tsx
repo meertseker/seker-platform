@@ -219,6 +219,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
               Toplu zam
             </Link>
           ) : null}
+          <Link
+            href="/odemeler/gecikenler#eski"
+            className="inline-flex min-h-11 items-center rounded-xl border border-border bg-surface px-3 text-sm font-semibold text-foreground hover:bg-muted"
+          >
+            Eski öğrenci alacakları
+          </Link>
         </div>
       </div>
 
