@@ -84,3 +84,12 @@ Menüde "Reklam" grubu var: "Bu hafta", "Görev ver", "İçerik panosu", "Kampan
 - Aylık bütçeyi Google ve Meta için ayrı girin. "Kampanyalar" ekranı ayın hızını buna göre gösterir.
 - Yasaklı ifadeler ve içerik limitleri (Reels açıklaması, sayfa başlığı, metin alt sınırı) içerik panosunu denetler.
 - Mesai, servis semtleri ve WhatsApp şablonları burada değil, "Ayarlar → Aday hattı"nda.
+
+## Sayfayı yayınlama
+
+- Öğretmen sayfa görevini teslim edip onayladıktan sonra görev kartında **Sayfayı önizle ve yayınla** düğmesi çıkar. Önce önizlemeye bakın. Önizleme sitedeki gerçek görünümdür; formu bir şey göndermez.
+- Sayfa adresi başlıktan otomatik önerilir. Yayınlanana kadar adresi değiştirebilirsiniz. Yayınlandıktan sonra adres sabitlenir, değişmez.
+- Yayınlayınca sayfa yaklaşık 30 saniye içinde açılır. Hemen açılmazsa biraz bekleyip yenileyin.
+- Yayındaki sayfada düzeltme için **Düzenle**'ye basın, değişikliği yapın, **Kaydet ve yeniden yayınla**'ya basın.
+- Sayfa artık kullanılmayacaksa **Sayfayı arşivle**'ye basın. Eski adrese gelen veli okulun mevcut sayfasına (/lp/az-mevcutlu-anaokulu) yönlenir, boş sayfa görmez.
+- Site düzenleyici bu yeni sayfaları düzenlemez. Değişiklik yalnız kartın **Düzenle** düğmesinden yapılır.

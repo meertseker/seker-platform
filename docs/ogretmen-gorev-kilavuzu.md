@@ -37,3 +37,14 @@ Haftalık Reels ve sayfa görevleri bu ekrandan yapılır. Telefonda, molada aç
 - Düzeltme istenirse görev size geri döner, bildirim gelir ve ekranın üstünde "Düzeltme istendi: …" notu görünür.
 - Düzeltme için yeni video yüklerseniz yüz sorusunu yeniden cevaplamanız gerekir; eski cevap yeni videoyu kapsamaz.
 - Bağlantı yoksa "Bağlantı yok, teslim edilemedi. Bağlantı gelince tekrar dene." yazar; yazdıklarınız kaybolmaz.
+
+## Sayfa görevi: reklam metni, fotoğraf ve önizleme
+- Sayfa görevinde fotoğrafı hazır listeden seçersiniz: "Bahçe, geniş açı", "Bahçe atölyeleri", "Mutfak atölyesi". Üçünde de çocuk yüzü yoktur. Yeni fotoğraf yüklenmez.
+- Fotoğraf seçmeden teslim edemezsiniz.
+- Görev Instagram sayfası içinse iki alan daha çıkar: reklam cümlesi (en fazla 125 karakter) ve reklam başlığı (en fazla 40 karakter). Google sayfasında bu alanlar yoktur. Teslim için zorunlu değildir, ama doldurmanız iyi olur.
+- **Sayfayı önizle** düğmesi sayfayı sitedeki gerçek görünümüyle açar. Önizlemedeki form çalışmaz, hiçbir şey göndermez; rahatça deneyebilirsiniz.
+
+## İçeriğim
+- **İçeriğim** sekmesinde teslim ettiğiniz içeriklerin geçmişini görürsünüz: ne zaman teslim edildi, onaylandı mı, yayına girdi mi.
+- Sayfanız yayındaysa o sayfadan gelen veli, randevu ve kayıt sayılarını da görürsünüz.
+- Para ya da harcama bilgisi burada görünmez.
