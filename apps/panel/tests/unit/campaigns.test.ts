@@ -18,7 +18,7 @@ function spend(o: Partial<CampaignSpendRow> & Pick<CampaignSpendRow, "platform" 
 }
 
 function obj(o: Partial<CampaignObject> & Pick<CampaignObject, "platform" | "level" | "objectId">): CampaignObject {
-  return { parentId: null, campaignId: null, name: o.objectId, status: "ENABLED", dailyBudgetMicros: null, budgetResource: null, contentCode: null, ...o };
+  return { parentId: null, campaignId: null, name: o.objectId, status: "ENABLED", dailyBudgetMicros: null, budgetResource: null, contentCode: null, effectiveStatus: null, reviewFeedback: null, ...o };
 }
 
 function lead(o: Partial<CampaignLead>): CampaignLead {
@@ -90,7 +90,7 @@ describe("buildCampaignRows", () => {
       key: "google:campaign:11", platform: "google", level: "campaign", depth: 0, objectId: "11", name: "TR_K9_Kres2Yas",
       status: "yayinda", spendKurus: 500_000, leads: 11, platformResults: 6, qualified: 4, appts: 1, enrolled: 1,
       cplKurus: 125_000, cplTone: "yellow", contentCode: null, unmatched: false, dailyBudgetTl: 250,
-      selfPaused: false, parentPaused: false, budgetNote: null,
+      selfPaused: false, parentPaused: false, budgetNote: null, adsetId: null, review: null,
     });
   });
 
@@ -130,6 +130,26 @@ describe("buildCampaignRows", () => {
     );
     expect(r.find((x) => x.key === "meta:ad:511")).toMatchObject({ status: "durduruldu", parentPaused: true, selfPaused: false });
     expect(r.find((x) => x.key === "meta:campaign:5")).toMatchObject({ status: "yayinda" });
+  });
+
+  it("reklam satırı üst set kimliğini ve inceleme etiketini taşır", () => {
+    const r = buildCampaignRows(
+      [],
+      [
+        obj({ platform: "meta", level: "campaign", objectId: "5", status: "ACTIVE" }),
+        obj({ platform: "meta", level: "adset", objectId: "51", parentId: "5", campaignId: "5", status: "ACTIVE" }),
+        obj({
+          platform: "meta", level: "ad", objectId: "511", parentId: "51", campaignId: "5", status: "ACTIVE", contentCode: "R-2600-A",
+          effectiveStatus: "DISAPPROVED", reviewFeedback: "Yanıltıcı iddia",
+        }),
+        obj({ platform: "meta", level: "ad", objectId: "512", parentId: "51", campaignId: "5", status: "ACTIVE", effectiveStatus: "ACTIVE" }),
+      ],
+      [],
+      S,
+    );
+    expect(r.find((x) => x.key === "meta:ad:511")).toMatchObject({ adsetId: "51", review: "Reddedildi: Yanıltıcı iddia" });
+    expect(r.find((x) => x.key === "meta:ad:512")).toMatchObject({ adsetId: "51", review: null });
+    expect(r.find((x) => x.key === "meta:campaign:5")).toMatchObject({ adsetId: null, review: null });
   });
 
   it("kampanyası bilinmeyen reklam velisi ayrı satırda, eylemsiz", () => {

@@ -3,6 +3,7 @@ import type { AdObjectSyncRow } from "../objects-store";
 import type { FetchFn } from "../types";
 import { appSecretProof, META_GRAPH_API_VERSION, META_GRAPH_BASE, type MetaConfig } from "./config";
 import { headers, MetaApiError, nextUrl, toApiError } from "./insights";
+import { reviewFeedbackText } from "./setup";
 
 const OBJECTS_TIMEOUT_MS = 30_000;
 /** Sonsuz sayfalama döngüsüne karşı üst sınır (insights ile aynı). */
@@ -22,6 +23,10 @@ interface RawObject {
   daily_budget?: string;
   campaign_id?: string;
   adset_id?: string;
+  /** Yalnız reklam isteğinde: inceleme dahil gerçek durum (PENDING_REVIEW, DISAPPROVED, WITH_ISSUES, …). */
+  effective_status?: string;
+  /** Yalnız reklam isteğinde: `{global:{anahtar:açıklama}}`. */
+  ad_review_feedback?: unknown;
 }
 
 function firstUrl(cfg: MetaConfig, edge: string, fields: string): URL {
@@ -63,12 +68,14 @@ function budgetMicros(raw: string | undefined): number | null {
  * Kampanya, reklam kümesi ve reklam durumları ile bütçeleri. `status` platformun ham ayar durumudur
  * (ACTIVE/PAUSED); değişiklik ağ geçidi bunu okur. Bütçe kampanyada ya da kümede durur; `budgetResource`
  * bütçeyi taşıyan nesnenin kimliğidir. İçerik kodu reklam adından çıkarılır; elle bağ yazım katmanında
- * (`upsertAdObjects`) adın üstüne geçer.
+ * (`upsertAdObjects`) adın üstüne geçer. Reklamlarda inceleme durumu (`effective_status`) ve ret açıklaması
+ * (`ad_review_feedback`) da okunur; bu GET canlı yazım kapısından bağımsızdır.
+ * Kaynak: https://developers.facebook.com/docs/marketing-api/reference/adgroup-review-feedback/
  */
 export async function fetchMetaObjects(cfg: MetaConfig, fetchFn: FetchFn = fetch): Promise<AdObjectSyncRow[]> {
   const campaigns = await fetchAll(cfg, "campaigns", "id,name,status,daily_budget", fetchFn);
   const adsets = await fetchAll(cfg, "adsets", "id,name,campaign_id,status,daily_budget", fetchFn);
-  const ads = await fetchAll(cfg, "ads", "id,name,adset_id,campaign_id,status", fetchFn);
+  const ads = await fetchAll(cfg, "ads", "id,name,adset_id,campaign_id,status,effective_status,ad_review_feedback", fetchFn);
 
   // Bütçe kampanyada ya da kümede durur; ağ geçidi eski değeri istenen satırdan okuyup bütçe kaynağına yazar.
   // Bu yüzden alt satırlar (küme, reklam) bütçesi olmayan üstün bütçesini ve kaynağını devralır.
@@ -129,6 +136,8 @@ export async function fetchMetaObjects(cfg: MetaConfig, fetchFn: FetchFn = fetch
       dailyBudgetMicros: budget?.micros ?? null,
       budgetResource: budget?.resource ?? null,
       contentCode: parseContentCode(a.name),
+      effectiveStatus: a.effective_status ?? null,
+      reviewFeedback: reviewFeedbackText(a.ad_review_feedback),
     });
   }
   return rows;

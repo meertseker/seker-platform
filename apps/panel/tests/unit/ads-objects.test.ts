@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fetchGoogleCampaignStates } from "@/lib/ads/google-objects";
 import { fetchMetaObjects } from "@/lib/ads/meta/objects";
-import { upsertAdObjects, type AdObjectSyncRow } from "@/lib/ads/objects-store";
+import { insertCreatedAdObjects, upsertAdObjects, type AdObjectSyncRow } from "@/lib/ads/objects-store";
 import type { AdsConfig } from "@/lib/ads/config";
 import type { MetaConfig } from "@/lib/ads/meta/config";
 
@@ -57,6 +57,34 @@ describe("fetchMetaObjects", () => {
     const byId = Object.fromEntries(rows.map((r) => [r.objectId, r]));
     expect(byId.c1).toMatchObject({ dailyBudgetMicros: 500_000_000, budgetResource: "c1", status: "ACTIVE" });
     expect(byId.a1).toMatchObject({ parentId: "s1", campaignId: "c1", contentCode: "R-2645-A", status: "PAUSED" });
+  });
+
+  it("reklam inceleme durumu ve açıklaması okunur; alanlar yalnız reklam isteğinde", async () => {
+    const fetchFn = fetchByEdge({
+      campaigns: [{ id: "c1", name: "K", status: "ACTIVE" }],
+      adsets: [{ id: "s1", name: "S", campaign_id: "c1", status: "ACTIVE" }],
+      ads: [
+        {
+          id: "a1", name: "R-2645-A · Gün", adset_id: "s1", campaign_id: "c1", status: "ACTIVE",
+          effective_status: "DISAPPROVED", ad_review_feedback: { global: { a: "Yanıltıcı iddia" } },
+        },
+        { id: "a2", name: "x", adset_id: "s1", campaign_id: "c1", status: "ACTIVE", effective_status: "ACTIVE" },
+      ],
+    });
+    const rows = await fetchMetaObjects(mcfg, fetchFn);
+    const byId = Object.fromEntries(rows.map((r) => [r.objectId, r]));
+    expect(byId.a1).toMatchObject({ effectiveStatus: "DISAPPROVED", reviewFeedback: "Yanıltıcı iddia" });
+    expect(byId.a2).toMatchObject({ effectiveStatus: "ACTIVE", reviewFeedback: null });
+    expect(byId.c1.effectiveStatus).toBeUndefined();
+    const fields = Object.fromEntries(
+      (fetchFn as unknown as ReturnType<typeof vi.fn>).mock.calls.map(([u]) => {
+        const url = new URL(u as string);
+        return [url.pathname.split("/").pop(), url.searchParams.get("fields")];
+      }),
+    );
+    expect(fields.ads).toBe("id,name,adset_id,campaign_id,status,effective_status,ad_review_feedback");
+    expect(fields.campaigns).not.toContain("effective_status");
+    expect(fields.adsets).not.toContain("effective_status");
   });
 
   it("sayfa sınırı aşılırsa kısmi liste dönmez, hata fırlatır", async () => {
@@ -165,6 +193,16 @@ describe("upsertAdObjects", () => {
     expect(deletes.some((d) => d.level === "campaign")).toBe(false);
   });
 
+  it("inceleme durumu ve açıklaması yüke girer; reklam dışı satırda null", async () => {
+    const { db, upserts } = fakeDb([]);
+    await upsertAdObjects(db, [
+      ad({ effectiveStatus: "DISAPPROVED", reviewFeedback: "Yanıltıcı iddia" }),
+      ad({ level: "adset", objectId: "s1", contentCode: null }),
+    ]);
+    expect(upserts[0][0]).toMatchObject({ effective_status: "DISAPPROVED", review_feedback: "Yanıltıcı iddia" });
+    expect(upserts[0][1]).toMatchObject({ effective_status: null, review_feedback: null });
+  });
+
   it("yazım patlarsa temizlik yapılmaz", async () => {
     const { db, deletes } = fakeDb([]);
     const failing = {
@@ -172,5 +210,65 @@ describe("upsertAdObjects", () => {
     };
     await expect(upsertAdObjects(failing as never, [ad()])).rejects.toThrow("ad_objects yazılamadı");
     expect(deletes).toHaveLength(0);
+  });
+});
+
+describe("insertCreatedAdObjects", () => {
+  function fakeDb(fail?: string) {
+    const calls: { table: string; op: string; rows?: Record<string, unknown>[]; opts?: unknown }[] = [];
+    const db = {
+      from: (table: string) => ({
+        upsert: (rows: Record<string, unknown>[], opts?: unknown) => {
+          calls.push({ table, op: "upsert", rows, opts });
+          return Promise.resolve({ error: fail === table ? { message: "x" } : null });
+        },
+        delete: () => {
+          calls.push({ table, op: "delete" });
+          const q: Record<string, unknown> = { eq: () => q, lt: () => Promise.resolve({ error: null }) };
+          return q;
+        },
+        select: () => {
+          calls.push({ table, op: "select" });
+          const q: Record<string, unknown> = { eq: () => q, in: () => Promise.resolve({ data: [], error: null }) };
+          return q;
+        },
+      }),
+    };
+    return { db: db as never, calls };
+  }
+  const created: AdObjectSyncRow[] = [
+    { platform: "meta", level: "ad", objectId: "a9", parentId: "s1", campaignId: "c1", name: "R-2645-A · Gün", status: "ACTIVE", dailyBudgetMicros: null, budgetResource: null, contentCode: "R-2645-A", effectiveStatus: "PENDING_REVIEW" },
+    { platform: "meta", level: "campaign", objectId: "c1", parentId: null, campaignId: "c1", name: "Test · Instagram", status: "PAUSED", dailyBudgetMicros: 2_000_000_000, budgetResource: "c1", contentCode: null },
+  ];
+
+  it("temizlik yapmadan upsert eder, içerik bağını aktörle yazar", async () => {
+    const { db, calls } = fakeDb();
+    await insertCreatedAdObjects(db, created, "u1");
+    expect(calls.some((c) => c.op === "delete")).toBe(false);
+    const obj = calls.find((c) => c.table === "ad_objects" && c.op === "upsert")!;
+    expect(obj.opts).toEqual({ onConflict: "platform,level,object_id" });
+    expect(obj.rows).toHaveLength(2);
+    expect(obj.rows![0]).toMatchObject({
+      platform: "meta", level: "ad", object_id: "a9", parent_id: "s1", campaign_id: "c1", content_code: "R-2645-A",
+      effective_status: "PENDING_REVIEW", review_feedback: null, status: "ACTIVE",
+    });
+    expect(typeof obj.rows![0].synced_at).toBe("string");
+    const link = calls.find((c) => c.table === "ad_content_links" && c.op === "upsert")!;
+    expect(link.opts).toEqual({ onConflict: "platform,ad_id" });
+    expect(link.rows).toEqual([{ platform: "meta", ad_id: "a9", content_code: "R-2645-A", linked_by: "u1" }]);
+  });
+
+  it("kodsuz ya da reklam olmayan satırda bağ yazılmaz; boş listede hiçbir şey yapılmaz", async () => {
+    const { db, calls } = fakeDb();
+    await insertCreatedAdObjects(db, [created[1]], "u1");
+    expect(calls.filter((c) => c.table === "ad_content_links")).toHaveLength(0);
+    const empty = fakeDb();
+    await insertCreatedAdObjects(empty.db, [], "u1");
+    expect(empty.calls).toHaveLength(0);
+  });
+
+  it("yazım hatası fırlatılır", async () => {
+    await expect(insertCreatedAdObjects(fakeDb("ad_objects").db, created, "u1")).rejects.toThrow("ad_objects yazılamadı");
+    await expect(insertCreatedAdObjects(fakeDb("ad_content_links").db, created, "u1")).rejects.toThrow("ad_content_links yazılamadı");
   });
 });

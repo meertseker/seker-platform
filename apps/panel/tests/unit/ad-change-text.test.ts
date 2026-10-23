@@ -6,7 +6,7 @@ function row(o: Partial<CampaignRow>): CampaignRow {
   return {
     key: "meta:ad:1", platform: "meta", level: "ad", depth: 1, objectId: "1", name: "R-2641-A", status: "reklam",
     spendKurus: 0, leads: 0, platformResults: 0, qualified: 0, appts: 0, enrolled: 0, cplKurus: null, cplTone: "red",
-    contentCode: "R-2641-A", unmatched: false, dailyBudgetTl: 150, selfPaused: false, parentPaused: false, budgetNote: null, ...o,
+    contentCode: "R-2641-A", unmatched: false, dailyBudgetTl: 150, selfPaused: false, parentPaused: false, budgetNote: null, adsetId: null, review: null, ...o,
   };
 }
 

@@ -6,9 +6,20 @@ export interface AdObjectSyncRow extends AdObjectRow {
   parentId: string | null;
   campaignId: string | null;
   contentCode: string | null;
+  /** Meta reklamının inceleme dahil gerçek durumu; yalnız reklam satırlarında dolu. */
+  effectiveStatus?: string | null;
+  /** Meta ret açıklaması (`reviewFeedbackText`); yalnız reklam satırlarında dolu. */
+  reviewFeedback?: string | null;
 }
 
 const CHUNK = 500;
+
+/** İnceleme kolonları her satırda gönderilir (toplu upsert'te kolon kümesi aynı kalsın); reklam dışında null. */
+function reviewColumns(row: AdObjectSyncRow): { effective_status: string | null; review_feedback: string | null } {
+  return row.level === "ad"
+    ? { effective_status: row.effectiveStatus ?? null, review_feedback: row.reviewFeedback ?? null }
+    : { effective_status: null, review_feedback: null };
+}
 /** `.in()` adresi URL'ye girer; uzun adres isteği düşürmesin diye bağ sorgusu 100'lük parçalarla gider. */
 const LINK_CHUNK = 100;
 
@@ -65,6 +76,7 @@ export async function upsertAdObjects(db: SupabaseClient, rows: AdObjectSyncRow[
     budget_resource: row.budgetResource,
     content_code:
       row.level === "ad" ? (links.get(`${row.platform}|${row.objectId}`) ?? row.contentCode) : row.contentCode,
+    ...reviewColumns(row),
     synced_at: syncedAt,
   }));
   for (let i = 0; i < payload.length; i += CHUNK) {
@@ -87,4 +99,42 @@ export async function upsertAdObjects(db: SupabaseClient, rows: AdObjectSyncRow[
     if (error) throw new Error(`ad_objects temizlenemedi: ${error.message}`);
   }
   return rows.length;
+}
+
+/**
+ * Panelin az önce Meta'da kurduğu nesneleri (kampanya, set, reklam) `ad_objects`'e yazar. Sabah senkronundan farkı:
+ * temizlik (silme) YOK — liste tam görüntü değil; ertesi sabah senkron aynı satırları Meta'dan görüp günceller.
+ * Reklam satırında içerik kodu varsa `ad_content_links`'e de (aynı kod, `linked_by` = aktör) yazılır; böylece
+ * reklam adı sonradan değişse de kod elle bağ gibi korunur.
+ */
+export async function insertCreatedAdObjects(
+  db: SupabaseClient,
+  rows: AdObjectSyncRow[],
+  actorId: string | null,
+): Promise<void> {
+  if (rows.length === 0) return;
+  const syncedAt = new Date().toISOString();
+  const payload = rows.map((row) => ({
+    platform: row.platform,
+    level: row.level,
+    object_id: row.objectId,
+    parent_id: row.parentId,
+    campaign_id: row.campaignId,
+    name: row.name,
+    status: row.status,
+    daily_budget_micros: row.dailyBudgetMicros,
+    budget_resource: row.budgetResource,
+    content_code: row.contentCode,
+    ...reviewColumns(row),
+    synced_at: syncedAt,
+  }));
+  const { error } = await db.from("ad_objects").upsert(payload, { onConflict: "platform,level,object_id" });
+  if (error) throw new Error(`ad_objects yazılamadı: ${error.message}`);
+
+  const links = rows
+    .filter((row) => row.level === "ad" && row.contentCode)
+    .map((row) => ({ platform: row.platform, ad_id: row.objectId, content_code: row.contentCode as string, linked_by: actorId }));
+  if (links.length === 0) return;
+  const { error: linkError } = await db.from("ad_content_links").upsert(links, { onConflict: "platform,ad_id" });
+  if (linkError) throw new Error(`ad_content_links yazılamadı: ${linkError.message}`);
 }

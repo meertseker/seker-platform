@@ -5,6 +5,7 @@
 import type { LeadStatus } from "@/lib/constants";
 import { addDaysToDateString } from "@/lib/lead-flow/business-hours";
 import type { AdSettings } from "./ad-settings";
+import { reviewLabel } from "./meta/setup";
 
 type Platform = "google" | "meta";
 
@@ -34,6 +35,10 @@ export type CampaignObject = {
   /** Bütçenin durduğu yer: Google campaignBudgets kaynak adı, Meta kampanya ya da reklam seti kimliği. */
   budgetResource: string | null;
   contentCode: string | null;
+  /** Meta reklamının inceleme dahil gerçek durumu (PENDING_REVIEW, DISAPPROVED, …); diğerlerinde null. */
+  effectiveStatus: string | null;
+  /** Meta ret açıklaması; diğerlerinde null. */
+  reviewFeedback: string | null;
 };
 
 export type CampaignLead = {
@@ -77,6 +82,10 @@ export type CampaignRow = {
   parentPaused: boolean;
   /** Bütçe başka düzeyde ya da paylaşılıyorsa onay penceresindeki uyarı satırı. */
   budgetNote: string | null;
+  /** Meta reklam satırında üst reklam setinin kimliği; diğerlerinde null. */
+  adsetId: string | null;
+  /** Meta reklam satırında inceleme etiketi ("İncelemede", "Reddedildi: …", "Sorunlu"); yoksa null. */
+  review: string | null;
 };
 
 const MICROS_PER_KURUS = 10_000;
@@ -127,6 +136,8 @@ function toRow(
     selfPaused: boolean;
     parentPaused: boolean;
     budgetNote?: string | null;
+    adsetId?: string | null;
+    review?: string | null;
   },
   s: AdSettings,
 ): CampaignRow {
@@ -149,6 +160,8 @@ function toRow(
     selfPaused: extra.selfPaused,
     parentPaused: extra.parentPaused,
     budgetNote: extra.budgetNote ?? null,
+    adsetId: extra.adsetId ?? null,
+    review: extra.review ?? null,
   };
 }
 
@@ -314,6 +327,8 @@ export function buildCampaignRows(
               selfPaused,
               parentPaused,
               budgetNote: budgetNoteFor(a.obj, objects, objIndex),
+              adsetId: a.obj?.parentId ?? null,
+              review: a.obj ? reviewLabel(a.obj.effectiveStatus, a.obj.reviewFeedback) : null,
             },
             s,
           ),
