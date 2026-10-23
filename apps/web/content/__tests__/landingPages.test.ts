@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { LANDING_PAGES, LANDING_SLUGS, getLandingPage } from '../landingPages';
 import { MEDIA } from '../media';
 import { ROSTER_STATUS, ENGLISH_COVERAGE_READY } from '../day';
+import { CODE_LP_SLUGS, LP_MEDIA_OPTIONS } from '@seker/shared/landing';
 
 const FORBIDDEN = ['indirim', 'kampanya', 'uygun fiyat', 'bütçe dostu', 'fırsat'];
 
@@ -160,6 +161,21 @@ describe('LANDING_PAGES — rakamlar tek kaynaktan, aşırı iddia yok', () => {
       expect(text, page.slug).not.toMatch(/doğrulanmamış/);
       expect(text, page.slug).not.toMatch(/neden (burada )?yazmıyoruz/);
       expect(text, page.slug).not.toMatch(/iddia olarak (sunmak|yazmak)/);
+    }
+  });
+});
+
+describe('@seker/shared/landing ile tutarlılık', () => {
+  it('CODE_LP_SLUGS ile LANDING_SLUGS aynı küme', () => {
+    expect([...CODE_LP_SLUGS].sort()).toEqual([...LANDING_SLUGS].sort());
+  });
+
+  it('her LP_MEDIA_OPTIONS öğesi MEDIA içinde, aynı src, çocuk yüzü yok', () => {
+    for (const opt of LP_MEDIA_OPTIONS) {
+      const asset = MEDIA[opt.key] as (typeof MEDIA)[keyof typeof MEDIA] & { hasChildFaces?: boolean };
+      expect(asset, opt.key).toBeDefined();
+      expect(asset.src).toBe(opt.src);
+      expect(asset.hasChildFaces).not.toBe(true);
     }
   });
 });
