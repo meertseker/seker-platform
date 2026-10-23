@@ -1,6 +1,7 @@
 // Öğretmenin Görevim ekranı sorguları ve etiketleri. Öğretmen yalnız kendi satırlarını görür (RLS + owner_id süzgeci).
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContentKind, PagePlatform } from "@/lib/content/codes";
+import { parseReelMediaMeta, type ReelMediaMeta } from "@/lib/content/media-meta";
 
 export type MyTask = {
   id: string;
@@ -15,7 +16,8 @@ export type MyTask = {
   caption: string | null;
   pageFields: Record<string, string>;
   mediaPath: string | null;
-  mediaMeta: { name: string; size: number; durationSec?: number } | null;
+  /** `reel`: K17 biçim bilgisi (eski yüklemede null). */
+  mediaMeta: { name: string; size: number; durationSec?: number; reel: ReelMediaMeta | null } | null;
   faceAnswer: boolean | null;
   reviewNote: string | null;
   submittedAt: string | null;
@@ -48,7 +50,12 @@ function toTask(r: Row): MyTask {
     caption: r.caption, pageFields: fields, mediaPath: r.media_path,
     mediaMeta:
       m && typeof m.name === "string" && typeof m.size === "number"
-        ? { name: m.name, size: m.size, ...(typeof m.durationSec === "number" ? { durationSec: m.durationSec } : {}) }
+        ? {
+            name: m.name,
+            size: m.size,
+            ...(typeof m.durationSec === "number" ? { durationSec: m.durationSec } : {}),
+            reel: parseReelMediaMeta(m),
+          }
         : null,
     faceAnswer: r.face_answer, reviewNote: r.review_note, submittedAt: r.submitted_at,
   };

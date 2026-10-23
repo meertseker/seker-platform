@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveContentDraft, submitContent } from "@/actions/content";
+import { saveReelVideoMeta } from "@/actions/instagram";
+import { CoverFramePicker } from "@/components/cover-frame-picker";
 import { VideoUpload, type VideoMeta } from "@/components/video-upload";
+import type { ReelMediaMeta } from "@/lib/content/media-meta";
 import { checkText } from "@/lib/content/checks";
 import { createDraftSaver, type DraftSaver, type SaveState } from "@/lib/content/draft-saver";
 import { mergeDraft, tabLabel, visibleTasks } from "@/lib/content/task-flow";
@@ -273,6 +276,13 @@ function TaskEditor({
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [submitErrors, setSubmitErrors] = useState<string[]>([]);
+  // Bu oturumda seçilen video (kapak karesi önizlemesi için); sayfa yenilenince yok.
+  const [file, setFile] = useState<File | null>(null);
+  // Video yokken "Altyazı ekledim" yalnız yerelde tutulur, yüklemede gönderilir.
+  const [pendingSubtitled, setPendingSubtitled] = useState(false);
+  const [reelError, setReelError] = useState<string | null>(null);
+  const reel = draft.mediaMeta?.reel ?? null;
+  const subtitled = reel ? reel.subtitled : pendingSubtitled;
 
   const isReels = task.kind === "reels";
 
@@ -291,6 +301,22 @@ function TaskEditor({
     const next = { ...draft.pageFields, [key]: value };
     onChange(() => ({ pageFields: next }));
     saver(task.id).queue({ pageFields: next });
+  }
+
+  /** K17 biçim bilgisini (kapak, altyazı) günceller; video yoksa yalnız yerel durum. */
+  function updateReel(patch: Partial<Pick<ReelMediaMeta, "coverOffsetMs" | "subtitled">>) {
+    if (!reel) {
+      if (patch.subtitled !== undefined) setPendingSubtitled(patch.subtitled);
+      return;
+    }
+    const next: ReelMediaMeta = { ...reel, ...patch };
+    onChange((d) => (d.mediaMeta ? { mediaMeta: { ...d.mediaMeta, reel: next } } : {}));
+    setReelError(null);
+    void saveReelVideoMeta(task.id, next)
+      .then((res) => {
+        if ("error" in res) setReelError(res.error);
+      })
+      .catch(() => setReelError("Kaydedilemedi, bağlantını kontrol et"));
   }
 
   function setFace(answer: boolean) {
@@ -401,9 +427,11 @@ function TaskEditor({
             meta={draft.mediaMeta}
             hasVideo={!!draft.mediaPath}
             maxMb={videoMaxMb}
+            subtitled={subtitled}
             disabled={submitting}
             onBusyChange={setUploading}
-            onUploaded={(path, meta) => {
+            onUploaded={(path, meta, chosen) => {
+              setFile(chosen);
               // Yeni video eski cevabı kapsamaz; sunucu da aynı şekilde sıfırlar, kaydedilemeyen eski cevap gönderilmez.
               if (path !== draft.mediaPath) saver(task.id).drop("faceAnswer");
               onChange((d) => ({
@@ -413,6 +441,18 @@ function TaskEditor({
               }));
             }}
           />
+
+          {draft.mediaPath && reel ? (
+            <section className="rounded-2xl border border-border bg-surface p-3.5">
+              <CoverFramePicker
+                file={file}
+                durationS={reel.durationS}
+                valueMs={reel.coverOffsetMs}
+                disabled={submitting || uploading}
+                onChange={(ms) => updateReel({ coverOffsetMs: ms })}
+              />
+            </section>
+          ) : null}
 
           <fieldset className="flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-3.5">
             <legend className="sr-only">Öğrenci yüzü ya da adı</legend>
@@ -443,6 +483,22 @@ function TaskEditor({
             {draft.faceAnswer === true ? (
               <p role="alert" className="rounded-[10px] bg-destructive-soft px-3 py-2.5 text-sm text-destructive-strong">
                 {FACE_WARNING}
+              </p>
+            ) : null}
+            <label className="flex min-h-11 cursor-pointer items-center gap-3 text-[15px] font-semibold">
+              <input
+                type="checkbox"
+                checked={subtitled}
+                disabled={submitting || uploading}
+                onChange={(e) => updateReel({ subtitled: e.target.checked })}
+                className="h-5 w-5 flex-none accent-[var(--color-accent)]"
+              />
+              Altyazı ekledim
+            </label>
+            <p className="text-[12.5px] text-muted-foreground">Reklama girmesi için altyazı gerekir.</p>
+            {reelError ? (
+              <p role="alert" className="text-sm text-destructive-strong">
+                {reelError}
               </p>
             ) : null}
           </fieldset>
@@ -538,6 +594,11 @@ function TaskEditor({
           >
             {submitting ? "Teslim ediliyor…" : uploading ? "Video yükleniyor…" : ready ? "Teslim et" : "Teslim için eksikleri tamamla"}
           </button>
+          {isReels ? (
+            <p className="text-center text-[12.5px] text-muted-foreground">
+              Teslimden sonra yönetici onaylar ve Instagram&apos;da yayınlar; sen bir şey yapmazsın.
+            </p>
+          ) : null}
         </div>
       </div>
     </>

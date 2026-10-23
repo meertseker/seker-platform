@@ -41,9 +41,9 @@ const getContentRules = vi.fn(async () => ({
 let stored: QueueRow | null;
 const store = {
   load: vi.fn(async () => stored),
-  transition: vi.fn(async () => true),
-  insertLog: vi.fn(async () => "log1"),
-  finishLog: vi.fn(async () => {}),
+  transition: vi.fn<(id: string, from: string, patch: Record<string, unknown>) => Promise<boolean>>(async () => true),
+  insertLog: vi.fn<(row: Record<string, unknown>) => Promise<string>>(async () => "log1"),
+  finishLog: vi.fn<(id: string, status: string, error: string | null) => Promise<void>>(async () => {}),
 };
 const processItem = vi.fn();
 const revalidatePath = vi.fn();

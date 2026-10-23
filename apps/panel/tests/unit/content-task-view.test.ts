@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueLabel, sortMyTasks, taskHeaderLabel, type MyTask } from "@/lib/queries/content";
+import { dueLabel, loadMyTasks, sortMyTasks, taskHeaderLabel, type MyTask } from "@/lib/queries/content";
 
 function task(over: Partial<MyTask>): MyTask {
   return {
@@ -33,5 +33,30 @@ describe("sortMyTasks", () => {
       task({ id: "acik-tarihsiz", status: "taslak", dueAt: null }),
     ]);
     expect(out.map((t) => t.id)).toEqual(["acik-erken", "acik-gec", "acik-tarihsiz", "teslim-yeni", "teslim-eski"]);
+  });
+});
+
+describe("loadMyTasks media_meta", () => {
+  const k17 = { durationS: 34, width: 1080, height: 1920, vertical: true, coverOffsetMs: 1000, subtitled: true };
+  function fakeDb(rows: unknown[]) {
+    const q: Record<string, unknown> = {};
+    q.select = () => q;
+    q.eq = () => q;
+    q.or = () => Promise.resolve({ data: rows, error: null });
+    return { from: () => q } as never;
+  }
+  const base = {
+    id: "1", code: "R-2646-A", kind: "reels", platform: "instagram", topic: "t", audience: null, brief: null, due_at: null,
+    status: "taslak", caption: null, page_fields: null, media_path: "o/1/v.mp4", face_answer: null, review_note: null, submitted_at: null,
+  };
+  it("satır K17'yi korur", async () => {
+    const [t] = await loadMyTasks(fakeDb([{ ...base, media_meta: { name: "v.mp4", size: 10, ...k17 } }]), "o");
+    expect(t.mediaMeta?.name).toBe("v.mp4");
+    expect(t.mediaMeta?.reel).toEqual(k17);
+    expect(t.mediaMeta?.reel?.vertical).toBe(true);
+  });
+  it("eski biçimde reel null, ad korunur", async () => {
+    const [t] = await loadMyTasks(fakeDb([{ ...base, media_meta: { name: "eski.mp4", size: 10, durationSec: 30 } }]), "o");
+    expect(t.mediaMeta).toEqual({ name: "eski.mp4", size: 10, durationSec: 30, reel: null });
   });
 });
