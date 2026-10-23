@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ContentTaskForm, type FormTask } from "@/components/content-task-form";
+import { GorevimTabs } from "@/components/gorevim-tabs";
 import { requireRole } from "@/lib/auth";
 import { getContentRules } from "@/lib/content/settings";
 import { videoMaxMb } from "@/lib/content/store";
@@ -43,6 +44,7 @@ export default async function GorevimPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <GorevimTabs active="gorevler" />
       <ContentTaskForm
         firstName={firstName}
         tasks={open.map((t) => toFormTask(t, now))}
