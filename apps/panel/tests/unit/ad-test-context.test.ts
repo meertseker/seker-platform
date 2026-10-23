@@ -9,6 +9,7 @@ const loadWeekInstagramPageSlug = vi.fn();
 const loadGateStatus = vi.fn();
 let metaTl = 20_000;
 
+vi.mock("@seker/auth/admin", () => ({ createAdminSupabase: () => ({}) }));
 vi.mock("@/lib/ads/preflight-sources", async (orig) => {
   const actual = await orig<typeof import("@/lib/ads/preflight-sources")>();
   return {

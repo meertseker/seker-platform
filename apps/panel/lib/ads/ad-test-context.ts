@@ -4,6 +4,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatTl } from "@/lib/content/board";
 import { istanbulDateString } from "@/lib/lead-flow/business-hours";
+import { siteBaseUrl } from "@/lib/pages/site";
 import { getAdSettings } from "./ad-settings";
 import type { AdSetup } from "./ad-setup";
 import { monthlyCapCheck } from "./ad-template";
@@ -68,15 +69,10 @@ export type AdTestContext = {
   setup: AdSetup | null;
 };
 
-export const DEFAULT_SITE_URL = "https://yeni.sekeranaokulu.com";
 const HOUR_MS = 3_600_000;
 const MSG_NOT_FOUND = "İçerik bulunamadı.";
 const MSG_NOT_INSTAGRAM = "Yalnız Instagram içerikleri reklam testine alınır.";
 const MSG_READ_FAILED = "Bilgiler okunamadı, tekrar deneyin.";
-
-function siteBaseFrom(env: Record<string, string | undefined>): string {
-  return env.SITE_PUBLIC_URL?.trim() || DEFAULT_SITE_URL;
-}
 
 function safeMetaConfig(env: Record<string, string | undefined>): MetaConfig | null {
   try {
@@ -120,7 +116,7 @@ export async function buildAdTestContext(
     if (!content) return { error: MSG_NOT_FOUND };
     if (content.platform !== "instagram") return { error: MSG_NOT_INSTAGRAM };
 
-    const siteBase = siteBaseFrom(env);
+    const siteBase = siteBaseUrl(env as NodeJS.ProcessEnv);
     const today = istanbulDateString(now);
     const cfg = safeMetaConfig(env);
 
