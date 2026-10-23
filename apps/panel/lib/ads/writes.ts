@@ -50,18 +50,33 @@ export type AdObjectRow = {
   budgetResource: string | null;
 };
 
+/** ad_change_log.action (0026 + Ruling P1 `sablon`). */
+export type AdLogAction =
+  | "pause"
+  | "resume"
+  | "budget"
+  | "ig_yayin"
+  | "kampanya_kur"
+  | "reklam_kur"
+  | "buyutmeye_tasi"
+  | "kitle_guncelle"
+  | "sablon";
+
+/** ad_change_log.source (B2). */
+export type AdLogSource = "kampanyalar" | "oneri" | "icerik" | "ayarlar" | "cron";
+
 export type AdChangeLogRow = {
   platform: "google" | "meta";
-  /** "icerik": Instagram içerik yayını (Paket B). */
-  level: "campaign" | "adset" | "ad" | "icerik";
+  /** "icerik": Instagram içerik yayını (Paket B); "audience"/"ayarlar": Paket C. */
+  level: "campaign" | "adset" | "ad" | "audience" | "icerik" | "ayarlar";
   objectId: string;
   objectName: string;
-  action: "pause" | "resume" | "budget" | "ig_yayin";
+  action: AdLogAction;
   oldValue: Record<string, unknown> | null;
   newValue: Record<string, unknown> | null;
   reason: string | null;
   gateRed: boolean;
-  source: "kampanyalar" | "oneri" | "icerik" | "ayarlar" | "cron";
+  source: AdLogSource;
   recommendationId: string | null;
   status: AdChangeStatus;
   error: string | null;
@@ -76,7 +91,8 @@ export interface AdChangeStore {
    */
   weekBudgetBaselineTl(platform: string, budgetResource: string, sinceIso: string, objectId: string): Promise<number | null>;
   insertLog(row: AdChangeLogRow): Promise<string>;
-  updateLog(id: string, patch: Pick<AdChangeLogRow, "status" | "error">): Promise<void>;
+  /** `newValue` verilirse new_value da değişir (kurulum kimlikleri); verilmezse dokunulmaz. */
+  updateLog(id: string, patch: { status: AdChangeStatus; error: string | null; newValue?: Record<string, unknown> }): Promise<void>;
   updateObject(platform: string, level: string, objectId: string, patch: Record<string, unknown>): Promise<void>;
   /** Aynı bütçe kaynağını taşıyan tüm satırların günlük bütçesi (paylaşılan / üst düzey bütçe). */
   updateBudgetRows(platform: string, budgetResource: string, micros: number): Promise<void>;
@@ -489,7 +505,9 @@ export function supabaseAdChangeStore(db: SupabaseClient): AdChangeStore & {
       return (data as { id: string }).id;
     },
     async updateLog(id, patch) {
-      const { error } = await db.from("ad_change_log").update(patch).eq("id", id);
+      const update: Record<string, unknown> = { status: patch.status, error: patch.error };
+      if (patch.newValue !== undefined) update.new_value = patch.newValue;
+      const { error } = await db.from("ad_change_log").update(update).eq("id", id);
       must(error);
     },
     async updateObject(platform, level, objectId, patch) {
