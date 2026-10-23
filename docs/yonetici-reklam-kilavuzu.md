@@ -120,6 +120,7 @@ Menüde "Reklam" grubu var: "Bu hafta", "Görev ver", "İçerik panosu", "Kampan
 - 72 saat dolmadan teste almak isterseniz "72 saati bekleme" kutusunu işaretleyip en az 10 karakterlik bir gerekçe yazın. Gerekçe kayda geçer.
 - Bütçe kapılarından biri kırmızıysa (Bu hafta ekranındaki kapılar) pencere bunu yazar ve gerekçe ister. Gerekçesiz kurulmaz.
 - Haftada en çok şablondaki sayı kadar yeni reklam kurulur. Aynı içerik için ikinci kez reklam kurulmaz.
+- Test kampanyası ya da seti elle duraklatıldıysa pencere uyarır: kurulum onu yeniden açar ve içindeki diğer reklamlar da yayına girer.
 
 ## "Sadece göster"
 
@@ -136,7 +137,6 @@ Menüde "Reklam" grubu var: "Bu hafta", "Görev ver", "İçerik panosu", "Kampan
 - "Sadece göster" burada da yalnız kayda yazar. "Vazgeç" hiçbir şey yapmaz.
 - Taşınınca içerik panosunda kart "Kazanan" aşamasına geçer.
 - Test ve Büyütme kampanyaları henüz kurulmadıysa Bu hafta'daki "Büyüt" onayı yalnız kartı "Kazanan"a taşır, Meta'da bir şey değişmez; sonuç satırı bunu yazar.
-- Test kampanyası ya da seti elle duraklatıldıysa pencere uyarır: kurulum onu yeniden açar ve içindeki diğer reklamlar da yayına girer.
 
 ## Uygulandı satırı ve Reklam kayıt defteri
 
