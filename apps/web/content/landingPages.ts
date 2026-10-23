@@ -287,3 +287,19 @@ export const LANDING_SLUGS = LANDING_PAGES.map((page) => page.slug);
 export function getLandingPage(slug: string): LandingPage | undefined {
   return LANDING_PAGES.find((page) => page.slug === slug);
 }
+
+/**
+ * Veritabanından gelen reklam sayfalarında (Reklam Konsolu Paket A) öğretmenin doldurmadığı bölümler:
+ * rakam şeridi, SSS ve form metinleri mevcut kod sabitlerinden gelir; yeni metin yazılmaz.
+ */
+export const DB_PAGE_DEFAULTS: {
+  proofPoints: { value: string; label: string }[];
+  faq: { question: string; answer: string }[];
+  formHeading: string;
+  formIntro: string;
+} = {
+  proofPoints: [YEARS_ACTIVE_POINT, ...rosterProof(), AGE_RANGE_POINT],
+  faq: [FAQ_AGES, FAQ_PRICE, FAQ_VISIT],
+  formHeading: 'Okulu gezin, sonra karar verin',
+  formIntro: FORM_INTRO_STANDARD,
+};
