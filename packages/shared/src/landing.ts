@@ -58,7 +58,7 @@ function cutAtWord(s: string, max: number, sep = ' '): string {
   const head = s.slice(0, max + 1);
   const i = head.lastIndexOf(sep);
   const out = i > 0 ? s.slice(0, i) : s.slice(0, max);
-  return out.replace(new RegExp(`[${sep === ' ' ? '\s' : '-'}]+$`), '');
+  return sep === ' ' ? out.trimEnd() : out.replace(/-+$/, '');
 }
 
 /** İçerik kartının `page_fields`'i → sayfa alanları. */

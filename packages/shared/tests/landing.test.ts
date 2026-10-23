@@ -136,6 +136,15 @@ describe('pageFieldsToLandingFields', () => {
     expect(words).toContain(f.metaDescription.split(' ').at(-1));
     expect(alt.startsWith(f.metaDescription)).toBe(true);
   });
+  it("kesme 's' ile biten kelimeden sonra düşerse kelime bozulmaz", () => {
+    // 'ders ' x 40: 160. karakter bir boşluktan hemen önce, son kelime 'ders'.
+    const alt = Array.from({ length: 40 }, () => 'ders').join(' ');
+    const f = pageFieldsToLandingFields({ alt_baslik: alt });
+    expect(f.metaDescription.length).toBeLessThanOrEqual(160);
+    expect(f.metaDescription.endsWith('ders')).toBe(true);
+    expect(f.metaDescription).toBe(f.metaDescription.trimEnd());
+    expect(f.metaDescription.split(' ').every((w) => w === 'ders')).toBe(true);
+  });
 });
 
 describe('parseLandingFields', () => {

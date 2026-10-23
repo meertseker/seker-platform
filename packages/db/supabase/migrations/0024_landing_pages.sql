@@ -27,11 +27,12 @@ create table public.landing_pages (
 create trigger touch_landing_pages before update on public.landing_pages
   for each row execute function public.touch_updated_at();
 
--- Yayından sonra adres değişmez (reklam bağlantıları kırılmasın); service_role dahil herkese.
+-- Yayından sonra (ya da taslak dışı durumda) adres değişmez; service_role dahil herkese.
 create or replace function public.landing_pages_guard() returns trigger
 language plpgsql set search_path = '' as $$
 begin
-  if old.published_at is not null and new.slug is distinct from old.slug then
+  -- published_at temizlenerek atlanmasın: taslak dışındaki her durumda da adres sabit.
+  if (old.published_at is not null or old.status <> 'taslak') and new.slug is distinct from old.slug then
     raise exception 'Yayından sonra adres değişmez' using errcode = '23514';
   end if;
   return new;

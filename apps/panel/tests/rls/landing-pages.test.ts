@@ -146,6 +146,12 @@ describe("landing_pages kısıtları", () => {
       .update({ status: "arsiv", archived_at: "2026-10-24T09:00:00Z" })
       .eq("id", live.data!.id);
     expect(u3.error).toBeNull();
+
+    // published_at temizlense de taslak dışı satırın adresi değişmez.
+    const u4 = await admin.from("landing_pages").update({ published_at: null }).eq("id", live.data!.id);
+    expect(u4.error).toBeNull();
+    const u5 = await admin.from("landing_pages").update({ slug: "rls-yayin-adres-3" }).eq("id", live.data!.id);
+    expect(u5.error?.code).toBe("23514");
   });
 
   it("aynı slug ikinci satırda 23505", async () => {
