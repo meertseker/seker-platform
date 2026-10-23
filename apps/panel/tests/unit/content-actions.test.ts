@@ -421,9 +421,17 @@ describe("submitContent", () => {
 
   it("sayfa başlığı kontrolden geçmezse teslim edilmez", async () => {
     row = { ...row, kind: "sayfa", code: "S-2643-G", media_path: null, face_answer: null, caption: null,
-      page_fields: { baslik: "Bölgenin en iyi anaokulu" } };
+      page_fields: { baslik: "Bölgenin en iyi anaokulu", mediaKey: "gardenWide" } };
     const res = await submitContent(CID);
     expect(res).toMatchObject({ blockers: ['"en iyi" kanıt ister, kullanılamaz'] });
+    expect(writes()).toHaveLength(0);
+  });
+
+  it("sayfa görsel seçilmeden teslim edilmez (O2, sunucuda da)", async () => {
+    row = { ...row, kind: "sayfa", code: "S-2643-G", media_path: null, face_answer: null, caption: null,
+      page_fields: { baslik: "İlk hafta uyum programı" } };
+    const res = await submitContent(CID);
+    expect(res).toMatchObject({ blockers: ["Görsel seç"] });
     expect(writes()).toHaveLength(0);
   });
 

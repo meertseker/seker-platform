@@ -13,6 +13,7 @@ function toFormTask(t: MyTask, now: Date): FormTask {
   return {
     id: t.id,
     kind: t.kind,
+    platform: t.platform,
     header: taskHeaderLabel(t),
     due: dueLabel(t.dueAt, now),
     overdue: isOverdue(t.dueAt, now),

@@ -1,5 +1,6 @@
 // İçerik eylemlerinin yardımcıları: teslim kontrolü, video dosya adı ve sınırı, gizli anahtarlı istemci sorguları.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { AD_HEADLINE_MAX, AD_PRIMARY_TEXT_MAX, isLpMediaKey } from "@seker/shared/landing";
 import { checkText, submissionBlockers } from "./checks";
 import type { ContentKind } from "./codes";
 import type { ContentRules } from "./settings";
@@ -20,7 +21,14 @@ export const PAGE_FIELDS: { key: string; label: string }[] = [
   { key: "blok3_baslik", label: "3. blok başlığı" },
   { key: "blok3_metin", label: "3. blok metni" },
 ];
-const PAGE_FIELD_KEYS = new Set(PAGE_FIELDS.map((f) => f.key));
+/** Sayfa görevinin reklam alanları (Instagram sayfasında formda görünür; teslimde zorunlu değil). */
+export const PAGE_AD_FIELDS: { key: "adPrimaryText" | "adHeadline"; label: string; max: number }[] = [
+  { key: "adPrimaryText", label: "Reklam cümlesi (Instagram'da görünür)", max: AD_PRIMARY_TEXT_MAX },
+  { key: "adHeadline", label: "Reklam başlığı", max: AD_HEADLINE_MAX },
+];
+const PAGE_AD_LABELS: Record<string, string> = { adPrimaryText: "Reklam cümlesi", adHeadline: "Reklam başlığı" };
+/** Taslakta kabul edilen anahtarlar: metin alanları, reklam alanları ve görsel anahtarı. */
+const PAGE_FIELD_KEYS = new Set([...PAGE_FIELDS.map((f) => f.key), ...PAGE_AD_FIELDS.map((f) => f.key), "mediaKey"]);
 
 export function isPageFieldKey(key: string): boolean {
   return PAGE_FIELD_KEYS.has(key);
@@ -37,7 +45,8 @@ export type SubmittableRow = {
 /**
  * Sunucu tarafı teslim kontrolü (istemci kontrolü atlansa da çalışır).
  * Reels: video, yüz sorusu (MEB Ek Madde 4) ve açıklama. Sayfa: başlık tam kontrolden,
- * dolu diğer alanlar yasaklı ifade kontrolünden geçer.
+ * dolu diğer alanlar yasaklı ifade kontrolünden geçer; görsel listeden seçilmiş olmalı, dolu reklam
+ * alanları sınır ve yasaklı ifade kontrolünden geçer.
  */
 export function contentBlockers(row: SubmittableRow, rules: ContentRules): string[] {
   const { banned, limits } = rules;
@@ -57,6 +66,12 @@ export function contentBlockers(row: SubmittableRow, rules: ContentRules): strin
     if (key === "baslik" || text(key).trim() === "") continue;
     const check = checkText(text(key), { max: Number.POSITIVE_INFINITY, min: 0, banned });
     if (!check.ok) out.push(`${label}: ${check.message}`);
+  }
+  if (!isLpMediaKey(fields.mediaKey)) out.push("Görsel seç");
+  for (const { key, max } of PAGE_AD_FIELDS) {
+    if (text(key).trim() === "") continue;
+    const check = checkText(text(key), { max, min: 0, banned });
+    if (!check.ok) out.push(`${PAGE_AD_LABELS[key]}: ${check.message}`);
   }
   return out;
 }

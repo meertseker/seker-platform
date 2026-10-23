@@ -7,12 +7,15 @@ import { VideoUpload, type VideoMeta } from "@/components/video-upload";
 import { checkText } from "@/lib/content/checks";
 import { createDraftSaver, type DraftSaver, type SaveState } from "@/lib/content/draft-saver";
 import { mergeDraft, tabLabel, visibleTasks } from "@/lib/content/task-flow";
-import { PAGE_FIELDS, contentBlockers } from "@/lib/content/store";
+import { PAGE_AD_FIELDS, PAGE_FIELDS, contentBlockers } from "@/lib/content/store";
+import { PageMediaSelect } from "@/components/page-media-select";
+import { PagePreviewButton } from "@/components/page-preview-button";
 import type { ContentLimits } from "@/lib/content/settings";
 
 export type FormTask = {
   id: string;
   kind: "reels" | "sayfa";
+  platform: "google" | "instagram";
   header: string;
   due: string;
   overdue: boolean;
@@ -481,6 +484,33 @@ function TaskEditor({
               />
             );
           })}
+          {task.platform === "instagram"
+            ? PAGE_AD_FIELDS.map(({ key, label, max }) => {
+                const value = draft.pageFields[key] ?? "";
+                return (
+                  <TextBlock
+                    key={key}
+                    id={`${key}-${task.id}`}
+                    label={label}
+                    value={value}
+                    onChange={(v) => setField(key, v)}
+                    rows={key === "adPrimaryText" ? 3 : 2}
+                    max={max}
+                    check={value.trim() === "" ? null : checkText(value, { max, min: 0, banned })}
+                    disabled={submitting}
+                  />
+                );
+              })
+            : null}
+          <PageMediaSelect
+            value={draft.pageFields.mediaKey ?? null}
+            onChange={(k) => setField("mediaKey", k)}
+            disabled={submitting}
+          />
+          <PagePreviewButton contentId={task.id} flush={() => saver(task.id).flush()} />
+          <p className="text-[12.5px] text-muted-foreground">
+            Önizleme sitedeki gerçek görünümdür; adres ve yayın yöneticide.
+          </p>
         </div>
       )}
 
