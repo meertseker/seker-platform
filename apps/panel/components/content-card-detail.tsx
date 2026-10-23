@@ -10,6 +10,7 @@ import {
   saveLearnedNote,
 } from "@/actions/content";
 import { PagePublishPanel } from "@/components/page-publish-panel";
+import { AdTestPanel } from "@/components/ads/AdTestPanel";
 import { useToast } from "@/components/toast";
 import { ReelPublishPanel } from "@/components/reel-publish-panel";
 import { InstagramPreview, ReelAutoChecks } from "@/components/reel-review-extras";
@@ -272,6 +273,7 @@ export function ContentCardDetail({ item, perf, rules, now, videoUrl, headingRef
           </button>
         </div>
 
+        <AdTestPanel item={item} />
         {kind === "remind" && !remind ? (
           <p className="text-sm text-muted-foreground">
             Öğretmenin telefonu kayıtlı değil; görev açılınca panel bildirimi gitti.
