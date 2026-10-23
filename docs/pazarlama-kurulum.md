@@ -208,3 +208,33 @@ Panel onaylanan Reels'i Instagram'a kendisi gönderir (Content Publishing API: k
 - `META_SITE_URL`: `meta-capi-test.mjs` için gerekli (test `Lead` olayının `event_source_url` değeri).
 - `META_PAGE_ID`: `meta-apply.mjs` ile sıfırdan kreatif kurulacaksa Facebook sayfası.
 - `META_INSTAGRAM_USER_ID`: aynı kreatifte kullanılacak Instagram hesabı.
+
+### Meta · panelden reklam (Paket C)
+Panel Reels ve sayfaları Meta'da reklam olarak kurar: bir kez Test ve Büyütme kampanyaları, sonra her içerik için Test'e bir reklam ve kazanınca Büyütme'ye kopya. Her yazım önce `ad_change_log`'a kaydedilir. `ADS_WRITE_ENABLED=true` değilse Meta'ya hiçbir istek gitmez ve kayıt `uygulanmadi_kapali` olur; bu kayıtta panelin göndereceği yükün tamamı durur.
+
+**(a) Ortam değişkenleri:** Yeni değişken yok. Kullanılanlar `META_ACCESS_TOKEN`, `META_APP_SECRET`, `META_AD_ACCOUNT_ID`, `META_PIXEL_ID`, `META_INSTAGRAM_USER_ID`, `META_FACEBOOK_PAGE_ID` (Paket B), `SITE_PUBLIC_URL` (reklam bağlantısı ve sayfa görseli adresi) ve yazım anahtarı `ADS_WRITE_ENABLED`.
+
+**(b) Sistem kullanıcısı:** Anahtarda `ads_management` izni olmalı. Reklam hesabı, piksel ve Facebook sayfası sistem kullanıcısına atanmış olmalı. Instagram hesabı reklam hesabında "Instagram hesapları" altında bağlı olmalı; değilse reklam kreatifi kurulamaz.
+
+**(c) Özel Hedef Kitle şartları:** "Mevcut velileri hariç tut" açıkken panel her Pazartesi sabahı aktif öğrencilerin veli telefonlarını (yalnız SHA-256 özeti) "Mevcut veliler (panel)" kitlesine yükler. Reklam hesabında Özel Hedef Kitle şartları bir kez kabul edilmemişse Meta 200/1870090 hatası verir ve panel "Meta'da Özel Hedef Kitle şartları kabul edilmemiş · Mert kabul eder" yazar. Kabul: Reklam Yöneticisi → Hedef Kitleler → Özel hedef kitle oluştur → Müşteri listesi adımında çıkan şartlar.
+
+**(d) İlk hafta "sadece göster" yöntemi:**
+1. Bayrak (`ADS_WRITE_ENABLED`) kapalı kalır.
+2. Zehra her içerikte "Sadece göster, kurma"ya basar. Bu, kayıt defterinde bir satır üretir.
+3. Mert her satırın `ad_change_log.new_value.summary` ve `steps` alanlarını Reklam Yöneticisi'nde elle açılan aynı ayarlarla karşılaştırır: reklam adı, kampanya, set, bağlantı ve `utm_content`.
+4. İstenirse aynı yük masaüstündeki `meta-apply.mjs` ile `--apply` olmadan, yalnız doğrulama olarak denenir.
+
+**(e) TRY bütçe birimi doğrulaması:** İlk gerçek "Kampanyaları kur"dan önce yapılır.
+1. Reklam Yöneticisi'nde elle günlük 200 TL bütçeli bir kampanya açılır.
+2. Bütçesi `meta-read.mjs` ya da paneldeki `metaGetDailyBudget` ile okunur. `20000` dönmelidir (×100).
+3. Farklı dönerse `apps/panel/lib/ads/meta/setup.ts` içindeki `TRY_MINOR_PER_TL` düzeltilmeden bayrak açılmaz.
+
+**(f) Bayrak açılışı (koordinatör işi):**
+1. `ADS_WRITE_ENABLED=true`, sonra `docker compose up -d panel`.
+2. Ayarlar'da "Kampanyaları kur". Kampanyalar ve setler duraklatılmış açılır.
+3. Reklam Yöneticisi'nde bütçe, konum, yaş, yerleşim (yalnız Instagram) ve optimizasyon (web sitesi dönüşümü, piksel Lead) kontrol edilir.
+4. Sonra ilk içerikte "Reklamı kur ve başlat".
+
+**(g) Reels reklamında bağlantı:** Reels reklamı yayınlanmış Instagram gönderisinin kendisiyle kurulur, beğeniler tek yerde kalır. Meta bu türde "Daha fazla bilgi" bağlantısını ya da `url_tags`'i taşımazsa, videoyu reklam hesabına ayrıca yükleyen yedek yol küçük bir iş olarak açılır (sabah soruları C, S3).
+
+**Cron:** Ek satır yok. Pazartesi kitle güncellemesi mevcut 06:00 `/api/cron/ads` koşusunun içinde çalışır.

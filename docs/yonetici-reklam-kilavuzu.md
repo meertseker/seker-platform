@@ -66,7 +66,7 @@ Menüde "Reklam" grubu var: "Bu hafta", "Görev ver", "İçerik panosu", "Kampan
   - Canlı yazım açıkken bütçe platformdan okunamadıysa ve bu hafta önceki bir bütçe değişikliği kaydı yoksa: eski bütçe bilinmediği için artış sayılır.
 - Instagram'da günlük bütçe reklamda değil, reklam setinde ya da kampanyada durur. Bütçeyi değiştirmek o reklam setinin ya da kampanyanın bütçesini değiştirir ve aynı bütçeyi kullanan diğer reklamları da etkiler; pencere bunu not olarak yazar.
 - Google'da bir bütçe birden fazla kampanya arasında paylaşılıyorsa değişiklik hepsini etkiler; pencere bunu da yazar.
-- Panelden hiçbir zaman yeni kampanya, reklam seti ya da reklam oluşturulmaz. Bunu Mert yapar.
+- Bu pencere yalnız mevcut kampanya, set ve reklamı değiştirir. Yeni reklam kurmak için aşağıdaki "Reklam testine al" bölümüne bakın.
 
 ## Reels'i Instagram'da yayınlama
 
@@ -103,3 +103,50 @@ Menüde "Reklam" grubu var: "Bu hafta", "Görev ver", "İçerik panosu", "Kampan
 - Yayındaki sayfada düzeltme için **Düzenle**'ye basın, değişikliği yapın, **Kaydet ve yeniden yayınla**'ya basın.
 - Sayfa artık kullanılmayacaksa **Sayfayı arşivle**'ye basın. Eski adrese gelen veli okulun mevcut sayfasına (/lp/az-mevcutlu-anaokulu) yönlenir, boş sayfa görmez.
 - Site düzenleyici bu yeni sayfaları düzenlemez. Değişiklik yalnız kartın **Düzenle** düğmesinden yapılır.
+
+## Reklam şablonu ve kampanyaların kurulumu
+
+- Ayarlar → Ayarlar ve hedefler'de, Bağlantılar kartının altında iki bölüm vardır: "Test ve Büyütme kampanyaları" kartı ve "Reklam şablonu".
+- Şablon her reklamda aynı kalan ayarlardır: Test ve Büyütme kampanyalarının günlük bütçesi, okulun konumu ve yarıçap, yaş aralığı, kampanya hedefi, reklam düğmesi, haftalık en çok yeni reklam sayısı (varsayılan 4) ve mevcut velilerin dışarıda tutulması. Kaydedince kimin, ne zaman değiştirdiği yazar ve kayda geçer.
+- "Kampanyaları kur" bir kez yapılır: Meta'da Test ve Büyütme kampanyalarını ve reklam setlerini **duraklatılmış** açar. Kart "Hazır" yazınca bir daha görünmez.
+- Şablonu yönetici değiştirir. Bütçe ve konum değişikliği yalnız bundan sonra kurulan reklamları etkiler.
+- Aylık Meta bütçesi (Ayarlar'daki "Aylık bütçe") ayın kalanına yetmiyorsa kurulum yapılmaz ve pencere sebebini yazar.
+
+## Reklam testine al
+
+- İçerik panosunda Instagram'da yayında olan bir Reels'in ya da yayınlanmış bir sayfanın kartında "Reklam testine al"a basın. Bu hafta ekranındaki "Teste al" önerisi de aynı pencereyi açar.
+- Pencere 9 kontrolü sırayla gösterir: onay ve MEB kutusu, yayın (Reels için Instagram'da en az 72 saat), reklam adı, bağlantıdaki etiketler, piksel, bütçe ve şablon, yasaklı ifade ya da öğrenci adı, video ya da görsel biçimi, reklam hesabı. Yeşil tik tamam, kırmızıda yanında ne yapılacağı yazar ("Onaya dön", "Ayarlar'a git", "Mert'e söyleyin" gibi).
+- Biri kırmızıysa "Reklamı kur ve başlat" kapanır. Önce sorunu giderin, pencereyi yeniden açın.
+- 72 saat dolmadan teste almak isterseniz "72 saati bekleme" kutusunu işaretleyip en az 10 karakterlik bir gerekçe yazın. Gerekçe kayda geçer.
+- Bütçe kapılarından biri kırmızıysa (Bu hafta ekranındaki kapılar) pencere bunu yazar ve gerekçe ister. Gerekçesiz kurulmaz.
+- Haftada en çok şablondaki sayı kadar yeni reklam kurulur. Aynı içerik için ikinci kez reklam kurulmaz.
+
+## "Sadece göster"
+
+- Canlı yazım kapalı olsa da açık olsa da her pencerede "Sadece göster" vardır. Meta'ya hiçbir şey göndermez.
+- Basınca "Panel şunu kuracaktı:" listesi çıkar: reklam adı, hangi kampanyaya ve sete gideceği, bağlantı, günlük bütçe, düğme. Bu liste kayda da yazılır.
+- Listeyi Reklam Yöneticisi'ndeki ayarlarla karşılaştırmak için kullanın. Bir satır yanlış görünüyorsa Mert'e kaydın saatini söyleyin.
+- Canlı yazım kapalıyken "Reklamı kur ve başlat" da yalnız kayda yazar: "Kaydedildi · uygulanmadı: canlı yazım kapalı". Hata değildir.
+
+## Büyütmeye taşı
+
+- Kampanyalar'da Test kampanyasındaki bir Instagram reklamının satırında "Büyütmeye taşı" düğmesi çıkar. Bu hafta ekranında "Büyüt" önerisini onaylamak da aynı işi yapar.
+- Pencere ne olacağını yazar: reklam Büyütme · Instagram kampanyasına kopyalanır, Test'teki reklam durur.
+- Kapı kırmızıysa gerekçe ister. "Taşı" en az 10 karakterlik gerekçeden sonra açılır.
+- "Sadece göster" burada da yalnız kayda yazar. "Vazgeç" hiçbir şey yapmaz.
+- Taşınınca içerik panosunda kart "Kazanan" aşamasına geçer.
+
+## Uygulandı satırı ve Reklam kayıt defteri
+
+- Kampanyalar'da her satırın altında gri tek satır, o reklama yapılan son işlemi yazar: "Uygulandı · kim · ne zaman · gerekçe". Tablonun altında en son değişiklik ve "Tüm değişiklik kaydı" bağlantısı vardır.
+- Bu hafta ekranında karar verilen önerinin altında "✓ Uygulandı · ad · saat · gerekçe", uygulanmadıysa "Kaydedildi · uygulanmadı · …", bekletildiyse "Bekletildi · ad · saat" yazar.
+- Rapor'daki "Reklam kayıt defteri" tablosu dönemdeki her reklam işlemini gösterir: ne zaman, kim, ne yapıldı, sonuç, gerekçe. Excel'e aktarınca ayrı bir sayfada çıkar.
+- Kayıtlar silinmez ve değiştirilmez.
+
+## Reddedilen reklam
+
+- Meta bir reklamı reddederse Kampanyalar'daki satırında kırmızı "Reddedildi: sebep" etiketi çıkar. "İncelemede" Meta'nın henüz bakmadığını gösterir.
+- Sebep çoğunlukla metin ya da görselle ilgilidir. İçeriği düzelttirin (öğretmene revize isteyin), sonra yeni bir içerik olarak teste alın.
+- Reddedilen reklam para harcamaz. Satırı durdurmanız gerekmez.
+- Sebep anlaşılmıyorsa ya da hesap kısıtlandıysa Mert'e haber verin.
+
