@@ -63,7 +63,9 @@ const MSG_GOSTER = "Kaydedildi · uygulanmadı: sadece göster";
 const MSG_CLOSED = "Kaydedildi · uygulanmadı: canlı yazım kapalı";
 const MSG_LOG_FAILED = "Kayıt yazılamadı; değişiklik yapılmadı.";
 const MSG_GATE_FAILED = "Bu haftanın kapıları hesaplanamadı; şimdilik kurulamaz.";
-const PENDING = "Platform yanıtı bekleniyor";
+/** Platforma gitmeden yazılan kaydın bekleme metni; yanıt gelmezse kayıt bu metinle `hata` kalır. */
+export const SETUP_PENDING_ERROR = "Platform yanıtı bekleniyor";
+const PENDING = SETUP_PENDING_ERROR;
 
 const DONE_TEXT: Record<SetupAction, string> = {
   kampanya_kur: "Kampanyalar kuruldu",
