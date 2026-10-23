@@ -11,6 +11,9 @@ vi.mock('@/lib/content/server', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/content/server')>();
   return { ...actual, getReaderData: async () => actual.buildReaderData({}, false, 2026) };
 });
+// Veritabanı reklam sayfaları (Reklam Konsolu Paket A): varsayılan olarak hiçbiri yok.
+const getPublishedLandingPage = vi.fn<(slug: string) => Promise<unknown>>(async () => null);
+vi.mock('@/lib/landing/db', () => ({ getPublishedLandingPage: (slug: string) => getPublishedLandingPage(slug) }));
 
 /**
  * LeadForm ('use client') useRouter() çağırır; RTL bunu gerçek bir Next.js
@@ -220,5 +223,47 @@ describe('beş LP için temel render sağlığı', () => {
     const { container, getByText } = render(jsx);
     expect(getByText(defaultData().values[`lp.${page.slug}.h1`] as string)).toBeDefined();
     expect(container.querySelector('#form')).not.toBeNull();
+  });
+});
+
+describe('veritabanı reklam sayfası (Reklam Konsolu Paket A)', () => {
+  const DB_FIELDS = {
+    h1: 'İlk hafta uyum nasıl geçer',
+    subhead: 'Uyum haftasını çocuğunuzun temposunda planlıyoruz.',
+    bodyBlocks: [{ heading: 'İlk gün', text: 'Birlikte geliyorsunuz.' }],
+    mediaKey: null,
+    adPrimaryText: '',
+    adHeadline: '',
+    metaTitle: 'İlk hafta uyum | Şeker Anaokulu',
+    metaDescription: 'Uyum haftası nasıl geçer.',
+  };
+
+  it('kod slug’ı olmayan yayındaki sayfayı veritabanı alanlarıyla render eder', async () => {
+    getPublishedLandingPage.mockResolvedValueOnce({ slug: 'ilk-hafta-uyum', status: 'yayinda', fields: DB_FIELDS });
+    const { container } = render(await LandingPageRoute(params('ilk-hafta-uyum')));
+    expect(getPublishedLandingPage).toHaveBeenCalledWith('ilk-hafta-uyum');
+    expect(container.querySelector('h1')?.textContent).toBe(DB_FIELDS.h1);
+    expect(container.textContent).toContain('Birlikte geliyorsunuz.');
+    expect(container.innerHTML).not.toContain('data-edit-');
+  });
+
+  it('veritabanında yoksa notFound()', async () => {
+    getPublishedLandingPage.mockResolvedValueOnce(null);
+    await expect(LandingPageRoute(params('ilk-hafta-uyum'))).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK/);
+  });
+
+  it('kod slug’ında veritabanına bakılmaz', async () => {
+    getPublishedLandingPage.mockClear();
+    await LandingPageRoute(params('beykent-anaokulu'));
+    await generateMetadata(params('beykent-anaokulu'));
+    expect(getPublishedLandingPage).not.toHaveBeenCalled();
+  });
+
+  it('generateMetadata veritabanı sayfası için noindex ve sayfanın başlığını verir', async () => {
+    getPublishedLandingPage.mockResolvedValueOnce({ slug: 'ilk-hafta-uyum', status: 'yayinda', fields: DB_FIELDS });
+    const metadata = await generateMetadata(params('ilk-hafta-uyum'));
+    expect(metadata.robots).toEqual({ index: false, follow: false });
+    expect(JSON.stringify(metadata.title)).toContain('İlk hafta uyum');
+    expect(metadata.description).toBe(DB_FIELDS.metaDescription);
   });
 });
