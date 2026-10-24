@@ -38,7 +38,7 @@ export const KAYIT_SLOTS: Record<string, SlotDef> = {
   'kayit.hero.title': text('Ana başlık', '2026-2027 kayıtlarımız açık', true),
   'kayit.hero.lead': text(
     'Giriş metni',
-    `Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk bulunuyor ve her sınıfta iki öğretmen görev yapıyor. Sınıfları doğum yılına ve ayına göre oluşturduğumuz için her grupta yer sayısı sınırlı; 2-3 yaş oyun grubundan 5-6 yaş ilkokula hazırlık sınıfına kadar tüm gruplarda erken başvurmanızı öneririz.`,
+    `Sınıf mevcudumuzu ${ROSTER_STATUS.childCount} çocukla sınırlıyoruz ve her sınıfta iki öğretmen görev yapıyor. Sınıfları doğum yılına ve ayına göre oluşturduğumuz için her grupta yer sayısı sınırlı; 2-3 yaş oyun grubundan 5-6 yaş ilkokula hazırlık sınıfına kadar tüm gruplarda erken başvurmanızı öneririz.`,
   ),
   'kayit.form.title': text('Form başlığı', 'Ön görüşme randevunuzu alın', true),
   'kayit.steps.title': text('Kayıt süreci başlığı', 'Kayıt süreci üç adımdan oluşur', true),

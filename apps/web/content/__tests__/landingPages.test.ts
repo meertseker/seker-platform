@@ -83,7 +83,8 @@ describe('LANDING_PAGES — rakamlar tek kaynaktan, aşırı iddia yok', () => {
 
   it.each(LANDING_PAGES)('$slug kanıt rakamlarında doğrulanmış sınıf mevcudunu taşır', (page) => {
     expect(page.proofPoints.some((p) => p.label === 'Sınıf mevcudu')).toBe(true);
-    expect(page.proofPoints.some((p) => p.label === 'Öğretmen başına çocuk')).toBe(true);
+    expect(page.proofPoints.some((p) => p.label === 'Sınıfta öğretmen')).toBe(true);
+    expect(JSON.stringify(page).toLowerCase()).not.toMatch(/öğretmen başına \d+ çocuk düş/);
   });
 
   it.each(LANDING_PAGES)('$slug sınıf mevcudunu ROSTER_STATUS dışında bir rakamla yazmaz', (page) => {

@@ -19,7 +19,7 @@ import { defaultData } from '@/lib/content/testing';
 describe('FAQ — rakamlar tek kaynaktan gelir', () => {
   it('künye doğrulandı ve sayılar okulun verdiği değerlerdir', () => {
     expect(ROSTER_STATUS.ready).toBe(true);
-    expect(ROSTER_STATUS.childCount).toBe(13);
+    expect(ROSTER_STATUS.childCount).toBe(15);
     expect(ROSTER_STATUS.teacherCount).toBe(2);
   });
 

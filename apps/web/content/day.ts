@@ -31,28 +31,38 @@ export type DayChapter = {
 export const SCHEDULE_READY = false;
 
 /**
- * ✅ DOĞRULANDI — okul yönetimi, 1 Ağustos 2026.
- * Sınıf mevcudu 13, her sınıfta iki öğretmen. MEB yönetmeliğinin dört yaş
- * üstü gruplar için izin verdiği üst sınır öğretmen başına 20 çocuktur;
- * bizde öğretmen başına 6-7 çocuk düşer. Sayı değişirse tek yer burasıdır.
+ * ✅ DOĞRULANDI — okul yönetimi, 1 Ağustos 2026; mevcut Ekim 2026'da okulun
+ * kendi düzenlemesiyle 15'e çıktı ("Sınıf mevcutlarımızı 15 öğrenciyle sınırlıyoruz").
+ * Her sınıfta iki öğretmen. MEB yönetmeliğinin dört yaş üstü gruplar için izin
+ * verdiği üst sınır öğretmen başına 20 çocuktur. Metinlerde "öğretmen başına N
+ * çocuk" hesabı yazılmaz; "sınıfta iki öğretmen" anlatılır. Sayı değişirse tek
+ * yer burasıdır.
  */
 export const ROSTER_STATUS: { ready: boolean; childCount: number; teacherCount: number; limit: number } = {
   ready: true,
-  childCount: 13,
+  childCount: 15,
   teacherCount: 2,
   limit: 20,
 };
 
 /**
  * ✅ DOĞRULANDI — okul yönetimi, 1 Ağustos 2026.
- * İngilizce öğretmeni anadili İngilizce olan bir öğretmendir ve her çocuk
- * her gün iki saat İngilizce görür. Günlük doz bu kadar yüksek olduğu için
- * mezuniyette konuşma çıktısı sayfalarda iddia edilebiliyor.
+ * Her çocuk her gün İngilizce görür. Süre (saat) artık metinlerde yazılmaz;
+ * okul Ekim 2026'da "3 kişilik uzman İngilizce kadromuzla yabancı dili her
+ * güne yayıyoruz" çizgisine geçti.
  */
 export const ENGLISH_COVERAGE_READY = true;
 
-/** Günlük İngilizce süresi (saat). Metinlerde tek kaynak budur. */
+/**
+ * Günlük İngilizce süresi (saat). ⚠️ Okul Ekim 2026'da "her gün 2 saat" ifadesini
+ * sitedeki metinlerinden kaldırdı ("5 gün / İngilizce", "3 kişilik uzman İngilizce
+ * kadromuzla yabancı dili her güne yayıyoruz"). Yeni metinde kullanılmaz; yalnızca
+ * prod'da okulun üzerine yazdığı eski varsayılanlarda duruyor.
+ */
 export const ENGLISH_HOURS_PER_DAY = 2;
+
+/** İngilizce kadrosundaki uzman eğitmen sayısı (okulun kendi metni, Ekim 2026). */
+export const ENGLISH_TEACHER_COUNT = 3;
 
 export const DAY_CHAPTERS: DayChapter[] = [
   {

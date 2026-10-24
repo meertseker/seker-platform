@@ -17,8 +17,8 @@ const text = (label: string, def: string, heading = false): SlotDef => ({
 const SAFETY_SECTIONS = [
   {
     id: 'kamera',
-    title: 'Kamera sistemi ve veli erişimi',
-    body: 'Okulun her yeri kamerayla izleniyor ve velilerimiz bu görüntülere kendileri erişebiliyor. İşten çıkmadan önce telefonu açıp çocuğunuzun ne yaptığına bakabilirsiniz. Bunu bir denetim aracı olarak değil, içiniz rahat etsin diye sunuyoruz.',
+    title: 'Okulcep ile gün içinde bilgilendirme',
+    body: 'Çocuğunuzun gün içindeki anlarını Okulcep uygulamamız üzerinden takip edebilirsiniz. Öğretmenlerimiz gün içinde mesaj, fotoğraf ve video paylaşarak sizi bilgilendirir.',
   },
   {
     id: 'bahce',
@@ -51,7 +51,7 @@ export const GUVENLIK_SLOTS: Record<string, SlotDef> = {
   'meta.guvenlik.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'Güvenlik ve Sağlık', max: 70 },
   'meta.guvenlik.description': {
     kind: 'text', label: 'Sayfa açıklaması (Google)', max: 160,
-    default: 'Kamera sistemi ve veli erişimi, gözetim altındaki iki bahçe, okulun kendi mutfağı ve uzman psikolog desteği. Beykent Büyükçekmece Özel Şeker Anaokulu.',
+    default: 'Okulcep ile gün içinde bilgilendirme, gözetim altındaki iki bahçe, okulun kendi mutfağı ve uzman psikolog desteği. Beykent Büyükçekmece Özel Şeker Anaokulu.',
   },
 
   'guvenlik.hero.eyebrow': text('Üst etiket', 'Güvenlik ve Sağlık'),

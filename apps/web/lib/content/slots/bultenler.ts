@@ -18,8 +18,8 @@ const CHANNELS = [
   },
   {
     id: 'kamera',
-    title: 'Gün içinde kameradan',
-    body: 'Merak ettiğinizde sınıfa kameradan bakabilirsiniz. Çıkışta konuştuğumuz şey genelde gördüğünüzün arkasındaki hikâye oluyor.',
+    title: "Gün içinde Okulcep'ten",
+    body: 'Öğretmenlerimiz gün içinde Okulcep uygulaması üzerinden mesaj, fotoğraf ve video paylaşır. Çıkışta konuştuğumuz şey genelde gördüğünüzün arkasındaki hikâye oluyor.',
     band: 'band-mint',
   },
   {

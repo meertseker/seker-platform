@@ -1,4 +1,4 @@
-import { ROSTER_STATUS, ENGLISH_HOURS_PER_DAY } from '@/content/day';
+import { ROSTER_STATUS } from '@/content/day';
 import { CAMPUS, MONTESSORI_DAYS_PER_WEEK, SUPPORT } from '@/content/program';
 import type { SlotDef } from '../types';
 import { limitFor, limitForField } from './limits';
@@ -102,15 +102,15 @@ export const HAKKIMIZDA_SLOTS: Record<string, SlotDef> = {
   'about.staff.title': text('Kadro bölümü başlığı', 'Kadromuz ve sınıflarımız', true),
   'about.staff.description': text(
     'Kadro bölümü metni',
-    `Kendi alanında deneyimli ve uzman bir eğitim kadrosuyla her çocuğun bireysel gelişimini yakından takip ediyoruz. ${SUPPORT.classPlacement} Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk ve iki öğretmen bulunuyor; branş derslerinin her biri alanında uzman bir öğretmenle yürüyor.`,
+    `Kendi alanında deneyimli ve uzman bir eğitim kadrosuyla her çocuğun bireysel gelişimini yakından takip ediyoruz. ${SUPPORT.classPlacement} Sınıf mevcudumuzu ${ROSTER_STATUS.childCount} çocukla sınırlıyoruz ve her sınıfta iki öğretmen bulunuyor; branş derslerinin her biri alanında uzman bir öğretmenle yürüyor.`,
   ),
   'about.staff.button': text('Kadro bölümü düğmesi', 'Branş derslerimiz'),
 
   // TrustBar (güven şeridi). Sınıf mevcudu ve öğretmen sayısı content/day.ts'den gelir (doğrulama kapısı).
   'trust.children.label': text('Güven şeridi: çocuk sayısı etiketi', 'Sınıfta çocuk'),
   'trust.teachers.label': text('Güven şeridi: öğretmen sayısı etiketi', 'Her sınıfta öğretmen'),
-  'trust.english.value': text('Güven şeridi: İngilizce süresi', `${ENGLISH_HOURS_PER_DAY} saat`),
-  'trust.english.label': text('Güven şeridi: İngilizce etiketi', 'Her gün İngilizce'),
+  'trust.english.value': text('Güven şeridi: İngilizce günü', '5 gün'),
+  'trust.english.label': text('Güven şeridi: İngilizce etiketi', 'İngilizce'),
   'trust.years.value': text('Güven şeridi: yıl sayısı', '{yilSayisi} yıl'),
   'trust.years.label': text('Güven şeridi: yıl etiketi', "Beykent'te aynı adreste"),
 };

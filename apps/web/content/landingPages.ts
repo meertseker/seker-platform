@@ -1,5 +1,5 @@
 import type { MediaKey } from './media';
-import { ROSTER_STATUS, ENGLISH_COVERAGE_READY, ENGLISH_HOURS_PER_DAY } from './day';
+import { ROSTER_STATUS, ENGLISH_COVERAGE_READY, ENGLISH_TEACHER_COUNT } from './day';
 import { MONTESSORI_DAYS_PER_WEEK } from './program';
 import { SITE } from '@/lib/site';
 
@@ -22,10 +22,9 @@ export type LandingPage = {
 
 /**
  * Rakamların tek kaynağı content/day.ts'deki ROSTER_STATUS'tür; burada
- * ikinci bir sayı yazılmaz. Okul yönetimi sınıf mevcudunu ve günlük
- * İngilizce süresini 1 Ağustos 2026'da doğruladı.
+ * ikinci bir sayı yazılmaz. "Öğretmen başına N çocuk" hesabı yazılmaz;
+ * okulun kendi anlatımı "sınıfta iki öğretmen"dir (Ekim 2026).
  */
-const CHILDREN_PER_TEACHER = Math.round(ROSTER_STATUS.childCount / ROSTER_STATUS.teacherCount);
 
 const AGE_RANGE_POINT = { value: '2-6', label: 'Yaş aralığı' };
 const YEARS_ACTIVE_POINT = { value: '{yilSayisi} yıl', label: "Beykent'te aynı adreste" };
@@ -33,25 +32,25 @@ const YEARS_ACTIVE_POINT = { value: '{yilSayisi} yıl', label: "Beykent'te aynı
 function rosterProof(): { value: string; label: string }[] {
   return [
     { value: String(ROSTER_STATUS.childCount), label: 'Sınıf mevcudu' },
-    { value: `1 : ${CHILDREN_PER_TEACHER}`, label: 'Öğretmen başına çocuk' },
+    { value: String(ROSTER_STATUS.teacherCount), label: 'Sınıfta öğretmen' },
   ];
 }
 
 /** Gövde metninde sınıf mevcudunu anlatan tek cümle. */
 function rosterSentence(): string {
-  return `Sınıflarımızda ${ROSTER_STATUS.childCount} çocuk ve ${ROSTER_STATUS.teacherCount} öğretmen bulunur — öğretmen başına ${CHILDREN_PER_TEACHER} çocuk düşer.`;
+  return `Sınıf mevcudumuzu ${ROSTER_STATUS.childCount} çocukla sınırlıyoruz ve her sınıfta ${ROSTER_STATUS.teacherCount} öğretmen birden görev yapıyor.`;
 }
 
 /**
  * İngilizce cümlesi. Öğretmenin anadili ve "mezun olduğunda konuşuyor"
- * türü çıktı iddiaları reklam sayfalarında kullanılmaz; yalnızca günlük
- * süre yazılır (asset dosyası §5.2).
+ * türü çıktı iddiaları reklam sayfalarında kullanılmaz (asset dosyası §5.2);
+ * süre (saat) de yazılmaz, okulun kendi cümlesi kullanılır (Ekim 2026).
  */
 function englishSentence(): string {
   const base =
     'İngilizce bizde ayrı bir ders saati değil; oyunun, sofranın ve geçişlerin içinde kullanılan ikinci dil.';
   return ENGLISH_COVERAGE_READY
-    ? `${base} Çocuğunuz her gün ${ENGLISH_HOURS_PER_DAY} saatini İngilizce öğretmeniyle geçirir.`
+    ? `${base} ${ENGLISH_TEACHER_COUNT} kişilik uzman İngilizce kadromuzla yabancı dili her güne yayıyoruz.`
     : base;
 }
 
@@ -123,7 +122,7 @@ export const LANDING_PAGES: LandingPage[] = [
     bodyBlocks: [
       {
         heading: 'Neden mahalledeki okul değil',
-        text: `Okul öncesinde belirleyici olan mesafe değil, öğretmen başına düşen çocuk sayısıdır. ${rosterSentence()}`,
+        text: `Okul öncesinde belirleyici olan mesafe değil, sınıfta kaç çocuğa kaç öğretmen düştüğüdür. ${rosterSentence()}`,
       },
       {
         heading: 'Servis ihtiyacınızı birlikte planlıyoruz',
@@ -153,10 +152,10 @@ export const LANDING_PAGES: LandingPage[] = [
   {
     slug: 'az-mevcutlu-anaokulu',
     campaign: 'K4-A',
-    metaTitle: 'Az Mevcutlu Anaokulu — Sınıfta 13 Çocuk | Özel Şeker Anaokulu',
-    metaDescription: `Sınıfımızda ${ROSTER_STATUS.childCount} çocuk ve ${ROSTER_STATUS.teacherCount} öğretmen var; öğretmen başına ${CHILDREN_PER_TEACHER} çocuk düşüyor. Yönetmelik ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor. Beykent Büyükçekmece.`,
+    metaTitle: `Az Mevcutlu Anaokulu — Sınıfta ${ROSTER_STATUS.childCount} Çocuk | Özel Şeker Anaokulu`,
+    metaDescription: `Sınıf mevcudumuz ${ROSTER_STATUS.childCount} çocukla sınırlı ve her sınıfta ${ROSTER_STATUS.teacherCount} öğretmen var. Yönetmelik ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor. Beykent Büyükçekmece.`,
     h1: 'Bir çocuğun okulda en çok neye ihtiyacı vardır? Kaliteli ve Birebir İlgiye!',
-    subhead: `Sınıfta ${ROSTER_STATUS.childCount} çocuk ve ${ROSTER_STATUS.teacherCount} öğretmen var; öğretmen başına ${CHILDREN_PER_TEACHER} çocuk düşer. Ön görüşmede ders saatinde gelip sınıfı kendiniz görebilirsiniz.`,
+    subhead: `Sınıf mevcudumuz ${ROSTER_STATUS.childCount} çocukla sınırlı ve her sınıfta ${ROSTER_STATUS.teacherCount} öğretmen var. Ön görüşmede ders saatinde gelip sınıfı kendiniz görebilirsiniz.`,
     mediaKey: 'mudKitchen',
     proofPoints: [YEARS_ACTIVE_POINT, ...rosterProof(), AGE_RANGE_POINT],
     bodyBlocks: [
@@ -180,7 +179,7 @@ export const LANDING_PAGES: LandingPage[] = [
       },
       {
         question: 'MEB yönetmeliği kaç çocuğa izin veriyor?',
-        answer: `Okul öncesi yönetmeliği öğretmen başına ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor. Bizde öğretmen başına ${CHILDREN_PER_TEACHER} çocuk düşüyor.`,
+        answer: `Okul öncesi yönetmeliği öğretmen başına ${ROSTER_STATUS.limit} çocuğa kadar izin veriyor. Biz sınıf mevcudumuzu ${ROSTER_STATUS.childCount} çocukla sınırlıyoruz ve her sınıfta ${ROSTER_STATUS.teacherCount} öğretmen görev yapıyor.`,
       },
       FAQ_AGES,
       FAQ_VISIT,
@@ -246,7 +245,7 @@ export const LANDING_PAGES: LandingPage[] = [
     bodyBlocks: [
       {
         heading: 'Bir — sınıf modeli',
-        text: `Öğretmen başına düşen çocuk sayısını düşük tutmak yapısal olarak daha maliyetlidir. ${rosterSentence()} Ücretimizin en büyük bileşeni budur.`,
+        text: `Sınıf mevcudunu düşük tutup her sınıfa iki öğretmen vermek yapısal olarak daha maliyetlidir. ${rosterSentence()} Ücretimizin en büyük bileşeni budur.`,
       },
       {
         heading: 'İki — program genişliği',
