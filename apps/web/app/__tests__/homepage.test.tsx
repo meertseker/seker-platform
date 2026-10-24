@@ -18,10 +18,10 @@ import { defaultData } from '@/lib/content/testing';
  * hali: doğrulanmamış rakamlar iddia olarak yazılamaz, yasaklı kelimeler ve
  * klişeler geçmez, eski "rainbow" paleti (raw hex) sızmaz.
  *
- * Fix round 1/5 — FeaturesSection, ActivitiesSection ve FAQSection (bkz.
- * content/__tests__/faqSafety.test.tsx) bu sayfada render edildiği için
- * tarama kapsamına eklendi (reviewer: "in scope because it renders on this
- * page").
+ * Fix round 1/5 — FeaturesSection ve ActivitiesSection bu sayfada render
+ * edildiği için tarama kapsamına eklendi (reviewer: "in scope because it
+ * renders on this page"). SSS bölümü ana sayfadan kalktı; yerinde /sss
+ * bağlantısı var. Duyurular (eski Bültenler sayfası) ana sayfada basılır.
  */
 
 const readSource = (...segments: string[]) =>
@@ -57,14 +57,13 @@ const ILETISIM_SLOTS_SRC = readProse('lib', 'content', 'slots', 'iletisim.ts');
 const TESEKKURLER_SLOTS_SRC = readProse('lib', 'content', 'slots', 'tesekkurler.ts');
 const YORUMLAR_SLOTS_SRC = readProse('lib', 'content', 'slots', 'yorumlar.ts');
 const SSS_SLOTS_SRC = readProse('lib', 'content', 'slots', 'sss.ts');
-const BULTENLER_SLOTS_SRC = readProse('lib', 'content', 'slots', 'bultenler.ts');
 const FORM_SLOTS_SRC = readProse('lib', 'content', 'slots', 'form.ts');
 
 const reader = () => makeReader(defaultData());
 const CONTACT_SRC = readSource('app', 'components', 'ContactSection.tsx');
 const FEATURES_SRC = readProse('app', 'components', 'FeaturesSection.tsx');
 const ACTIVITIES_SRC = readProse('app', 'components', 'ActivitiesSection.tsx');
-const FAQ_SECTION_SRC = readProse('app', 'components', 'FAQSection.tsx');
+const ANNOUNCEMENTS_SRC = readProse('app', 'components', 'AnnouncementsSection.tsx');
 
 const HOMEPAGE_FILES = {
   'app/components/HeroSection.tsx': HERO_SRC,
@@ -85,12 +84,11 @@ const HOMEPAGE_FILES = {
   'lib/content/slots/tesekkurler.ts': TESEKKURLER_SLOTS_SRC,
   'lib/content/slots/yorumlar.ts': YORUMLAR_SLOTS_SRC,
   'lib/content/slots/sss.ts': SSS_SLOTS_SRC,
-  'lib/content/slots/bultenler.ts': BULTENLER_SLOTS_SRC,
   'lib/content/slots/form.ts': FORM_SLOTS_SRC,
   'app/components/ContactSection.tsx': CONTACT_SRC,
   'app/components/FeaturesSection.tsx': FEATURES_SRC,
   'app/components/ActivitiesSection.tsx': ACTIVITIES_SRC,
-  'app/components/FAQSection.tsx': FAQ_SECTION_SRC,
+  'app/components/AnnouncementsSection.tsx': ANNOUNCEMENTS_SRC,
 };
 
 describe('ana sayfa kaynak taraması — fiyat ve yasak kelime', () => {
@@ -160,18 +158,16 @@ describe('ana sayfa kaynak taraması — eski "rainbow" paleti (Task 3 notu, Ana
 });
 
 describe('ana sayfa yapısı — form ilk kaydırmada erişilebilir', () => {
-  it('ContactSection, günün önizlemesinden hemen sonra ve mevcut bölümlerden (Features/Activities/FAQ) önce geliyor', () => {
+  it('ContactSection, günün önizlemesinden hemen sonra ve mevcut bölümlerden (Features/Activities) önce geliyor', () => {
     const dayPreviewIndex = ANASAYFA_SRC.indexOf('DAY_PREVIEW_IDS');
     const contactIndex = ANASAYFA_SRC.indexOf('<ContactSection');
     const featuresIndex = ANASAYFA_SRC.indexOf('<FeaturesSection');
     const activitiesIndex = ANASAYFA_SRC.indexOf('<ActivitiesSection');
-    const faqIndex = ANASAYFA_SRC.indexOf('<FAQSection');
 
     expect(dayPreviewIndex).toBeGreaterThan(-1);
     expect(contactIndex).toBeGreaterThan(dayPreviewIndex);
     expect(contactIndex).toBeLessThan(featuresIndex);
     expect(contactIndex).toBeLessThan(activitiesIndex);
-    expect(contactIndex).toBeLessThan(faqIndex);
   });
 
   it('günün önizlemesi ham chapter.time değil chapterLabel() kullanır — doğrulanmamış saat sızdırmaz', () => {

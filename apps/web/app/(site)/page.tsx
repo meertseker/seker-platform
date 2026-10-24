@@ -1,5 +1,6 @@
 import HomeView from './HomeView';
 import { getReaderData } from '@/lib/content/server';
+import { getAnnouncements } from '@/lib/content/getContent';
 import { makeReader } from '@/lib/content/reader';
 import { buildMetadata } from '@/lib/metadata';
 
@@ -9,5 +10,6 @@ export async function generateMetadata() {
 }
 
 export default async function Home() {
-  return <HomeView data={await getReaderData()} />;
+  const [data, announcements] = await Promise.all([getReaderData(), getAnnouncements()]);
+  return <HomeView data={data} announcements={announcements} />;
 }

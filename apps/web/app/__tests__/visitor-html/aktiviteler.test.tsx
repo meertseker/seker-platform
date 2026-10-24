@@ -43,20 +43,19 @@ describe('aktiviteler ziyaretçi HTML', () => {
     expect(render(<AktivitelerView data={defaultData(PREFIXES)} />).container.innerHTML).not.toContain('data-edit-');
   });
 
-  it('düzenleme modunda dersler, hafta günleri ve metinler işaretlenir', () => {
+  it('düzenleme modunda dersler ve metinler işaretlenir', () => {
     const { container } = render(<AktivitelerView data={{ ...defaultData(PREFIXES), editing: true }} />);
-    for (const key of ['aktiviteler.hero.title', 'aktiviteler.week.title', 'aktiviteler.cta.lead', 'aktiviteler.detail.gains']) {
+    for (const key of ['aktiviteler.hero.title', 'aktiviteler.cta.lead', 'aktiviteler.detail.gains']) {
       expect(container.querySelector(`[data-edit-key="${key}"]`), key).not.toBeNull();
     }
-    for (const list of ['program.branches', 'program.weekDays']) {
+    for (const list of ['program.branches']) {
       expect(container.querySelector(`[data-edit-list="${list}"]`), list).not.toBeNull();
     }
     for (const path of ['montessori.name', 'montessori.summary', 'montessori.body1', 'montessori.gain5', 'seramik.name']) {
       expect(container.querySelector(`[data-edit-key="program.branches"][data-edit-path="${path}"]`), path).not.toBeNull();
     }
-    for (const path of ['pazartesi.day', 'cuma.title', 'cuma.description']) {
-      expect(container.querySelector(`[data-edit-key="program.weekDays"][data-edit-path="${path}"]`), path).not.toBeNull();
-    }
+    // Haftalık özel günler bu sayfadan kalktı; program.weekDays yalnız ana sayfada.
+    expect(container.querySelector('[data-edit-list="program.weekDays"]')).toBeNull();
   });
 
   it('?ders= ile yaz dersi ve sekme geçişi çalışır; ayrıntı panosu seçili dersin alanlarını basar', () => {

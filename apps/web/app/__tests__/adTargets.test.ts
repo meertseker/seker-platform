@@ -15,10 +15,11 @@ function siteRouteExists(routePath: string): boolean {
 
 /** Reklam planındaki site hedefleri (K1-K10 arama kampanyaları, `/lib/leadSchema`
  * ve `content/nav.ts` ile aynı hedef sayfalar). `/kadromuz` okul kararıyla
- * kaldırıldı — ekipten kimse sitede tanıtılmıyor. */
+ * kaldırıldı — ekipten kimse sitede tanıtılmıyor. `/guvenlik` Hakkımızda'ya
+ * katıldı (`/hakkimizda#guvenlik`, next.config yönlendirmesi). */
 const AD_SITE_TARGETS = [
   '/', '/kayit', '/egitim-yaklasimimiz', '/veli-yorumlari',
-  '/guvenlik', '/gunluk-akis', '/yas-gruplari',
+  '/hakkimizda', '/gunluk-akis', '/yas-gruplari',
 ];
 
 const EXPECTED_LPS = [

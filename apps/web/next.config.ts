@@ -31,6 +31,9 @@ const nextConfig: NextConfig = {
         destination: '/kayit',
         permanent: true,
       },
+      // Site sadeleştirmesi: Bültenler kalktı (duyurular ana sayfada), Güvenlik Hakkımızda'ya katıldı.
+      { source: '/bultenler', destination: '/', permanent: true },
+      { source: '/guvenlik', destination: '/hakkimizda#guvenlik', permanent: true },
       {
         source: '/admin/:path*',
         destination: process.env.PANEL_URL ?? 'https://panel.sekeranaokulu.com',

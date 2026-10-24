@@ -7,18 +7,19 @@ import Timecode from '@/app/components/cine/Timecode'
 import FeaturesSection from '@/app/components/FeaturesSection'
 import ActivitiesSection from '@/app/components/ActivitiesSection'
 import WeekRhythmSection from '@/app/components/WeekRhythmSection'
-import FAQSection from '@/app/components/FAQSection'
+import AnnouncementsSection from '@/app/components/AnnouncementsSection'
 import ContactSection from '@/app/components/ContactSection'
 import { Editable } from '@/app/components/edit/Editable'
 import { makeReader, pickData } from '@/lib/content/reader'
 import type { ReaderData } from '@/lib/content/types'
+import type { PublicAnnouncement } from '@/lib/content/getContent'
 import { chapterLabel, type DayChapter } from '@/content/day'
 
 const DAY_PREVIEW_IDS = ['sabah-cemberi', 'calisma-saati', 'atolye']
 
 type ChapterItem = Pick<DayChapter, 'id' | 'time' | 'title' | 'lead' | 'mediaKey' | 'grade'>
 
-const HomeView = ({ data }: { data: ReaderData }) => {
+const HomeView = ({ data, announcements = [] }: { data: ReaderData; announcements?: PublicAnnouncement[] }) => {
   const c = makeReader(data)
   const chapters = c.list<ChapterItem>('day.chapters')
   // "Sahne 01" gibi birleşik etiket: ön ek günlük akış sayfasıyla ortak alandan gelir (sayfa ayarlarında düzenlenir).
@@ -26,6 +27,9 @@ const HomeView = ({ data }: { data: ReaderData }) => {
   return (
     <div className="min-h-screen bg-paper">
       <HeroSection c={c} />
+
+      {/* Okulun aktif duyuruları — yoksa bölüm hiç basılmaz */}
+      <AnnouncementsSection c={c} items={announcements} />
 
       {/* Günün üç sahnesi — tam anlatı /gunluk-akis sayfasında */}
       <section className="mx-auto max-w-6xl px-6 py-8 md:py-16">
@@ -107,7 +111,17 @@ const HomeView = ({ data }: { data: ReaderData }) => {
       <FeaturesSection c={c} />
       <ActivitiesSection c={c} />
       <WeekRhythmSection c={c} />
-      <FAQSection data={pickData(data, ['home.faq.', 'faq.'])} />
+
+      {/* SSS ana sayfada tekrarlanmaz; soruların tamamı /sss sayfasında */}
+      <div className="bg-paper px-6 pb-16 text-center">
+        <Link
+          href="/sss"
+          className="inline-block rounded-full border-2 border-grape px-8 py-3 font-semibold text-grape hover:bg-grape hover:text-white"
+        >
+          <span {...c.attrs('home.faqLink.label')}>{c.text('home.faqLink.label')}</span>
+          <span aria-hidden="true"> →</span>
+        </Link>
+      </div>
     </div>
   )
 }

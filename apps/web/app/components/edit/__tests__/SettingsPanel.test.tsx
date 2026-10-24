@@ -3,8 +3,8 @@ import { settingsKeysFor } from '../SettingsPanel';
 import { SLOTS } from '@/lib/content/registry';
 
 const meta = {
-  'meta.bultenler.title': { kind: 'text' as const, label: 'Sayfa başlığı' },
-  'meta.bultenler.description': { kind: 'text' as const, label: 'Açıklama' },
+  'meta.yorumlar.title': { kind: 'text' as const, label: 'Sayfa başlığı' },
+  'meta.yorumlar.description': { kind: 'text' as const, label: 'Açıklama' },
   'lp.kres-2-yas.metaTitle': { kind: 'text' as const, label: 'LP başlık' },
   'lp.kres-2-yas.metaDescription': { kind: 'text' as const, label: 'LP açıklama' },
   'yasgrubu.focus.suffix': { kind: 'text' as const, label: 'Odak başlığı sonu' },
@@ -22,9 +22,9 @@ const meta = {
 
 describe('settingsKeysFor', () => {
   it('normal sayfa', () => {
-    expect(settingsKeysFor('/bultenler', meta, { '/bultenler': 'bultenler' })).toEqual([
-      'meta.bultenler.title',
-      'meta.bultenler.description',
+    expect(settingsKeysFor('/veli-yorumlari', meta, { '/veli-yorumlari': 'yorumlar' })).toEqual([
+      'meta.yorumlar.title',
+      'meta.yorumlar.description',
       'site.phone',
       'chrome.footer.rights',
       'chrome.whatsapp.label',
@@ -53,10 +53,10 @@ describe('settingsKeysFor', () => {
     expect(keys).not.toContain('yasgrubu.focus.suffix');
   });
   it('form olan sayfalarda form ek alanları; diğerlerinde yok', () => {
-    for (const path of ['/', '/kayit', '/iletisim', '/guvenlik', '/yas-gruplari/2-3-yas']) {
+    for (const path of ['/', '/kayit', '/iletisim', '/hakkimizda', '/yas-gruplari/2-3-yas']) {
       expect(settingsKeysFor(path, meta, {}), path).toEqual(expect.arrayContaining(['form.help.before', 'form.error']));
     }
-    for (const path of ['/bultenler', '/sss', '/veli-yorumlari']) {
+    for (const path of ['/sss', '/veli-yorumlari']) {
       expect(settingsKeysFor(path, meta, {}), path).not.toContain('form.error');
     }
   });

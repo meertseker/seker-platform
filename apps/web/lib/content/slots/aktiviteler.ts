@@ -6,7 +6,7 @@ const text = (label: string, def: string, heading = false): SlotDef => ({
   kind: 'text', label, default: def, max: limitFor(def, heading),
 });
 
-/** Branş dersleri sayfası. Dersler `program.branches`, haftalık günler `program.weekDays` listesindedir. */
+/** Branş dersleri sayfası. Dersler `program.branches` listesindedir. */
 export const AKTIVITELER_SLOTS: Record<string, SlotDef> = {
   'meta.aktiviteler.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'Branş Dersleri ve Aktiviteler', max: 70 },
   'meta.aktiviteler.description': {
@@ -36,11 +36,6 @@ export const AKTIVITELER_SLOTS: Record<string, SlotDef> = {
   'aktiviteler.card.cta': text('Kart bağlantı yazısı', 'Ayrıntısını okuyun'),
   'aktiviteler.detail.gains': text('Kazanımlar başlığı', 'Neyi destekliyor?', true),
 
-  'aktiviteler.week.title': text('Haftalık günler başlığı', 'Haftalık özel günlerimiz', true),
-  'aktiviteler.week.lead': text(
-    'Haftalık günler açıklaması',
-    'Okul yaşamını daha keyifli hâle getirmek için haftanın belirli günlerinde özel etkinlikler düzenliyoruz.',
-  ),
   'aktiviteler.cta.title': text('Form başlığı', 'Dersleri çalışırken görün', true),
   'aktiviteler.cta.lead': text(
     'Form üstü metin',

@@ -1,5 +1,4 @@
-import { ROSTER_STATUS } from '@/content/day';
-import { CAMPUS, MONTESSORI_DAYS_PER_WEEK, SUPPORT } from '@/content/program';
+import { CAMPUS, MONTESSORI_DAYS_PER_WEEK } from '@/content/program';
 import type { SlotDef } from '../types';
 import { limitFor, limitForField } from './limits';
 
@@ -68,12 +67,6 @@ export const HAKKIMIZDA_SLOTS: Record<string, SlotDef> = {
       label: { kind: 'text', max: limitForField(FACTS, 'label'), label: 'Etiket' },
     },
   },
-  'hakkimizda.psychologist.title': text('Psikolog bölümü başlığı', 'Okulumuzda uzman psikolog görev yapıyor', true),
-  'hakkimizda.psychologist.lead': text('Psikolog bölümü ana metin', SUPPORT.psychologist),
-  'hakkimizda.psychologist.note': text(
-    'Psikolog bölümü ek metin',
-    'Uyum dönemi, kardeş kıskançlığı, tuvalet eğitimi ya da uyku düzeni gibi başlıklarda evde ve okulda tutarlı bir yaklaşım kurmak için sizinle birlikte çalışıyoruz.',
-  ),
   'hakkimizda.values.title': text('Değerler başlığı', 'Değerlerimiz', true),
   'hakkimizda.values.lead': text(
     'Değerler giriş metni',
@@ -91,20 +84,6 @@ export const HAKKIMIZDA_SLOTS: Record<string, SlotDef> = {
     'Form üstü metin',
     `Haftanın ${MONTESSORI_DAYS_PER_WEEK} günü Montessori çalışıyoruz. Randevunuzu çalışma saatine alalım, sınıfı iş üstünde görün.`,
   ),
-
-  // AboutSection bileşeninin iki örneği (about.<örnek>.*).
-  'about.garden.title': text('Bahçe bölümü başlığı', 'İki binamız, iki büyük bahçemiz var', true),
-  'about.garden.description': text(
-    'Bahçe bölümü metni',
-    'Geniş metrekareye sahip iki bahçemizle çocukların özgürce hareket edebildiği, keşfedebildiği ve doğayla iç içe vakit geçirebildiği ferah bir eğitim ortamı sunuyoruz. Bahçeleri yıllar içinde kendimiz kurduk: ahşap oyun mutfağı, açık hava sınıfı, denge yolu, dev satranç tahtası ve ağacın etrafındaki oturma bankı. Çocuklar günün büyük bölümünü burada geçiriyor.',
-  ),
-  'about.garden.button': text('Bahçe bölümü düğmesi', 'Bir günümüzü görün'),
-  'about.staff.title': text('Kadro bölümü başlığı', 'Kadromuz ve sınıflarımız', true),
-  'about.staff.description': text(
-    'Kadro bölümü metni',
-    `Kendi alanında deneyimli ve uzman bir eğitim kadrosuyla her çocuğun bireysel gelişimini yakından takip ediyoruz. ${SUPPORT.classPlacement} Sınıf mevcudumuzu ${ROSTER_STATUS.childCount} çocukla sınırlıyoruz ve her sınıfta iki öğretmen bulunuyor; branş derslerinin her biri alanında uzman bir öğretmenle yürüyor.`,
-  ),
-  'about.staff.button': text('Kadro bölümü düğmesi', 'Branş derslerimiz'),
 
   // TrustBar (güven şeridi). Sınıf mevcudu ve öğretmen sayısı content/day.ts'den gelir (doğrulama kapısı).
   'trust.children.label': text('Güven şeridi: çocuk sayısı etiketi', 'Sınıfta çocuk'),

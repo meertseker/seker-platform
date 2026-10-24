@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import { FAQ_ITEMS, PUBLISHED_FAQ, FEATURED_FAQ } from '../faq';
 import { ROSTER_STATUS, ENGLISH_COVERAGE_READY, ENGLISH_HOURS_PER_DAY } from '../day';
 import { buildFaqSchema } from '@/lib/schema';
-import FAQSection from '@/app/components/FAQSection';
+import SSS from '@/app/(site)/sss/SSS';
 import { defaultData } from '@/lib/content/testing';
 
 /**
@@ -76,8 +76,8 @@ describe('FAQ — doğrulanmış olsa da aşırı iddia yok', () => {
     expect(json).not.toContain('akıcı ingilizce');
   });
 
-  it('FAQSection render çıktısı doğru mevcudu gösterir ve eski rakamı içermez', () => {
-    const { container } = render(<FAQSection data={defaultData(['home.faq.', 'faq.'])} />);
+  it('SSS sayfası render çıktısı doğru mevcudu gösterir ve eski rakamı içermez', () => {
+    const { container } = render(<SSS data={defaultData(['sss.', 'faq.'])} />);
     const html = container.innerHTML.toLocaleLowerCase('tr');
     expect(html).toContain(`${ROSTER_STATUS.childCount} çocuk`);
     expect(html).not.toMatch(/\b10\s+çocuk\b/);

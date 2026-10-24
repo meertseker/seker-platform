@@ -1,8 +1,7 @@
-import Image from 'next/image'
 import PageHero from '@/app/components/PageHero'
-import AboutSection from '@/app/components/AboutSection'
 import JsonLd from '@/app/components/JsonLd'
 import LeadForm from '@/app/components/LeadForm'
+import Timecode from '@/app/components/cine/Timecode'
 import { Editable } from '@/app/components/edit/Editable'
 import { buildBreadcrumbSchema } from '@/lib/schema'
 import { makeReader, pickData } from '@/lib/content/reader'
@@ -10,6 +9,10 @@ import type { ReaderData } from '@/lib/content/types'
 
 type Fact = { id: string; value: string; label: string }
 type Value = { id: string; title: string; description: string }
+type SafetySection = { id: string; title: string; body: string }
+
+/** Güvenlik kartlarının şerit renkleri — sitenin aksan sırası. */
+const SAFETY_STRIPES = ['bg-grape', 'bg-mint', 'bg-sky', 'bg-bubble']
 
 /** Değer simgelerinin rengi ve çizimi (id ile eşlenir); metinler `hakkimizda.values` listesinden gelir. */
 const VALUE_LOOK: Record<string, { chip: string; path: string }> = {
@@ -35,7 +38,7 @@ export default function HakkimizdaView({ data }: { data: ReaderData }) {
   const c = makeReader(data)
   const facts = c.list<Fact>('hakkimizda.facts')
   const values = c.list<Value>('hakkimizda.values')
-  const aboutData = pickData(data, ['about.', 'media.'])
+  const safety = c.list<SafetySection>('guvenlik.sections')
 
   return (
     <div className="min-h-screen bg-paper">
@@ -54,7 +57,7 @@ export default function HakkimizdaView({ data }: { data: ReaderData }) {
 
       {/* Doğrulanabilir künye — okulun yaşı ve fiziksel alanı. */}
       <section className="py-12">
-        <div className="mx-auto max-w-5xl px-6">
+        <div className="mx-auto max-w-5xl px-4 md:px-6">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4" {...c.listAttrs('hakkimizda.facts')}>
             {facts.map((fact, index) => (
               <div key={fact.id} className="rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-rule">
@@ -78,54 +81,6 @@ export default function HakkimizdaView({ data }: { data: ReaderData }) {
                 />
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="pb-16">
-        <div className="container mx-auto px-4 md:px-6">
-          <AboutSection
-            data={aboutData}
-            id="garden"
-            buttonLink="/gunluk-akis"
-            imageKey="media.gardenWide"
-            imagePosition="right"
-            accent="mint"
-          />
-
-          <div className="my-16 text-center md:hidden" {...c.attrs('media.mudKitchenSmall')}>
-            <Image
-              src={c.image('media.mudKitchenSmall').src}
-              alt={c.image('media.mudKitchenSmall').alt}
-              className="mx-auto rounded-3xl shadow-lg shadow-ink/10"
-              width={300}
-              height={200}
-            />
-          </div>
-
-          <div className="mt-16">
-            <AboutSection
-              data={aboutData}
-              id="staff"
-              buttonLink="/aktiviteler"
-              imageKey="media.gardenWorkshops"
-              imagePosition="left"
-              accent="bubble"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Psikolog desteği — velinin en çok merak ettiği başlıklardan biri. */}
-      <section className="bg-paper-warm py-16">
-        <div className="mx-auto max-w-3xl px-6">
-          <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-rule">
-            <div className="h-1.5 bg-sky" />
-            <div className="p-8 md:p-10">
-              <Editable c={c} k="hakkimizda.psychologist.title" as="h2" className="font-display text-2xl text-ink md:text-3xl" />
-              <Editable c={c} k="hakkimizda.psychologist.lead" as="p" className="mt-5 text-lg text-ink" />
-              <Editable c={c} k="hakkimizda.psychologist.note" as="p" className="mt-4 text-ink-soft" />
-            </div>
           </div>
         </div>
       </section>
@@ -156,11 +111,32 @@ export default function HakkimizdaView({ data }: { data: ReaderData }) {
         </div>
       </section>
 
-      <section className="bg-paper-warm py-16">
-        <div className="mx-auto max-w-2xl px-6">
+      {/* Güvenlik ve sağlık — eski /guvenlik sayfası; /guvenlik buraya yönlenir. */}
+      <section id="guvenlik" className="scroll-mt-24 bg-paper-warm py-16">
+        <div className="mx-auto max-w-4xl px-4 md:px-6">
+          <div className="mb-12 text-center">
+            <Timecode editAttrs={c.attrs('guvenlik.hero.eyebrow')}>{c.text('guvenlik.hero.eyebrow')}</Timecode>
+            <Editable c={c} k="guvenlik.hero.title" as="h2" className="mt-2 font-display text-3xl text-ink md:text-4xl" />
+          </div>
+          <div className="grid gap-6 md:grid-cols-2" {...c.listAttrs('guvenlik.sections')}>
+            {safety.map((section, index) => (
+              <div key={section.id} className="card-lift overflow-hidden rounded-3xl bg-white shadow-sm">
+                <div className={`h-1.5 ${SAFETY_STRIPES[index % SAFETY_STRIPES.length]}`} />
+                <div className="p-6 md:p-8">
+                  <Editable c={c} k="guvenlik.sections" path={`${section.id}.title`} value={section.title} as="h3" className="font-display text-xl text-ink" />
+                  <Editable c={c} k="guvenlik.sections" path={`${section.id}.body`} value={section.body} as="p" className="mt-3 text-ink-soft" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16">
+        <div className="mx-auto max-w-2xl px-4 md:px-6">
           <Editable c={c} k="hakkimizda.visit.title" as="h2" className="text-center font-display text-3xl text-ink" />
           <Editable c={c} k="hakkimizda.visit.lead" as="p" className="mt-4 text-center text-ink-soft" />
-          <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 md:p-8">
+          <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 ring-1 ring-rule md:p-8">
             <LeadForm data={pickData(data, ['form.'])} />
           </div>
         </div>

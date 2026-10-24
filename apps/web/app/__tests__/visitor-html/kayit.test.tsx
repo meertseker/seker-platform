@@ -25,7 +25,7 @@ describe('kayit ziyaretçi HTML', () => {
 
   it('düzenleme modunda metinler, adımlar ve form etiketleri işaretlenir', () => {
     const { container } = render(<KayitView data={{ ...defaultData(PREFIXES), editing: true }} />);
-    for (const key of ['kayit.hero.title', 'kayit.form.title', 'kayit.steps.title', 'kayit.contact.ctaWhatsapp', 'site.phone', 'form.submit', 'form.parentName.label']) {
+    for (const key of ['kayit.hero.title', 'kayit.form.title', 'kayit.steps.title', 'form.submit', 'form.parentName.label']) {
       expect(container.querySelector(`[data-edit-key="${key}"]`), key).not.toBeNull();
     }
     expect(container.querySelector('[data-edit-list="kayit.steps"]')).not.toBeNull();

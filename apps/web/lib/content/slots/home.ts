@@ -162,13 +162,14 @@ export const HOME_SLOTS: Record<string, SlotDef> = {
     },
   },
 
-  'home.faq.eyebrow': text('Bölüm etiketi', 'Velilerin sorduğu'),
-  'home.faq.title': text('Bölüm başlığı', 'Sık Sorulan Sorular', true),
-  'home.faq.lead': text(
-    'Bölüm açıklaması',
-    'Anaokulumuza dair merak ettiğiniz önemli soruların cevaplarını burada bulabilirsiniz.',
+  // Duyurular: veritabanındaki aktif duyurular; yoksa bölüm hiç basılmaz (düzenleme modunda yönlendirme görünür).
+  'home.announcements.title': text('Duyurular başlığı', 'Duyurular', true),
+  'home.announcements.empty': text(
+    'Duyuru yokken düzenleme modunda görünen yönlendirme',
+    'Henüz duyuru yok. Çubuktaki ‘Yeni duyuru’ ile ekleyin.',
   ),
-  'home.faq.cta': text('Bağlantı düğmesi', 'Tüm soruları görüntüle'),
+
+  'home.faqLink.label': text('SSS bağlantısı', 'Sık sorulan sorular'),
 
   'home.contact.eyebrow': text('Bölüm etiketi', 'Ön görüşme'),
   'home.contact.title': text('Bölüm başlığı', 'Ön Görüşme Randevusu Alın', true),

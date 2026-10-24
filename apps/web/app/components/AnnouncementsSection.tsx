@@ -5,11 +5,11 @@ import type { Reader } from '@/lib/content/types';
 export default function AnnouncementsSection({ c, items }: { c: Reader; items: PublicAnnouncement[] }) {
   if (!items.length && !c.editing) return null;
   return (
-    <section className="py-12">
+    <section className="py-12" id="duyurular">
       <div className="mx-auto max-w-6xl px-6">
-        <h2 className="text-2xl text-ink md:text-3xl" {...c.attrs('bultenler.announcements.title')}>{c.text('bultenler.announcements.title')}</h2>
+        <h2 className="text-2xl text-ink md:text-3xl" {...c.attrs('home.announcements.title')}>{c.text('home.announcements.title')}</h2>
         {!items.length ? (
-          <p className="mt-4 text-ink-soft" {...c.attrs('bultenler.announcements.empty')}>{c.text('bultenler.announcements.empty')}</p>
+          <p className="mt-4 text-ink-soft" {...c.attrs('home.announcements.empty')}>{c.text('home.announcements.empty')}</p>
         ) : (
           <div className="mt-6 grid gap-6 md:grid-cols-2">
             {items.map((a) => (

@@ -8,7 +8,8 @@ const text = (label: string, def: string, heading = false): SlotDef => ({
 });
 
 /**
- * Bu sayfa daha önce sekiz adet "TODO: ... eklenecek" kartını doğrudan
+ * Hakkımızda sayfasındaki güvenlik bölümü (eski /guvenlik sayfası; anahtar adları
+ * okulun kayıtları kaybolmasın diye korunur). Bu bölüm daha önce sekiz adet "TODO: ... eklenecek" kartını doğrudan
  * yayında gösteriyordu. Artık yalnızca okulun doğruladığı uygulamalar
  * yazılıyor; belge gerektiren başlıklar (yangın onayı, deprem raporu,
  * hijyen protokolü, acil durum planı) sayfada iddia olarak yer almaz —
@@ -48,18 +49,8 @@ const SAFETY_SECTIONS = [
 ];
 
 export const GUVENLIK_SLOTS: Record<string, SlotDef> = {
-  'meta.guvenlik.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'Güvenlik ve Sağlık', max: 70 },
-  'meta.guvenlik.description': {
-    kind: 'text', label: 'Sayfa açıklaması (Google)', max: 160,
-    default: 'Okulcep ile gün içinde bilgilendirme, gözetim altındaki iki bahçe, okulun kendi mutfağı ve uzman psikolog desteği. Beykent Büyükçekmece Özel Şeker Anaokulu.',
-  },
-
-  'guvenlik.hero.eyebrow': text('Üst etiket', 'Güvenlik ve Sağlık'),
-  'guvenlik.hero.title': text('Ana başlık', 'Çocuğunuzun güvenliği, tesadüfe bırakılmaz.', true),
-  'guvenlik.hero.lead': text(
-    'Giriş metni',
-    'Aşağıda okulumuzda her gün işleyen güvenlik ve sağlık uygulamalarını bulacaksınız. Yangın, deprem ve acil durum belgelerimizi ise ön görüşmede yerinde gösteriyoruz — bir web sayfasında okuduğunuz cümle yerine belgenin kendisini görmeniz daha anlamlı.',
-  ),
+  'guvenlik.hero.eyebrow': text('Güvenlik bölümü üst etiketi', 'Güvenlik ve Sağlık'),
+  'guvenlik.hero.title': text('Güvenlik bölümü başlığı', 'Çocuğunuzun güvenliği, tesadüfe bırakılmaz.', true),
   'guvenlik.sections': {
     kind: 'list', label: 'Güvenlik ve sağlık uygulamaları', fixedItems: true, maxItems: 12, default: SAFETY_SECTIONS,
     fields: {
@@ -67,9 +58,4 @@ export const GUVENLIK_SLOTS: Record<string, SlotDef> = {
       body: { kind: 'text', max: limitForField(SAFETY_SECTIONS, 'body'), label: 'Açıklama' },
     },
   },
-  'guvenlik.cta.title': text('Form başlığı', 'Güvenlik uygulamalarımızı yerinde inceleyin', true),
-  'guvenlik.cta.lead': text(
-    'Form üstü metin',
-    'Ön görüşmede binayı birlikte gezip giriş-çıkış düzenini, bahçeleri ve belgelerimizi gözden geçirebiliriz.',
-  ),
 };

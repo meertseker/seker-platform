@@ -49,10 +49,4 @@ export const KAYIT_SLOTS: Record<string, SlotDef> = {
       description: { kind: 'text', max: limitForField(STEPS, 'description'), label: 'Adım açıklaması' },
     },
   },
-  'kayit.contact.title': text('Doğrudan ulaşım başlığı', 'Formu doldurmadan da ulaşabilirsiniz', true),
-  'kayit.contact.lead': text(
-    'Doğrudan ulaşım açıklaması',
-    "Telefon veya WhatsApp'tan yazdığınızda da aynı 15 dakikalık dönüş taahhüdümüz geçerlidir.",
-  ),
-  'kayit.contact.ctaWhatsapp': text('WhatsApp düğmesi', "WhatsApp'tan Yazın"),
 };

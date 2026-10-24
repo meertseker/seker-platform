@@ -516,7 +516,7 @@ function EditBarExtras(p: ExtrasProps) {
           {lists.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
         </select>
       ) : null}
-      {window.location.pathname.startsWith('/bultenler') ? (
+      {window.location.pathname === '/' ? (
         <button type="button" onClick={() => { p.setAnnId('new'); p.setPanel('announcement'); }}>Yeni duyuru</button>
       ) : null}
       <button type="button" onClick={() => p.setPanel('settings')}>Sayfa ayarları</button>

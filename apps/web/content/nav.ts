@@ -10,9 +10,7 @@ export const NAV_ITEMS = [
 /** Footer link set — must reach every indexable page. */
 export const FOOTER_LINKS = [
   ...NAV_ITEMS,
-  { href: '/guvenlik', label: 'Güvenlik' },
   { href: '/hakkimizda', label: 'Hakkımızda' },
-  { href: '/bultenler', label: 'Bültenler' },
   { href: '/sss', label: 'Sıkça Sorulan Sorular' },
   { href: '/iletisim', label: 'İletişim' },
   { href: '/kayit', label: 'Ön Görüşme Randevusu' },

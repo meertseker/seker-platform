@@ -6,17 +6,17 @@ import { defaultData } from '@/lib/content/testing';
 
 describe('AnnouncementsSection', () => {
   it('ziyaretçide boşsa hiçbir şey basmaz', () => {
-    const { container } = render(<AnnouncementsSection c={makeReader(defaultData(['bultenler.']))} items={[]} />);
+    const { container } = render(<AnnouncementsSection c={makeReader(defaultData(['home.announcements.']))} items={[]} />);
     expect(container.innerHTML).toBe('');
   });
   it('düzenlemede boşsa yönlendirme metni', () => {
-    const { container } = render(<AnnouncementsSection c={makeReader({ ...defaultData(['bultenler.']), editing: true })} items={[]} />);
+    const { container } = render(<AnnouncementsSection c={makeReader({ ...defaultData(['home.announcements.']), editing: true })} items={[]} />);
     expect(container.textContent).toContain('Yeni duyuru');
   });
   it('duyuruyu başlık ve temiz gövdeyle basar, kartı düzenleme için işaretler', () => {
     const { container } = render(
       <AnnouncementsSection
-        c={makeReader({ ...defaultData(['bultenler.']), editing: true })}
+        c={makeReader({ ...defaultData(['home.announcements.']), editing: true })}
         items={[{ id: 'a1', title: 'Kermes', body: '<p>Cumartesi</p>', imageSrc: null, imageAlt: null, startsOn: '2026-10-20', endsOn: null }]}
       />,
     );
@@ -25,7 +25,7 @@ describe('AnnouncementsSection', () => {
   it('ziyaretçide kart düzenleme özniteliği taşımaz', () => {
     const { container } = render(
       <AnnouncementsSection
-        c={makeReader(defaultData(['bultenler.']))}
+        c={makeReader(defaultData(['home.announcements.']))}
         items={[{ id: 'a1', title: 'Kermes', body: '<p>Cumartesi</p>', imageSrc: null, imageAlt: null, startsOn: '2026-10-20', endsOn: null }]}
       />,
     );

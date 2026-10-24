@@ -1,7 +1,5 @@
 import { vi, describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import KayitView from '@/app/(site)/kayit/KayitView';
-import BultenlerView from '@/app/(site)/bultenler/BultenlerView';
 import TesekkurlerView from '@/app/(site)/tesekkurler/TesekkurlerView';
 import YorumlarView from '@/app/(site)/veli-yorumlari/YorumlarView';
 import SSS from '@/app/(site)/sss/SSS';
@@ -12,8 +10,6 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 // F2-T12a: tel:, wa.me, mailto ve harita bağlantıları site.* alanlarından gelir; SITE sabitinden değil.
 const NEW_PHONE = '0532 111 22 33';
 const cases: [string, (d: ReturnType<typeof defaultData>) => React.ReactElement, string[]][] = [
-  ['kayit', (d) => <KayitView data={d} />, ['kayit.', 'form.']],
-  ['bultenler', (d) => <BultenlerView data={d} />, ['bultenler.', 'media.']],
   ['tesekkurler', (d) => <TesekkurlerView data={d} />, ['tesekkurler.']],
   ['sss', (d) => <SSS data={d} />, ['sss.', 'faq.']],
 ];

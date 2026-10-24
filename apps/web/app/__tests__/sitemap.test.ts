@@ -10,8 +10,8 @@ describe('sitemap', () => {
     entries = await sitemap();
   });
 
-  it('19 URL üretir (Faz 2 sayıyı değiştirmez)', () => {
-    expect(entries).toHaveLength(19);
+  it('17 URL üretir (Güvenlik ve Bültenler kalktı)', () => {
+    expect(entries).toHaveLength(17);
   });
 
   it('ana sayfayı içerir', () => {

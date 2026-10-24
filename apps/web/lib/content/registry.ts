@@ -16,7 +16,6 @@ import { ILETISIM_SLOTS } from './slots/iletisim';
 import { TESEKKURLER_SLOTS } from './slots/tesekkurler';
 import { YORUMLAR_SLOTS } from './slots/yorumlar';
 import { SSS_SLOTS } from './slots/sss';
-import { BULTENLER_SLOTS } from './slots/bultenler';
 import { LEGAL_SLOTS } from './slots/legal';
 import { LP_SLOTS } from './slots/lp';
 
@@ -39,7 +38,6 @@ export const SLOTS: Record<string, SlotDef> = {
   ...TESEKKURLER_SLOTS,
   ...YORUMLAR_SLOTS,
   ...SSS_SLOTS,
-  ...BULTENLER_SLOTS,
   ...LEGAL_SLOTS,
   ...LP_SLOTS,
 };

@@ -15,10 +15,10 @@ function walk(dir: string): string[] {
 }
 
 describe('düzenleme katmanı SEO ve paket sınırları', () => {
-  it('sitemap düzenleme uçlarını içermez ve 19 URL üretir', async () => {
+  it('sitemap düzenleme uçlarını içermez ve 17 URL üretir', async () => {
     const urls = (await sitemap()).map((u) => u.url);
     expect(urls.some((u) => u.includes('/api/'))).toBe(false);
-    expect(urls).toHaveLength(19); // Faz 2 öncesiyle aynı
+    expect(urls).toHaveLength(17); // Güvenlik ve Bültenler sayfaları kalktı
   });
   it('robots /api/ taramasını kapatır', () => {
     expect((robots().rules as { disallow: string[] }).disallow).toContain('/api/');

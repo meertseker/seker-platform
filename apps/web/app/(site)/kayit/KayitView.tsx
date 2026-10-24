@@ -1,10 +1,8 @@
 import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import LeadForm from '@/app/components/LeadForm';
-import TrackedLink from '@/app/components/TrackedLink';
 import { Editable } from '@/app/components/edit/Editable';
 import { buildBreadcrumbSchema } from '@/lib/schema';
-import { phoneE164, whatsappUrl } from '@/lib/site';
 import { makeReader, pickData } from '@/lib/content/reader';
 import type { ReaderData } from '@/lib/content/types';
 
@@ -59,31 +57,6 @@ export default function KayitView({ data }: { data: ReaderData }) {
         </ol>
       </section>
 
-      <section className="mx-auto max-w-3xl px-6 py-16 text-center">
-        <Editable c={c} k="kayit.contact.title" as="h2" className="font-display text-3xl text-ink" />
-        <Editable c={c} k="kayit.contact.lead" as="p" className="mt-4 text-ink-soft" />
-        <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
-          <TrackedLink
-            href={`tel:${phoneE164(c)}`}
-            event="tel_click"
-            payload={{ page: 'kayit' }}
-            className="rounded-full bg-grape px-8 py-4 font-semibold text-white shadow-lg shadow-grape/30 transition hover:bg-ink"
-            editAttrs={c.attrs('site.phone')}
-          >
-            {c.text('site.phone')}
-          </TrackedLink>
-          <TrackedLink
-            href={whatsappUrl(c)}
-            event="whatsapp_click"
-            payload={{ page: 'kayit' }}
-            external
-            className="rounded-full border-2 border-mint-deep px-8 py-4 font-semibold text-ink transition hover:bg-mint/10"
-            editAttrs={c.attrs('kayit.contact.ctaWhatsapp')}
-          >
-            {c.text('kayit.contact.ctaWhatsapp')}
-          </TrackedLink>
-        </div>
-      </section>
     </div>
   );
 }

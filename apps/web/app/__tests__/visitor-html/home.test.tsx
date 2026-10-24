@@ -28,10 +28,10 @@ describe('ana sayfa ziyaretçi HTML', () => {
   it('düzenleme modunda metinler, listeler ve fotoğraflar işaretlenir', () => {
     const data = { ...defaultData(PREFIXES), editing: true };
     const { container } = render(<HomeView data={data} />);
-    for (const key of ['home.hero.title', 'home.day.link', 'home.faq.cta', 'media.gardenWide', 'media.candyCorner']) {
+    for (const key of ['home.hero.title', 'home.day.link', 'home.faqLink.label', 'media.gardenWide', 'media.candyCorner']) {
       expect(container.querySelector(`[data-edit-key="${key}"]`), key).not.toBeNull();
     }
-    for (const list of ['day.chapters', 'home.garden.shots', 'home.features.cards', 'program.branches', 'program.weekDays', 'faq.items']) {
+    for (const list of ['day.chapters', 'home.garden.shots', 'home.features.cards', 'program.branches', 'program.weekDays']) {
       expect(container.querySelector(`[data-edit-list="${list}"]`), list).not.toBeNull();
     }
     expect(container.querySelector('blockquote[data-edit-key="testimonials.items"][data-edit-path="muge-ilkokul-olsa.quote"]')).not.toBeNull();
@@ -46,5 +46,20 @@ describe('ana sayfa ziyaretçi HTML', () => {
     container.querySelectorAll('form').forEach((el) => el.remove());
     // "Sahne 0N": ön ek gunlukakis.scene.prefix alanından, sıra numarası chapterLabel()'den gelir.
     expect(uncoveredText(container)).toEqual([]);
+  });
+  it('SSS bölümü yok: /sss bağlantısı var, FAQPage şeması basılmaz', () => {
+    const { container } = render(<HomeView data={defaultData(PREFIXES)} />);
+    expect(container.querySelector('a[href="/sss"]')?.textContent).toContain('Sık sorulan sorular');
+    expect(container.innerHTML).not.toContain('FAQPage');
+  });
+
+  it('duyurular: yoksa bölüm basılmaz, varsa formdan önce görünür', () => {
+    const empty = render(<HomeView data={defaultData(PREFIXES)} />).container;
+    expect(empty.querySelector('#duyurular')).toBeNull();
+    const item = { id: 'a1', title: 'Kermes', body: '<p>Cumartesi</p>', startsOn: '2026-10-01', endsOn: null, imageSrc: null, imageAlt: null };
+    const { container } = render(<HomeView data={defaultData(PREFIXES)} announcements={[item]} />);
+    const section = container.querySelector('#duyurular');
+    expect(section?.textContent).toContain('Kermes');
+    expect(section!.compareDocumentPosition(container.querySelector('form')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
