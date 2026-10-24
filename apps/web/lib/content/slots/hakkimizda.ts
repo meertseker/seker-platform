@@ -84,12 +84,4 @@ export const HAKKIMIZDA_SLOTS: Record<string, SlotDef> = {
     'Form üstü metin',
     `Haftanın ${MONTESSORI_DAYS_PER_WEEK} günü Montessori çalışıyoruz. Randevunuzu çalışma saatine alalım, sınıfı iş üstünde görün.`,
   ),
-
-  // TrustBar (güven şeridi). Sınıf mevcudu ve öğretmen sayısı content/day.ts'den gelir (doğrulama kapısı).
-  'trust.children.label': text('Güven şeridi: çocuk sayısı etiketi', 'Sınıfta çocuk'),
-  'trust.teachers.label': text('Güven şeridi: öğretmen sayısı etiketi', 'Her sınıfta öğretmen'),
-  'trust.english.value': text('Güven şeridi: İngilizce günü', '5 gün'),
-  'trust.english.label': text('Güven şeridi: İngilizce etiketi', 'İngilizce'),
-  'trust.years.value': text('Güven şeridi: yıl sayısı', '{yilSayisi} yıl'),
-  'trust.years.label': text('Güven şeridi: yıl etiketi', "Beykent'te aynı adreste"),
 };

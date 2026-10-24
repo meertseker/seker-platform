@@ -1,10 +1,10 @@
 import PageHero from '@/app/components/PageHero'
 import JsonLd from '@/app/components/JsonLd'
-import LeadForm from '@/app/components/LeadForm'
+import FormSection from '@/app/components/FormSection'
 import Timecode from '@/app/components/cine/Timecode'
 import { Editable } from '@/app/components/edit/Editable'
 import { buildBreadcrumbSchema } from '@/lib/schema'
-import { makeReader, pickData } from '@/lib/content/reader'
+import { makeReader } from '@/lib/content/reader'
 import type { ReaderData } from '@/lib/content/types'
 
 type Fact = { id: string; value: string; label: string }
@@ -132,15 +132,7 @@ export default function HakkimizdaView({ data }: { data: ReaderData }) {
         </div>
       </section>
 
-      <section className="py-16">
-        <div className="mx-auto max-w-2xl px-4 md:px-6">
-          <Editable c={c} k="hakkimizda.visit.title" as="h2" className="text-center font-display text-3xl text-ink" />
-          <Editable c={c} k="hakkimizda.visit.lead" as="p" className="mt-4 text-center text-ink-soft" />
-          <div className="mt-10 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 ring-1 ring-rule md:p-8">
-            <LeadForm data={pickData(data, ['form.'])} />
-          </div>
-        </div>
-      </section>
+      <FormSection c={c} data={data} tone="paper" keys={{ title: 'hakkimizda.visit.title', lead: 'hakkimizda.visit.lead' }} />
     </div>
   )
 }

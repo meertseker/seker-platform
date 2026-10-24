@@ -1,9 +1,9 @@
 import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
-import LeadForm from '@/app/components/LeadForm';
+import FormSection from '@/app/components/FormSection';
 import { Editable } from '@/app/components/edit/Editable';
 import { buildBreadcrumbSchema } from '@/lib/schema';
-import { makeReader, pickData } from '@/lib/content/reader';
+import { makeReader } from '@/lib/content/reader';
 import type { ReaderData } from '@/lib/content/types';
 
 /** Adım rozetlerinin renkleri — üç adım, üç ton. */
@@ -27,17 +27,11 @@ export default function KayitView({ data }: { data: ReaderData }) {
         c={c}
         keys={{ eyebrow: 'kayit.hero.eyebrow', title: 'kayit.hero.title', lead: 'kayit.hero.lead' }}
         tone="bubble"
+        scallopTone="paper-warm"
       />
 
-      <section className="bg-paper-warm py-16">
-        <div className="mx-auto max-w-2xl px-6">
-          <Editable c={c} k="kayit.form.title" as="h2" className="text-center font-display text-3xl text-ink" />
-          {/* Geri arama süresi formun kendi alt satırında yazıyor — burada tekrarlanmaz. */}
-          <div className="mt-8 rounded-3xl bg-white p-6 shadow-lg shadow-ink/5 md:p-8">
-            <LeadForm data={pickData(data, ['form.'])} />
-          </div>
-        </div>
-      </section>
+      {/* Form en üstte: bu sayfa randevu düğmelerinin hedefi. Geri arama süresi formun kendi alt satırında yazıyor. */}
+      <FormSection c={c} data={data} keys={{ title: 'kayit.form.title' }} />
 
       <section className="mx-auto max-w-5xl px-6 py-16">
         <Editable c={c} k="kayit.steps.title" as="h2" className="text-center font-display text-3xl text-ink" />

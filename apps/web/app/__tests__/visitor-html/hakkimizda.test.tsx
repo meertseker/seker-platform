@@ -1,13 +1,11 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
 import HakkimizdaView from '@/app/(site)/hakkimizda/HakkimizdaView';
-import TrustBar from '@/app/components/TrustBar';
 import { defaultData, sentinelData, uncoveredText } from '@/lib/content/testing';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const PREFIXES = ['hakkimizda.', 'meta.hakkimizda.', 'guvenlik.', 'media.'];
-const TRUST = ['trust.'];
 
 describe('hakkimizda ziyaretçi HTML', () => {
   beforeEach(() => {
@@ -21,14 +19,8 @@ describe('hakkimizda ziyaretçi HTML', () => {
     expect(container.innerHTML).toMatchSnapshot();
   });
 
-  it('TrustBar: düzenleme katmanından önceki hâliyle aynı', () => {
-    const { container } = render(<TrustBar data={defaultData(TRUST)} />);
-    expect(container.innerHTML).toMatchSnapshot();
-  });
-
   it('ziyaretçiye düzenleme öznitelikleri gitmez', () => {
     expect(render(<HakkimizdaView data={defaultData(PREFIXES)} />).container.innerHTML).not.toContain('data-edit-');
-    expect(render(<TrustBar data={defaultData(TRUST)} />).container.innerHTML).not.toContain('data-edit-');
   });
 
   it('düzenleme modunda metinler, listeler ve fotoğraflar işaretlenir', () => {
@@ -59,21 +51,10 @@ describe('hakkimizda ziyaretçi HTML', () => {
     expect(container.querySelector('section#guvenlik [data-edit-list="guvenlik.sections"]')).not.toBeNull();
   });
 
-  it('TrustBar: düzenleme modunda etiketler işaretlenir; sınıf mevcudu rakamları kodda kalır', () => {
-    const { container } = render(<TrustBar data={{ ...defaultData(TRUST), editing: true }} />);
-    expect(container.querySelector('[data-edit-key="trust.english.label"]')).not.toBeNull();
-    expect(container.querySelector('[data-edit-key="trust.years.value"]')).not.toBeNull();
-  });
-
   it('görünür her metin bir içerik alanından geliyor', () => {
     const { container } = render(<HakkimizdaView data={sentinelData(PREFIXES)} />);
     // Başvuru formu (LeadForm) bu görevin kapsamı değil.
     container.querySelectorAll('form').forEach((el) => el.remove());
-    expect(uncoveredText(container)).toEqual([]);
-  });
-
-  it('TrustBar: görünür her metin bir içerik alanından geliyor', () => {
-    const { container } = render(<TrustBar data={sentinelData(TRUST)} />);
     expect(uncoveredText(container)).toEqual([]);
   });
 });
