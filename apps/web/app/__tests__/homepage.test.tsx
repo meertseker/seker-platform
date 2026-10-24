@@ -175,7 +175,7 @@ describe('ana sayfa yapısı — form ilk kaydırmada erişilebilir', () => {
   });
 
   it('günün önizlemesi ham chapter.time değil chapterLabel() kullanır — doğrulanmamış saat sızdırmaz', () => {
-    expect(ANASAYFA_SRC).toContain('chapterLabel(chapter)');
+    expect(ANASAYFA_SRC).toContain('chapterLabel(chapter, scenePrefix)');
     expect(ANASAYFA_SRC).not.toMatch(/\{chapter\.time\}/);
   });
 });

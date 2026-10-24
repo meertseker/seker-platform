@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { settingsKeysFor } from '../SettingsPanel';
+import { SLOTS } from '@/lib/content/registry';
 
 const meta = {
   'meta.bultenler.title': { kind: 'text' as const, label: 'Sayfa başlığı' },
@@ -59,6 +60,19 @@ describe('settingsKeysFor', () => {
       expect(settingsKeysFor(path, meta, {}), path).not.toContain('form.error');
     }
   });
+  it('tıklanamayan yeni yazılar: çerez bandı her sayfada, uzun form alanları yalnız reklam sayfasında, sahne ön eki ana sayfada', () => {
+    const all = Object.fromEntries(Object.keys(SLOTS).map((k) => [k, { kind: 'text' as const, label: k }]));
+    expect(settingsKeysFor('/sss', all, {})).toEqual(expect.arrayContaining(['chrome.cookie.text', 'chrome.cookie.accept']));
+    expect(settingsKeysFor('/kayit', all, {})).toEqual(expect.arrayContaining(['form.phone.placeholder', 'form.err.phone', 'form.tooMany']));
+    expect(settingsKeysFor('/kayit', all, {})).not.toContain('form.birth.month');
+    expect(settingsKeysFor('/lp/kres-2-yas', all, {})).toEqual(expect.arrayContaining(['form.birth.month', 'form.district.placeholder', 'form.err.startWindow']));
+    expect(settingsKeysFor('/', all, {})).toContain('gunlukakis.scene.prefix');
+    // Listelenen her anahtar kayıt defterinde tanımlı.
+    for (const path of ['/', '/kayit', '/lp/kres-2-yas', '/gunluk-akis']) {
+      for (const key of settingsKeysFor(path, all, {})) expect(SLOTS[key], key).toBeDefined();
+    }
+  });
+
   it('SSS: e-posta düğmesi yazısı sayfa ayarlarında', () => {
     expect(settingsKeysFor('/sss', meta, {})).toContain('sss.cta.email');
   });

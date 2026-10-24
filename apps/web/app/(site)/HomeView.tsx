@@ -21,6 +21,8 @@ type ChapterItem = Pick<DayChapter, 'id' | 'time' | 'title' | 'lead' | 'mediaKey
 const HomeView = ({ data }: { data: ReaderData }) => {
   const c = makeReader(data)
   const chapters = c.list<ChapterItem>('day.chapters')
+  // "Sahne 01" gibi birleşik etiket: ön ek günlük akış sayfasıyla ortak alandan gelir (sayfa ayarlarında düzenlenir).
+  const scenePrefix = c.text('gunlukakis.scene.prefix')
   return (
     <div className="min-h-screen bg-paper">
       <HeroSection c={c} />
@@ -73,7 +75,7 @@ const HomeView = ({ data }: { data: ReaderData }) => {
                   sizes="(max-width: 768px) 192px, 360px"
                   transitionName={`day-${chapter.id}`}
                 />
-                <Timecode className="mt-2 block md:mt-4">{chapterLabel(chapter)}</Timecode>
+                <Timecode className="mt-2 block md:mt-4">{chapterLabel(chapter, scenePrefix)}</Timecode>
                 <Editable
                   c={c}
                   k="day.chapters"

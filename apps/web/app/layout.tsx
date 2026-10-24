@@ -12,7 +12,7 @@ import { buildPreschoolSchema } from "../lib/schema";
 import { SITE } from "../lib/site";
 import { buildMetadata } from "../lib/metadata";
 import { getReaderData } from "../lib/content/server";
-import { makeReader } from "../lib/content/reader";
+import { makeReader, pickData } from "../lib/content/reader";
 
 const fredoka = Fredoka({
   variable: "--font-fredoka",
@@ -58,6 +58,11 @@ async function SiteSchema() {
   return <JsonLd data={buildPreschoolSchema(c)} />;
 }
 
+/** Çerez bandı yazıları `chrome.cookie.*` alanlarından; bant istemcide (tercih yoksa) açılır, sunucu HTML'i değişmez. */
+async function SiteCookieBanner() {
+  return <CookieBanner data={pickData(await getReaderData(), ["chrome.cookie."])} />;
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -76,7 +81,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <SiteSchema />
           {children}
-          <CookieBanner />
+          <SiteCookieBanner />
           <VisitBeacon />
         </Suspense>
       </body>

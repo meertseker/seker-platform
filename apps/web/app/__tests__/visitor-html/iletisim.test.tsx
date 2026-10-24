@@ -7,7 +7,7 @@ import { defaultData, sentinelData, uncoveredText } from '@/lib/content/testing'
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const PREFIXES = ['iletisim.', 'meta.iletisim.', 'chrome.contact.', 'form.'];
-const HOME_PREFIXES = ['home.', 'faq.', 'testimonials.', 'day.', 'program.', 'media.', 'chrome.contact.', 'form.'];
+const HOME_PREFIXES = ['home.', 'faq.', 'testimonials.', 'day.', 'program.', 'media.', 'chrome.contact.', 'form.', 'gunlukakis.scene.'];
 
 describe('iletisim ziyaretçi HTML', () => {
   beforeEach(() => {

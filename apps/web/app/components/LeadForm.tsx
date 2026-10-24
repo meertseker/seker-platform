@@ -90,10 +90,10 @@ export default function LeadForm({
     // Form noValidate olduğundan (ana sayfa davranışı korunur) qualify alanlarının eksiği istemcide yakalanır; sunucuya 400 gitmez.
     if (qualify) {
       const missing: FieldErrors = {};
-      if (!payload.childBirthMonth) missing.childBirthMonth = ['Doğum ayını seçin'];
-      if (!payload.childBirthYear) missing.childBirthYear = ['Doğum yılını seçin'];
-      if (!payload.district) missing.district = ['Semtinizi seçin'];
-      if (!payload.startWindow) missing.startWindow = ['Başlangıç zamanını seçin'];
+      if (!payload.childBirthMonth) missing.childBirthMonth = [t('form.err.childBirthMonth')];
+      if (!payload.childBirthYear) missing.childBirthYear = [t('form.err.childBirthYear')];
+      if (!payload.district) missing.district = [t('form.err.district')];
+      if (!payload.startWindow) missing.startWindow = [t('form.err.startWindow')];
       if (Object.keys(missing).length) {
         setErrors(missing);
         setFormError(t('form.invalid'));
@@ -112,7 +112,12 @@ export default function LeadForm({
 
       if (!response.ok) {
         setErrors(result.errors ?? {});
-        setFormError(result.message ?? t('form.invalid'));
+        // Bilinen sunucu yanıtları düzenlenebilir yazıyla gösterilir; tanınmayan bir yanıtta sunucunun mesajı kalır.
+        setFormError(
+          response.status === 429 ? t('form.tooMany')
+          : response.status >= 500 ? t('form.failed')
+          : result.message ?? t('form.invalid'),
+        );
         return;
       }
 
@@ -129,8 +134,13 @@ export default function LeadForm({
   const field =
     'w-full rounded-xl border-2 border-rule bg-white px-4 py-3 text-ink placeholder:text-ink-soft transition-colors focus:border-mark focus:outline-none focus:ring-1 focus:ring-mark';
   const label = 'mb-1.5 block text-sm font-semibold text-ink';
-  const err = (name: string) =>
-    errors[name] ? <p className="mt-1 text-sm text-red-600">{errors[name]![0]}</p> : null;
+  // Sunucunun bilinen hata cümlesi (form.err.* varsayılanıyla aynı) gelirse düzenlenmiş yazı gösterilir; başka mesaj olduğu gibi kalır.
+  const err = (name: string) => {
+    const message = errors[name]?.[0];
+    if (!message) return null;
+    const key = `form.err.${name}`;
+    return <p className="mt-1 text-sm text-red-600">{FORM_DEFAULTS[key] === message ? t(key) : message}</p>;
+  };
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
@@ -154,7 +164,7 @@ export default function LeadForm({
             type="tel"
             inputMode="tel"
             autoComplete="tel"
-            placeholder="05XX XXX XX XX"
+            placeholder={t('form.phone.placeholder')}
             className={field}
             required
           />
@@ -170,7 +180,7 @@ export default function LeadForm({
               <div>
                 <label htmlFor="childBirthMonth" className="sr-only" {...ign}>Doğum ayı</label>
                 <select id="childBirthMonth" name="childBirthMonth" defaultValue="" required className={`${field} min-h-[44px]`} {...ign}>
-                  <option value="">Ay</option>
+                  <option value="">{t('form.birth.month')}</option>
                   {MONTHS.map((m, i) => (
                     <option key={m} value={i + 1}>{m}</option>
                   ))}
@@ -180,7 +190,7 @@ export default function LeadForm({
               <div>
                 <label htmlFor="childBirthYear" className="sr-only" {...ign}>Doğum yılı</label>
                 <select id="childBirthYear" name="childBirthYear" defaultValue="" required className={`${field} min-h-[44px]`} {...ign}>
-                  <option value="">Yıl</option>
+                  <option value="">{t('form.birth.year')}</option>
                   {Array.from({ length: 8 }, (_, i) => thisYear - i).map((y) => (
                     <option key={y} value={y}>{y}</option>
                   ))}
@@ -193,7 +203,7 @@ export default function LeadForm({
           <div>
             <label htmlFor="district" className={label} {...attrs('form.district.label')}>{t('form.district.label')}</label>
             <select id="district" name="district" defaultValue="" required className={`${field} min-h-[44px]`} {...ign}>
-              <option value="">Seçin</option>
+              <option value="">{t('form.district.placeholder')}</option>
               {DISTRICTS.map((d) => (
                 <option key={d} value={d}>{d}</option>
               ))}

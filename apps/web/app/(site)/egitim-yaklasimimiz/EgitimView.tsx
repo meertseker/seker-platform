@@ -80,8 +80,16 @@ export default function EgitimView({ data }: { data: ReaderData }) {
                   {/* Boş paragraf ziyaretçiye basılmaz; düzenlemede yeniden yazılabilsin diye boş hâliyle görünür. */}
                   {PARAGRAPHS.filter((field) => section[field] || c.editing).map((field, index) =>
                     section.id === 'brans' && field === 'p2' ? (
-                      // Giriş cümlesi + türetilmiş branş adları tek paragrafta: tek alana yazılmasın diye işaretsiz.
-                      <p key={field}>{`${c.fill(section[field])} ${branchNames}.`}</p>
+                      // Giriş cümlesi düzenlenir; branş adları program.branches listesinden türetilip arkasına eklenir.
+                      // Ziyaretçi HTML'i değişmesin diye işaretli <span> yalnızca düzenleme modunda basılır.
+                      c.editing ? (
+                        <p key={field}>
+                          <Editable c={c} k="egitim.sections" path={`${section.id}.${field}`} value={section[field]} />
+                          {` ${branchNames}.`}
+                        </p>
+                      ) : (
+                        <p key={field}>{`${c.fill(section[field])} ${branchNames}.`}</p>
+                      )
                     ) : (
                       <Editable
                         key={field}

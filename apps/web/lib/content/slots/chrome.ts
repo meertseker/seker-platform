@@ -14,6 +14,26 @@ const footerDefault = FOOTER_LINKS.map(({ href, label }) => ({ id: navId(href), 
 export const NAV_HREFS: Record<string, string> = Object.fromEntries(NAV_ITEMS.map((i) => [navId(i.href), i.href]));
 export const FOOTER_HREFS: Record<string, string> = Object.fromEntries(FOOTER_LINKS.map((i) => [navId(i.href), i.href]));
 
+/**
+ * Çerez bandının yazıları. CookieBanner istemci bileşenidir; data verilmezse (testler) bu varsayılanları kullanır.
+ * Bant yalnızca tercih kaydı olmayan tarayıcıda göründüğü için alanlar sayfa ayarlarında da listelenir.
+ */
+export const COOKIE_DEFAULTS: Record<string, string> = {
+  'chrome.cookie.text': 'Deneyiminizi iyileştirmek ve reklam performansını ölçmek için çerez kullanıyoruz.',
+  'chrome.cookie.link': 'Çerez Politikası',
+  'chrome.cookie.reject': 'Reddet',
+  'chrome.cookie.accept': 'Kabul Et',
+  'chrome.cookie.label': 'Çerez tercihi',
+};
+
+const COOKIE_LABELS: Record<string, string> = {
+  'chrome.cookie.text': 'Çerez bandı: açıklama cümlesi',
+  'chrome.cookie.link': 'Çerez bandı: politika bağlantısı',
+  'chrome.cookie.reject': 'Çerez bandı: reddet düğmesi',
+  'chrome.cookie.accept': 'Çerez bandı: kabul düğmesi',
+  'chrome.cookie.label': 'Çerez bandı: erişilebilirlik etiketi (ekran okuyucu)',
+};
+
 const t = (label: string, def: string, heading = false): SlotDef => ({
   kind: 'text', label, default: def, max: limitFor(def, heading),
 });
@@ -48,4 +68,5 @@ export const CHROME_SLOTS: Record<string, SlotDef> = {
   'chrome.contact.address': t('İletişim kartı: adres başlığı', 'Adres'),
   'chrome.lp.footer.kvkk': t('Reklam sayfası alt bilgi: KVKK', 'KVKK Aydınlatma Metni'),
   'chrome.lp.footer.cookies': t('Reklam sayfası alt bilgi: çerez', 'Çerez Politikası'),
+  ...Object.fromEntries(Object.entries(COOKIE_DEFAULTS).map(([key, def]) => [key, t(COOKIE_LABELS[key], def)])),
 };

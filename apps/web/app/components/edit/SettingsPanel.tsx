@@ -2,10 +2,15 @@
 
 import type { ReaderData } from '@/lib/content/types';
 import { countChars } from '@/lib/content/chars';
+import { COOKIE_DEFAULTS } from '@/lib/content/slots/chrome';
+import { FORM_QUALIFY_SETTING_KEYS, FORM_SETTING_KEYS } from '@/lib/content/slots/form';
 import { Drawer } from './Drawer';
 
-/** Sayfada tıklanacak görünür yeri olmayan site geneli alanlar (telif satırı, WhatsApp düğmesi etiketi). */
-const EXTRA_SETTING_KEYS = ['chrome.footer.rights', 'chrome.whatsapp.label'];
+/**
+ * Sayfada tıklanacak görünür yeri olmayan site geneli alanlar (telif satırı, WhatsApp düğmesi etiketi,
+ * çerez bandı: bant yalnızca tercih kaydı olmayan tarayıcıda açılır).
+ */
+const EXTRA_SETTING_KEYS = ['chrome.footer.rights', 'chrome.whatsapp.label', ...Object.keys(COOKIE_DEFAULTS)];
 
 /**
  * Sayfadaki birleşik (başka metinle yan yana basılan) öğelerde satır içi düzenleme işareti olmaz;
@@ -16,8 +21,12 @@ export const PAGE_EXTRA_KEYS: { match: RegExp; keys: string[] }[] = [
   // Başvuru formu olan sayfalar: formda yalnızca belirli durumlarda görünen veya birleşik yazılar.
   {
     match: /^\/$|^\/lp\/[a-z0-9-]+$|^\/(kayit|iletisim|egitim-yaklasimimiz|guvenlik|hakkimizda|yas-gruplari|gunluk-akis|aktiviteler)(\/[a-z0-9-]+)?$/,
-    keys: ['form.help.before', 'form.help.after', 'form.submitting', 'form.error', 'form.invalid'],
+    keys: ['form.help.before', 'form.help.after', 'form.submitting', 'form.error', 'form.invalid', ...FORM_SETTING_KEYS],
   },
+  // Reklam sayfalarındaki uzun form: seçim kutularının ilk satırları ve seçim hataları.
+  { match: /^\/lp\/[a-z0-9-]+$/, keys: FORM_QUALIFY_SETTING_KEYS },
+  // Ana sayfadaki "Sahne 01" etiketleri günlük akış sayfasıyla aynı ön eki kullanır.
+  { match: /^\/$/, keys: ['gunlukakis.scene.prefix'] },
   { match: /^\/gizlilik$/, keys: ['legal.gizlilik.updatedLabel', 'legal.gizlilik.updatedOn'] },
   { match: /^\/sss$/, keys: ['sss.cta.email'] },
   { match: /^\/gunluk-akis$/, keys: ['gunlukakis.scene.prefix', 'gunlukakis.roster.count', 'gunlukakis.roster.limit'] },

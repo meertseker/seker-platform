@@ -25,7 +25,7 @@ describe('egitim ziyaretçi HTML', () => {
     expect(container.innerHTML).not.toContain('data-edit-');
   });
 
-  it('düzenleme modunda metinler ve listeler işaretlenir; birleşik branş paragrafı işaretsiz kalır', () => {
+  it('düzenleme modunda metinler ve listeler işaretlenir; branş paragrafında giriş cümlesi düzenlenir', () => {
     const data = { ...defaultData(PREFIXES), editing: true };
     const { container } = render(<EgitimView data={data} />);
     for (const key of ['egitim.hero.title', 'egitim.english.title', 'egitim.ages.note', 'egitim.cta.lead']) {
@@ -37,6 +37,13 @@ describe('egitim ziyaretçi HTML', () => {
     expect(container.querySelector('h2[data-edit-key="egitim.sections"][data-edit-path="montessori.question"]')).not.toBeNull();
     expect(container.querySelector('p[data-edit-key="egitim.sections"][data-edit-path="brans.p1"]')).not.toBeNull();
     expect(container.querySelector('p[data-edit-key="egitim.sections"][data-edit-path="brans.p2"]')).toBeNull();
+    // Giriş cümlesi paragrafın içinde ayrı işaretli alan; türetilen branş adları onun dışında kalır.
+    const intro = container.querySelector('span[data-edit-key="egitim.sections"][data-edit-path="brans.p2"]');
+    expect(intro?.textContent).toBe('Programımızda şu çalışmalar yer alıyor:');
+    expect(intro?.parentElement?.tagName).toBe('P');
+    expect(intro?.parentElement?.textContent).toMatch(/^Programımızda şu çalışmalar yer alıyor: .+\.$/);
+    const visitorBrans = render(<EgitimView data={defaultData(PREFIXES)} />).container;
+    expect(visitorBrans.innerHTML).toContain('<p>Programımızda şu çalışmalar yer alıyor: ');
     // Boş p4 düzenlemede boş ve işaretli basılır (yeniden yazılabilsin); ziyaretçide basılmaz.
     const empty = container.querySelector('p[data-edit-path="planlama.p4"]');
     expect(empty?.textContent).toBe('');

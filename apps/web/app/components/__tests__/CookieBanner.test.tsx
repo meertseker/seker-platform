@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { CONSENT_KEY } from '@/lib/consent';
 import { CONSENT_EVENT } from '@/lib/metaPixel';
+import { defaultData, sentinelData, uncoveredText } from '@/lib/content/testing';
 import CookieBanner from '../CookieBanner';
 
 /**
@@ -102,6 +103,23 @@ describe('CookieBanner', () => {
       analytics_storage: 'denied',
     });
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('yazılar chrome.cookie.* alanlarından gelir; data verilmezse varsayılan aynıdır', () => {
+    Object.defineProperty(window, 'localStorage', { value: storageWith(null), configurable: true });
+    const bare = render(<CookieBanner />).container.innerHTML;
+    cleanup();
+    const withData = render(<CookieBanner data={defaultData(['chrome.cookie.'])} />).container.innerHTML;
+    expect(withData).toBe(bare);
+    expect(withData).not.toContain('data-edit-');
+    cleanup();
+
+    const { container } = render(<CookieBanner data={{ ...sentinelData(['chrome.cookie.']), editing: true }} />);
+    expect(uncoveredText(container)).toEqual([]);
+    expect(screen.getByRole('dialog', { name: '⟦chrome.cookie.label⟧' })).toBeDefined();
+    for (const key of ['chrome.cookie.text', 'chrome.cookie.link', 'chrome.cookie.reject', 'chrome.cookie.accept']) {
+      expect(container.querySelector(`[data-edit-key="${key}"]`), key).not.toBeNull();
+    }
   });
 
   it.each([
