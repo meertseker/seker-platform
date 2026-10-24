@@ -1,4 +1,5 @@
 import type { SlotDef } from './types';
+import { labelFor } from './labels';
 import { SITE_SLOTS } from './slots/site';
 import { MEDIA_SLOTS } from './slots/media';
 import { LIST_SLOTS } from './slots/lists';
@@ -19,8 +20,9 @@ import { SSS_SLOTS } from './slots/sss';
 import { LEGAL_SLOTS } from './slots/legal';
 import { LP_SLOTS } from './slots/lp';
 
-// Her sayfa görevi kendi slots dosyasını buraya ekler.
-export const SLOTS: Record<string, SlotDef> = {
+// Her sayfa görevi kendi slots dosyasını buraya ekler. Slot dosyaları alanın kısa adını yazar;
+// panelde görünen "Sayfa › Bölüm › Alan" etiketi labelFor() ile burada üretilir.
+const RAW_SLOTS: Record<string, SlotDef> = {
   ...SITE_SLOTS,
   ...MEDIA_SLOTS,
   ...LIST_SLOTS,
@@ -41,5 +43,9 @@ export const SLOTS: Record<string, SlotDef> = {
   ...LEGAL_SLOTS,
   ...LP_SLOTS,
 };
+
+export const SLOTS: Record<string, SlotDef> = Object.fromEntries(
+  Object.entries(RAW_SLOTS).map(([key, def]) => [key, { ...def, label: labelFor(key, def.label) }]),
+);
 
 export { PAGE_IDS } from './pageIds';

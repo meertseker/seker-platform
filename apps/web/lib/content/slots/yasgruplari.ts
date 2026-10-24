@@ -9,10 +9,10 @@ const BOOKING_NOTE = 'Sınıf mevcudumuz sınırlı olduğu için kayıtları d�
 
 /** Yaş grupları listesi ve alt sayfaları. Grup içerikleri `ageGroups.items` listesindedir (lists.ts). */
 export const YASGRUPLARI_SLOTS: Record<string, SlotDef> = {
-  'meta.yasgruplari.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'Yaş Grupları', max: 70 },
+  'meta.yasgruplari.title': { kind: 'text', label: 'Başlık', default: 'Yaş Grupları', max: 70 },
   'meta.yasgruplari.description': {
     // Özgün metin Google'ın 160 karakterini aşıyor; sahibi ayarlar panelinden kısaltabilir.
-    kind: 'text', label: 'Sayfa açıklaması (Google)', max: 190,
+    kind: 'text', label: 'Açıklama', max: 190,
     default:
       'Özel Şeker Anaokulu\'nda 2 yaşından ilkokula hazırlığa kadar dört yaş grubu: 2-3 yaş oyun grubu, 3-4 yaş, 4-5 yaş ve 5-6 yaş sınıfları. Her grubun kendi programı ve kendi öğretmenleri var.',
   },
@@ -24,14 +24,14 @@ export const YASGRUPLARI_SLOTS: Record<string, SlotDef> = {
     'Sınıflarımızı çocukların doğum yıllarını ve aylarını dikkate alarak oluşturuyor, gelişim dönemlerine uygun bir eğitim süreci planlıyoruz. Çocuğunuzun grubuna tıklayarak o yaşa özel programı ve günün akışını inceleyin.',
   ),
   'yasgruplari.card.cta': text('Kart bağlantı yazısı', 'Programı incele'),
-  'yasgruplari.cta.title': text('Form başlığı', 'Çocuğunuzun yaş grubu için kontenjan sorun', true),
-  'yasgruplari.cta.lead': text('Form üstü metin', BOOKING_NOTE),
+  'yasgruplari.cta.title': text('Başlık', 'Çocuğunuzun yaş grubu için kontenjan sorun', true),
+  'yasgruplari.cta.lead': text('Açıklama', BOOKING_NOTE),
 
   // Alt sayfaların (2-3-yas, 3-4-yas …) ortak etiketleri.
   'yasgrubu.classSize.label': text('Sınıf mevcudu etiketi', 'Sınıf mevcudu:'),
-  'yasgrubu.focus.suffix': text('Odak alanları başlığı (yaş etiketinden sonra gelir)', 'programında odak alanlarımız', true),
-  'yasgrubu.flow.title': text('Günün akışı başlığı', 'Günün akışından', true),
-  'yasgrubu.flow.cta': text('Günlük akış bağlantı yazısı', 'Tam günlük akışı görün'),
-  'yasgrubu.cta.suffix': text('Form başlığı (yaş etiketinden sonra gelir)', 'kontenjanımızı sorun', true),
-  'yasgrubu.cta.lead': text('Form üstü metin', BOOKING_NOTE),
+  'yasgrubu.focus.suffix': text('Başlık eki (yaş etiketinden sonra gelir)', 'programında odak alanlarımız', true),
+  'yasgrubu.flow.title': text('Başlık', 'Günün akışından', true),
+  'yasgrubu.flow.cta': text('Bağlantı yazısı', 'Tam günlük akışı görün'),
+  'yasgrubu.cta.suffix': text('Başlık eki (yaş etiketinden sonra gelir)', 'kontenjanımızı sorun', true),
+  'yasgrubu.cta.lead': text('Açıklama', BOOKING_NOTE),
 };

@@ -49,10 +49,10 @@ const SAFETY_SECTIONS = [
 ];
 
 export const GUVENLIK_SLOTS: Record<string, SlotDef> = {
-  'guvenlik.hero.eyebrow': text('Güvenlik bölümü üst etiketi', 'Güvenlik ve Sağlık'),
-  'guvenlik.hero.title': text('Güvenlik bölümü başlığı', 'Çocuğunuzun güvenliği, tesadüfe bırakılmaz.', true),
+  'guvenlik.hero.eyebrow': text('Üst etiket', 'Güvenlik ve Sağlık'),
+  'guvenlik.hero.title': text('Başlık', 'Çocuğunuzun güvenliği, tesadüfe bırakılmaz.', true),
   'guvenlik.sections': {
-    kind: 'list', label: 'Güvenlik ve sağlık uygulamaları', fixedItems: true, maxItems: 12, default: SAFETY_SECTIONS,
+    kind: 'list', label: 'Kartlar', fixedItems: true, maxItems: 12, default: SAFETY_SECTIONS,
     fields: {
       title: { kind: 'text', max: limitForField(SAFETY_SECTIONS, 'title'), label: 'Başlık' },
       body: { kind: 'text', max: limitForField(SAFETY_SECTIONS, 'body'), label: 'Açıklama' },

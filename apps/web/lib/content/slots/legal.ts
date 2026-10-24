@@ -31,9 +31,9 @@ const title = (label: string, def: string): SlotDef => ({ kind: 'text', label, d
 const body = (label: string, def: string): SlotDef => ({
   kind: 'rich', label, default: def, max: 20000, warn: WARN, allowHeadings: true,
 });
-const metaTitle = (def: string): SlotDef => ({ kind: 'text', label: 'Sayfa başlığı (tarayıcı sekmesi)', default: def, max: 70 });
+const metaTitle = (def: string): SlotDef => ({ kind: 'text', label: 'Başlık (tarayıcı sekmesi)', default: def, max: 70 });
 const metaDesc = (def: string): SlotDef => ({
-  kind: 'text', label: 'Sayfa açıklaması (Google)', default: def, max: metaDescriptionMax(def),
+  kind: 'text', label: 'Açıklama', default: def, max: metaDescriptionMax(def),
 });
 
 /** Yasal sayfalar. KVKK_CONSENT_LABEL bilerek slot değildir (Google onay beyanının dayanağı; kodda kalır). */
@@ -45,17 +45,17 @@ export const LEGAL_SLOTS: Record<string, SlotDef> = {
   'meta.cerez.title': metaTitle('Çerez Politikası'),
   'meta.cerez.description': metaDesc(CEREZ_DESC),
 
-  'legal.gizlilik.title': title('Sayfa başlığı', 'KVKK Aydınlatma Metni'),
+  'legal.gizlilik.title': title('Başlık', 'KVKK Aydınlatma Metni'),
   'legal.gizlilik.updatedLabel': {
     kind: 'text', label: 'Son güncelleme etiketi', default: 'Son güncelleme:', max: limitFor('Son güncelleme:'), warn: WARN,
   },
   'legal.gizlilik.updatedOn': { kind: 'text', label: 'Son güncelleme tarihi', default: KVKK_TEXT.updatedOn, max: 80, warn: WARN },
   'legal.gizlilik.body': body('KVKK aydınlatma metni', kvkkToHtml(KVKK_TEXT)),
 
-  'legal.kullanim.title': title('Sayfa başlığı', 'Kullanım Şartları'),
+  'legal.kullanim.title': title('Başlık', 'Kullanım Şartları'),
   'legal.kullanim.body': body('Kullanım şartları metni', PLACEHOLDER('Kullanım şartlarımız')),
 
-  'legal.cerez.title': title('Sayfa başlığı', 'Çerez Politikası'),
+  'legal.cerez.title': title('Başlık', 'Çerez Politikası'),
   'legal.cerez.body': body('Çerez politikası metni', CEREZ_HTML),
 
   'legal.common.contactCta': { kind: 'text', label: 'İletişim düğmesi', default: 'İletişim', max: limitFor('İletişim') },

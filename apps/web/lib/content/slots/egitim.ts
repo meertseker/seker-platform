@@ -77,9 +77,9 @@ const TRACK_IDS = ['play-time', 'kids-club', 'speaking'];
 const tracksDefault = ENGLISH_TRACKS.map(({ name, description }, i) => ({ id: TRACK_IDS[i], name, description }));
 
 export const EGITIM_SLOTS: Record<string, SlotDef> = {
-  'meta.egitim.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'Eğitim Yaklaşımımız', max: 70 },
+  'meta.egitim.title': { kind: 'text', label: 'Başlık', default: 'Eğitim Yaklaşımımız', max: 70 },
   'meta.egitim.description': {
-    kind: 'text', label: 'Sayfa açıklaması (Google)', max: 160,
+    kind: 'text', label: 'Açıklama', max: 160,
     default: `Haftanın ${MONTESSORI_DAYS_PER_WEEK} günü Montessori, alanında uzman öğretmenlerle branş dersleri ve her gün İngilizce. Beykent Büyükçekmece'de 2-6 yaş okul öncesi eğitim.`,
   },
 
@@ -90,7 +90,7 @@ export const EGITIM_SLOTS: Record<string, SlotDef> = {
     'Çocukların bireysel farklılıklarını ve ilgi alanlarını dikkate alan bir eğitim yaklaşımı benimsiyoruz. Programımız; zihinsel, sosyal, duygusal, fiziksel ve sanatsal gelişimi bir bütün olarak destekleyecek şekilde planlanıyor.',
   ),
   'egitim.sections': {
-    kind: 'list', label: 'Eğitim yaklaşımı bölümleri', fixedItems: true, maxItems: 12, default: EGITIM_SECTIONS,
+    kind: 'list', label: 'Bölümler', fixedItems: true, maxItems: 12, default: EGITIM_SECTIONS,
     fields: {
       question: { kind: 'text', max: Math.min(120, limitForField(EGITIM_SECTIONS, 'question')), label: 'Soru başlığı' },
       p1: { kind: 'text', max: paragraphMax, label: '1. paragraf (öne çıkan)' },
@@ -99,19 +99,19 @@ export const EGITIM_SLOTS: Record<string, SlotDef> = {
       p4: { kind: 'text', max: paragraphMax, label: '4. paragraf (boşsa gösterilmez)', optional: true },
     },
   },
-  'egitim.english.title': text('İngilizce bölümü başlığı', 'İngilizce günün içinde nasıl görünüyor?', true),
+  'egitim.english.title': text('Başlık', 'İngilizce günün içinde nasıl görünüyor?', true),
   'egitim.english.tracks': {
-    kind: 'list', label: 'İngilizce çalışmaları', fixedItems: true, maxItems: 6, default: tracksDefault,
+    kind: 'list', label: 'Çalışmalar', fixedItems: true, maxItems: 6, default: tracksDefault,
     fields: {
       name: { kind: 'text', max: limitForField(tracksDefault, 'name'), label: 'Çalışma adı' },
       description: { kind: 'text', max: limitForField(tracksDefault, 'description'), label: 'Açıklama' },
     },
   },
-  'egitim.ages.title': text('Yaş grubu bölümü başlığı', 'Yaş grubuna göre program', true),
+  'egitim.ages.title': text('Başlık', 'Yaş grubuna göre program', true),
   'egitim.ages.note': text(
-    'Yaş grubu altı not',
+    'Alt not',
     `Tam gün ${FULL_DAY_LABEL}, yarım gün ${HALF_DAY_LABEL}. {kurulusYili}'den beri, {yilSayisi} yıldır aynı yaklaşımla ${SITE.areaServed.slice(0, 3).join(', ')} ve çevresindeki ailelere hizmet veriyoruz.`,
   ),
-  'egitim.cta.title': text('Form başlığı', 'Programı yerinde görmek ister misiniz?', true),
-  'egitim.cta.lead': text('Form üstü metin', 'Ders saatinde gelin; sınıfları gezip öğretmenlerimizle tanışın.'),
+  'egitim.cta.title': text('Başlık', 'Programı yerinde görmek ister misiniz?', true),
+  'egitim.cta.lead': text('Açıklama', 'Ders saatinde gelin; sınıfları gezip öğretmenlerimizle tanışın.'),
 };

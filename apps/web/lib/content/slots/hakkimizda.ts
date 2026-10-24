@@ -48,9 +48,9 @@ const FACTS = [
 ];
 
 export const HAKKIMIZDA_SLOTS: Record<string, SlotDef> = {
-  'meta.hakkimizda.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'Hakkımızda', max: 70 },
+  'meta.hakkimizda.title': { kind: 'text', label: 'Başlık', default: 'Hakkımızda', max: 70 },
   'meta.hakkimizda.description': {
-    kind: 'text', label: 'Sayfa açıklaması (Google)', max: 160,
+    kind: 'text', label: 'Açıklama', max: 160,
     default: "Beykent bölgesinin en köklü anaokullarından biri. {kurulusYili}'den beri iki binamız ve iki büyük bahçemizle 2-6 yaş çocuklara Montessori temelli okul öncesi eğitim.",
   },
 
@@ -61,27 +61,27 @@ export const HAKKIMIZDA_SLOTS: Record<string, SlotDef> = {
     'Yıllara dayanan eğitim deneyimimizi, çocukları tanıyan ve her çocuğun kendini değerli hissettiği bir okul anlayışıyla sürdürüyoruz. Çocukların akademik gelişiminin yanı sıra sosyal, duygusal ve bilişsel gelişimlerini de destekliyoruz.',
   ),
   'hakkimizda.facts': {
-    kind: 'list', label: 'Künye kartları', fixedItems: true, maxItems: 4, default: FACTS,
+    kind: 'list', label: 'Kartlar', fixedItems: true, maxItems: 4, default: FACTS,
     fields: {
       value: { kind: 'text', max: 20, label: 'Değer' },
       label: { kind: 'text', max: limitForField(FACTS, 'label'), label: 'Etiket' },
     },
   },
-  'hakkimizda.values.title': text('Değerler başlığı', 'Değerlerimiz', true),
+  'hakkimizda.values.title': text('Başlık', 'Değerlerimiz', true),
   'hakkimizda.values.lead': text(
-    'Değerler giriş metni',
+    'Açıklama',
     'Sevgi, güven ve aidiyet duygusunu merkeze alan bir okul ortamı kurmaya çalışıyoruz. Montessori yaklaşımımız ve branş derslerimizle çocukların özgüvenlerini, yeteneklerini ve bağımsızlıklarını destekliyoruz.',
   ),
   'hakkimizda.values': {
-    kind: 'list', label: 'Değerlerimiz', fixedItems: true, maxItems: 8, default: VALUES,
+    kind: 'list', label: 'Kartlar', fixedItems: true, maxItems: 8, default: VALUES,
     fields: {
       title: { kind: 'text', max: 30, label: 'Başlık' },
       description: { kind: 'text', max: Math.min(200, limitForField(VALUES, 'description')), label: 'Açıklama' },
     },
   },
-  'hakkimizda.visit.title': text('Form başlığı', 'Okulu gezmeye gelin', true),
+  'hakkimizda.visit.title': text('Başlık', 'Okulu gezmeye gelin', true),
   'hakkimizda.visit.lead': text(
-    'Form üstü metin',
+    'Açıklama',
     `Haftanın ${MONTESSORI_DAYS_PER_WEEK} günü Montessori çalışıyoruz. Randevunuzu çalışma saatine alalım, sınıfı iş üstünde görün.`,
   ),
 };

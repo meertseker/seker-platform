@@ -13,7 +13,7 @@ export const SSS_SLOTS: Record<string, SlotDef> = {
   'sss.hero.eyebrow': text('Üst etiket', 'Sık sorulan sorular'),
   'sss.hero.title': text('Ana başlık', 'Velilerin en çok sorduğu sorular', true),
   'sss.hero.lead': text('Giriş metni', LEAD),
-  'sss.cta.title': text('Alt bölüm başlığı', 'Cevabını bulamadığınız bir soru mu var?', true),
-  'sss.cta.lead': text('Alt bölüm açıklaması', 'Arayın ya da yazın; okulu gezmeye gelmeden önce aklınızda soru kalmasın.'),
+  'sss.cta.title': text('Başlık', 'Cevabını bulamadığınız bir soru mu var?', true),
+  'sss.cta.lead': text('Açıklama', 'Arayın ya da yazın; okulu gezmeye gelmeden önce aklınızda soru kalmasın.'),
   'sss.cta.email': text('E-posta düğmesi', 'E-posta gönderin'),
 };

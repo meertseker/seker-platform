@@ -66,8 +66,8 @@ const weekDefault = WEEK_DAYS.map((d) => ({
 }));
 
 export const HOME_SLOTS: Record<string, SlotDef> = {
-  'meta.home.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: SITE.name, max: 70 },
-  'meta.home.description': { kind: 'text', label: 'Sayfa açıklaması (Google)', default: SITE.description, max: 160 },
+  'meta.home.title': { kind: 'text', label: 'Başlık', default: SITE.name, max: 70 },
+  'meta.home.description': { kind: 'text', label: 'Açıklama', default: SITE.description, max: 160 },
 
   'home.hero.badge': text('Üst etiket', "Beykent'in en köklü anaokullarından biri · {kurulusYili}'den beri"),
   'home.hero.title': text('Ana başlık', 'Çocuğu tanıyan, potansiyelini keşfeden bir okul.', true),
@@ -97,63 +97,63 @@ export const HOME_SLOTS: Record<string, SlotDef> = {
     'Montessori ayrı bir etkinlik saati değil, haftanın her günü günün omurgası. {yilSayisi} yıldır aynı bahçede çalışıyoruz.',
   ),
 
-  'home.testimonials.eyebrow': text('Bölüm etiketi', 'Veli yorumları'),
-  'home.testimonials.title': text('Bölüm başlığı', 'Bizi seçen aileler ne diyor?', true),
+  'home.testimonials.eyebrow': text('Üst etiket', 'Veli yorumları'),
+  'home.testimonials.title': text('Başlık', 'Bizi seçen aileler ne diyor?', true),
   'home.testimonials.link': text('Bağlantı metni', 'Tüm yorumları okuyun'),
 
-  'home.day.eyebrow': text('Bölüm etiketi', 'Bir günümüz'),
-  'home.day.title': text('Bölüm başlığı', 'Çocuğunuz burada bütün gün ne yapıyor?', true),
+  'home.day.eyebrow': text('Üst etiket', 'Bir günümüz'),
+  'home.day.title': text('Başlık', 'Çocuğunuz burada bütün gün ne yapıyor?', true),
   'home.day.lead': text(
-    'Bölüm açıklaması',
+    'Açıklama',
     'Velilerin bize en çok sorduğu soru bu. Karşılamadan çıkışa, günün tamamı aşağıda.',
   ),
   'home.day.link': text('Bağlantı metni', 'Günün tamamını görün'),
 
-  'home.garden.eyebrow': text('Bölüm etiketi', 'Bahçelerimiz'),
-  'home.garden.title': text('Bölüm başlığı', 'En büyük sınıfımız çatının altında değil.', true),
+  'home.garden.eyebrow': text('Üst etiket', 'Bahçelerimiz'),
+  'home.garden.title': text('Başlık', 'En büyük sınıfımız çatının altında değil.', true),
   'home.garden.lead': text(
-    'Bölüm açıklaması',
+    'Açıklama',
     'İki ayrı binamız ve geniş metrekareye sahip iki büyük bahçemiz var. Bahçeleri yıllar içinde kendimiz kurduk: ahşap mutfak, tamir köşesi, denge yolu, dev satranç tahtası, ağacın etrafındaki bank. Çocuklar günün büyük bölümünü burada geçiriyor.',
   ),
   'home.garden.caption': text(
-    'Geniş fotoğraf alt yazısı',
+    'Geniş fotoğrafın alt yazısı',
     'Ağacın etrafındaki bank, denge yolu ve açık hava sınıfı — hepsi aynı bahçede, öğretmenin görebileceği mesafede.',
   ),
   'home.garden.shots': {
-    kind: 'list', label: 'Bahçe kareleri', fixedItems: true, maxItems: 4, default: GARDEN_SHOTS,
+    kind: 'list', label: 'Kareler', fixedItems: true, maxItems: 4, default: GARDEN_SHOTS,
     fields: {
       title: { kind: 'text', max: limitForField(GARDEN_SHOTS, 'title'), label: 'Başlık' },
       note: { kind: 'text', max: limitForField(GARDEN_SHOTS, 'note'), label: 'Açıklama' },
     },
   },
 
-  'home.features.eyebrow': text('Bölüm etiketi', 'Neden burası'),
-  'home.features.title': text('Bölüm başlığı', 'Neden Şeker Anaokulu?', true),
+  'home.features.eyebrow': text('Üst etiket', 'Neden burası'),
+  'home.features.title': text('Başlık', 'Neden Şeker Anaokulu?', true),
   'home.features.lead': text(
-    'Bölüm açıklaması',
+    'Açıklama',
     'Bizim için eğitim yalnızca öğretmek değil; çocuğu tanımak, ilgi ve yeteneklerini keşfetmesine alan açmak ve gelişimine eşlik etmek.',
   ),
   'home.features.cta': text('Randevu düğmesi', 'Ön Görüşme Randevusu Alın'),
   'home.features.cards': {
-    kind: 'list', label: 'Dört kart', fixedItems: true, maxItems: 4, default: FEATURE_CARDS,
+    kind: 'list', label: 'Kartlar', fixedItems: true, maxItems: 4, default: FEATURE_CARDS,
     fields: {
       title: { kind: 'text', max: limitForField(FEATURE_CARDS, 'title'), label: 'Başlık' },
       description: { kind: 'text', max: limitForField(FEATURE_CARDS, 'description'), label: 'Açıklama' },
     },
   },
 
-  'home.activities.eyebrow': text('Bölüm etiketi', 'Branşlar'),
-  'home.activities.title': text('Bölüm başlığı', 'Branş Derslerimiz', true),
+  'home.activities.eyebrow': text('Üst etiket', 'Branşlar'),
+  'home.activities.title': text('Başlık', 'Branş Derslerimiz', true),
   'home.activities.lead': text(
-    'Bölüm açıklaması',
+    'Açıklama',
     'Hangi çocuğun neyle açılacağını önceden bilemezsiniz. Bu yüzden programımızı farklı branş ve çalışmalarla zenginleştiriyor, her çocuğa kendi ilgi alanını bulabileceği kadar çok kapı açıyoruz.',
   ),
   'home.activities.cta': text('Bağlantı düğmesi', 'Bütün derslerin ayrıntısını görün'),
 
-  'home.week.eyebrow': text('Bölüm etiketi', 'Haftalık ritim'),
-  'home.week.title': text('Bölüm başlığı', 'Haftanın her günü çocuklar için ayrı bir şey ifade ediyor.', true),
+  'home.week.eyebrow': text('Üst etiket', 'Haftalık ritim'),
+  'home.week.title': text('Başlık', 'Haftanın her günü çocuklar için ayrı bir şey ifade ediyor.', true),
   'home.week.lead': text(
-    'Bölüm açıklaması',
+    'Açıklama',
     'Okul yaşamını daha keyifli hâle getirmek için haftanın belirli günlerinde özel etkinlikler düzenliyoruz. Sabah çantaya ne koyacağınızı bu takvimden bakabilirsiniz.',
   ),
   'program.weekDays': {
@@ -166,21 +166,21 @@ export const HOME_SLOTS: Record<string, SlotDef> = {
   },
 
   // Duyurular: veritabanındaki aktif duyurular; yoksa bölüm hiç basılmaz (düzenleme modunda yönlendirme görünür).
-  'home.announcements.title': text('Duyurular başlığı', 'Duyurular', true),
+  'home.announcements.title': text('Başlık', 'Duyurular', true),
   'home.announcements.empty': text(
-    'Duyuru yokken düzenleme modunda görünen yönlendirme',
+    'Duyuru yokken (yalnız düzenlemede) görünen not',
     'Henüz duyuru yok. Çubuktaki ‘Yeni duyuru’ ile ekleyin.',
   ),
 
   // Merak edilenler: faq.items içinde "Ana sayfada göster" işaretli sorular, kapalı akordeon.
-  'home.faq.eyebrow': text('Bölüm etiketi', 'Merak edilenler'),
-  'home.faq.title': text('Bölüm başlığı', 'Gelmeden önce en çok sorulanlar', true),
-  'home.faqLink.label': text('SSS bağlantısı', 'Sık sorulan sorular'),
+  'home.faq.eyebrow': text('Üst etiket', 'Merak edilenler'),
+  'home.faq.title': text('Başlık', 'Gelmeden önce en çok sorulanlar', true),
+  'home.faqLink.label': text('Tüm sorular bağlantısı', 'Sık sorulan sorular'),
 
-  'home.contact.eyebrow': text('Bölüm etiketi', 'Ön görüşme'),
-  'home.contact.title': text('Bölüm başlığı', 'Ön Görüşme Randevusu Alın', true),
+  'home.contact.eyebrow': text('Üst etiket', 'Ön görüşme'),
+  'home.contact.title': text('Başlık', 'Ön Görüşme Randevusu Alın', true),
   'home.contact.lead': text(
-    'Bölüm açıklaması',
+    'Açıklama',
     'Okulu gezin, sınıfları ve bahçeleri görün, öğretmenlerimizle tanışın. Size uygun bir saat seçin; kayıt zorunluluğu yok.',
   ),
 };

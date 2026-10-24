@@ -8,9 +8,9 @@ const text = (label: string, def: string, heading = false): SlotDef => ({
 
 /** Günlük akış sayfası. Sahneler `day.chapters` listesindedir (lists.ts). */
 export const GUNLUKAKIS_SLOTS: Record<string, SlotDef> = {
-  'meta.gunlukakis.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'Günlük Akış', max: 70 },
+  'meta.gunlukakis.title': { kind: 'text', label: 'Başlık', default: 'Günlük Akış', max: 70 },
   'meta.gunlukakis.description': {
-    kind: 'text', label: 'Sayfa açıklaması (Google)', max: 160,
+    kind: 'text', label: 'Açıklama', max: 160,
     default:
       "Şeker Anaokulu'nda bir gün: karşılamadan çıkışa — sabah çemberi, Montessori çalışma saati, İngilizce, bahçe ve branş dersleri. Beykent Büyükçekmece, 2-6 yaş.",
   },
@@ -22,26 +22,26 @@ export const GUNLUKAKIS_SLOTS: Record<string, SlotDef> = {
     'Velilerin bize en çok sorduğu soru: "Çocuğum orada bütün gün ne yapıyor?" Cevabı aşağıda, sahne sahne.',
   ),
 
-  'gunlukakis.plan.full.label': text('Tam gün etiketi', 'Tam gün'),
-  'gunlukakis.plan.full.hours': text('Tam gün saatleri', FULL_DAY_LABEL),
-  'gunlukakis.plan.full.note': text('Tam gün notu', 'Aşağıdaki akışın tamamı bu programda yaşanıyor.'),
-  'gunlukakis.plan.half.label': text('Yarım gün etiketi', 'Yarım gün'),
-  'gunlukakis.plan.half.hours': text('Yarım gün saatleri', HALF_DAY_LABEL),
-  'gunlukakis.plan.half.note': text('Yarım gün notu', 'Sabah çemberi, Montessori çalışması, İngilizce ve bahçe zamanını kapsıyor.'),
+  'gunlukakis.plan.full.label': text('Etiket', 'Tam gün'),
+  'gunlukakis.plan.full.hours': text('Saatler', FULL_DAY_LABEL),
+  'gunlukakis.plan.full.note': text('Not', 'Aşağıdaki akışın tamamı bu programda yaşanıyor.'),
+  'gunlukakis.plan.half.label': text('Etiket', 'Yarım gün'),
+  'gunlukakis.plan.half.hours': text('Saatler', HALF_DAY_LABEL),
+  'gunlukakis.plan.half.note': text('Not', 'Sabah çemberi, Montessori çalışması, İngilizce ve bahçe zamanını kapsıyor.'),
 
-  'gunlukakis.scene.prefix': { kind: 'text', label: 'Sahne sırası etiketi (ör. "Sahne 01")', default: 'Sahne', max: 20 },
+  'gunlukakis.scene.prefix': { kind: 'text', label: 'Sıra etiketi (ör. "Sahne 01")', default: 'Sahne', max: 20 },
   'gunlukakis.roster.count': {
-    kind: 'text', label: 'Künye altyazısı', default: '{cocuk} çocuk, {ogretmen} öğretmen', max: 60,
+    kind: 'text', label: 'Altyazı', default: '{cocuk} çocuk, {ogretmen} öğretmen', max: 60,
     warn: '{cocuk} ve {ogretmen} yerine sınıf mevcudu otomatik yazılır; bunları silmeyin.',
   },
   'gunlukakis.roster.limit': {
-    kind: 'text', label: 'Künye üst sınır altyazısı', default: 'MEB üst sınırı {limit}', max: 60,
+    kind: 'text', label: 'Üst sınır altyazısı', default: 'MEB üst sınırı {limit}', max: 60,
     warn: '{limit} yerine MEB üst sınırı otomatik yazılır; silmeyin.',
   },
 
-  'gunlukakis.cta.title': text('Form başlığı', 'Bu akışı yerinde görün', true),
+  'gunlukakis.cta.title': text('Başlık', 'Bu akışı yerinde görün', true),
   'gunlukakis.cta.lead': text(
-    'Form üstü metin',
+    'Açıklama',
     'Bu akış yazıldığı gibi işliyor. Emin olmak isterseniz ders saatinde gelin — randevunuzu sabaha alalım, çalışırken görün.',
   ),
 };

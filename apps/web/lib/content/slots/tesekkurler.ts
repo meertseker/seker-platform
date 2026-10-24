@@ -7,7 +7,7 @@ const text = (label: string, def: string, heading = false): SlotDef => ({
 
 /** Form sonrası teşekkür sayfası (arama motorlarına kapalı; yalnızca başlık meta'sı var). */
 export const TESEKKURLER_SLOTS: Record<string, SlotDef> = {
-  'meta.tesekkurler.title': { kind: 'text', label: 'Sayfa başlığı (tarayıcı sekmesi)', default: 'Talebiniz Alındı', max: 70 },
+  'meta.tesekkurler.title': { kind: 'text', label: 'Başlık (tarayıcı sekmesi)', default: 'Talebiniz Alındı', max: 70 },
 
   'tesekkurler.hero.eyebrow': text('Üst etiket', 'Teşekkürler'),
   'tesekkurler.hero.title': text('Ana başlık', 'Talebiniz bize ulaştı.', true),

@@ -27,11 +27,11 @@ export const COOKIE_DEFAULTS: Record<string, string> = {
 };
 
 const COOKIE_LABELS: Record<string, string> = {
-  'chrome.cookie.text': 'Çerez bandı: açıklama cümlesi',
-  'chrome.cookie.link': 'Çerez bandı: politika bağlantısı',
-  'chrome.cookie.reject': 'Çerez bandı: reddet düğmesi',
-  'chrome.cookie.accept': 'Çerez bandı: kabul düğmesi',
-  'chrome.cookie.label': 'Çerez bandı: erişilebilirlik etiketi (ekran okuyucu)',
+  'chrome.cookie.text': 'Açıklama cümlesi',
+  'chrome.cookie.link': 'Politika bağlantısı',
+  'chrome.cookie.reject': 'Reddet düğmesi',
+  'chrome.cookie.accept': 'Kabul düğmesi',
+  'chrome.cookie.label': 'Erişilebilirlik etiketi (ekran okuyucu)',
 };
 
 const t = (label: string, def: string, heading = false): SlotDef => ({
@@ -40,33 +40,33 @@ const t = (label: string, def: string, heading = false): SlotDef => ({
 
 export const CHROME_SLOTS: Record<string, SlotDef> = {
   'chrome.nav.items': {
-    kind: 'list', label: 'Üst menü', fixedItems: true, maxItems: 20, default: navDefault,
+    kind: 'list', label: 'Menü maddeleri', fixedItems: true, maxItems: 20, default: navDefault,
     fields: { label: { kind: 'text', max: 40, label: 'Menü yazısı' } },
   },
-  'chrome.header.cta': t('Üst menü randevu düğmesi', 'Ön Görüşme Randevusu'),
+  'chrome.header.cta': t('Randevu düğmesi', 'Ön Görüşme Randevusu'),
   'chrome.footer.links': {
-    kind: 'list', label: 'Alt bilgi bağlantıları', fixedItems: true, maxItems: 30, default: footerDefault,
+    kind: 'list', label: 'Bağlantılar', fixedItems: true, maxItems: 30, default: footerDefault,
     fields: { label: { kind: 'text', max: Math.max(40, limitForField(footerDefault, 'label')), label: 'Bağlantı yazısı' } },
   },
-  'chrome.footer.name': t('Alt bilgi okul adı', 'Şeker Anaokulu'),
+  'chrome.footer.name': t('Okul adı', 'Şeker Anaokulu'),
   'chrome.footer.tagline': t(
-    'Alt bilgi tanıtım cümlesi',
+    'Tanıtım cümlesi',
     "Beykent'in en köklü anaokullarından biri. {kurulusYili}'den beri 2-6 yaş çocuklara Montessori temelli okul öncesi eğitim veriyoruz.",
   ),
-  'chrome.footer.linksTitle': t('Alt bilgi bağlantı başlığı', 'Hızlı Linkler'),
-  'chrome.footer.contactTitle': t('Alt bilgi iletişim başlığı', 'İletişim'),
+  'chrome.footer.linksTitle': t('Bağlantılar başlığı', 'Hızlı Linkler'),
+  'chrome.footer.contactTitle': t('İletişim başlığı', 'İletişim'),
   'chrome.footer.rights': t('Telif satırı (yıl otomatik)', 'Şeker Anaokulu. Tüm hakları saklıdır.'),
   'chrome.footer.privacy': t('Gizlilik bağlantısı', 'Gizlilik Politikası'),
   'chrome.footer.terms': t('Kullanım şartları bağlantısı', 'Kullanım Şartları'),
   'chrome.footer.cookies': t('Çerez bağlantısı', 'Çerez Politikası'),
-  'chrome.mobile.call': t('Mobil çubuk: ara', 'Ara'),
-  'chrome.mobile.whatsapp': t('Mobil çubuk: WhatsApp', 'WhatsApp'),
-  'chrome.mobile.book': t('Mobil çubuk: randevu', 'Randevu'),
-  'chrome.whatsapp.label': t('WhatsApp düğmesi erişilebilirlik etiketi', "WhatsApp'tan yazın"),
-  'chrome.contact.phone': t('İletişim kartı: telefon başlığı', 'Telefon'),
-  'chrome.contact.email': t('İletişim kartı: e-posta başlığı', 'E-posta'),
-  'chrome.contact.address': t('İletişim kartı: adres başlığı', 'Adres'),
-  'chrome.lp.footer.kvkk': t('Reklam sayfası alt bilgi: KVKK', 'KVKK Aydınlatma Metni'),
-  'chrome.lp.footer.cookies': t('Reklam sayfası alt bilgi: çerez', 'Çerez Politikası'),
+  'chrome.mobile.call': t('Ara düğmesi', 'Ara'),
+  'chrome.mobile.whatsapp': t('WhatsApp düğmesi', 'WhatsApp'),
+  'chrome.mobile.book': t('Randevu düğmesi', 'Randevu'),
+  'chrome.whatsapp.label': t('Erişilebilirlik etiketi (ekran okuyucu)', "WhatsApp'tan yazın"),
+  'chrome.contact.phone': t('Telefon başlığı', 'Telefon'),
+  'chrome.contact.email': t('E-posta başlığı', 'E-posta'),
+  'chrome.contact.address': t('Adres başlığı', 'Adres'),
+  'chrome.lp.footer.kvkk': t('KVKK bağlantısı', 'KVKK Aydınlatma Metni'),
+  'chrome.lp.footer.cookies': t('Çerez bağlantısı', 'Çerez Politikası'),
   ...Object.fromEntries(Object.entries(COOKIE_DEFAULTS).map(([key, def]) => [key, t(COOKIE_LABELS[key], def)])),
 };

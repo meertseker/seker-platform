@@ -31,8 +31,8 @@ const DESCRIPTION =
   "Özel Şeker Anaokulu 2026-2027 ön kayıt. Beykent Büyükçekmece'de 2-6 yaş okul öncesi eğitim; tam gün ve yarım gün seçenekleri. Ön görüşme randevusu alın.";
 
 export const KAYIT_SLOTS: Record<string, SlotDef> = {
-  'meta.kayit.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: '2026-2027 Kayıtları', max: 70 },
-  'meta.kayit.description': { kind: 'text', label: 'Sayfa açıklaması (Google)', default: DESCRIPTION, max: metaDescriptionMax(DESCRIPTION) },
+  'meta.kayit.title': { kind: 'text', label: 'Başlık', default: '2026-2027 Kayıtları', max: 70 },
+  'meta.kayit.description': { kind: 'text', label: 'Açıklama', default: DESCRIPTION, max: metaDescriptionMax(DESCRIPTION) },
 
   'kayit.hero.eyebrow': text('Üst etiket', '2-6 yaş · Beykent Büyükçekmece'),
   'kayit.hero.title': text('Ana başlık', '2026-2027 kayıtlarımız açık', true),
@@ -40,10 +40,10 @@ export const KAYIT_SLOTS: Record<string, SlotDef> = {
     'Giriş metni',
     `Sınıf mevcudumuzu ${ROSTER_STATUS.childCount} çocukla sınırlıyoruz ve her sınıfta iki öğretmen görev yapıyor. Sınıfları doğum yılına ve ayına göre oluşturduğumuz için her grupta yer sayısı sınırlı; 2-3 yaş oyun grubundan 5-6 yaş ilkokula hazırlık sınıfına kadar tüm gruplarda erken başvurmanızı öneririz.`,
   ),
-  'kayit.form.title': text('Form başlığı', 'Ön görüşme randevunuzu alın', true),
-  'kayit.steps.title': text('Kayıt süreci başlığı', 'Kayıt süreci üç adımdan oluşur', true),
+  'kayit.form.title': text('Başlık', 'Ön görüşme randevunuzu alın', true),
+  'kayit.steps.title': text('Başlık', 'Kayıt süreci üç adımdan oluşur', true),
   'kayit.steps': {
-    kind: 'list', label: 'Kayıt adımları', fixedItems: true, maxItems: 3, default: STEPS,
+    kind: 'list', label: 'Adımlar', fixedItems: true, maxItems: 3, default: STEPS,
     fields: {
       title: { kind: 'text', max: 40, label: 'Adım başlığı' },
       description: { kind: 'text', max: limitForField(STEPS, 'description'), label: 'Adım açıklaması' },

@@ -11,7 +11,7 @@ const text = (label: string, def: string, heading = false): SlotDef => ({
  * site.* alanlarından üretilir (page.tsx), böylece okul bilgileri değişince kendiliğinden güncellenir.
  */
 export const ILETISIM_SLOTS: Record<string, SlotDef> = {
-  'meta.iletisim.title': { kind: 'text', label: 'Sayfa başlığı (Google)', default: 'İletişim', max: 70 },
+  'meta.iletisim.title': { kind: 'text', label: 'Başlık', default: 'İletişim', max: 70 },
 
   'iletisim.hero.eyebrow': text('Üst etiket', 'İletişim'),
   'iletisim.hero.title': text('Ana başlık', 'Bize ulaşın', true),
@@ -20,10 +20,10 @@ export const ILETISIM_SLOTS: Record<string, SlotDef> = {
     `Formu doldurun, telefon edin ya da WhatsApp'tan yazın. Hafta içi ${FULL_DAY_LABEL} saatleri arasında okulda oluyoruz; yarım gün programımız ${HALF_DAY_LABEL} arasında.`,
   ),
   // Ana sayfadaki iletişim bölümüyle aynı varsayılanlar, ayrı anahtarlar: biri değişince diğeri değişmez.
-  'iletisim.contact.eyebrow': text('Form bölümü etiketi', 'Ön görüşme'),
-  'iletisim.contact.title': text('Form bölümü başlığı', 'Ön Görüşme Randevusu Alın', true),
+  'iletisim.contact.eyebrow': text('Üst etiket', 'Ön görüşme'),
+  'iletisim.contact.title': text('Başlık', 'Ön Görüşme Randevusu Alın', true),
   'iletisim.contact.lead': text(
-    'Form bölümü açıklaması',
+    'Açıklama',
     'Okulu gezin, sınıfları ve bahçeleri görün, öğretmenlerimizle tanışın. Size uygun bir saat seçin; kayıt zorunluluğu yok.',
   ),
 };
