@@ -1,5 +1,4 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import Timecode from './cine/Timecode';
 import { Editable } from './edit/Editable';
 import type { Reader } from '@/lib/content/types';
@@ -71,16 +70,7 @@ export default function GardenSection({ c }: { c: Reader }) {
 
       <div className="relative z-10 mx-auto max-w-6xl px-6">
         <Timecode editAttrs={c.attrs('home.garden.eyebrow')}>{c.text('home.garden.eyebrow')}</Timecode>
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
-          <Editable c={c} k="home.garden.title" as="h2" className="max-w-2xl text-2xl text-ink md:text-4xl" />
-          <Link
-            href="/gunluk-akis"
-            className="text-sm text-ink underline underline-offset-4 md:text-base"
-            {...c.attrs('home.garden.link')}
-          >
-            {c.text('home.garden.link')}
-          </Link>
-        </div>
+        <Editable c={c} k="home.garden.title" as="h2" className="mt-2 max-w-2xl text-2xl text-ink md:text-4xl" />
         <Editable c={c} k="home.garden.lead" as="p" className="mt-3 max-w-2xl text-ink-soft" />
 
         {/* Geniş bahçe karesi — bölümün çapası. */}

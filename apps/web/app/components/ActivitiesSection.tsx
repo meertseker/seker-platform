@@ -32,8 +32,9 @@ const ActivitiesSection = ({ c }: { c: Reader }) => {
           <Editable c={c} k="home.activities.lead" as="p" className="mx-auto mt-4 max-w-2xl text-ink-soft" />
         </div>
 
+        {/* Telefonda tek sıra yatay kaydırma (dört fotoğraflı kart alt alta ~1100 px tutuyordu); md+ ızgara. */}
         <div
-          className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
+          className="mt-8 -mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-4 md:mx-0 md:mt-12 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-4"
           {...c.listAttrs('program.branches')}
         >
           {featured.map((branch) => {
@@ -42,7 +43,7 @@ const ActivitiesSection = ({ c }: { c: Reader }) => {
               <Link
                 key={branch.id}
                 href={`/aktiviteler?ders=${branch.id}`}
-                className="card-lift overflow-hidden rounded-3xl bg-white shadow-sm"
+                className="card-lift w-64 shrink-0 snap-start overflow-hidden rounded-3xl bg-white shadow-sm md:w-auto"
               >
                 <div
                   className="relative h-44 overflow-hidden"
@@ -53,7 +54,7 @@ const ActivitiesSection = ({ c }: { c: Reader }) => {
                     src={photo.src}
                     alt={photo.alt}
                     fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    sizes="(max-width: 768px) 256px, (max-width: 1024px) 50vw, 25vw"
                     className="object-cover"
                   />
                   <div className="absolute inset-0 z-10 bg-gradient-to-t from-ink/80 via-ink/15 to-transparent" />

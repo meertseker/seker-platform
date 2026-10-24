@@ -97,6 +97,10 @@ export const HOME_SLOTS: Record<string, SlotDef> = {
     'Montessori ayrı bir etkinlik saati değil, haftanın her günü günün omurgası. {yilSayisi} yıldır aynı bahçede çalışıyoruz.',
   ),
 
+  'home.testimonials.eyebrow': text('Bölüm etiketi', 'Veli yorumları'),
+  'home.testimonials.title': text('Bölüm başlığı', 'Bizi seçen aileler ne diyor?', true),
+  'home.testimonials.link': text('Bağlantı metni', 'Tüm yorumları okuyun'),
+
   'home.day.eyebrow': text('Bölüm etiketi', 'Bir günümüz'),
   'home.day.title': text('Bölüm başlığı', 'Çocuğunuz burada bütün gün ne yapıyor?', true),
   'home.day.lead': text(
@@ -107,7 +111,6 @@ export const HOME_SLOTS: Record<string, SlotDef> = {
 
   'home.garden.eyebrow': text('Bölüm etiketi', 'Bahçelerimiz'),
   'home.garden.title': text('Bölüm başlığı', 'En büyük sınıfımız çatının altında değil.', true),
-  'home.garden.link': text('Bağlantı metni', 'Bir günümüzü görün'),
   'home.garden.lead': text(
     'Bölüm açıklaması',
     'İki ayrı binamız ve geniş metrekareye sahip iki büyük bahçemiz var. Bahçeleri yıllar içinde kendimiz kurduk: ahşap mutfak, tamir köşesi, denge yolu, dev satranç tahtası, ağacın etrafındaki bank. Çocuklar günün büyük bölümünü burada geçiriyor.',
@@ -169,6 +172,9 @@ export const HOME_SLOTS: Record<string, SlotDef> = {
     'Henüz duyuru yok. Çubuktaki ‘Yeni duyuru’ ile ekleyin.',
   ),
 
+  // Merak edilenler: faq.items içinde "Ana sayfada göster" işaretli sorular, kapalı akordeon.
+  'home.faq.eyebrow': text('Bölüm etiketi', 'Merak edilenler'),
+  'home.faq.title': text('Bölüm başlığı', 'Gelmeden önce en çok sorulanlar', true),
   'home.faqLink.label': text('SSS bağlantısı', 'Sık sorulan sorular'),
 
   'home.contact.eyebrow': text('Bölüm etiketi', 'Ön görüşme'),

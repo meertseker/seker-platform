@@ -64,6 +64,9 @@ const CONTACT_SRC = readSource('app', 'components', 'ContactSection.tsx');
 const FEATURES_SRC = readProse('app', 'components', 'FeaturesSection.tsx');
 const ACTIVITIES_SRC = readProse('app', 'components', 'ActivitiesSection.tsx');
 const ANNOUNCEMENTS_SRC = readProse('app', 'components', 'AnnouncementsSection.tsx');
+const TESTIMONIALS_SRC = readProse('app', 'components', 'TestimonialsSection.tsx');
+const HOMEFAQ_SRC = readProse('app', 'components', 'HomeFaqSection.tsx');
+const FORMSECTION_SRC = readProse('app', 'components', 'FormSection.tsx');
 
 const HOMEPAGE_FILES = {
   'app/components/HeroSection.tsx': HERO_SRC,
@@ -89,6 +92,9 @@ const HOMEPAGE_FILES = {
   'app/components/FeaturesSection.tsx': FEATURES_SRC,
   'app/components/ActivitiesSection.tsx': ACTIVITIES_SRC,
   'app/components/AnnouncementsSection.tsx': ANNOUNCEMENTS_SRC,
+  'app/components/TestimonialsSection.tsx': TESTIMONIALS_SRC,
+  'app/components/HomeFaqSection.tsx': HOMEFAQ_SRC,
+  'app/components/FormSection.tsx': FORMSECTION_SRC,
 };
 
 describe('ana sayfa kaynak taraması — fiyat ve yasak kelime', () => {
@@ -157,17 +163,14 @@ describe('ana sayfa kaynak taraması — eski "rainbow" paleti (Task 3 notu, Ana
   });
 });
 
-describe('ana sayfa yapısı — form ilk kaydırmada erişilebilir', () => {
-  it('ContactSection, günün önizlemesinden hemen sonra ve mevcut bölümlerden (Features/Activities) önce geliyor', () => {
-    const dayPreviewIndex = ANASAYFA_SRC.indexOf('DAY_PREVIEW_IDS');
-    const contactIndex = ANASAYFA_SRC.indexOf('<ContactSection');
-    const featuresIndex = ANASAYFA_SRC.indexOf('<FeaturesSection');
-    const activitiesIndex = ANASAYFA_SRC.indexOf('<ActivitiesSection');
-
-    expect(dayPreviewIndex).toBeGreaterThan(-1);
-    expect(contactIndex).toBeGreaterThan(dayPreviewIndex);
-    expect(contactIndex).toBeLessThan(featuresIndex);
-    expect(contactIndex).toBeLessThan(activitiesIndex);
+describe('ana sayfa yapısı — ikna akışı: dikkat → kanıt → gün → neden biz → itirazlar → form', () => {
+  it('bölümler kaynakta bu sırayla; form en sonda, telefonda alt çubuk zaten her ekranda', () => {
+    const order = ['<HeroSection', '<AnnouncementsSection', '<TestimonialsSection', 'DAY_PREVIEW_IDS.map', '<GardenSection', '<FeaturesSection', '<ActivitiesSection', '<HomeFaqSection', '<ContactSection']
+      .map((m) => ANASAYFA_SRC.indexOf(m));
+    order.forEach((i, n) => expect(i, String(n)).toBeGreaterThan(-1));
+    for (let i = 1; i < order.length; i++) expect(order[i]).toBeGreaterThan(order[i - 1]);
+    // Haftalık ritim ana sayfada değil (Günlük Akış sayfasında).
+    expect(ANASAYFA_SRC).not.toContain('WeekRhythmSection');
   });
 
   it('günün önizlemesi ham chapter.time değil chapterLabel() kullanır — doğrulanmamış saat sızdırmaz', () => {

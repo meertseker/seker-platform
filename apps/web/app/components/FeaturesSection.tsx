@@ -99,9 +99,10 @@ const FeaturesSection = ({ c }: { c: Reader }) => {
           })}
         </div>
 
+        {/* Düğme sayfanın sonundaki forma kaydırır (#randevu); yeni sayfa açmaz. */}
         <div className="mt-12 text-center">
           <Link
-            href="/kayit"
+            href="#randevu"
             className="inline-block rounded-full bg-grape px-8 py-4 font-semibold text-white shadow-lg shadow-grape/30 hover:bg-ink"
             {...c.attrs('home.features.cta')}
           >
