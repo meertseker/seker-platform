@@ -13,8 +13,8 @@
 ## Kalın yazı, liste, bağlantı (duyurular, yasal metinler)
 Çift tıklayınca sağda bir düzenleyici açılır. Kalın, italik, madde işaretli liste ve bağlantı ekleyebilirsiniz. Word'den yapıştırdığınız yazının yazı tipi ve renkleri silinir; bu bilinçlidir.
 
-## Listeler (sorular, yorumlar, kanallar)
-Çubuktaki **Listeler…** menüsünden listeyi seçin. Madde ekleyebilir, silebilir, ↑ ↓ ile sırasını değiştirebilirsiniz. Menü ve yaş grupları gibi bazı listelerin maddeleri sabittir; yalnızca yazıları değişir.
+## Listeler (sorular, yorumlar, sahneler, dersler)
+Çubuktaki **Listeler…** menüsünden listeyi seçin. Liste ve alan adları "Sayfa › Bölüm › Alan" biçimindedir (ör. "Günlük akış › Günün sahneleri", "Ana sayfa › Bir günümüz › Başlık"); Geçmiş'te ve uyarılarda da aynı adlar görünür. Madde ekleyebilir, silebilir, ↑ ↓ ile sırasını değiştirebilirsiniz. Menü ve yaş grupları gibi bazı listelerin maddeleri sabittir; yalnızca yazıları değişir.
 
 ## Fotoğraf değiştirmek
 1. Fotoğrafa çift tıklayın.
@@ -25,7 +25,12 @@
 Not: Aynı fotoğraf sitede birden çok yerde kullanılıyorsa hepsinde değişir. iPhone fotoğrafı yüklenmiyorsa: Ayarlar › Kamera › Biçimler › En Uyumlu.
 
 ## Duyurular
-Bültenler sayfasında çubuktaki **Yeni duyuru**'ya basın. Başlık, metin, istersen fotoğraf, başlangıç ve bitiş tarihi girin; **Yayında** kutusunu işaretleyip kaydedin. Bitiş tarihi geçen duyuru kendiliğinden kalkar.
+Ana sayfada çubuktaki **Yeni duyuru**'ya basın. Yayındaki duyurular ana sayfada, üst alanın hemen altında görünür; duyuru yokken bölüm hiç görünmez. Başlık, metin, istersen fotoğraf, başlangıç ve bitiş tarihi girin; **Yayında** kutusunu işaretleyip kaydedin. Bitiş tarihi geçen duyuru kendiliğinden kalkar.
+
+## Sayfanın sonundaki randevu formu
+Her sayfanın sonunda aynı randevu formu vardır; başlığı ve üstündeki kısa açıklama o sayfaya aittir, çift tıklayarak değiştirilir. Formun kendi yazıları (alan adları, düğme, "15 dakika içinde sizi arayalım") bütün sayfalarda ortaktır; birinde değişince hepsinde değişir.
+
+Ana sayfadaki **Merak edilenler** bölümü, Sorular ve cevaplar listesinde **Ana sayfada göster** işaretli soruları gösterir; sorunun tamamı SSS sayfasında kalır.
 
 ## Sayfa ayarları ve okul bilgileri
 Çubuktaki **Sayfa ayarları**: Google'da görünen sayfa başlığı/açıklaması, telefon, adres, çalışma saatleri, kuruluş yılı. Telefonu burada değiştirince sitedeki tüm "Ara" düğmeleri ve WhatsApp bağlantısı da değişir.
