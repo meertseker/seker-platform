@@ -5,7 +5,7 @@ import { defaultData, sentinelData, uncoveredText } from '@/lib/content/testing'
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), notFound: vi.fn() }));
 
-const PREFIXES = ['gunlukakis.', 'meta.gunlukakis.', 'day.', 'media.'];
+const PREFIXES = ['gunlukakis.', 'meta.gunlukakis.', 'day.', 'media.', 'home.week.', 'program.weekDays'];
 
 describe('gunlukakis ziyaretçi HTML', () => {
   beforeEach(() => {
@@ -29,6 +29,12 @@ describe('gunlukakis ziyaretçi HTML', () => {
       expect(container.querySelector(`[data-edit-key="${key}"]`), key).not.toBeNull();
     }
     expect(container.querySelector('[data-edit-list="day.chapters"]')).not.toBeNull();
+    // Haftalık ritim ana sayfadan buraya taşındı; sahnelerden sonra, formdan önce.
+    const week = container.querySelector('[data-edit-list="program.weekDays"]');
+    expect(week).not.toBeNull();
+    expect(container.querySelector('[data-edit-key="home.week.lead"]')).not.toBeNull();
+    expect(container.querySelector('[data-edit-list="day.chapters"]')!.compareDocumentPosition(week!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(week!.compareDocumentPosition(container.querySelector('section#randevu')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     for (const path of ['karsilama.title', 'karsilama.lead', 'karsilama.body1', 'karsilama.body2', 'bahce.body2']) {
       const hit = container.querySelector(`[data-edit-key="day.chapters"][data-edit-path="${path}"]`);
       // kapanis dışında hepsinin 2. paragrafı var; yalnızca kapanis.body2 boş ve basılmaz.

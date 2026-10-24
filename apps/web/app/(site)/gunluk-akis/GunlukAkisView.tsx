@@ -1,6 +1,7 @@
 import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
-import LeadForm from '@/app/components/LeadForm';
+import FormSection from '@/app/components/FormSection';
+import WeekRhythmSection from '@/app/components/WeekRhythmSection';
 import TimeSpine from '@/app/components/cine/TimeSpine';
 import DayChapters from '@/app/components/cine/DayChapters';
 import { Editable } from '@/app/components/edit/Editable';
@@ -47,19 +48,10 @@ export default function GunlukAkisView({ data }: { data: ReaderData }) {
           <DayChapters c={c} />
         </div>
 
-        <section className="band-grape relative mt-16 overflow-hidden py-16">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-            <span className="confetti-float absolute -left-8 top-8 h-32 w-32 rounded-full bg-sunny/15" />
-            <span className="confetti-float absolute right-[6%] bottom-10 h-24 w-24 rounded-full bg-bubble/20" />
-          </div>
-          <div className="relative z-10 mx-auto max-w-2xl px-6">
-            <Editable c={c} k="gunlukakis.cta.title" as="h2" className="text-3xl text-white" />
-            <Editable c={c} k="gunlukakis.cta.lead" as="p" className="mt-4 text-white/85" />
-            <div className="mt-8 rounded-3xl bg-white p-6 shadow-xl shadow-ink/20 md:p-8">
-              <LeadForm data={pickData(data, ['form.'])} />
-            </div>
-          </div>
-        </section>
+        {/* Haftanın günlerine bağlı ritüeller — günün akışının haftalık karşılığı (ana sayfadan taşındı). */}
+        <WeekRhythmSection c={c} />
+
+        <FormSection c={c} data={data} keys={{ title: 'gunlukakis.cta.title', lead: 'gunlukakis.cta.lead' }} />
       </main>
     </div>
   );

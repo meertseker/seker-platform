@@ -54,7 +54,7 @@ describe('aktiviteler ziyaretçi HTML', () => {
     for (const path of ['montessori.name', 'montessori.summary', 'montessori.body1', 'montessori.gain5', 'seramik.name']) {
       expect(container.querySelector(`[data-edit-key="program.branches"][data-edit-path="${path}"]`), path).not.toBeNull();
     }
-    // Haftalık özel günler bu sayfadan kalktı; program.weekDays yalnız ana sayfada.
+    // Haftalık özel günler bu sayfadan kalktı; program.weekDays Günlük Akış sayfasında.
     expect(container.querySelector('[data-edit-list="program.weekDays"]')).toBeNull();
   });
 
