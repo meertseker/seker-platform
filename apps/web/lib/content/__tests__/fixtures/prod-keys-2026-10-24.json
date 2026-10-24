@@ -1,0 +1,932 @@
+{
+  "exportedAt": "2026-10-24",
+  "note": "Prod site_content anahtarlari (okul personelinin yazdigi kayitlar); degerler burada yok. Liste maddeleri: id + alan adlari.",
+  "entries": [
+    {
+      "key": "ageGroups.items",
+      "kind": "list",
+      "items": [
+        {
+          "id": "2-3-yas",
+          "fields": [
+            "ageLabel",
+            "classSize",
+            "focus1Text",
+            "focus1Title",
+            "focus2Text",
+            "focus2Title",
+            "focus3Text",
+            "focus3Title",
+            "focus4Text",
+            "focus4Title",
+            "groupName",
+            "headline",
+            "highlight1",
+            "highlight2",
+            "highlight3",
+            "highlight4",
+            "highlight5",
+            "image",
+            "intro",
+            "metaDescription",
+            "metaTitle",
+            "title"
+          ]
+        },
+        {
+          "id": "3-4-yas",
+          "fields": [
+            "ageLabel",
+            "classSize",
+            "focus1Text",
+            "focus1Title",
+            "focus2Text",
+            "focus2Title",
+            "focus3Text",
+            "focus3Title",
+            "focus4Text",
+            "focus4Title",
+            "groupName",
+            "headline",
+            "highlight1",
+            "highlight2",
+            "highlight3",
+            "highlight4",
+            "highlight5",
+            "image",
+            "intro",
+            "metaDescription",
+            "metaTitle",
+            "title"
+          ]
+        },
+        {
+          "id": "4-5-yas",
+          "fields": [
+            "ageLabel",
+            "classSize",
+            "focus1Text",
+            "focus1Title",
+            "focus2Text",
+            "focus2Title",
+            "focus3Text",
+            "focus3Title",
+            "focus4Text",
+            "focus4Title",
+            "groupName",
+            "headline",
+            "highlight1",
+            "highlight2",
+            "highlight3",
+            "highlight4",
+            "highlight5",
+            "image",
+            "intro",
+            "metaDescription",
+            "metaTitle",
+            "title"
+          ]
+        },
+        {
+          "id": "5-6-yas",
+          "fields": [
+            "ageLabel",
+            "classSize",
+            "focus1Text",
+            "focus1Title",
+            "focus2Text",
+            "focus2Title",
+            "focus3Text",
+            "focus3Title",
+            "focus4Text",
+            "focus4Title",
+            "groupName",
+            "headline",
+            "highlight1",
+            "highlight2",
+            "highlight3",
+            "highlight4",
+            "highlight5",
+            "image",
+            "intro",
+            "metaDescription",
+            "metaTitle",
+            "title"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "aktiviteler.cta.lead",
+      "kind": "text"
+    },
+    {
+      "key": "aktiviteler.cta.title",
+      "kind": "text"
+    },
+    {
+      "key": "aktiviteler.hero.lead",
+      "kind": "text"
+    },
+    {
+      "key": "aktiviteler.season.yearRound.note",
+      "kind": "text"
+    },
+    {
+      "key": "chrome.footer.tagline",
+      "kind": "text"
+    },
+    {
+      "key": "day.chapters",
+      "kind": "list",
+      "items": [
+        {
+          "id": "karsilama",
+          "fields": [
+            "body1",
+            "body2",
+            "grade",
+            "lead",
+            "mediaKey",
+            "time",
+            "title"
+          ]
+        },
+        {
+          "id": "sabah-cemberi",
+          "fields": [
+            "body1",
+            "body2",
+            "feature",
+            "grade",
+            "lead",
+            "mediaKey",
+            "time",
+            "title"
+          ]
+        },
+        {
+          "id": "calisma-saati",
+          "fields": [
+            "body1",
+            "body2",
+            "grade",
+            "lead",
+            "mediaKey",
+            "time",
+            "title"
+          ]
+        },
+        {
+          "id": "ingilizce",
+          "fields": [
+            "body1",
+            "body2",
+            "grade",
+            "lead",
+            "mediaKey",
+            "time",
+            "title"
+          ]
+        },
+        {
+          "id": "bahce",
+          "fields": [
+            "body1",
+            "body2",
+            "grade",
+            "lead",
+            "mediaKey",
+            "time",
+            "title"
+          ]
+        },
+        {
+          "id": "ogle",
+          "fields": [
+            "body1",
+            "body2",
+            "grade",
+            "lead",
+            "mediaKey",
+            "time",
+            "title"
+          ]
+        },
+        {
+          "id": "dinlenme",
+          "fields": [
+            "body1",
+            "body2",
+            "grade",
+            "lead",
+            "mediaKey",
+            "time",
+            "title"
+          ]
+        },
+        {
+          "id": "atolye",
+          "fields": [
+            "body1",
+            "body2",
+            "grade",
+            "lead",
+            "mediaKey",
+            "time",
+            "title"
+          ]
+        },
+        {
+          "id": "cikis",
+          "fields": [
+            "body1",
+            "body2",
+            "grade",
+            "lead",
+            "mediaKey",
+            "time",
+            "title"
+          ]
+        },
+        {
+          "id": "kapanis",
+          "fields": [
+            "body1",
+            "body2",
+            "grade",
+            "lead",
+            "mediaKey",
+            "time",
+            "title"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "egitim.ages.note",
+      "kind": "text"
+    },
+    {
+      "key": "egitim.cta.lead",
+      "kind": "text"
+    },
+    {
+      "key": "egitim.english.title",
+      "kind": "text"
+    },
+    {
+      "key": "egitim.hero.eyebrow",
+      "kind": "text"
+    },
+    {
+      "key": "egitim.sections",
+      "kind": "list",
+      "items": [
+        {
+          "id": "montessori",
+          "fields": [
+            "p1",
+            "p2",
+            "p3",
+            "p4",
+            "question"
+          ]
+        },
+        {
+          "id": "planlama",
+          "fields": [
+            "p1",
+            "p2",
+            "p3",
+            "p4",
+            "question"
+          ]
+        },
+        {
+          "id": "brans",
+          "fields": [
+            "p1",
+            "p2",
+            "p3",
+            "p4",
+            "question"
+          ]
+        },
+        {
+          "id": "dil",
+          "fields": [
+            "p1",
+            "p2",
+            "p3",
+            "p4",
+            "question"
+          ]
+        },
+        {
+          "id": "teknoloji",
+          "fields": [
+            "p1",
+            "p2",
+            "p3",
+            "p4",
+            "question"
+          ]
+        },
+        {
+          "id": "duygusal",
+          "fields": [
+            "p1",
+            "p2",
+            "p3",
+            "p4",
+            "question"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "faq.items",
+      "kind": "list",
+      "items": [
+        {
+          "id": "yas-araligi",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "sinif-mevcudu",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "calisma-saatleri",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "montessori",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "ingilizce",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "kamera",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "ucret",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "brans-dersleri",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "psikolog",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "bahce",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "egitim-programi",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "servis",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "yemek",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "uyum-sureci",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        },
+        {
+          "id": "ucret-taksit",
+          "fields": [
+            "answer",
+            "featured",
+            "question",
+            "ready"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "form.help.emphasis",
+      "kind": "text"
+    },
+    {
+      "key": "gunlukakis.hero.lead",
+      "kind": "text"
+    },
+    {
+      "key": "gunlukakis.hero.title",
+      "kind": "text"
+    },
+    {
+      "key": "gunlukakis.plan.full.hours",
+      "kind": "text"
+    },
+    {
+      "key": "gunlukakis.plan.half.hours",
+      "kind": "text"
+    },
+    {
+      "key": "gunlukakis.plan.half.note",
+      "kind": "text"
+    },
+    {
+      "key": "home.contact.lead",
+      "kind": "text"
+    },
+    {
+      "key": "home.day.lead",
+      "kind": "text"
+    },
+    {
+      "key": "home.day.title",
+      "kind": "text"
+    },
+    {
+      "key": "home.features.cards",
+      "kind": "list",
+      "items": [
+        {
+          "id": "taniyoruz",
+          "fields": [
+            "description",
+            "title"
+          ]
+        },
+        {
+          "id": "montessori",
+          "fields": [
+            "description",
+            "title"
+          ]
+        },
+        {
+          "id": "ingilizce",
+          "fields": [
+            "description",
+            "title"
+          ]
+        },
+        {
+          "id": "psikolog",
+          "fields": [
+            "description",
+            "title"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "home.features.lead",
+      "kind": "text"
+    },
+    {
+      "key": "home.garden.caption",
+      "kind": "text"
+    },
+    {
+      "key": "home.garden.lead",
+      "kind": "text"
+    },
+    {
+      "key": "home.garden.shots",
+      "kind": "list",
+      "items": [
+        {
+          "id": "mudKitchen",
+          "fields": [
+            "note",
+            "title"
+          ]
+        },
+        {
+          "id": "outdoorClass",
+          "fields": [
+            "note",
+            "title"
+          ]
+        },
+        {
+          "id": "giraffes",
+          "fields": [
+            "note",
+            "title"
+          ]
+        },
+        {
+          "id": "candyCorner",
+          "fields": [
+            "note",
+            "title"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "home.garden.title",
+      "kind": "text"
+    },
+    {
+      "key": "home.hero.badge",
+      "kind": "text"
+    },
+    {
+      "key": "home.hero.lead",
+      "kind": "text"
+    },
+    {
+      "key": "home.hero.programEnglish",
+      "kind": "text"
+    },
+    {
+      "key": "home.hero.programEnglishLabel",
+      "kind": "text"
+    },
+    {
+      "key": "home.hero.programNote",
+      "kind": "text"
+    },
+    {
+      "key": "home.hero.rosterChildren",
+      "kind": "text"
+    },
+    {
+      "key": "home.hero.rosterChildrenLabel",
+      "kind": "text"
+    },
+    {
+      "key": "home.hero.rosterNote",
+      "kind": "text"
+    },
+    {
+      "key": "home.hero.title",
+      "kind": "text"
+    },
+    {
+      "key": "home.week.lead",
+      "kind": "text"
+    },
+    {
+      "key": "program.branches",
+      "kind": "list",
+      "items": [
+        {
+          "id": "montessori",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "beceri-koordinasyon",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "gorsel-sanatlar",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "seramik",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "robotik-kodlama",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "ingilizce",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "muzik-ritim",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "bale-dans",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "drama",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "satranc",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "matematik-fen",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "yuzme",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "binicilik",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        },
+        {
+          "id": "sportif-faaliyetler",
+          "fields": [
+            "body1",
+            "body2",
+            "body3",
+            "body4",
+            "gain1",
+            "gain2",
+            "gain3",
+            "gain4",
+            "gain5",
+            "mediaKey",
+            "name",
+            "season",
+            "summary"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "yasgruplari.cta.lead",
+      "kind": "text"
+    },
+    {
+      "key": "yasgruplari.cta.title",
+      "kind": "text"
+    },
+    {
+      "key": "yasgruplari.hero.title",
+      "kind": "text"
+    },
+    {
+      "key": "yorumlar.hero.lead",
+      "kind": "text"
+    },
+    {
+      "key": "yorumlar.hero.title",
+      "kind": "text"
+    },
+    {
+      "key": "yorumlar.share.title",
+      "kind": "text"
+    }
+  ]
+}
