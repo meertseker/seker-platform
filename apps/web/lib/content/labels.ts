@@ -134,9 +134,10 @@ const FIXED: Record<string, string> = {
   'ageGroups.items': `Yaş grupları${SEP}Gruplar`,
 };
 
+/** Anahtarın en uzun bölüm öneki; liste anahtarı bölümün kendisi olabilir (hakkimizda.facts → Künye). */
 function section(key: string): string | undefined {
   const parts = key.split('.');
-  for (let n = parts.length - 1; n >= 2; n--) {
+  for (let n = parts.length; n >= 2; n--) {
     const hit = SECTIONS[parts.slice(0, n).join('.')];
     if (hit) return hit;
   }
