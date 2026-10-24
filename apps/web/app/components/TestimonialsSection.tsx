@@ -42,7 +42,7 @@ export default function TestimonialsSection({ c }: { c: Reader }) {
 
         {/* Telefonda tek sıra yatay kaydırma; md+ üç sütun. */}
         <div
-          className="mt-6 -mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-4 pt-4 md:mx-0 md:mt-10 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-0 md:pb-0"
+          className="mt-6 -mx-6 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto px-6 pb-4 pt-4 md:mx-0 md:items-stretch md:mt-10 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-0 md:pb-0"
           {...c.listAttrs('testimonials.items')}
         >
           {quotes.map((q, index) => (

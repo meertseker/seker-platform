@@ -68,7 +68,7 @@ const FeaturesSection = ({ c }: { c: Reader }) => {
         </div>
 
         <div
-          className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
+          className="mt-8 grid grid-cols-1 gap-4 md:mt-12 md:grid-cols-2 md:gap-6 lg:grid-cols-4"
           {...c.listAttrs('home.features.cards')}
         >
           {cards.map((card, index) => {
@@ -78,22 +78,25 @@ const FeaturesSection = ({ c }: { c: Reader }) => {
             <Link
               key={card.id}
               href={feature.href}
-              className={`card-lift rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ${ACCENTS[index % ACCENTS.length].ring}`}
+              /* Telefonda simge solda, yazı sağda (kısa kart); md+ dikey ve ortalı. */
+              className={`card-lift flex items-start gap-4 rounded-3xl bg-white p-5 text-left shadow-sm ring-1 md:block md:p-6 md:text-center ${ACCENTS[index % ACCENTS.length].ring}`}
             >
               <div
-                className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-white ${ACCENTS[index % ACCENTS.length].chip}`}
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white md:mx-auto md:mb-4 md:h-14 md:w-14 ${ACCENTS[index % ACCENTS.length].chip}`}
               >
                 {feature.icon}
               </div>
-              <Editable c={c} k="home.features.cards" path={`${card.id}.title`} value={card.title} as="h3" className="text-lg text-ink" />
-              <Editable
-                c={c}
-                k="home.features.cards"
-                path={`${card.id}.description`}
-                value={card.description}
-                as="p"
-                className="mt-3 text-sm leading-relaxed text-ink-soft"
-              />
+              <div>
+                <Editable c={c} k="home.features.cards" path={`${card.id}.title`} value={card.title} as="h3" className="text-lg text-ink" />
+                <Editable
+                  c={c}
+                  k="home.features.cards"
+                  path={`${card.id}.description`}
+                  value={card.description}
+                  as="p"
+                  className="mt-2 text-sm leading-relaxed text-ink-soft md:mt-3"
+                />
+              </div>
             </Link>
             )
           })}
