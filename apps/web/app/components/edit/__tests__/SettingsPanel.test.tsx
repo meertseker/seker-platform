@@ -21,10 +21,13 @@ const meta = {
 };
 
 describe('settingsKeysFor', () => {
-  it('normal sayfa', () => {
-    expect(settingsKeysFor('/veli-yorumlari', meta, { '/veli-yorumlari': 'yorumlar' })).toEqual([
+  it('normal sayfa (formsuz)', () => {
+    expect(settingsKeysFor('/veli-yorumlari', { ...meta, 'sss.cta.email': undefined as never }, { '/veli-yorumlari': 'yorumlar' })).toEqual([
       'meta.yorumlar.title',
       'meta.yorumlar.description',
+      // Veli Yorumları sayfasında da randevu formu var.
+      'form.help.before',
+      'form.error',
       'site.phone',
       'chrome.footer.rights',
       'chrome.whatsapp.label',
@@ -53,10 +56,10 @@ describe('settingsKeysFor', () => {
     expect(keys).not.toContain('yasgrubu.focus.suffix');
   });
   it('form olan sayfalarda form ek alanları; diğerlerinde yok', () => {
-    for (const path of ['/', '/kayit', '/iletisim', '/hakkimizda', '/yas-gruplari/2-3-yas']) {
+    for (const path of ['/', '/kayit', '/iletisim', '/hakkimizda', '/yas-gruplari/2-3-yas', '/veli-yorumlari']) {
       expect(settingsKeysFor(path, meta, {}), path).toEqual(expect.arrayContaining(['form.help.before', 'form.error']));
     }
-    for (const path of ['/sss', '/veli-yorumlari']) {
+    for (const path of ['/sss', '/gizlilik']) {
       expect(settingsKeysFor(path, meta, {}), path).not.toContain('form.error');
     }
   });

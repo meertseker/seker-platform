@@ -31,6 +31,9 @@ export const YORUMLAR_SLOTS: Record<string, SlotDef> = {
   ),
   'yorumlar.empty.cta': text('Boş durum düğmesi', 'Okul Ziyareti Planlayın'),
 
+  'yorumlar.cta.title': text('Form başlığı', 'Siz de gelin, okulu yerinde görün', true),
+  'yorumlar.cta.lead': text('Form üstü metin', 'Sınıfları ve bahçeleri gezin, öğretmenlerimizle tanışın. Size uygun bir saat seçelim.'),
+
   'yorumlar.share.title': text('Paylaşım başlığı', "Şeker Anaokulu'nda veliyseniz deneyiminizi paylaşın", true),
   'yorumlar.share.lead': text(
     'Paylaşım açıklaması',

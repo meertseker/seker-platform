@@ -1,6 +1,7 @@
 import PageHero from '@/app/components/PageHero';
 import JsonLd from '@/app/components/JsonLd';
 import TrackedLink from '@/app/components/TrackedLink';
+import FormSection from '@/app/components/FormSection';
 import { Editable } from '@/app/components/edit/Editable';
 import { buildBreadcrumbSchema } from '@/lib/schema';
 import { mapsUrl } from '@/lib/site';
@@ -90,7 +91,10 @@ export default function YorumlarView({ data }: { data: ReaderData }) {
         </section>
       )}
 
-      <section className="bg-paper-warm py-16 text-center">
+      {/* Yorumları okuyup ikna olan veli için randevu formu; paylaşım çağrısı (mevcut veliye) en sonda. */}
+      <FormSection c={c} data={data} keys={{ title: 'yorumlar.cta.title', lead: 'yorumlar.cta.lead' }} />
+
+      <section className="bg-paper py-16 text-center">
         <Editable c={c} k="yorumlar.share.title" as="h2" className="font-display text-2xl text-ink" />
         <Editable c={c} k="yorumlar.share.lead" as="p" className="mx-auto mt-4 max-w-xl px-6 text-ink-soft" />
         <TrackedLink

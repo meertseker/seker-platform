@@ -5,7 +5,7 @@ import { defaultData, sentinelData, uncoveredText } from '@/lib/content/testing'
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
-const PREFIXES = ['yorumlar.', 'meta.yorumlar.', 'testimonials.'];
+const PREFIXES = ['yorumlar.', 'meta.yorumlar.', 'testimonials.', 'form.'];
 
 describe('yorumlar ziyaretçi HTML', () => {
   beforeEach(() => {
@@ -43,7 +43,16 @@ describe('yorumlar ziyaretçi HTML', () => {
 
   it('görünür her metin bir içerik alanından geliyor', () => {
     const { container } = render(<YorumlarView data={sentinelData(PREFIXES)} />);
+    container.querySelectorAll('form').forEach((el) => el.remove());
     expect(uncoveredText(container)).toEqual([]);
+  });
+
+  it('randevu formu yorumlardan sonra, paylaşım çağrısından önce gelir', () => {
+    const { container } = render(<YorumlarView data={{ ...defaultData(PREFIXES), editing: true }} />);
+    const form = container.querySelector('section#randevu');
+    const share = container.querySelector('[data-edit-key="yorumlar.share.title"]');
+    expect(form).not.toBeNull();
+    expect(form!.compareDocumentPosition(share!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('boş durum: metinler ve düğme içerik alanından geliyor', () => {
@@ -51,6 +60,7 @@ describe('yorumlar ziyaretçi HTML', () => {
     data.values['testimonials.items'] = [];
     const { container } = render(<YorumlarView data={{ ...data, editing: true }} />);
     expect(container.querySelector('[data-edit-key="yorumlar.empty.cta"]')).not.toBeNull();
+    container.querySelectorAll('form').forEach((el) => el.remove());
     expect(uncoveredText(container)).toEqual([]);
   });
 });

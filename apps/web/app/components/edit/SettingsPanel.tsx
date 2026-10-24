@@ -20,7 +20,7 @@ export const PAGE_EXTRA_KEYS: { match: RegExp; keys: string[] }[] = [
   { match: /^\/yas-gruplari\/[a-z0-9-]+$/, keys: ['yasgrubu.focus.suffix', 'yasgrubu.cta.suffix'] },
   // Başvuru formu olan sayfalar: formda yalnızca belirli durumlarda görünen veya birleşik yazılar.
   {
-    match: /^\/$|^\/lp\/[a-z0-9-]+$|^\/(kayit|iletisim|egitim-yaklasimimiz|hakkimizda|yas-gruplari|gunluk-akis|aktiviteler)(\/[a-z0-9-]+)?$/,
+    match: /^\/$|^\/lp\/[a-z0-9-]+$|^\/(kayit|iletisim|egitim-yaklasimimiz|hakkimizda|yas-gruplari|gunluk-akis|aktiviteler|veli-yorumlari)(\/[a-z0-9-]+)?$/,
     keys: ['form.help.before', 'form.help.after', 'form.submitting', 'form.error', 'form.invalid', ...FORM_SETTING_KEYS],
   },
   // Reklam sayfalarındaki uzun form: seçim kutularının ilk satırları ve seçim hataları.
